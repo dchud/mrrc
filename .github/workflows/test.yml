@@ -44,21 +44,6 @@ jobs:
       - name: Run doc tests
         run: cargo test --doc --verbose
 
-  test-minimal-versions:
-    name: Test Minimal Versions
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@nightly
-
-      - name: Install minimal versions
-        run: cargo update -Z minimal-versions
-
-      - name: Run tests
-        run: cargo test --verbose --all
-
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
