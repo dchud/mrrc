@@ -1,8 +1,50 @@
+//! JSON serialization and deserialization of MARC records.
+//!
+//! This module provides conversion between MARC records and a generic JSON representation.
+//! The JSON format is a simple, flat structure with fields as keys and values/subfields
+//! as objects.
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use mrrc::{Record, Field, Leader, json};
+//!
+//! let mut record = Record::new(Leader::default());
+//! let mut field = Field::new("245".to_string(), '1', '0');
+//! field.add_subfield('a', "Title".to_string());
+//! record.add_field(field);
+//!
+//! let json = json::record_to_json(&record)?;
+//! println!("{}", json);
+//!
+//! let restored = json::json_to_record(&json)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+
 use crate::error::Result;
 use crate::record::{Field, Record};
 use serde_json::{json, Value};
 
-/// Convert a MARC record to JSON
+/// Convert a MARC record to JSON.
+///
+/// Produces a JSON array where:
+/// - First element is the leader
+/// - Subsequent elements are control and data fields
+/// - Each field is an object with the tag as key
+///
+/// # Examples
+///
+/// ```ignore
+/// use mrrc::{Record, Field, Leader, json};
+///
+/// let mut record = Record::new(Leader::default());
+/// let mut field = Field::new("245".to_string(), '1', '0');
+/// field.add_subfield('a', "Test".to_string());
+/// record.add_field(field);
+///
+/// let json_value = json::record_to_json(&record)?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 pub fn record_to_json(record: &Record) -> Result<Value> {
     let mut fields = Vec::new();
 
@@ -44,7 +86,24 @@ pub fn record_to_json(record: &Record) -> Result<Value> {
     Ok(Value::Array(fields))
 }
 
-/// Convert JSON back to a MARC record
+/// Convert JSON back to a MARC record.
+///
+/// Reverses the transformation performed by [`record_to_json`].
+///
+/// # Examples
+///
+/// ```ignore
+/// use mrrc::{Record, Field, Leader, json};
+///
+/// let mut record = Record::new(Leader::default());
+/// let mut field = Field::new("245".to_string(), '1', '0');
+/// field.add_subfield('a', "Test".to_string());
+/// record.add_field(field);
+///
+/// let json_value = json::record_to_json(&record)?;
+/// let restored = json::json_to_record(&json_value)?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 pub fn json_to_record(json: &Value) -> Result<Record> {
     use crate::error::MarcError;
     use crate::leader::Leader;

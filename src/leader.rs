@@ -1,8 +1,29 @@
+//! MARC record leader parsing and manipulation.
+//!
+//! The MARC leader is a 24-byte fixed-length field at the start of every MARC record.
+//! It contains metadata describing the record's structure, content type, and encoding.
+//!
+//! # Structure
+//!
+//! - Positions 0-4: Record length (5 digits)
+//! - Position 5: Record status
+//! - Position 6: Record type (a = language material, c = music, etc.)
+//! - Position 7: Bibliographic level (m = monograph, s = serial, etc.)
+//! - Position 8: Control record type
+//! - Position 9: Character coding (space = MARC-8, a = UTF-8)
+//! - Position 10: Indicator count (usually 2)
+//! - Position 11: Subfield code count (usually 2)
+//! - Positions 12-16: Base address of data (5 digits)
+//! - Positions 17-19: Encoding level, cataloging form, multipart level
+//! - Positions 20-23: Reserved (usually "4500")
+
 use crate::error::{MarcError, Result};
 use serde::{Deserialize, Serialize};
 
-/// MARC Leader - 24 bytes at the start of every MARC record
-/// Contains metadata about the record structure and content
+/// MARC Leader - 24 bytes at the start of every MARC record.
+///
+/// Contains metadata about the record structure and content.
+/// All MARC records must begin with exactly 24 bytes of leader information.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Leader {
     /// Record length (5 digits) - positions 0-4

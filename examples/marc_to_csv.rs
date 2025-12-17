@@ -12,7 +12,6 @@
 ///     cargo run --example marc_to_csv -- records.mrc
 ///     cargo run --example marc_to_csv -- records.mrc.gz output.csv
 ///     cargo run --example marc_to_csv -- BooksAll.2016.part01.utf8.gz books.csv
-
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, Write};
@@ -53,9 +52,10 @@ fn main() -> anyhow::Result<()> {
 
     // Prepare output
     let mut output: Box<dyn Write> = if let Some(path) = output_path {
-        Box::new(File::create(path).map_err(|e| {
-            anyhow::anyhow!("Failed to create output file '{}': {}", path, e)
-        })?)
+        Box::new(
+            File::create(path)
+                .map_err(|e| anyhow::anyhow!("Failed to create output file '{}': {}", path, e))?,
+        )
     } else {
         Box::new(std::io::stdout())
     };
@@ -84,9 +84,7 @@ fn main() -> anyhow::Result<()> {
                     .and_then(|f| f.get_subfield('a'))
                     .or_else(|| {
                         // Fallback to field 110 (corporate author)
-                        record
-                            .get_field("110")
-                            .and_then(|f| f.get_subfield('a'))
+                        record.get_field("110").and_then(|f| f.get_subfield('a'))
                     })
                     .unwrap_or("N/A");
 
@@ -102,7 +100,10 @@ fn main() -> anyhow::Result<()> {
                             if field_008.len() >= 11 {
                                 let year = &field_008[7..11];
                                 // Only use if it looks like a year (4 digits, not all spaces/zeros)
-                                if year != "    " && year != "0000" && year.chars().all(|c| c.is_ascii_digit()) {
+                                if year != "    "
+                                    && year != "0000"
+                                    && year.chars().all(|c| c.is_ascii_digit())
+                                {
                                     Some(year)
                                 } else {
                                     None

@@ -1,3 +1,25 @@
+//! XML serialization and deserialization of MARC records.
+//!
+//! This module provides conversion between MARC records and MARCXML format,
+//! which is the standard XML representation of MARC records used in libraries.
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use mrrc::{Record, Field, Leader, xml};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut record = Record::new(Leader::default());
+//! let mut field = Field::new("245".to_string(), '1', '0');
+//! field.add_subfield('a', "Title".to_string());
+//! record.add_field(field);
+//!
+//! let xml_str = xml::record_to_xml(&record)?;
+//! let restored = xml::xml_to_record(&xml_str)?;
+//! # Ok(())
+//! # }
+//! ```
+
 use crate::error::{MarcError, Result};
 use crate::leader::Leader;
 use crate::record::{Field, Record};
@@ -5,40 +27,80 @@ use quick_xml::de::from_str as xml_from_str;
 use quick_xml::se::to_string as xml_to_string;
 use serde::{Deserialize, Serialize};
 
-/// MARCXML record representation for serialization
+/// MARCXML record representation for serialization.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarcXmlRecord {
+    /// MARC leader string
     pub leader: String,
+    /// Control fields (tags 001-009)
     #[serde(default)]
     pub controlfield: Vec<MarcXmlControlField>,
+    /// Data fields (tags 010+)
     #[serde(default)]
     pub datafield: Vec<MarcXmlDataField>,
 }
 
+/// MARCXML control field representation
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarcXmlControlField {
+    /// Field tag (e.g., "001", "008")
     pub tag: String,
+    /// Control field value
     #[serde(rename = "$value")]
     pub value: String,
 }
 
+/// MARCXML data field representation
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarcXmlDataField {
+    /// Field tag (e.g., "245", "650")
     pub tag: String,
+    /// First indicator
     pub ind1: String,
+    /// Second indicator
     pub ind2: String,
+    /// Subfields
     #[serde(default)]
     pub subfield: Vec<MarcXmlSubfield>,
 }
 
+/// MARCXML subfield representation
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarcXmlSubfield {
+    /// Subfield code (e.g., 'a', 'b', 'c')
     pub code: String,
+    /// Subfield value
     #[serde(rename = "$value")]
     pub value: String,
 }
 
-/// Convert a MARC record to MARCXML string
+/// Convert a MARC record to MARCXML string.
+///
+/// Serializes a MARC record into MARCXML format, which is the standard XML
+/// representation of MARC records. The leader is converted to a string, and all
+/// control fields and data fields with their indicators and subfields are included.
+///
+/// # Arguments
+///
+/// * `record` - The MARC record to convert
+///
+/// # Returns
+///
+/// A string containing the MARCXML representation, or an error if serialization fails.
+///
+/// # Example
+///
+/// ```ignore
+/// # use mrrc::{Record, Field, Leader, xml};
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut record = Record::new(Leader::default());
+/// let mut field = Field::new("245".to_string(), '1', '0');
+/// field.add_subfield('a', "Test Title".to_string());
+/// record.add_field(field);
+/// let xml = xml::record_to_xml(&record)?;
+/// # Ok(())
+/// # }
+/// ```
 pub fn record_to_xml(record: &Record) -> Result<String> {
     let leader_bytes = record.leader.as_bytes()?;
     let leader_str = String::from_utf8_lossy(&leader_bytes).to_string();
@@ -81,7 +143,30 @@ pub fn record_to_xml(record: &Record) -> Result<String> {
         .map_err(|e| MarcError::ParseError(format!("Failed to serialize to XML: {}", e)))
 }
 
-/// Convert MARCXML string to a MARC record
+/// Convert MARCXML string to a MARC record.
+///
+/// Deserializes a MARCXML string into a MARC record. The function parses the XML,
+/// reconstructs the leader, and repopulates all control fields and data fields with
+/// their indicators and subfields.
+///
+/// # Arguments
+///
+/// * `xml` - The MARCXML string to parse
+///
+/// # Returns
+///
+/// A MARC Record, or an error if parsing or deserialization fails.
+///
+/// # Example
+///
+/// ```ignore
+/// # use mrrc::xml;
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let xml_str = r#"<record><leader>...</leader></record>"#;
+/// let record = xml::xml_to_record(xml_str)?;
+/// # Ok(())
+/// # }
+/// ```
 pub fn xml_to_record(xml: &str) -> Result<Record> {
     let xml_record: MarcXmlRecord = xml_from_str(xml)
         .map_err(|e| MarcError::ParseError(format!("Failed to parse XML: {}", e)))?;

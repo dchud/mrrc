@@ -17,10 +17,7 @@ fn test_read_simple_book_record() {
     // Check title field
     let title_fields = record.get_fields("245").expect("No title field");
     assert!(!title_fields.is_empty());
-    assert_eq!(
-        title_fields[0].get_subfield('a'),
-        Some("The Great Gatsby")
-    );
+    assert_eq!(title_fields[0].get_subfield('a'), Some("The Great Gatsby"));
     assert_eq!(
         title_fields[0].get_subfield('c'),
         Some("F. Scott Fitzgerald")
@@ -56,8 +53,7 @@ fn test_read_music_record() {
 
 #[test]
 fn test_read_record_with_control_fields() {
-    let file = File::open("tests/data/with_control_fields.mrc")
-        .expect("Could not open test file");
+    let file = File::open("tests/data/with_control_fields.mrc").expect("Could not open test file");
     let mut reader = MarcReader::new(file);
 
     let record = reader.read_record().expect("Failed to read record");
@@ -87,7 +83,9 @@ fn test_read_multiple_records() {
     assert!(record3.is_some());
 
     // No more records
-    let record4 = reader.read_record().expect("Failed to check for fourth record");
+    let record4 = reader
+        .read_record()
+        .expect("Failed to check for fourth record");
     assert!(record4.is_none());
 }
 
@@ -111,12 +109,17 @@ fn test_roundtrip_book_record() {
     // Read back from buffer
     let cursor = Cursor::new(buffer);
     let mut reader = MarcReader::new(cursor);
-    let restored = reader.read_record().expect("Failed to read restored record");
+    let restored = reader
+        .read_record()
+        .expect("Failed to read restored record");
     let restored = restored.expect("No restored record");
 
     // Verify the roundtrip preserved data
     assert_eq!(original.leader.record_type, restored.leader.record_type);
-    assert_eq!(original.leader.bibliographic_level, restored.leader.bibliographic_level);
+    assert_eq!(
+        original.leader.bibliographic_level,
+        restored.leader.bibliographic_level
+    );
 
     let orig_title = original.get_fields("245").unwrap()[0].get_subfield('a');
     let restored_title = restored.get_fields("245").unwrap()[0].get_subfield('a');
@@ -185,12 +188,10 @@ fn test_marcjson_serialization_with_file_data() {
     let record = record.expect("No record found");
 
     // Convert to MARCJSON
-    let json = marcjson::record_to_marcjson(&record)
-        .expect("Failed to convert to MARCJSON");
+    let json = marcjson::record_to_marcjson(&record).expect("Failed to convert to MARCJSON");
 
     // Convert back from MARCJSON
-    let restored =
-        marcjson::marcjson_to_record(&json).expect("Failed to restore from MARCJSON");
+    let restored = marcjson::marcjson_to_record(&json).expect("Failed to restore from MARCJSON");
 
     // Verify data
     assert_eq!(record.leader.record_type, restored.leader.record_type);

@@ -91,8 +91,7 @@ impl Record {
     /// }
     /// ```
     pub fn title(&self) -> Option<&str> {
-        self.get_field("245")
-            .and_then(|f| f.get_subfield('a'))
+        self.get_field("245").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get the title and statement of responsibility from field 245
@@ -101,10 +100,7 @@ impl Record {
     /// Title comes from subfield 'a', responsibility from subfield 'c'.
     pub fn title_with_responsibility(&self) -> (Option<&str>, Option<&str>) {
         match self.get_field("245") {
-            Some(field) => (
-                field.get_subfield('a'),
-                field.get_subfield('c'),
-            ),
+            Some(field) => (field.get_subfield('a'), field.get_subfield('c')),
             None => (None, None),
         }
     }
@@ -113,8 +109,7 @@ impl Record {
     ///
     /// Returns the first author found. Use `authors()` to get all authors.
     pub fn author(&self) -> Option<&str> {
-        self.get_field("100")
-            .and_then(|f| f.get_subfield('a'))
+        self.get_field("100").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get all authors from field 700 (added entry for personal name), subfield 'a'
@@ -122,25 +117,18 @@ impl Record {
     /// This includes secondary authors/contributors. For the primary author, use `author()`.
     pub fn authors(&self) -> Vec<&str> {
         self.get_fields("700")
-            .map(|fields| {
-                fields
-                    .iter()
-                    .filter_map(|f| f.get_subfield('a'))
-                    .collect()
-            })
+            .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
             .unwrap_or_default()
     }
 
     /// Get the corporate body (publisher or organization) from field 110, subfield 'a'
     pub fn corporate_author(&self) -> Option<&str> {
-        self.get_field("110")
-            .and_then(|f| f.get_subfield('a'))
+        self.get_field("110").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get the publisher from field 260, subfield 'b'
     pub fn publisher(&self) -> Option<&str> {
-        self.get_field("260")
-            .and_then(|f| f.get_subfield('b'))
+        self.get_field("260").and_then(|f| f.get_subfield('b'))
     }
 
     /// Get the publication date from field 260, subfield 'c'
@@ -154,7 +142,10 @@ impl Record {
                 self.get_control_field("008").and_then(|field_008| {
                     if field_008.len() >= 11 {
                         let year = &field_008[7..11];
-                        if year != "    " && year != "0000" && year.chars().all(|c| c.is_ascii_digit()) {
+                        if year != "    "
+                            && year != "0000"
+                            && year.chars().all(|c| c.is_ascii_digit())
+                        {
                             Some(year)
                         } else {
                             None
@@ -170,37 +161,25 @@ impl Record {
     ///
     /// Returns the first ISBN. Use `isbns()` to get all ISBNs.
     pub fn isbn(&self) -> Option<&str> {
-        self.get_field("020")
-            .and_then(|f| f.get_subfield('a'))
+        self.get_field("020").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get all ISBNs from field 020, subfield 'a'
     pub fn isbns(&self) -> Vec<&str> {
         self.get_fields("020")
-            .map(|fields| {
-                fields
-                    .iter()
-                    .filter_map(|f| f.get_subfield('a'))
-                    .collect()
-            })
+            .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
             .unwrap_or_default()
     }
 
     /// Get the ISSN from field 022, subfield 'a'
     pub fn issn(&self) -> Option<&str> {
-        self.get_field("022")
-            .and_then(|f| f.get_subfield('a'))
+        self.get_field("022").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get all subject headings from field 650, subfield 'a'
     pub fn subjects(&self) -> Vec<&str> {
         self.get_fields("650")
-            .map(|fields| {
-                fields
-                    .iter()
-                    .filter_map(|f| f.get_subfield('a'))
-                    .collect()
-            })
+            .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
             .unwrap_or_default()
     }
 
@@ -229,22 +208,19 @@ impl Record {
 
     /// Get the Library of Congress Control Number (LCCN) from field 010, subfield 'a'
     pub fn lccn(&self) -> Option<&str> {
-        self.get_field("010")
-            .and_then(|f| f.get_subfield('a'))
+        self.get_field("010").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get the physical description from field 300, subfield 'a'
     ///
     /// Typically describes the extent of the resource (e.g., "256 pages").
     pub fn physical_description(&self) -> Option<&str> {
-        self.get_field("300")
-            .and_then(|f| f.get_subfield('a'))
+        self.get_field("300").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get the series statement from field 490, subfield 'a'
     pub fn series(&self) -> Option<&str> {
-        self.get_field("490")
-            .and_then(|f| f.get_subfield('a'))
+        self.get_field("490").and_then(|f| f.get_subfield('a'))
     }
 
     /// Check if this is a book (leader type 'a' for language material and bib level 'm' for monograph)
@@ -475,7 +451,10 @@ mod tests {
         let mut record = Record::new(leader);
 
         // Field 008 positions 7-10 contain publication year
-        record.add_control_field("008".to_string(), "200101s1925    xxu||||||||||||||||eng||".to_string());
+        record.add_control_field(
+            "008".to_string(),
+            "200101s1925    xxu||||||||||||||||eng||".to_string(),
+        );
 
         assert_eq!(record.publication_date(), Some("1925"));
     }
@@ -536,7 +515,7 @@ mod tests {
         let mut field_008 = "12345678901234567890123456789012345".to_string(); // 35 chars
         field_008.push_str("eng"); // positions 35-37
         field_008.push_str("||"); // positions 38-39 (total 40)
-        
+
         record.add_control_field("008".to_string(), field_008);
         assert_eq!(record.language(), Some("eng"));
     }

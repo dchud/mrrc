@@ -28,7 +28,7 @@ mrrc = "0.1"
 
 ### Reading MARC Records
 
-```rust
+```rust,ignore
 use mrrc::MarcReader;
 use std::fs::File;
 
@@ -50,7 +50,7 @@ while let Some(record) = reader.read_record()? {
 
 ### Writing MARC Records
 
-```rust
+```rust,ignore
 use mrrc::{MarcWriter, Record, Field, Leader};
 use std::io::Cursor;
 
@@ -82,7 +82,7 @@ writer.write_record(&record)?;
 
 #### JSON Format
 
-```rust
+```rust,ignore
 use mrrc::json;
 
 let json = json::record_to_json(&record)?;
@@ -94,7 +94,7 @@ let restored = json::json_to_record(&json)?;
 
 #### XML Format
 
-```rust
+```rust,ignore
 use mrrc::xml;
 
 let xml_string = xml::record_to_xml(&record)?;
@@ -106,7 +106,7 @@ let restored = xml::xml_to_record(&xml_string)?;
 
 #### MARCJSON Format (standard MARC-JSON)
 
-```rust
+```rust,ignore
 use mrrc::marcjson;
 
 let json = marcjson::record_to_marcjson(&record)?;
@@ -142,7 +142,7 @@ Breaking down:
 
 ### Record
 
-```rust
+```rust,ignore
 // Create a record
 let mut record = Record::new(Leader::default());
 
@@ -160,7 +160,7 @@ for field in record.fields() { }
 
 ### Field
 
-```rust
+```rust,ignore
 let mut field = Field::new("245".to_string(), '1', '0');
 
 // Add subfields
@@ -174,7 +174,7 @@ let values = field.get_subfield_values('a'); // Multiple occurrences
 
 ### MarcReader & MarcWriter
 
-```rust
+```rust,ignore
 // Read from any source implementing Read
 let mut reader = MarcReader::new(file);
 while let Some(record) = reader.read_record()? { }

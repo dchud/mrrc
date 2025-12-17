@@ -1,3 +1,47 @@
+//! Writing MARC records to binary format.
+//!
+//! This module provides [`MarcWriter`] for serializing [`Record`] instances
+//! to ISO 2709 binary format that can be written to any destination implementing
+//! [`std::io::Write`].
+//!
+//! # Examples
+//!
+//! Writing records to a file:
+//!
+//! ```ignore
+//! use mrrc::{MarcWriter, Record, Field, Leader};
+//! use std::fs::File;
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut file = File::create("output.mrc")?;
+//! let mut writer = MarcWriter::new(&mut file);
+//!
+//! let mut record = Record::new(Leader::default());
+//! let mut field = Field::new("245".to_string(), '1', '0');
+//! field.add_subfield('a', "Title".to_string());
+//! record.add_field(field);
+//!
+//! writer.write_record(&record)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! Writing to a buffer:
+//!
+//! ```ignore
+//! use mrrc::{MarcWriter, Record, Leader};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut buffer = Vec::new();
+//! {
+//!     let mut writer = MarcWriter::new(&mut buffer);
+//!     let record = Record::new(Leader::default());
+//!     writer.write_record(&record)?;
+//! }
+//! # Ok(())
+//! # }
+//! ```
+
 use crate::error::Result;
 use crate::record::Record;
 use std::io::Write;
@@ -6,18 +50,81 @@ const FIELD_TERMINATOR: u8 = 0x1E;
 const SUBFIELD_DELIMITER: u8 = 0x1F;
 const RECORD_TERMINATOR: u8 = 0x1D;
 
-/// Writer for ISO 2709 binary MARC format
+/// Writer for ISO 2709 binary MARC format.
+///
+/// `MarcWriter` serializes [`Record`] instances to ISO 2709 binary format.
+/// Records are written one at a time to any destination implementing [`std::io::Write`].
+///
+/// # Examples
+///
+/// ```ignore
+/// use mrrc::{MarcWriter, Record, Leader};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut buffer = Vec::new();
+/// {
+///     let mut writer = MarcWriter::new(&mut buffer);
+///     let record = Record::new(Leader::default());
+///     writer.write_record(&record)?;
+/// }
+/// # Ok(())
+/// # }
+/// ```
 pub struct MarcWriter<W: Write> {
     writer: W,
 }
 
 impl<W: Write> MarcWriter<W> {
-    /// Create a new MARC writer
+    /// Create a new MARC writer.
+    ///
+    /// # Arguments
+    ///
+    /// * `writer` - Any destination implementing [`std::io::Write`]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mrrc::MarcWriter;
+    /// let buffer = Vec::new();
+    /// let writer = MarcWriter::new(buffer);
+    /// ```
     pub fn new(writer: W) -> Self {
         MarcWriter { writer }
     }
 
-    /// Write a single MARC record
+    /// Write a single MARC record.
+    ///
+    /// Serializes the record to ISO 2709 binary format and writes it to the
+    /// underlying writer.
+    ///
+    /// # Arguments
+    ///
+    /// * `record` - The record to write
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use mrrc::{MarcWriter, Record, Field, Leader};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut buffer = Vec::new();
+    /// {
+    ///     let mut writer = MarcWriter::new(&mut buffer);
+    ///     let mut record = Record::new(Leader::default());
+    ///     let mut field = Field::new("245".to_string(), '1', '0');
+    ///     field.add_subfield('a', "Title".to_string());
+    ///     record.add_field(field);
+    ///     writer.write_record(&record)?;
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The record structure is invalid
+    /// - An I/O error occurs during writing
     pub fn write_record(&mut self, record: &Record) -> Result<()> {
         // Build the data area first
         let mut data_area = Vec::new();

@@ -1,3 +1,38 @@
+//! Reading MARC records from binary streams.
+//!
+//! This module provides [`MarcReader`] for reading ISO 2709 formatted MARC records
+//! from any source that implements [`std::io::Read`].
+//!
+//! # Examples
+//!
+//! Reading records from a file:
+//!
+//! ```no_run
+//! use mrrc::MarcReader;
+//! use std::fs::File;
+//!
+//! let file = File::open("records.mrc")?;
+//! let mut reader = MarcReader::new(file);
+//!
+//! while let Some(record) = reader.read_record()? {
+//!     println!("Record type: {}", record.leader.record_type);
+//! }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! Reading from a buffer:
+//!
+//! ```
+//! use mrrc::MarcReader;
+//! use std::io::Cursor;
+//!
+//! let data = b"...binary MARC data...";
+//! let cursor = Cursor::new(data.to_vec());
+//! let mut reader = MarcReader::new(cursor);
+//!
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+
 use crate::error::{MarcError, Result};
 use crate::leader::Leader;
 use crate::record::{Field, Record};
@@ -6,18 +41,80 @@ use std::io::Read;
 const FIELD_TERMINATOR: u8 = 0x1E;
 const SUBFIELD_DELIMITER: u8 = 0x1F;
 
-/// Reader for ISO 2709 binary MARC format
+/// Reader for ISO 2709 binary MARC format.
+///
+/// `MarcReader` reads one MARC record at a time from any source implementing [`std::io::Read`].
+/// Records are fully parsed and returned as [`Record`] instances.
+///
+/// # Examples
+///
+/// ```
+/// use mrrc::MarcReader;
+/// use std::io::Cursor;
+///
+/// let binary_data = vec![]; // MARC binary data
+/// let cursor = Cursor::new(binary_data);
+/// let mut reader = MarcReader::new(cursor);
+///
+/// match reader.read_record() {
+///     Ok(Some(record)) => println!("Record type: {}", record.leader.record_type),
+///     Ok(None) => println!("End of file"),
+///     Err(e) => eprintln!("Error: {}", e),
+/// }
+/// ```
 pub struct MarcReader<R: Read> {
     reader: R,
 }
 
 impl<R: Read> MarcReader<R> {
-    /// Create a new MARC reader
+    /// Create a new MARC reader.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - Any source implementing [`std::io::Read`]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mrrc::MarcReader;
+    /// use std::io::Cursor;
+    ///
+    /// let data = vec![];
+    /// let cursor = Cursor::new(data);
+    /// let reader = MarcReader::new(cursor);
+    /// ```
     pub fn new(reader: R) -> Self {
         MarcReader { reader }
     }
 
-    /// Read a single MARC record
+    /// Read a single MARC record.
+    ///
+    /// Returns `Ok(Some(record))` if a record was successfully read, `Ok(None)` if EOF
+    /// was reached, or `Err` if a parsing error occurred.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mrrc::MarcReader;
+    /// use std::io::Cursor;
+    ///
+    /// # let data = vec![];
+    /// # let cursor = Cursor::new(data);
+    /// let mut reader = MarcReader::new(cursor);
+    ///
+    /// match reader.read_record() {
+    ///     Ok(Some(record)) => { /* process record */ },
+    ///     Ok(None) => println!("End of file"),
+    ///     Err(e) => eprintln!("Error: {}", e),
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The binary data is malformed
+    /// - The record structure is invalid
+    /// - An I/O error occurs
     pub fn read_record(&mut self) -> Result<Option<Record>> {
         // Read the leader (24 bytes)
         let mut leader_bytes = vec![0u8; 24];

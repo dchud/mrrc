@@ -1,13 +1,39 @@
+//! MARCJSON serialization and deserialization of MARC records.
+//!
+//! MARCJSON is the standard JSON-LD format for MARC records used in the library community.
+//! It provides a structured representation suitable for APIs and web services.
+//!
+//! # Format
+//!
+//! - Leader is a special field with key "leader"
+//! - Control fields (001-009): `{tag: value}`
+//! - Data fields (010+): `{tag: {ind1, ind2, subfields: [{code: value}, ...]}}`
+
 use crate::error::{MarcError, Result};
 use crate::leader::Leader;
 use crate::record::{Field, Record};
 use serde_json::{json, Value};
 
-/// Convert a MARC record to MARCJSON format
-/// MARCJSON is a standard JSON interchange format for MARC records
-/// Format: array of fields where each field is an object with:
-/// - Control fields (001-009): {tag: value}
-/// - Data fields (010+): {tag: {ind1, ind2, subfields: [{code: value}, ...]}}
+/// Convert a MARC record to MARCJSON format.
+///
+/// MARCJSON is a standard JSON-LD interchange format for MARC records.
+/// It's widely used in library systems for API communication.
+///
+/// # Examples
+///
+/// ```ignore
+/// use mrrc::{Record, Field, Leader, marcjson};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut record = Record::new(Leader::default());
+/// let mut field = Field::new("245".to_string(), '1', '0');
+/// field.add_subfield('a', "Title".to_string());
+/// record.add_field(field);
+///
+/// let json = marcjson::record_to_marcjson(&record)?;
+/// # Ok(())
+/// # }
+/// ```
 pub fn record_to_marcjson(record: &Record) -> Result<Value> {
     let mut fields = Vec::new();
 

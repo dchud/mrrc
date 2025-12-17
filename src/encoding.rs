@@ -1,7 +1,20 @@
+//! Character encoding support for MARC records.
+//!
+//! MARC records can use different character encodings:
+//! - **MARC-8** (legacy) — Mixed character sets with escape sequences
+//! - **UTF-8** (modern) — Unicode standard encoding
+//!
+//! The encoding is indicated in position 9 of the MARC leader:
+//! - Space character = MARC-8
+//! - 'a' = UTF-8
+//!
+//! This module provides automatic encoding detection and conversion.
+
 use crate::error::{MarcError, Result};
 
-/// Character encoding support for MARC records
-/// MARC records can use different encodings: MARC-8 (legacy) and UTF-8
+/// Character encoding for MARC records.
+///
+/// Indicates the character set used to encode field data in a MARC record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MarcEncoding {
     /// MARC-8 encoding (legacy, mixed character sets)
