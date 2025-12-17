@@ -1,6 +1,7 @@
 pub mod error;
 pub mod json;
 pub mod leader;
+pub mod marcjson;
 pub mod reader;
 pub mod record;
 pub mod writer;
