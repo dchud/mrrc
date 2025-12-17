@@ -1,4 +1,33 @@
+# Rust build artifacts
 /target/
+Cargo.lock
 **/*.rs.bk
 *.pdb
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+.env
+.env.local
+
+# Profiling and coverage
+*.profraw
+*.profdata
+/coverage/
+*.lcov
+
+# Documentation
+/doc/
+/docs/
+
+# Test outputs
+test-output/
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
