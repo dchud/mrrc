@@ -1,0 +1,31 @@
+[package]
+name = "mrrc"
+version = "0.1.0"
+edition = "2021"
+authors = ["MARC Rust Community"]
+description = "A Rust library for working with MARC bibliographic data"
+license = "MIT"
+repository = "https://github.com/mrrc/mrrc"
+
+[dependencies]
+# Core parsing and data handling
+bytes = "1.5"
+nom = "7.1"
+
+# Encoding support
+encoding_rs = "0.8"
+
+# Serialization formats
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+quick-xml = "0.31"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Testing and examples
+#proptest = "1.0"
+
+[dev-dependencies]
+proptest = "1.0"
