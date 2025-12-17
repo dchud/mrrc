@@ -6,6 +6,7 @@ authors = ["MARC Rust Community"]
 description = "A Rust library for working with MARC bibliographic data"
 license = "MIT"
 repository = "https://github.com/mrrc/mrrc"
+rust-version = "1.71"
 
 [dependencies]
 # Core parsing and data handling

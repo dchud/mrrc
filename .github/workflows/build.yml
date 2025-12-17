@@ -55,8 +55,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust 1.70
-        uses: dtolnay/rust-toolchain@1.70
+      - name: Install Rust 1.71
+        uses: dtolnay/rust-toolchain@1.71
 
       - name: Cache cargo registry
         uses: actions/cache@v3
