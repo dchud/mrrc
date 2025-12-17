@@ -1,4 +1,4 @@
-use crate::error::{MarcError, Result};
+use crate::error::Result;
 use crate::record::Record;
 use std::io::Write;
 
@@ -137,7 +137,7 @@ mod tests {
 
         // Verify basic structure
         assert!(buffer.len() > 24); // At least leader + data
-        // Record length: 24 (leader) + 13 (directory: 245 + 0015 + 00000 + terminator) + 15 (field data) + 1 (record term) = 53
+                                    // Record length: 24 (leader) + 13 (directory: 245 + 0015 + 00000 + terminator) + 15 (field data) + 1 (record term) = 53
         assert_eq!(&buffer[0..5], b"00053"); // Record length
         assert_eq!(buffer[24], b'2'); // Start of directory (tag '245')
     }

@@ -1,12 +1,12 @@
-pub mod leader;
-pub mod record;
 pub mod error;
-pub mod reader;
-pub mod writer;
 pub mod json;
+pub mod leader;
+pub mod reader;
+pub mod record;
+pub mod writer;
 
-pub use leader::Leader;
-pub use record::{Record, Field, Subfield};
 pub use error::{MarcError, Result};
+pub use leader::Leader;
 pub use reader::MarcReader;
+pub use record::{Field, Record, Subfield};
 pub use writer::MarcWriter;

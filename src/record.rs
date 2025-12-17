@@ -59,7 +59,7 @@ impl Record {
     pub fn add_field(&mut self, field: Field) {
         self.data_fields
             .entry(field.tag.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(field);
     }
 
@@ -149,7 +149,7 @@ mod tests {
     fn test_add_control_field() {
         let leader = make_leader();
         let mut record = Record::new(leader);
-        
+
         record.add_control_field("001".to_string(), "12345".to_string());
         assert_eq!(record.get_control_field("001"), Some("12345"));
     }

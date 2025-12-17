@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::record::{Record, Field, Subfield};
+use crate::record::{Field, Record};
 use serde_json::{json, Value};
 
 /// Convert a MARC record to JSON
@@ -88,11 +88,9 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
                 }
             } else {
                 // Data field
-                let field_obj = value
-                    .as_object()
-                    .ok_or_else(|| {
-                        MarcError::InvalidField(format!("Field {} must be object", tag))
-                    })?;
+                let field_obj = value.as_object().ok_or_else(|| {
+                    MarcError::InvalidField(format!("Field {} must be object", tag))
+                })?;
 
                 let ind1 = field_obj
                     .get("ind1")
@@ -108,7 +106,8 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
 
                 let mut field = Field::new(tag.clone(), ind1, ind2);
 
-                if let Some(subfields_obj) = field_obj.get("subfields").and_then(|v| v.as_object()) {
+                if let Some(subfields_obj) = field_obj.get("subfields").and_then(|v| v.as_object())
+                {
                     for (code, value) in subfields_obj {
                         if let Some(code_char) = code.chars().next() {
                             if let Some(str_value) = value.as_str() {

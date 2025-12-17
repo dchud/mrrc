@@ -37,9 +37,10 @@ impl Leader {
     /// Parse a leader from 24 bytes
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         if bytes.len() < 24 {
-            return Err(MarcError::InvalidLeader(
-                format!("Leader must be at least 24 bytes, got {}", bytes.len())
-            ));
+            return Err(MarcError::InvalidLeader(format!(
+                "Leader must be at least 24 bytes, got {}",
+                bytes.len()
+            )));
         }
 
         let record_length = parse_digits(&bytes[0..5])?;
@@ -49,17 +50,19 @@ impl Leader {
         let control_record_type = bytes[8] as char;
         let character_coding = bytes[9] as char;
 
-        let indicator_count = (bytes[10] as char)
-            .to_digit(10)
-            .ok_or_else(|| MarcError::InvalidLeader(
-                format!("Invalid indicator count at position 10: {}", bytes[10] as char)
-            ))? as u8;
+        let indicator_count = (bytes[10] as char).to_digit(10).ok_or_else(|| {
+            MarcError::InvalidLeader(format!(
+                "Invalid indicator count at position 10: {}",
+                bytes[10] as char
+            ))
+        })? as u8;
 
-        let subfield_code_count = (bytes[11] as char)
-            .to_digit(10)
-            .ok_or_else(|| MarcError::InvalidLeader(
-                format!("Invalid subfield code count at position 11: {}", bytes[11] as char)
-            ))? as u8;
+        let subfield_code_count = (bytes[11] as char).to_digit(10).ok_or_else(|| {
+            MarcError::InvalidLeader(format!(
+                "Invalid subfield code count at position 11: {}",
+                bytes[11] as char
+            ))
+        })? as u8;
 
         let data_base_address = parse_digits(&bytes[12..17])?;
         let encoding_level = bytes[17] as char;
@@ -107,9 +110,10 @@ impl Leader {
         // Reserved (4 bytes)
         let reserved_bytes = self.reserved.as_bytes();
         if reserved_bytes.len() != 4 {
-            return Err(MarcError::InvalidLeader(
-                format!("Reserved field must be 4 characters, got {}", reserved_bytes.len())
-            ));
+            return Err(MarcError::InvalidLeader(format!(
+                "Reserved field must be 4 characters, got {}",
+                reserved_bytes.len()
+            )));
         }
         bytes.extend_from_slice(reserved_bytes);
 
@@ -120,16 +124,15 @@ impl Leader {
 /// Parse 5-digit ASCII number from bytes
 fn parse_digits(bytes: &[u8]) -> Result<u32> {
     if bytes.len() != 5 {
-        return Err(MarcError::InvalidLeader(
-            format!("Expected 5-digit field, got {} bytes", bytes.len())
-        ));
+        return Err(MarcError::InvalidLeader(format!(
+            "Expected 5-digit field, got {} bytes",
+            bytes.len()
+        )));
     }
 
     let s = String::from_utf8_lossy(bytes);
     s.parse::<u32>()
-        .map_err(|_| MarcError::InvalidLeader(
-            format!("Invalid numeric field: '{}'", s)
-        ))
+        .map_err(|_| MarcError::InvalidLeader(format!("Invalid numeric field: '{}'", s)))
 }
 
 #[cfg(test)]

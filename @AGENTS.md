@@ -12,6 +12,18 @@ bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
 
+## Code Quality Standards
+
+**Before committing ANY code changes:**
+
+```bash
+cargo fmt                          # Format code
+cargo clippy --all-targets        # Lint all targets
+cargo test                        # Run all tests
+```
+
+All code must pass clippy with zero warnings and all tests must pass.
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.

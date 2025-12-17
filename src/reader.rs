@@ -1,11 +1,10 @@
 use crate::error::{MarcError, Result};
 use crate::leader::Leader;
-use crate::record::{Field, Record, Subfield};
-use std::io::{Read, Seek, SeekFrom};
+use crate::record::{Field, Record};
+use std::io::Read;
 
 const FIELD_TERMINATOR: u8 = 0x1E;
 const SUBFIELD_DELIMITER: u8 = 0x1F;
-const RECORD_TERMINATOR: u8 = 0x1D;
 
 /// Reader for ISO 2709 binary MARC format
 pub struct MarcReader<R: Read> {
@@ -44,7 +43,7 @@ impl<R: Read> MarcReader<R> {
         let mut record_data = vec![0u8; record_length - 24];
         self.reader
             .read_exact(&mut record_data)
-            .map_err(|e| MarcError::IoError(e))?;
+            .map_err(MarcError::IoError)?;
 
         // Parse directory
         let directory = &record_data[..directory_size];
@@ -75,9 +74,10 @@ impl<R: Read> MarcReader<R> {
 
             let end_position = start_position + field_length;
             if end_position > data.len() {
-                return Err(MarcError::InvalidRecord(
-                    format!("Field {} exceeds data area", tag),
-                ));
+                return Err(MarcError::InvalidRecord(format!(
+                    "Field {} exceeds data area",
+                    tag
+                )));
             }
 
             let field_data = &data[start_position..end_position];
@@ -86,7 +86,10 @@ impl<R: Read> MarcReader<R> {
             if tag == "LDR" {
                 // Leader is already parsed
                 continue;
-            } else if tag.starts_with('0') && tag.chars().all(|c| c.is_numeric()) && tag.as_str() < "010" {
+            } else if tag.starts_with('0')
+                && tag.chars().all(|c| c.is_numeric())
+                && tag.as_str() < "010"
+            {
                 // Control field (001-009)
                 let value = String::from_utf8_lossy(
                     &field_data[..field_data.len().saturating_sub(1)], // Remove field terminator
@@ -145,8 +148,7 @@ fn parse_data_field(data: &[u8], tag: &str) -> Result<Field> {
                 end += 1;
             }
 
-            let value =
-                String::from_utf8_lossy(&subfield_data[current_position..end]).to_string();
+            let value = String::from_utf8_lossy(&subfield_data[current_position..end]).to_string();
             field.add_subfield(code, value);
             current_position = end;
         } else {
@@ -162,9 +164,10 @@ fn parse_data_field(data: &[u8], tag: &str) -> Result<Field> {
 /// Parse a 4-digit ASCII number from bytes
 fn parse_4digits(bytes: &[u8]) -> Result<usize> {
     if bytes.len() != 4 {
-        return Err(MarcError::InvalidRecord(
-            format!("Expected 4-digit field, got {} bytes", bytes.len()),
-        ));
+        return Err(MarcError::InvalidRecord(format!(
+            "Expected 4-digit field, got {} bytes",
+            bytes.len()
+        )));
     }
 
     let s = String::from_utf8_lossy(bytes);
@@ -175,9 +178,10 @@ fn parse_4digits(bytes: &[u8]) -> Result<usize> {
 /// Parse a 5-digit ASCII number from bytes
 fn parse_digits(bytes: &[u8]) -> Result<usize> {
     if bytes.len() != 5 {
-        return Err(MarcError::InvalidRecord(
-            format!("Expected 5-digit field, got {} bytes", bytes.len()),
-        ));
+        return Err(MarcError::InvalidRecord(format!(
+            "Expected 5-digit field, got {} bytes",
+            bytes.len()
+        )));
     }
 
     let s = String::from_utf8_lossy(bytes);
@@ -190,54 +194,54 @@ mod tests {
     use super::*;
     use std::io::Cursor;
 
-
+    const RECORD_TERMINATOR: u8 = 0x1D;
 
     #[test]
     fn test_read_simple_record() {
         // Manually build a valid MARC record
         let mut record_bytes = Vec::new();
-        
+
         // Data area: field 245
         let mut field_245 = Vec::new();
-        field_245.extend_from_slice(b"10");  // Indicators
+        field_245.extend_from_slice(b"10"); // Indicators
         field_245.push(SUBFIELD_DELIMITER);
         field_245.push(b'a');
         field_245.extend_from_slice(b"Test title");
         field_245.push(FIELD_TERMINATOR);
-        
+
         // Directory (without terminator yet)
         let mut directory = Vec::new();
         directory.extend_from_slice(b"245");
         directory.extend_from_slice(format!("{:04}", field_245.len()).as_bytes());
         directory.extend_from_slice(b"00000");
-        
+
         // Base address is after leader + directory + directory terminator
-        let base_address = 24 + directory.len() + 1;  // +1 for directory terminator
+        let base_address = 24 + directory.len() + 1; // +1 for directory terminator
         directory.push(FIELD_TERMINATOR);
         let record_length = base_address + field_245.len() + 1;
-        
+
         // Leader (must be exactly 24 bytes)
         let mut leader = Vec::new();
-        leader.extend_from_slice(format!("{:05}", record_length).as_bytes());  // 0-4
-        leader.push(b'n');  // 5: status
-        leader.push(b'a');  // 6: type
-        leader.push(b'm');  // 7: bib level
-        leader.push(b' ');  // 8: control type
-        leader.push(b'a');  // 9: character coding
-        leader.push(b'2');  // 10: indicator count
-        leader.push(b'2');  // 11: subfield code count
-        leader.extend_from_slice(format!("{:05}", base_address).as_bytes());  // 12-16
-        leader.push(b' ');  // 17: encoding level
-        leader.push(b' ');  // 18: cataloging form
-        leader.push(b' ');  // 19: multipart level
-        leader.extend_from_slice(b"4500");  // 20-23: reserved
-        
+        leader.extend_from_slice(format!("{:05}", record_length).as_bytes()); // 0-4
+        leader.push(b'n'); // 5: status
+        leader.push(b'a'); // 6: type
+        leader.push(b'm'); // 7: bib level
+        leader.push(b' '); // 8: control type
+        leader.push(b'a'); // 9: character coding
+        leader.push(b'2'); // 10: indicator count
+        leader.push(b'2'); // 11: subfield code count
+        leader.extend_from_slice(format!("{:05}", base_address).as_bytes()); // 12-16
+        leader.push(b' '); // 17: encoding level
+        leader.push(b' '); // 18: cataloging form
+        leader.push(b' '); // 19: multipart level
+        leader.extend_from_slice(b"4500"); // 20-23: reserved
+
         // Assemble
         record_bytes.extend_from_slice(&leader);
         record_bytes.extend_from_slice(&directory);
         record_bytes.extend_from_slice(&field_245);
         record_bytes.push(RECORD_TERMINATOR);
-        
+
         let cursor = Cursor::new(record_bytes);
         let mut reader = MarcReader::new(cursor);
 
@@ -268,7 +272,7 @@ mod tests {
     fn test_read_multiple_records() {
         // Build two records
         let mut all_bytes = Vec::new();
-        
+
         for _ in 0..2 {
             let mut field_245 = Vec::new();
             field_245.extend_from_slice(b"10");
@@ -276,31 +280,31 @@ mod tests {
             field_245.push(b'a');
             field_245.extend_from_slice(b"Test title");
             field_245.push(FIELD_TERMINATOR);
-            
+
             let mut directory = Vec::new();
             directory.extend_from_slice(b"245");
             directory.extend_from_slice(format!("{:04}", field_245.len()).as_bytes());
             directory.extend_from_slice(b"00000");
-            
+
             let base_address = 24 + directory.len() + 1;
             directory.push(FIELD_TERMINATOR);
             let record_length = base_address + field_245.len() + 1;
-            
+
             let mut leader = Vec::new();
-            leader.extend_from_slice(format!("{:05}", record_length).as_bytes());  // 0-4
-            leader.push(b'n');  // 5
-            leader.push(b'a');  // 6
-            leader.push(b'm');  // 7
-            leader.push(b' ');  // 8
-            leader.push(b'a');  // 9
-            leader.push(b'2');  // 10
-            leader.push(b'2');  // 11
-            leader.extend_from_slice(format!("{:05}", base_address).as_bytes());  // 12-16
-            leader.push(b' ');  // 17
-            leader.push(b' ');  // 18
-            leader.push(b' ');  // 19
-            leader.extend_from_slice(b"4500");  // 20-23
-            
+            leader.extend_from_slice(format!("{:05}", record_length).as_bytes()); // 0-4
+            leader.push(b'n'); // 5
+            leader.push(b'a'); // 6
+            leader.push(b'm'); // 7
+            leader.push(b' '); // 8
+            leader.push(b'a'); // 9
+            leader.push(b'2'); // 10
+            leader.push(b'2'); // 11
+            leader.extend_from_slice(format!("{:05}", base_address).as_bytes()); // 12-16
+            leader.push(b' '); // 17
+            leader.push(b' '); // 18
+            leader.push(b' '); // 19
+            leader.extend_from_slice(b"4500"); // 20-23
+
             all_bytes.extend_from_slice(&leader);
             all_bytes.extend_from_slice(&directory);
             all_bytes.extend_from_slice(&field_245);
