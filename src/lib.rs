@@ -1,3 +1,4 @@
+pub mod encoding;
 pub mod error;
 pub mod json;
 pub mod leader;
