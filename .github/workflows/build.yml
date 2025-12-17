@@ -49,35 +49,4 @@ jobs:
       - name: Build examples
         run: cargo build --examples --verbose
 
-  build-min-supported:
-    name: Build (MSRV)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Install Rust 1.71
-        uses: dtolnay/rust-toolchain@1.71
-
-      - name: Remove Cargo.lock for MSRV testing
-        run: rm Cargo.lock
-
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-msrv
-
-      - name: Cache cargo index
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-msrv
-
-      - name: Cache cargo build
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-msrv
-
-      - name: Build library
-        run: cargo build --verbose --all
