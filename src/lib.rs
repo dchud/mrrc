@@ -3,6 +3,7 @@ pub mod record;
 pub mod error;
 pub mod reader;
 pub mod writer;
+pub mod json;
 
 pub use leader::Leader;
 pub use record::{Record, Field, Subfield};
