@@ -4,6 +4,7 @@ pub mod leader;
 pub mod reader;
 pub mod record;
 pub mod writer;
+pub mod xml;
 
 pub use error::{MarcError, Result};
 pub use leader::Leader;
