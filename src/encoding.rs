@@ -398,4 +398,106 @@ mod tests {
         // The string should be properly decoded
         assert!(decoded.contains("caf"));
     }
+
+    #[test]
+    fn test_marc8_roundtrip_ascii() {
+        // ASCII text should roundtrip cleanly
+        let original = "The Quick Brown Fox";
+        let encoded = encode_string(original, MarcEncoding::Marc8).unwrap();
+        let decoded = decode_bytes(&encoded, MarcEncoding::Marc8).unwrap();
+        assert_eq!(original, decoded);
+    }
+
+    #[test]
+    fn test_marc8_roundtrip_with_escape_sequences() {
+        // Text with escape sequences should decode properly
+        // This is a simplified test - real MARC-8 records would have more complex sequences
+        let bytes = b"ASCII\x1B(BMore";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert_eq!(decoded, "ASCIIMore");
+    }
+
+    #[test]
+    fn test_marc8_multiple_character_sets() {
+        // Test switching between character sets
+        // ESC ) E switches G1 to ANSEL
+        let bytes = b"\x1B)EText";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert_eq!(decoded, "Text");
+    }
+
+    #[test]
+    fn test_marc8_greek_symbol_escape() {
+        // ESC g should switch to Greek symbols (deprecated but supported)
+        let bytes = b"\x1BgA";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        // Greek symbols are marked but we don't have a full table yet
+        // Just verify it doesn't crash
+        assert!(!decoded.is_empty());
+    }
+
+    #[test]
+    fn test_marc8_incomplete_escape_at_end() {
+        // Incomplete escape sequence at end should be handled gracefully
+        let bytes = b"Text\x1B";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        // Should handle gracefully - replacement character or skip
+        assert!(decoded.contains("Text"));
+    }
+
+    #[test]
+    fn test_marc8_control_characters_ignored() {
+        // Control characters (except LF/CR) should be skipped
+        let mut bytes = Vec::from(&b"Hello"[..]);
+        bytes.insert(2, 0x01); // Insert a control character
+        let decoded = decode_bytes(&bytes, MarcEncoding::Marc8).unwrap();
+        // Control char should be skipped
+        assert_eq!(decoded.len(), 5); // "Hello"
+    }
+
+    #[test]
+    fn test_marc8_vs_utf8_equivalence() {
+        // ASCII should be the same in both encodings
+        let text = "Simple ASCII Text 12345";
+        let utf8_encoded = encode_string(text, MarcEncoding::Utf8).unwrap();
+        let marc8_encoded = encode_string(text, MarcEncoding::Marc8).unwrap();
+        // ASCII should be identical in both
+        assert_eq!(utf8_encoded, marc8_encoded);
+        
+        // Both should decode to the same result
+        let from_utf8 = decode_bytes(&utf8_encoded, MarcEncoding::Utf8).unwrap();
+        let from_marc8 = decode_bytes(&marc8_encoded, MarcEncoding::Marc8).unwrap();
+        assert_eq!(from_utf8, from_marc8);
+    }
+
+    #[test]
+    fn test_marc8_replacement_char_on_unknown() {
+        // Unknown escape sequences should be skipped
+        let bytes = b"\x1B\xFF";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        // Unknown sequences are skipped in parsing
+        // The 0xFF byte is a control character, so it's also skipped
+        // Result should be empty or just whitespace
+        assert!(decoded.is_empty() || decoded.chars().all(|c| c.is_whitespace()));
+    }
+
+    #[test]
+    fn test_marc8_high_byte_range_uses_g1() {
+        // High bytes (0xA0-0xFE) should use G1 character set (default: ANSEL)
+        // Without escape sequences, should default to ASCII for low bytes and ANSEL for high bytes
+        let bytes = &[0x41, 0xA0]; // 'A' in ASCII, 0xA0 in ANSEL (should map to space)
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert_eq!(decoded, "A ");
+    }
+
+    #[test]
+    fn test_marc8_eacc_multibyte_skip() {
+        // EACC sequences should be recognized even if we skip them for now
+        let bytes = b"\x1B$1ABC";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        // EACC charset is switched but we skip multibyte processing
+        // The 'A', 'B', 'C' bytes are treated as 3-byte sequences, so we skip them
+        // Result should be empty or minimal
+        assert!(decoded.is_empty() || decoded.len() <= 3);
+    }
 }
