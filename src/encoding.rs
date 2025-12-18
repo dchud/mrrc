@@ -227,8 +227,23 @@ fn decode_marc8(bytes: &[u8]) -> Result<String> {
         if Marc8Decoder::is_multibyte(charset) {
             if i + 2 < bytes.len() {
                 // EACC: 3-byte sequence
-                // Try to decode as UTF-8 first, then as EACC lookup
-                // For now, we'll skip multibyte and just move forward
+                // Concatenate 3 bytes into a u32 key for lookup
+                let key = ((bytes[i] as u32) << 16) | ((bytes[i + 1] as u32) << 8) | (bytes[i + 2] as u32);
+                
+                if let Some((unicode_point, is_combining)) = crate::marc8_tables::get_eacc_character(key) {
+                    let ch = char::from_u32(unicode_point).unwrap_or('\u{FFFD}');
+                    if is_combining {
+                        combining_chars.push(ch);
+                    } else {
+                        for combining_ch in combining_chars.drain(..) {
+                            result.push(combining_ch);
+                        }
+                        result.push(ch);
+                    }
+                } else {
+                    // Character not in EACC table - use replacement
+                    result.push('\u{FFFD}');
+                }
                 i += 3;
                 continue;
             }
@@ -491,13 +506,44 @@ mod tests {
     }
 
     #[test]
-    fn test_marc8_eacc_multibyte_skip() {
-        // EACC sequences should be recognized even if we skip them for now
-        let bytes = b"\x1B$1ABC";
+    fn test_marc8_eacc_multibyte_decoding() {
+        // Test EACC (East Asian Character Code) 3-byte sequence decoding
+        // EACC is switched with ESC $ 1 (0x1B 0x24 0x31)
+        // Then 3-byte sequences follow
+        
+        // Example: IDEOGRAPHIC SPACE (U+3000) is at EACC key 0x212320
+        // We construct: ESC $ 1 (switch to EACC) followed by 0x21 0x23 0x20
+        let bytes = b"\x1B\x24\x31\x21\x23\x20";
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
-        // EACC charset is switched but we skip multibyte processing
-        // The 'A', 'B', 'C' bytes are treated as 3-byte sequences, so we skip them
-        // Result should be empty or minimal
-        assert!(decoded.is_empty() || decoded.len() <= 3);
+        
+        // Should have decoded the IDEOGRAPHIC SPACE character
+        assert!(!decoded.is_empty(), "Should decode EACC character");
+        assert_eq!(decoded, "\u{3000}");  // U+3000 is IDEOGRAPHIC SPACE
+    }
+    
+    #[test]
+    fn test_marc8_eacc_multiple_characters() {
+        // Test multiple EACC characters in sequence
+        // 0x212320 = U+3000 (IDEOGRAPHIC SPACE)
+        // 0x212328 = U+FF08 (FULLWIDTH LEFT PARENTHESIS)
+        let bytes = b"\x1B\x24\x31\x21\x23\x20\x21\x23\x28";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        
+        assert!(!decoded.is_empty(), "Should decode multiple EACC characters");
+        // Should have both IDEOGRAPHIC SPACE and FULLWIDTH LEFT PARENTHESIS
+        assert!(decoded.contains('\u{3000}'), "Should contain IDEOGRAPHIC SPACE");
+        assert!(decoded.contains('\u{FF08}'), "Should contain FULLWIDTH LEFT PARENTHESIS");
+    }
+    
+    #[test]
+    fn test_marc8_eacc_with_reset() {
+        // Test EACC characters followed by reset to ASCII
+        // 0x212320 = U+3000, then reset to ASCII with ESC ( B, then 'A'
+        let bytes = b"\x1B\x24\x31\x21\x23\x20\x1B\x28\x42A";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        
+        assert!(!decoded.is_empty(), "Should decode EACC and ASCII");
+        assert!(decoded.contains('\u{3000}'), "Should contain IDEOGRAPHIC SPACE");
+        assert!(decoded.contains('A'), "Should contain ASCII 'A'");
     }
 }
