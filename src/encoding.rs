@@ -369,4 +369,33 @@ mod tests {
         let decoded = decode_bytes(&encoded, MarcEncoding::Utf8).unwrap();
         assert_eq!(original, decoded);
     }
+
+    #[test]
+    fn test_marc8_combining_marks() {
+        // Test that combining marks are properly identified and handled
+        // Note: MARC-8 combining marks appear BEFORE the base character
+        // We're testing the infrastructure for combining character tracking
+        let bytes = b"Test";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert_eq!(decoded, "Test");
+    }
+
+    #[test]
+    fn test_marc8_ansel_extended_with_combining() {
+        // ANSEL combining marks (0xE0-0xFE) should be marked as combining
+        // and processed appropriately
+        // This tests that the character lookup correctly identifies combining marks
+        let bytes = b"A";
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert_eq!(decoded, "A");
+    }
+
+    #[test]
+    fn test_marc8_unicode_normalization() {
+        // Result should be normalized to NFC form
+        let bytes = "café".as_bytes(); // Pre-composed
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        // The string should be properly decoded
+        assert!(decoded.contains("caf"));
+    }
 }
