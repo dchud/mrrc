@@ -12,6 +12,7 @@ rust-version = "1.71"
 # Core parsing and data handling
 bytes = "1.5"
 nom = "7.1"
+lazy_static = "1.4"
 
 # Encoding support
 encoding_rs = "0.8"
