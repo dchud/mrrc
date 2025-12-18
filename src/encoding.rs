@@ -12,7 +12,7 @@
 //! support for MARC-8 escape sequences and character set switching.
 
 use crate::error::{MarcError, Result};
-use crate::marc8_tables::{CharacterSetId, get_charset_table};
+use crate::marc8_tables::{get_charset_table, CharacterSetId};
 
 /// Character encoding for MARC records.
 ///
@@ -228,9 +228,13 @@ fn decode_marc8(bytes: &[u8]) -> Result<String> {
             if i + 2 < bytes.len() {
                 // EACC: 3-byte sequence
                 // Concatenate 3 bytes into a u32 key for lookup
-                let key = ((bytes[i] as u32) << 16) | ((bytes[i + 1] as u32) << 8) | (bytes[i + 2] as u32);
-                
-                if let Some((unicode_point, is_combining)) = crate::marc8_tables::get_eacc_character(key) {
+                let key = ((bytes[i] as u32) << 16)
+                    | ((bytes[i + 1] as u32) << 8)
+                    | (bytes[i + 2] as u32);
+
+                if let Some((unicode_point, is_combining)) =
+                    crate::marc8_tables::get_eacc_character(key)
+                {
                     let ch = char::from_u32(unicode_point).unwrap_or('\u{FFFD}');
                     if is_combining {
                         combining_chars.push(ch);
@@ -478,7 +482,7 @@ mod tests {
         let marc8_encoded = encode_string(text, MarcEncoding::Marc8).unwrap();
         // ASCII should be identical in both
         assert_eq!(utf8_encoded, marc8_encoded);
-        
+
         // Both should decode to the same result
         let from_utf8 = decode_bytes(&utf8_encoded, MarcEncoding::Utf8).unwrap();
         let from_marc8 = decode_bytes(&marc8_encoded, MarcEncoding::Marc8).unwrap();
@@ -510,17 +514,17 @@ mod tests {
         // Test EACC (East Asian Character Code) 3-byte sequence decoding
         // EACC is switched with ESC $ 1 (0x1B 0x24 0x31)
         // Then 3-byte sequences follow
-        
+
         // Example: IDEOGRAPHIC SPACE (U+3000) is at EACC key 0x212320
         // We construct: ESC $ 1 (switch to EACC) followed by 0x21 0x23 0x20
         let bytes = b"\x1B\x24\x31\x21\x23\x20";
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
-        
+
         // Should have decoded the IDEOGRAPHIC SPACE character
         assert!(!decoded.is_empty(), "Should decode EACC character");
-        assert_eq!(decoded, "\u{3000}");  // U+3000 is IDEOGRAPHIC SPACE
+        assert_eq!(decoded, "\u{3000}"); // U+3000 is IDEOGRAPHIC SPACE
     }
-    
+
     #[test]
     fn test_marc8_eacc_multiple_characters() {
         // Test multiple EACC characters in sequence
@@ -528,22 +532,34 @@ mod tests {
         // 0x212328 = U+FF08 (FULLWIDTH LEFT PARENTHESIS)
         let bytes = b"\x1B\x24\x31\x21\x23\x20\x21\x23\x28";
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
-        
-        assert!(!decoded.is_empty(), "Should decode multiple EACC characters");
+
+        assert!(
+            !decoded.is_empty(),
+            "Should decode multiple EACC characters"
+        );
         // Should have both IDEOGRAPHIC SPACE and FULLWIDTH LEFT PARENTHESIS
-        assert!(decoded.contains('\u{3000}'), "Should contain IDEOGRAPHIC SPACE");
-        assert!(decoded.contains('\u{FF08}'), "Should contain FULLWIDTH LEFT PARENTHESIS");
+        assert!(
+            decoded.contains('\u{3000}'),
+            "Should contain IDEOGRAPHIC SPACE"
+        );
+        assert!(
+            decoded.contains('\u{FF08}'),
+            "Should contain FULLWIDTH LEFT PARENTHESIS"
+        );
     }
-    
+
     #[test]
     fn test_marc8_eacc_with_reset() {
         // Test EACC characters followed by reset to ASCII
         // 0x212320 = U+3000, then reset to ASCII with ESC ( B, then 'A'
         let bytes = b"\x1B\x24\x31\x21\x23\x20\x1B\x28\x42A";
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
-        
+
         assert!(!decoded.is_empty(), "Should decode EACC and ASCII");
-        assert!(decoded.contains('\u{3000}'), "Should contain IDEOGRAPHIC SPACE");
+        assert!(
+            decoded.contains('\u{3000}'),
+            "Should contain IDEOGRAPHIC SPACE"
+        );
         assert!(decoded.contains('A'), "Should contain ASCII 'A'");
     }
 }

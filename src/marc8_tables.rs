@@ -3,7 +3,7 @@
 //! This module provides the complete character mappings for all MARC-8 character sets
 //! as defined by the Library of Congress MARC 21 specification.
 //!
-//! Reference: https://www.loc.gov/marc/specifications/specchartables.html
+//! Reference: <https://www.loc.gov/marc/specifications/specchartables.html>
 
 use std::collections::HashMap;
 
@@ -90,7 +90,7 @@ lazy_static::lazy_static! {
     /// Includes combining marks and extended Latin characters
     static ref ANSEL_EXTENDED_LATIN: HashMap<u8, CharacterMapping> = {
         let mut m = HashMap::new();
-        
+
         // ANSEL combining marks (diacritics) - appear before base character
         m.insert(0xE0, (0x0300, true));  // COMBINING GRAVE ACCENT
         m.insert(0xE1, (0x0301, true));  // COMBINING ACUTE ACCENT
@@ -110,10 +110,10 @@ lazy_static::lazy_static! {
         m.insert(0xEF, (0x0325, true));  // COMBINING RING BELOW
         m.insert(0xF0, (0x0233, false)); // LATIN SMALL LETTER Y WITH MACRON
         m.insert(0xFE, (0x0305, true));  // COMBINING OVERLINE
-        
+
         // ANSEL graphics (space character)
         m.insert(0xA0, (0x0020, false)); // NO-BREAK SPACE (space)
-        
+
         // ANSEL extended characters (0xA1-0xBF, 0xC0-0xDF)
         m.insert(0xA1, (0x0141, false)); // LATIN CAPITAL LETTER L WITH STROKE
         m.insert(0xA2, (0x00D8, false)); // LATIN CAPITAL LETTER O WITH STROKE
@@ -130,7 +130,7 @@ lazy_static::lazy_static! {
         m.insert(0xAD, (0x01A0, false)); // LATIN CAPITAL LETTER O WITH HORN
         m.insert(0xAE, (0x01AF, false)); // LATIN CAPITAL LETTER U WITH HORN
         m.insert(0xAF, (0x02BC, false)); // MODIFIER LETTER APOSTROPHE
-        
+
         m.insert(0xB0, (0x0142, false)); // LATIN SMALL LETTER L WITH STROKE
         m.insert(0xB1, (0x00F8, false)); // LATIN SMALL LETTER O WITH STROKE
         m.insert(0xB2, (0x0111, false)); // LATIN SMALL LETTER D WITH STROKE
@@ -147,7 +147,7 @@ lazy_static::lazy_static! {
         m.insert(0xBD, (0x0123, false)); // LATIN SMALL LETTER G WITH CEDILLA
         m.insert(0xBE, (0x0145, false)); // LATIN CAPITAL LETTER N WITH CEDILLA
         m.insert(0xBF, (0x0146, false)); // LATIN SMALL LETTER N WITH CEDILLA
-        
+
         m.insert(0xC0, (0x0156, false)); // LATIN CAPITAL LETTER R WITH CEDILLA
         m.insert(0xC1, (0x0157, false)); // LATIN SMALL LETTER R WITH CEDILLA
         m.insert(0xC2, (0x0132, false)); // LATIN CAPITAL LIGATURE IJ
@@ -164,7 +164,7 @@ lazy_static::lazy_static! {
         m.insert(0xCD, (0x0155, false)); // LATIN SMALL LETTER R WITH ACUTE
         m.insert(0xCE, (0x0158, false)); // LATIN CAPITAL LETTER R WITH CARON
         m.insert(0xCF, (0x0159, false)); // LATIN SMALL LETTER R WITH CARON
-        
+
         m.insert(0xD0, (0x0160, false)); // LATIN CAPITAL LETTER S WITH CARON
         m.insert(0xD1, (0x0161, false)); // LATIN SMALL LETTER S WITH CARON
         m.insert(0xD2, (0x0164, false)); // LATIN CAPITAL LETTER T WITH CARON
@@ -181,7 +181,7 @@ lazy_static::lazy_static! {
         m.insert(0xDD, (0x017C, false)); // LATIN SMALL LETTER Z WITH DOT ABOVE
         m.insert(0xDE, (0x017D, false)); // LATIN CAPITAL LETTER Z WITH CARON
         m.insert(0xDF, (0x017E, false)); // LATIN SMALL LETTER Z WITH CARON
-        
+
         m
     };
 
@@ -351,10 +351,9 @@ lazy_static::lazy_static! {
 
     /// Extended Cyrillic - 0x51
     static ref EXTENDED_CYRILLIC: HashMap<u8, CharacterMapping> = {
-        let m = HashMap::new();
         // This would contain additional Cyrillic characters
         // Truncated for example - would need full mappings
-        m
+        HashMap::new()
     };
 
     /// Basic Greek - 0x53
@@ -16177,9 +16176,18 @@ mod tests {
 
     #[test]
     fn test_charset_id_from_byte() {
-        assert_eq!(CharacterSetId::from_byte(0x42), Some(CharacterSetId::BasicLatin));
-        assert_eq!(CharacterSetId::from_byte(0x45), Some(CharacterSetId::AnselExtendedLatin));
-        assert_eq!(CharacterSetId::from_byte(0x32), Some(CharacterSetId::BasicHebrew));
+        assert_eq!(
+            CharacterSetId::from_byte(0x42),
+            Some(CharacterSetId::BasicLatin)
+        );
+        assert_eq!(
+            CharacterSetId::from_byte(0x45),
+            Some(CharacterSetId::AnselExtendedLatin)
+        );
+        assert_eq!(
+            CharacterSetId::from_byte(0x32),
+            Some(CharacterSetId::BasicHebrew)
+        );
         assert_eq!(CharacterSetId::from_byte(0x31), Some(CharacterSetId::EACC));
         assert_eq!(CharacterSetId::from_byte(0xFF), None);
     }
