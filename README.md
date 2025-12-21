@@ -78,6 +78,50 @@ let mut writer = MarcWriter::new(file);
 writer.write_record(&record)?;
 ```
 
+### Writing MARC Records with Builder API (Recommended)
+
+For a more fluent, idiomatic Rust experience, use the builder pattern:
+
+```rust,ignore
+use mrrc::{Record, Field, Leader};
+
+let record = Record::builder(Leader::default())
+    .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
+    .field(
+        Field::builder("245".to_string(), '1', '0')
+            .subfield_str('a', "The Great Gatsby /")
+            .subfield_str('c', "F. Scott Fitzgerald.")
+            .build()
+    )
+    .field(
+        Field::builder("100".to_string(), '1', ' ')
+            .subfield_str('a', "Fitzgerald, F. Scott,")
+            .subfield_str('d', "1896-1940")
+            .build()
+    )
+    .field(
+        Field::builder("650".to_string(), ' ', '0')
+            .subfield_str('a', "Psychological fiction.")
+            .build()
+    )
+    .field(
+        Field::builder("650".to_string(), ' ', '0')
+            .subfield_str('a', "United States")
+            .subfield_str('x', "History")
+            .subfield_str('y', "20th century")
+            .build()
+    )
+    .build();
+
+let mut writer = MarcWriter::new(buffer);
+writer.write_record(&record)?;
+```
+
+Benefits of the builder approach:
+- **Cleaner syntax** - No need for explicit `.to_string()` calls with `*_str()` methods
+- **Method chaining** - Build complex records in a single expression
+- **Type safety** - Compile-time checking of record structure
+
 ### Converting to Other Formats
 
 #### JSON Format
@@ -143,33 +187,48 @@ Breaking down:
 ### Record
 
 ```rust,ignore
-// Create a record
-let mut record = Record::new(Leader::default());
+// Create using builder (recommended)
+let record = Record::builder(Leader::default())
+    .control_field_str("001", "123456")
+    .field(field)
+    .build();
 
-// Add fields
-record.add_control_field("001".to_string(), "123456".to_string());
+// Or create manually
+let mut record = Record::new(Leader::default());
+record.add_control_field_str("001", "123456");
 record.add_field(field);
 
 // Retrieve fields
 if let Some(fields) = record.get_fields("245") { }
 if let Some(field) = record.get_field("245") { }
 
-// Iterate
+// Iterate over fields
 for field in record.fields() { }
+for field in record.fields_by_tag("650") { }  // By tag
+for (tag, value) in record.control_fields_iter() { }  // Control fields
 ```
 
 ### Field
 
 ```rust,ignore
-let mut field = Field::new("245".to_string(), '1', '0');
+// Create using builder (recommended)
+let field = Field::builder("245".to_string(), '1', '0')
+    .subfield_str('a', "Title")
+    .subfield_str('c', "Author")
+    .build();
 
-// Add subfields
-field.add_subfield('a', "Title".to_string());
-field.add_subfield('c', "Author".to_string());
+// Or create manually
+let mut field = Field::new("245".to_string(), '1', '0');
+field.add_subfield_str('a', "Title");
+field.add_subfield_str('c', "Author");
 
 // Retrieve subfields
 if let Some(value) = field.get_subfield('a') { }
-let values = field.get_subfield_values('a'); // Multiple occurrences
+let values = field.get_subfield_values('a');  // Multiple occurrences
+
+// Iterate over subfields
+for subfield in field.subfields() { }
+for value in field.subfields_by_code('a') { }  // By code
 ```
 
 ### MarcReader & MarcWriter
@@ -186,9 +245,9 @@ writer.write_record(&record)?;
 
 ## Testing
 
-The library includes 46 comprehensive tests covering:
+The library includes 97 comprehensive tests covering:
 
-- **Unit tests** (38): Individual component functionality
+- **Unit tests** (89): Individual component functionality, including builder and iterator API
 - **Integration tests** (8): End-to-end reading, writing, and format conversions
 
 Run tests with:
@@ -212,9 +271,9 @@ Test data files are in `tests/data/`:
 
 ## Known Limitations
 
-- No helper methods yet for common field extraction (e.g., `get_title()`, `get_author()`)
 - Limited validation of field indicators and indicator semantics
 - No support for MARC Authority records (planned)
+- No direct support for MARC Authorities or Holdings records yet
 
 ## Development Status
 
