@@ -1,5 +1,3 @@
-#![allow(clippy::needless_continue, clippy::redundant_closure_for_method_calls)]
-
 //! Reading MARC records from binary streams.
 //!
 //! This module provides [`MarcReader`] for reading ISO 2709 formatted MARC records
@@ -181,25 +179,22 @@ impl<R: Read> MarcReader<R> {
 
             let field_data = &data[start_position..end_position];
 
-            // Parse field
-            if tag == "LDR" {
-                // Leader is already parsed
-                continue;
-            } else if tag.starts_with('0')
-                && tag.chars().all(char::is_numeric)
-                && tag.as_str() < "010"
-            {
-                // Control field (001-009)
-                let value = String::from_utf8_lossy(
-                    &field_data[..field_data.len().saturating_sub(1)], // Remove field terminator
-                )
-                .to_string();
-                record.add_control_field(tag, value);
-            } else {
-                // Data field (010+)
-                parse_data_field(field_data, &tag)
-                    .map(|field| record.add_field(field))
-                    .map_err(|e| MarcError::InvalidField(format!("Tag {tag}: {e}")))?;
+            // Parse field (skip LDR as it's already parsed)
+            if tag != "LDR" {
+                if tag.starts_with('0') && tag.chars().all(char::is_numeric) && tag.as_str() < "010"
+                {
+                    // Control field (001-009)
+                    let value = String::from_utf8_lossy(
+                        &field_data[..field_data.len().saturating_sub(1)], // Remove field terminator
+                    )
+                    .to_string();
+                    record.add_control_field(tag, value);
+                } else {
+                    // Data field (010+)
+                    parse_data_field(field_data, &tag)
+                        .map(|field| record.add_field(field))
+                        .map_err(|e| MarcError::InvalidField(format!("Tag {tag}: {e}")))?;
+                }
             }
         }
 

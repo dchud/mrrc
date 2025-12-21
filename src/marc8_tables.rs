@@ -143,7 +143,7 @@ fn find_in_charset(charset: CharacterSetId, unicode_char: u32) -> Option<(u32, b
     let table = get_charset_table(charset);
     for (&byte, &(unicode, is_combining)) in table {
         if unicode == unicode_char {
-            return Some((byte as u32, is_combining));
+            return Some((u32::from(byte), is_combining));
         }
     }
     None
@@ -155,7 +155,7 @@ lazy_static::lazy_static! {
         let mut m = HashMap::new();
         // ASCII printable characters: 0x20-0x7E
         for i in 0x20..=0x7E {
-            m.insert(i, (i as u32, false));
+            m.insert(i, (u32::from(i), false));
         }
         m
     };
