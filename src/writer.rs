@@ -1,5 +1,3 @@
-#![allow(clippy::cast_possible_truncation)]
-
 //! Writing MARC records to binary format.
 //!
 //! This module provides [`MarcWriter`] for serializing [`Record`] instances
@@ -188,8 +186,12 @@ impl<W: Write> MarcWriter<W> {
 
         // Update leader with correct values
         let mut leader = record.leader.clone();
-        leader.record_length = record_length as u32;
-        leader.data_base_address = base_address as u32;
+        leader.record_length = u32::try_from(record_length).map_err(|_| {
+            MarcError::InvalidRecord("Record length exceeds 4GB limit".to_string())
+        })?;
+        leader.data_base_address = u32::try_from(base_address).map_err(|_| {
+            MarcError::InvalidRecord("Base address exceeds 4GB limit".to_string())
+        })?;
 
         // Write leader
         let leader_bytes = leader.as_bytes()?;

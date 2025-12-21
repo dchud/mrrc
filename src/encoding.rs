@@ -382,8 +382,15 @@ fn encode_marc8(s: &str) -> Result<Vec<u8>> {
                 current_charset = target_charset;
             }
 
-            // Add the character byte
-            bytes.push(byte_value as u8);
+            // Add the character byte(s)
+            // For single-byte character sets, byte_value fits in u8
+            // For EACC (multi-byte), this is handled separately above
+            bytes.push(u8::try_from(byte_value).map_err(|_| {
+                MarcError::EncodingError(format!(
+                    "Character byte value {} exceeds u8 range for charset {:?}",
+                    byte_value, target_charset
+                ))
+            })?);
         } else {
             // Character not found in MARC-8, use replacement character
             bytes.push(0x3F); // Question mark
