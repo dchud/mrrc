@@ -312,7 +312,7 @@ let encoding = MarcEncoding::Utf8;
 
 MARC-8 records with multiple scripts require careful handling of escape sequences:
 
-```rust,ignore
+```text
 // Example: Hebrew text in an otherwise English record
 // MARC-8 bytes: [English text] ESC)2 [Hebrew text] ESC)E [more English]
 //

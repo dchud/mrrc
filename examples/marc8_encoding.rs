@@ -35,7 +35,7 @@ fn detect_encoding_example() {
         Ok(encoding) => {
             println!("   Leader position 9 = '{}'", leader_char_marc8);
             println!("   Encoding: {:?}\n", encoding);
-        }
+        },
         Err(e) => eprintln!("   Error: {}\n", e),
     }
 
@@ -45,7 +45,7 @@ fn detect_encoding_example() {
         Ok(encoding) => {
             println!("   Leader position 9 = '{}'", leader_char_utf8);
             println!("   Encoding: {:?}\n", encoding);
-        }
+        },
         Err(e) => eprintln!("   Error: {}\n", e),
     }
 }
@@ -56,7 +56,12 @@ fn character_sets_example() {
     println!("   MARC-8 uses ISO 2022 escape sequences to switch between character sets.\n");
 
     let character_sets = vec![
-        ("Basic Latin (ASCII)", "Default (G0)", "ESC ( B", "0x20-0x7E"),
+        (
+            "Basic Latin (ASCII)",
+            "Default (G0)",
+            "ESC ( B",
+            "0x20-0x7E",
+        ),
         (
             "ANSEL Extended Latin",
             "Default (G1)",
@@ -71,29 +76,37 @@ fn character_sets_example() {
             "ESC ) 4",
             "Extended Arabic characters",
         ),
-        ("Basic Cyrillic", "0x4E", "ESC ( N", "Russian/Slavic characters"),
+        (
+            "Basic Cyrillic",
+            "0x4E",
+            "ESC ( N",
+            "Russian/Slavic characters",
+        ),
         ("Basic Greek", "0x53", "ESC ( S", "Greek alphabet"),
         ("Greek Symbols", "0x67", "ESC g", "α, β, γ (deprecated)"),
-        (
-            "Subscripts",
-            "0x62",
-            "ESC b",
-            "₀-₉, ₊, ₋, ₍, ₎ (14 chars)",
-        ),
+        ("Subscripts", "0x62", "ESC b", "₀-₉, ₊, ₋, ₍, ₎ (14 chars)"),
         (
             "Superscripts",
             "0x70",
             "ESC p",
             "⁰-⁹, ⁺, ⁻, ⁽, ⁾ (14 chars)",
         ),
-        ("East Asian (EACC)", "0x31", "ESC $ 1", "Chinese, Japanese, Korean"),
+        (
+            "East Asian (EACC)",
+            "0x31",
+            "ESC $ 1",
+            "Chinese, Japanese, Korean",
+        ),
     ];
 
     println!("   Character Set          | Final Char | Escape Sequence | Examples");
     println!("   {}", "-".repeat(75));
 
     for (name, final_char, escape, examples) in character_sets {
-        println!("   {:<22} | {:<10} | {:<15} | {}", name, final_char, escape, examples);
+        println!(
+            "   {:<22} | {:<10} | {:<15} | {}",
+            name, final_char, escape, examples
+        );
     }
     println!();
 }

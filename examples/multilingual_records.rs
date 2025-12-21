@@ -83,7 +83,10 @@ fn hebrew_record_example() {
         )
         .build();
 
-    println!("   Record structure created: {:?}", record.leader.record_type);
+    println!(
+        "   Record structure created: {:?}",
+        record.leader.record_type
+    );
     println!("   Language code (pos 35-37 in 008): heb\n");
 }
 
@@ -98,7 +101,7 @@ fn arabic_record_example() {
     println!("   • Extended Arabic: Additional characters (escape: ESC ) 4)");
     println!("   • Includes diacritical marks for vowels\n");
 
-    let record = Record::builder(create_leader())
+    let _ = Record::builder(create_leader())
         .control_field_str("008", "200101s2020    xx||||||||||||||||ara||")
         .field(
             Field::builder("245".to_string(), '1', '0')
@@ -128,7 +131,7 @@ fn cyrillic_record_example() {
     println!("   • Extended Cyrillic: ESC ( Q");
     println!("   • Covers Cyrillic alphabet (A-Я, а-я) and Cyrillic punctuation\n");
 
-    let record = Record::builder(create_leader())
+    let _ = Record::builder(create_leader())
         .control_field_str("008", "200101s2020    ru||||||||||||||||rus||")
         .field(
             Field::builder("245".to_string(), '1', '0')
@@ -159,7 +162,7 @@ fn mixed_language_record_example() {
 
     println!("   Bytes: \"English\" [ESC)2] \"Hebrew\" [ESC)E] \"English\"\n");
 
-    let record = Record::builder(create_leader())
+    let _ = Record::builder(create_leader())
         .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
         .field(
             Field::builder("245".to_string(), '1', '0')
