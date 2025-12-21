@@ -1,3 +1,5 @@
+#![allow(clippy::cast_possible_truncation)]
+
 //! Writing MARC records to binary format.
 //!
 //! This module provides [`MarcWriter`] for serializing [`Record`] instances
@@ -70,6 +72,7 @@ const RECORD_TERMINATOR: u8 = 0x1D;
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct MarcWriter<W: Write> {
     writer: W,
 }
@@ -139,8 +142,8 @@ impl<W: Write> MarcWriter<W> {
 
                 // Add directory entry
                 directory.extend_from_slice(tag.as_bytes());
-                directory.extend_from_slice(format!("{:04}", field_length).as_bytes());
-                directory.extend_from_slice(format!("{:05}", current_position).as_bytes());
+                directory.extend_from_slice(format!("{field_length:04}").as_bytes());
+                directory.extend_from_slice(format!("{current_position:05}").as_bytes());
 
                 // Add data
                 data_area.extend_from_slice(field_data);
@@ -167,8 +170,8 @@ impl<W: Write> MarcWriter<W> {
 
                 // Add directory entry
                 directory.extend_from_slice(tag.as_bytes());
-                directory.extend_from_slice(format!("{:04}", field_length).as_bytes());
-                directory.extend_from_slice(format!("{:05}", current_position).as_bytes());
+                directory.extend_from_slice(format!("{field_length:04}").as_bytes());
+                directory.extend_from_slice(format!("{current_position:05}").as_bytes());
 
                 // Add data
                 data_area.extend_from_slice(&field_data);
@@ -318,7 +321,7 @@ mod tests {
 
         for i in 1..=3 {
             let mut field = Field::new("650".to_string(), ' ', '0');
-            field.add_subfield('a', format!("Subject {}", i));
+            field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }
 

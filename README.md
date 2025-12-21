@@ -231,7 +231,7 @@ for subfield in field.subfields() { }
 for value in field.subfields_by_code('a') { }  // By code
 ```
 
-### MarcReader & MarcWriter
+### `MarcReader` & `MarcWriter`
 
 ```rust,ignore
 // Read from any source implementing Read

@@ -45,6 +45,10 @@ use serde_json::{json, Value};
 /// let json_value = json::record_to_json(&record)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if the record cannot be converted to JSON.
 pub fn record_to_json(record: &Record) -> Result<Value> {
     let mut fields = Vec::new();
 
@@ -104,6 +108,10 @@ pub fn record_to_json(record: &Record) -> Result<Value> {
 /// let restored = json::json_to_record(&json_value)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if the JSON is invalid or missing required fields.
 pub fn json_to_record(json: &Value) -> Result<Record> {
     use crate::error::MarcError;
     use crate::leader::Leader;
@@ -148,7 +156,7 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
             } else {
                 // Data field
                 let field_obj = value.as_object().ok_or_else(|| {
-                    MarcError::InvalidField(format!("Field {} must be object", tag))
+                    MarcError::InvalidField(format!("Field {tag} must be object"))
                 })?;
 
                 let ind1 = field_obj
@@ -267,7 +275,7 @@ mod tests {
 
         for i in 1..=3 {
             let mut field = Field::new("650".to_string(), ' ', '0');
-            field.add_subfield('a', format!("Subject {}", i));
+            field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }
 

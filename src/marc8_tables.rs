@@ -1,3 +1,5 @@
+#![allow(clippy::unreadable_literal, clippy::cast_lossless)]
+
 //! MARC-8 character set tables and mappings.
 //!
 //! This module provides the complete character mappings for all MARC-8 character sets

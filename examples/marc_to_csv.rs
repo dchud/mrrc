@@ -4,14 +4,14 @@
 /// and extracting publication dates, authors, and titles into a CSV format.
 ///
 /// Usage:
-///     cargo run --example marc_to_csv -- <input_file.mrc[.gz]> [output_file.csv]
+///     cargo run --example `marc_to_csv` -- <`input_file.mrc`[.gz]> [`output_file.csv`]
 ///
 /// If no output file is specified, writes to stdout.
 ///
 /// Examples:
-///     cargo run --example marc_to_csv -- records.mrc
-///     cargo run --example marc_to_csv -- records.mrc.gz output.csv
-///     cargo run --example marc_to_csv -- BooksAll.2016.part01.utf8.gz books.csv
+///     cargo run --example `marc_to_csv` -- records.mrc
+///     cargo run --example `marc_to_csv` -- records.mrc.gz output.csv
+///     cargo run --example `marc_to_csv` -- BooksAll.2016.part01.utf8.gz books.csv
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, Write};
@@ -32,11 +32,11 @@ fn main() -> anyhow::Result<()> {
     }
 
     let input_path = &args[1];
-    let output_path = args.get(2).map(|s| s.as_str());
+    let output_path = args.get(2).map(std::string::String::as_str);
 
     // Open input file
     let file = File::open(input_path)
-        .map_err(|e| anyhow::anyhow!("Failed to open input file '{}': {}", input_path, e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to open input file '{input_path}': {e}"))?;
 
     // Determine if file is gzipped
     let is_gzip = input_path.ends_with(".gz");
@@ -54,7 +54,7 @@ fn main() -> anyhow::Result<()> {
     let mut output: Box<dyn Write> = if let Some(path) = output_path {
         Box::new(
             File::create(path)
-                .map_err(|e| anyhow::anyhow!("Failed to create output file '{}': {}", path, e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to create output file '{path}': {e}"))?,
         )
     } else {
         Box::new(std::io::stdout())
@@ -131,11 +131,10 @@ fn main() -> anyhow::Result<()> {
     }
 
     eprintln!(
-        "Processed {} records with {} errors",
-        record_count, error_count
+        "Processed {record_count} records with {error_count} errors"
     );
     if let Some(path) = output_path {
-        eprintln!("CSV written to: {}", path);
+        eprintln!("CSV written to: {path}");
     }
 
     Ok(())
@@ -155,12 +154,12 @@ fn write_csv_row<W: Write>(writer: &mut W, fields: &[&str]) -> anyhow::Result<()
                 if c == '"' {
                     write!(writer, "\"\"")?;
                 } else {
-                    write!(writer, "{}", c)?;
+                    write!(writer, "{c}")?;
                 }
             }
             write!(writer, "\"")?;
         } else {
-            write!(writer, "{}", field)?;
+            write!(writer, "{field}")?;
         }
     }
     writeln!(writer)?;

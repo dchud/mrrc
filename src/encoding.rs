@@ -30,18 +30,22 @@ impl MarcEncoding {
     /// Position 9 of leader indicates the character coding:
     /// ' ' (space) = MARC-8
     /// 'a' = UTF-8
+    ///
+    /// # Errors
+    ///
+    /// Returns `MarcError::EncodingError` if the character is not a valid encoding indicator.
     pub fn from_leader_char(c: char) -> Result<Self> {
         match c {
             ' ' => Ok(MarcEncoding::Marc8),
             'a' => Ok(MarcEncoding::Utf8),
             _ => Err(MarcError::EncodingError(format!(
-                "Unknown character encoding: {}",
-                c
+                "Unknown character encoding: {c}"
             ))),
         }
     }
 
     /// Get the leader character for this encoding
+    #[must_use] 
     pub fn as_leader_char(&self) -> char {
         match self {
             MarcEncoding::Marc8 => ' ',
@@ -51,10 +55,14 @@ impl MarcEncoding {
 }
 
 /// Decode bytes using the specified encoding
+///
+/// # Errors
+///
+/// Returns `MarcError::EncodingError` if the bytes are invalid for the encoding.
 pub fn decode_bytes(bytes: &[u8], encoding: MarcEncoding) -> Result<String> {
     match encoding {
         MarcEncoding::Utf8 => String::from_utf8(bytes.to_vec())
-            .map_err(|e| MarcError::EncodingError(format!("Invalid UTF-8: {}", e))),
+            .map_err(|e| MarcError::EncodingError(format!("Invalid UTF-8: {e}"))),
         MarcEncoding::Marc8 => decode_marc8(bytes),
     }
 }
@@ -228,9 +236,9 @@ fn decode_marc8(bytes: &[u8]) -> Result<String> {
             if i + 2 < bytes.len() {
                 // EACC: 3-byte sequence
                 // Concatenate 3 bytes into a u32 key for lookup
-                let key = ((bytes[i] as u32) << 16)
-                    | ((bytes[i + 1] as u32) << 8)
-                    | (bytes[i + 2] as u32);
+                let key = (u32::from(bytes[i]) << 16)
+                    | (u32::from(bytes[i + 1]) << 8)
+                    | u32::from(bytes[i + 2]);
 
                 if let Some((unicode_point, is_combining)) =
                     crate::marc8_tables::get_eacc_character(key)
@@ -625,7 +633,7 @@ mod tests {
         // Unknown sequences are skipped in parsing
         // The 0xFF byte is a control character, so it's also skipped
         // Result should be empty or just whitespace
-        assert!(decoded.is_empty() || decoded.chars().all(|c| c.is_whitespace()));
+        assert!(decoded.is_empty() || decoded.chars().all(char::is_whitespace));
     }
 
     #[test]

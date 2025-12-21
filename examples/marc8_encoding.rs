@@ -7,7 +7,6 @@
 //! - Proper handling of combining characters and diacritics
 
 use mrrc::encoding::MarcEncoding;
-use mrrc::leader::Leader;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== MARC-8 Encoding Support ===\n");
@@ -33,20 +32,20 @@ fn detect_encoding_example() {
     let leader_char_marc8 = ' ';
     match MarcEncoding::from_leader_char(leader_char_marc8) {
         Ok(encoding) => {
-            println!("   Leader position 9 = '{}'", leader_char_marc8);
-            println!("   Encoding: {:?}\n", encoding);
+            println!("   Leader position 9 = '{leader_char_marc8}'");
+            println!("   Encoding: {encoding:?}\n");
         },
-        Err(e) => eprintln!("   Error: {}\n", e),
+        Err(e) => eprintln!("   Error: {e}\n"),
     }
 
     // 'a' = UTF-8 (modern encoding)
     let leader_char_utf8 = 'a';
     match MarcEncoding::from_leader_char(leader_char_utf8) {
         Ok(encoding) => {
-            println!("   Leader position 9 = '{}'", leader_char_utf8);
-            println!("   Encoding: {:?}\n", encoding);
+            println!("   Leader position 9 = '{leader_char_utf8}'");
+            println!("   Encoding: {encoding:?}\n");
         },
-        Err(e) => eprintln!("   Error: {}\n", e),
+        Err(e) => eprintln!("   Error: {e}\n"),
     }
 }
 
@@ -104,8 +103,7 @@ fn character_sets_example() {
 
     for (name, final_char, escape, examples) in character_sets {
         println!(
-            "   {:<22} | {:<10} | {:<15} | {}",
-            name, final_char, escape, examples
+            "   {name:<22} | {final_char:<10} | {escape:<15} | {examples}"
         );
     }
     println!();

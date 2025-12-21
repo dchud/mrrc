@@ -101,6 +101,10 @@ pub struct MarcXmlSubfield {
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if the record cannot be serialized to XML.
 pub fn record_to_xml(record: &Record) -> Result<String> {
     let leader_bytes = record.leader.as_bytes()?;
     let leader_str = String::from_utf8_lossy(&leader_bytes).to_string();
@@ -140,7 +144,7 @@ pub fn record_to_xml(record: &Record) -> Result<String> {
     };
 
     xml_to_string(&xml_record)
-        .map_err(|e| MarcError::ParseError(format!("Failed to serialize to XML: {}", e)))
+        .map_err(|e| MarcError::ParseError(format!("Failed to serialize to XML: {e}")))
 }
 
 /// Convert MARCXML string to a MARC record.
@@ -167,9 +171,13 @@ pub fn record_to_xml(record: &Record) -> Result<String> {
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if the XML is invalid or missing required elements.
 pub fn xml_to_record(xml: &str) -> Result<Record> {
     let xml_record: MarcXmlRecord = xml_from_str(xml)
-        .map_err(|e| MarcError::ParseError(format!("Failed to parse XML: {}", e)))?;
+        .map_err(|e| MarcError::ParseError(format!("Failed to parse XML: {e}")))?;
 
     let leader = Leader::from_bytes(xml_record.leader.as_bytes())?;
     let mut record = Record::new(leader);
@@ -233,11 +241,11 @@ mod tests {
         record.add_field(field);
 
         let xml = record_to_xml(&record).unwrap();
-        eprintln!("Generated XML:\n{}", xml);
+        eprintln!("Generated XML:\n{xml}");
         assert!(xml.contains("<leader>"));
         assert!(xml.contains("001") && xml.contains("12345"));
         assert!(xml.contains("<datafield") && xml.contains("245"));
-        assert!(xml.contains("1") && xml.contains("0")); // indicators
+        assert!(xml.contains('1') && xml.contains('0')); // indicators
         assert!(xml.contains("Test title"));
     }
 
@@ -285,7 +293,7 @@ mod tests {
 
         for i in 1..=3 {
             let mut field = Field::new("650".to_string(), ' ', '0');
-            field.add_subfield('a', format!("Subject {}", i));
+            field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }
 

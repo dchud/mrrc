@@ -56,6 +56,10 @@ pub struct Leader {
 
 impl Leader {
     /// Parse a leader from 24 bytes
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bytes are invalid or too short.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         if bytes.len() < 24 {
             return Err(MarcError::InvalidLeader(format!(
@@ -109,6 +113,10 @@ impl Leader {
     }
 
     /// Serialize leader to 24-byte array
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the leader values are invalid for serialization.
     pub fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut bytes = Vec::with_capacity(24);
 
@@ -153,7 +161,7 @@ fn parse_digits(bytes: &[u8]) -> Result<u32> {
 
     let s = String::from_utf8_lossy(bytes);
     s.parse::<u32>()
-        .map_err(|_| MarcError::InvalidLeader(format!("Invalid numeric field: '{}'", s)))
+        .map_err(|_| MarcError::InvalidLeader(format!("Invalid numeric field: '{s}'")))
 }
 
 #[cfg(test)]

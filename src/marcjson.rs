@@ -34,6 +34,10 @@ use serde_json::{json, Value};
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if the record cannot be converted to MARCJSON.
 pub fn record_to_marcjson(record: &Record) -> Result<Value> {
     let mut fields = Vec::new();
 
@@ -85,6 +89,10 @@ pub fn record_to_marcjson(record: &Record) -> Result<Value> {
 }
 
 /// Convert MARCJSON format to a MARC record
+///
+/// # Errors
+///
+/// Returns an error if the MARCJSON is invalid or missing required fields.
 pub fn marcjson_to_record(json: &Value) -> Result<Record> {
     let array = json
         .as_array()
@@ -126,7 +134,7 @@ pub fn marcjson_to_record(json: &Value) -> Result<Record> {
             } else {
                 // Data field with indicators and subfields
                 let field_obj = value.as_object().ok_or_else(|| {
-                    MarcError::InvalidField(format!("Field {} must be object", tag))
+                    MarcError::InvalidField(format!("Field {tag} must be object"))
                 })?;
 
                 let ind1 = field_obj
@@ -257,7 +265,7 @@ mod tests {
 
         for i in 1..=3 {
             let mut field = Field::new("650".to_string(), ' ', '0');
-            field.add_subfield('a', format!("Subject {}", i));
+            field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }
 

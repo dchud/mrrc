@@ -1,3 +1,5 @@
+#![allow(clippy::needless_continue, clippy::redundant_closure_for_method_calls)]
+
 //! Reading MARC records from binary streams.
 //!
 //! This module provides [`MarcReader`] for reading ISO 2709 formatted MARC records
@@ -62,6 +64,7 @@ const SUBFIELD_DELIMITER: u8 = 0x1F;
 ///     Err(e) => eprintln!("Error: {}", e),
 /// }
 /// ```
+#[derive(Debug)]
 pub struct MarcReader<R: Read> {
     reader: R,
 }
@@ -119,7 +122,7 @@ impl<R: Read> MarcReader<R> {
         // Read the leader (24 bytes)
         let mut leader_bytes = vec![0u8; 24];
         match self.reader.read_exact(&mut leader_bytes) {
-            Ok(_) => {},
+            Ok(()) => {},
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
                 // End of file
                 return Ok(None);
@@ -172,8 +175,7 @@ impl<R: Read> MarcReader<R> {
             let end_position = start_position + field_length;
             if end_position > data.len() {
                 return Err(MarcError::InvalidRecord(format!(
-                    "Field {} exceeds data area",
-                    tag
+                    "Field {tag} exceeds data area"
                 )));
             }
 
@@ -184,7 +186,7 @@ impl<R: Read> MarcReader<R> {
                 // Leader is already parsed
                 continue;
             } else if tag.starts_with('0')
-                && tag.chars().all(|c| c.is_numeric())
+                && tag.chars().all(char::is_numeric)
                 && tag.as_str() < "010"
             {
                 // Control field (001-009)
@@ -197,7 +199,7 @@ impl<R: Read> MarcReader<R> {
                 // Data field (010+)
                 parse_data_field(field_data, &tag)
                     .map(|field| record.add_field(field))
-                    .map_err(|e| MarcError::InvalidField(format!("Tag {}: {}", tag, e)))?;
+                    .map_err(|e| MarcError::InvalidField(format!("Tag {tag}: {e}")))?;
             }
         }
 
@@ -269,7 +271,7 @@ fn parse_4digits(bytes: &[u8]) -> Result<usize> {
 
     let s = String::from_utf8_lossy(bytes);
     s.parse::<usize>()
-        .map_err(|_| MarcError::InvalidRecord(format!("Invalid numeric field: '{}'", s)))
+        .map_err(|_| MarcError::InvalidRecord(format!("Invalid numeric field: '{s}'")))
 }
 
 /// Parse a 5-digit ASCII number from bytes
@@ -283,7 +285,7 @@ fn parse_digits(bytes: &[u8]) -> Result<usize> {
 
     let s = String::from_utf8_lossy(bytes);
     s.parse::<usize>()
-        .map_err(|_| MarcError::InvalidRecord(format!("Invalid numeric field: '{}'", s)))
+        .map_err(|_| MarcError::InvalidRecord(format!("Invalid numeric field: '{s}'")))
 }
 
 #[cfg(test)]
@@ -319,7 +321,7 @@ mod tests {
 
         // Leader (must be exactly 24 bytes)
         let mut leader = Vec::new();
-        leader.extend_from_slice(format!("{:05}", record_length).as_bytes()); // 0-4
+        leader.extend_from_slice(format!("{record_length:05}").as_bytes()); // 0-4
         leader.push(b'n'); // 5: status
         leader.push(b'a'); // 6: type
         leader.push(b'm'); // 7: bib level
@@ -327,7 +329,7 @@ mod tests {
         leader.push(b'a'); // 9: character coding
         leader.push(b'2'); // 10: indicator count
         leader.push(b'2'); // 11: subfield code count
-        leader.extend_from_slice(format!("{:05}", base_address).as_bytes()); // 12-16
+        leader.extend_from_slice(format!("{base_address:05}").as_bytes()); // 12-16
         leader.push(b' '); // 17: encoding level
         leader.push(b' '); // 18: cataloging form
         leader.push(b' '); // 19: multipart level
@@ -388,7 +390,7 @@ mod tests {
             let record_length = base_address + field_245.len() + 1;
 
             let mut leader = Vec::new();
-            leader.extend_from_slice(format!("{:05}", record_length).as_bytes()); // 0-4
+            leader.extend_from_slice(format!("{record_length:05}").as_bytes()); // 0-4
             leader.push(b'n'); // 5
             leader.push(b'a'); // 6
             leader.push(b'm'); // 7
@@ -396,7 +398,7 @@ mod tests {
             leader.push(b'a'); // 9
             leader.push(b'2'); // 10
             leader.push(b'2'); // 11
-            leader.extend_from_slice(format!("{:05}", base_address).as_bytes()); // 12-16
+            leader.extend_from_slice(format!("{base_address:05}").as_bytes()); // 12-16
             leader.push(b' '); // 17
             leader.push(b' '); // 18
             leader.push(b' '); // 19
