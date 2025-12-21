@@ -481,6 +481,18 @@ lazy_static::lazy_static! {
         m
     };
 
+    /// Greek Symbols - custom MARC set, escape sequence ESCg (0x1B 0x67)
+    /// Contains 3 deprecated Greek symbol characters (alpha, beta, gamma)
+    /// Note: These characters map to their equivalents in the Greek set but round-trip mapping is problematic
+    /// Reference: https://www.loc.gov/marc/specifications/codetables/GreekSymbols.html
+    static ref GREEK_SYMBOLS: HashMap<u8, CharacterMapping> = {
+        let mut m = HashMap::new();
+        m.insert(0x61, (0x03B1, false)); // GREEK SMALL LETTER ALPHA
+        m.insert(0x62, (0x03B2, false)); // GREEK SMALL LETTER BETA
+        m.insert(0x63, (0x03B3, false)); // GREEK SMALL LETTER GAMMA
+        m
+    };
+
     /// Subscript characters - custom MARC set, escape sequence ESCb (0x1B 0x62)
     /// Contains 14 subscript characters: parentheses, plus, minus, and digits 0-9
     static ref SUBSCRIPT: HashMap<u8, CharacterMapping> = {
@@ -523,19 +535,7 @@ lazy_static::lazy_static! {
         m
     };
 
-    /// Greek Symbols - custom MARC set, escape sequence ESCg (0x1B 0x67)
-    /// Contains 3 Greek symbol characters (alpha, beta, gamma)
-    /// Note: These characters have mapping difficulties and usage is discouraged
-    /// Reference: https://www.loc.gov/marc/specifications/speccharmarc8.html
-    static ref GREEK_SYMBOLS: HashMap<u8, CharacterMapping> = {
-        let mut m = HashMap::new();
-        // Greek symbol characters (deprecated - mapping difficulties)
-        // These map to their equivalents but round-tripping is problematic
-        m.insert(0x41, (0x03B1, false)); // GREEK SMALL LETTER ALPHA
-        m.insert(0x42, (0x03B2, false)); // GREEK SMALL LETTER BETA
-        m.insert(0x43, (0x03B3, false)); // GREEK SMALL LETTER GAMMA
-        m
-    };
+
 
     /// EACC (East Asian Character Code) - 0x31
     /// Multi-byte character set (3 bytes per character) for Chinese, Japanese, Korean

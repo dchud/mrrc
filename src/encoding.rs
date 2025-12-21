@@ -673,9 +673,17 @@ mod tests {
     #[test]
     fn test_marc8_greek_symbols_escape() {
         // ESC g switches to Greek symbols (deprecated)
-        let bytes = b"\x1BgA"; // ESC g then 'A' (alpha)
+        let bytes = b"\x1Bga"; // ESC g then 'a' (alpha) - 0x61 is the MARC-8 code for alpha
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
         assert_eq!(decoded, "α"); // GREEK SMALL LETTER ALPHA
+    }
+
+    #[test]
+    fn test_marc8_greek_symbols_all() {
+        // Test all three Greek symbols: alpha, beta, gamma
+        let bytes = b"\x1Bgabc"; // ESC g, then a (alpha), b (beta), c (gamma)
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert_eq!(decoded, "αβγ");
     }
 
     #[test]
@@ -739,6 +747,66 @@ mod tests {
             decoded.contains('\u{FF08}'),
             "Should contain FULLWIDTH LEFT PARENTHESIS"
         );
+    }
+
+    #[test]
+    fn test_marc8_hebrew_text() {
+        // Test Basic Hebrew character set - ESC ) 2 (designate as G1)
+        // Using Hebrew letters: alef (0xA1), bet (0xA2), gimel (0xA3)
+        // ESC ) 2 designates Hebrew as G1 set, so high bytes (0xA1-0xFE) use Hebrew
+        let bytes = b"\x1B\x292\xA1\xA2\xA3\x1B\x29\x45"; // Designate Hebrew to G1, 3 Hebrew letters, designate ANSEL to G1 (reset)
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert!(decoded.contains('א'), "Should contain Hebrew alef");
+        assert!(decoded.contains('ב'), "Should contain Hebrew bet");
+        assert!(decoded.contains('ג'), "Should contain Hebrew gimel");
+    }
+
+    #[test]
+    fn test_marc8_arabic_text() {
+        // Test Basic Arabic character set - ESC ) 3 (designate as G1)
+        // Using Arabic letters: hamza (0xA1), alef with madda (0xA2), alef with hamza above (0xA3)
+        let bytes = b"\x1B\x293\xA1\xA2\xA3\x1B\x29\x45"; // Designate Arabic to G1, 3 Arabic letters, designate ANSEL to G1 (reset)
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert!(decoded.contains('ء'), "Should contain Arabic hamza");
+        assert!(decoded.contains('آ'), "Should contain Arabic alef with madda");
+        assert!(decoded.contains('أ'), "Should contain Arabic alef with hamza above");
+    }
+
+    #[test]
+    fn test_marc8_extended_arabic_text() {
+        // Test Extended Arabic character set - ESC ) 4 (designate as G1)
+        // Using extended Arabic letters
+        let bytes = b"\x1B\x294\xA1\xA2\xA3\x1B\x29\x45"; // Designate Extended Arabic to G1, 3 letters, designate ANSEL to G1 (reset)
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        // Extended Arabic has different character mappings
+        assert!(!decoded.is_empty(), "Should decode extended Arabic");
+    }
+
+    #[test]
+    fn test_marc8_mixed_ltr_rtl() {
+        // Test mixed left-to-right (ASCII) and right-to-left (Hebrew) text
+        // "Hello" in ASCII (default), then switch to Hebrew for "שלום" (Shalom)
+        // ESC ) 2 designates Hebrew to G1, then shin(0xB5)+lamed(0xAC)+vav(0xA6)+final_mem(0xB8)
+        let bytes = b"Hello\x1B\x292\xB5\xAC\xA6\xB8\x1B\x29\x45!"; // "Hello", designate Hebrew to G1, Hebrew text, reset to ANSEL, "!"
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        assert!(decoded.starts_with("Hello"), "Should start with ASCII Hello");
+        assert!(decoded.contains('ש'), "Should contain Hebrew shin");
+        assert!(decoded.contains('ל'), "Should contain Hebrew lamed");
+        assert!(decoded.contains('ו'), "Should contain Hebrew vav");
+        assert!(decoded.contains('ם'), "Should contain Hebrew final mem");
+    }
+
+    #[test]
+    fn test_marc8_bidi_with_diacritics() {
+        // Test bidirectional text with diacritics (combining marks)
+        // MARC-8 stores combining marks before the base character
+        // Using ANSEL G1 with combining grave (0xE0 in ANSEL) before Hebrew alef (via G1)
+        // First designate Hebrew to G1, use 0xE0 as combining grave, then 0xA1 for alef
+        let bytes = b"\x1B\x292\xE0\xA1\x1B\x29\x45AB"; // Designate Hebrew to G1, combining grave + alef, reset to ANSEL, ASCII 'AB'
+        let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
+        // Combining marks are applied to the following character
+        assert!(decoded.contains('א'), "Should contain Hebrew alef (may have combining mark)");
+        assert!(decoded.contains('A'), "Should contain ASCII A");
     }
 
     #[test]
