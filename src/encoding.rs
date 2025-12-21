@@ -131,7 +131,7 @@ fn decode_marc8(bytes: &[u8]) -> Result<String> {
                     }
                     i += 3;
                     continue;
-                }
+                },
                 // ESC ) - Designate G1 character set (single-byte)
                 0x29 => {
                     if i + 2 >= bytes.len() {
@@ -144,7 +144,7 @@ fn decode_marc8(bytes: &[u8]) -> Result<String> {
                     }
                     i += 3;
                     continue;
-                }
+                },
                 // ESC $ - Designate multi-byte character set
                 0x24 => {
                     if i + 2 >= bytes.len() {
@@ -167,37 +167,37 @@ fn decode_marc8(bytes: &[u8]) -> Result<String> {
                     }
                     i += 3;
                     continue;
-                }
+                },
                 // ESC s - Reset G0 to Basic Latin (ASCII)
                 0x73 => {
                     decoder.g0 = CharacterSetId::BasicLatin;
                     i += 2;
                     continue;
-                }
+                },
                 // Custom MARC-8 escape sequences (locking, non-ISO 2022)
                 // ESC g - Greek Symbols (deprecated - mapping difficulties)
                 0x67 => {
                     decoder.g0 = CharacterSetId::GreekSymbols;
                     i += 2;
                     continue;
-                }
+                },
                 // ESC b - Subscripts (custom MARC set)
                 0x62 => {
                     decoder.g0 = CharacterSetId::Subscript;
                     i += 2;
                     continue;
-                }
+                },
                 // ESC p - Superscripts (custom MARC set)
                 0x70 => {
                     decoder.g0 = CharacterSetId::Superscript;
                     i += 2;
                     continue;
-                }
+                },
                 _ => {
                     // Unknown escape sequence - skip it
                     i += 2;
                     continue;
-                }
+                },
             }
         }
 
@@ -309,67 +309,67 @@ fn encode_marc8(s: &str) -> Result<Vec<u8>> {
                         // ESC s - Reset to ASCII
                         bytes.push(0x1B);
                         bytes.push(0x73);
-                    }
+                    },
                     CharacterSetId::AnselExtendedLatin => {
                         // ESC ) E - Switch G1 to ANSEL
                         bytes.push(0x1B);
                         bytes.push(0x29);
                         bytes.push(0x45);
-                    }
+                    },
                     CharacterSetId::Subscript => {
                         // ESC b - Switch to Subscript
                         bytes.push(0x1B);
                         bytes.push(0x62);
-                    }
+                    },
                     CharacterSetId::Superscript => {
                         // ESC p - Switch to Superscript
                         bytes.push(0x1B);
                         bytes.push(0x70);
-                    }
+                    },
                     CharacterSetId::GreekSymbols => {
                         // ESC g - Switch to Greek symbols
                         bytes.push(0x1B);
                         bytes.push(0x67);
-                    }
+                    },
                     CharacterSetId::BasicHebrew => {
                         // ESC ( 2 - Switch G0 to Hebrew
                         bytes.push(0x1B);
                         bytes.push(0x28);
                         bytes.push(0x32);
-                    }
+                    },
                     CharacterSetId::BasicArabic => {
                         // ESC ( 3 - Switch G0 to Arabic
                         bytes.push(0x1B);
                         bytes.push(0x28);
                         bytes.push(0x33);
-                    }
+                    },
                     CharacterSetId::ExtendedArabic => {
                         // ESC ( 4 - Switch G0 to Extended Arabic
                         bytes.push(0x1B);
                         bytes.push(0x28);
                         bytes.push(0x34);
-                    }
+                    },
                     CharacterSetId::BasicCyrillic => {
                         // ESC ( N - Switch G0 to Basic Cyrillic
                         bytes.push(0x1B);
                         bytes.push(0x28);
                         bytes.push(0x4E);
-                    }
+                    },
                     CharacterSetId::ExtendedCyrillic => {
                         // ESC ( Q - Switch G0 to Extended Cyrillic
                         bytes.push(0x1B);
                         bytes.push(0x28);
                         bytes.push(0x51);
-                    }
+                    },
                     CharacterSetId::BasicGreek => {
                         // ESC ( S - Switch G0 to Basic Greek
                         bytes.push(0x1B);
                         bytes.push(0x28);
                         bytes.push(0x53);
-                    }
+                    },
                     CharacterSetId::EACC => {
                         // Not applicable for single characters
-                    }
+                    },
                 }
                 current_charset = target_charset;
             }

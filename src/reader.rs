@@ -119,11 +119,11 @@ impl<R: Read> MarcReader<R> {
         // Read the leader (24 bytes)
         let mut leader_bytes = vec![0u8; 24];
         match self.reader.read_exact(&mut leader_bytes) {
-            Ok(_) => {}
+            Ok(_) => {},
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
                 // End of file
                 return Ok(None);
-            }
+            },
             Err(e) => return Err(MarcError::IoError(e)),
         }
 
