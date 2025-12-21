@@ -1,3 +1,5 @@
+//! Placeholder binary for the mrrc library.
+
 fn main() {
-    println!("Hello, world!");
+    println!("mrrc - MARC Rust Community Library");
 }

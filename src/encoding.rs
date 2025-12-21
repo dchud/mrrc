@@ -45,7 +45,7 @@ impl MarcEncoding {
     }
 
     /// Get the leader character for this encoding
-    #[must_use] 
+    #[must_use]
     pub fn as_leader_char(&self) -> char {
         match self {
             MarcEncoding::Marc8 => ' ',
@@ -68,6 +68,10 @@ pub fn decode_bytes(bytes: &[u8], encoding: MarcEncoding) -> Result<String> {
 }
 
 /// Encode string using the specified encoding
+///
+/// # Errors
+///
+/// Returns an error if the encoding operation fails.
 pub fn encode_string(s: &str, encoding: MarcEncoding) -> Result<Vec<u8>> {
     match encoding {
         MarcEncoding::Utf8 => Ok(s.as_bytes().to_vec()),
@@ -108,6 +112,12 @@ impl Marc8Decoder {
 /// - Character set switching via escape sequences
 /// - Combining marks (diacritics)
 /// - Multi-byte character sets (EACC/CJK)
+#[allow(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    clippy::unnecessary_wraps,
+    clippy::items_after_statements
+)]
 fn decode_marc8(bytes: &[u8]) -> Result<String> {
     let mut decoder = Marc8Decoder::new();
     let mut result = String::new();
@@ -386,10 +396,9 @@ fn encode_marc8(s: &str) -> Result<Vec<u8>> {
             // For single-byte character sets, byte_value fits in u8
             // For EACC (multi-byte), this is handled separately above
             bytes.push(u8::try_from(byte_value).map_err(|_| {
-                MarcError::EncodingError(format!(
-                    "Character byte value {} exceeds u8 range for charset {:?}",
-                    byte_value, target_charset
-                ))
+                MarcError::EncodingError(
+                    format!("Character byte value {byte_value} exceeds u8 range for charset {target_charset:?}")
+                )
             })?);
         } else {
             // Character not found in MARC-8, use replacement character

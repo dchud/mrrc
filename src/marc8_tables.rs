@@ -1,4 +1,8 @@
-#![allow(clippy::unreadable_literal, clippy::cast_lossless)]
+#![allow(
+    clippy::unreadable_literal,
+    clippy::cast_lossless,
+    clippy::mistyped_literal_suffixes
+)]
 
 //! MARC-8 character set tables and mappings.
 //!
@@ -9,8 +13,8 @@
 
 use std::collections::HashMap;
 
-/// Represents a MARC-8 character mapping entry: (Unicode codepoint, is_combining_mark)
-/// If is_combining_mark is true, the character combines with the following base character.
+/// Represents a MARC-8 character mapping entry: (Unicode codepoint, `is_combining_mark`)
+/// If `is_combining_mark` is true, the character combines with the following base character.
 pub type CharacterMapping = (u32, bool);
 
 /// Character set identifiers used in escape sequences
@@ -32,18 +36,19 @@ pub enum CharacterSetId {
     ExtendedCyrillic = 0x51,
     /// Basic Greek - escape sequence final character 'S' (0x53)
     BasicGreek = 0x53,
-    /// Subscript characters - custom MARC set, escape sequence ESCb (0x1B 0x62)
+    /// Subscript characters - custom MARC set, escape sequence `ESCb` (0x1B 0x62)
     Subscript = 0x62,
-    /// Superscript characters - custom MARC set, escape sequence ESCp (0x1B 0x70)
+    /// Superscript characters - custom MARC set, escape sequence `ESCp` (0x1B 0x70)
     Superscript = 0x70,
-    /// Greek Symbols - custom MARC set, escape sequence ESCg (0x1B 0x67)
+    /// Greek Symbols - custom MARC set, escape sequence `ESCg` (0x1B 0x67)
     GreekSymbols = 0x67,
     /// EACC (East Asian Character Code) - escape sequence final character '1' (0x31), multibyte
     EACC = 0x31,
 }
 
 impl CharacterSetId {
-    /// Convert from byte value to CharacterSetId
+    /// Convert from byte value to `CharacterSetId`
+    #[must_use]
     pub fn from_byte(b: u8) -> Option<Self> {
         match b {
             0x42 => Some(CharacterSetId::BasicLatin),
@@ -61,7 +66,8 @@ impl CharacterSetId {
 }
 
 /// Get the character mapping table for a given single-byte character set
-/// For EACC (multi-byte), use get_eacc_character() instead
+/// For EACC (multi-byte), use `get_eacc_character()` instead
+#[must_use]
 pub fn get_charset_table(id: CharacterSetId) -> &'static HashMap<u8, CharacterMapping> {
     match id {
         CharacterSetId::BasicLatin => &BASIC_LATIN,
@@ -81,19 +87,21 @@ pub fn get_charset_table(id: CharacterSetId) -> &'static HashMap<u8, CharacterMa
 
 /// Look up a character in the EACC (East Asian Character Code) table
 /// EACC uses 3-byte sequences where the bytes are concatenated into a single u32 key
-/// Example: bytes [0x21, 0x23, 0x20] become key 0x21_23_20
+/// Example: bytes [0x21, 0x23, 0x20] become key `0x21_23_20`
+#[must_use]
 pub fn get_eacc_character(key: u32) -> Option<CharacterMapping> {
     EACC_TABLE.get(&key).copied()
 }
 
 /// Try to find a Unicode character in any MARC-8 character set and return the best encoding
-/// Returns (charset_id, byte_value) for single-byte sets, or (charset_id, key) for multi-byte
+/// Returns (`charset_id`, `byte_value`) for single-byte sets, or (`charset_id`, `key`) for multi-byte
 /// Prefers Basic Latin, then ANSEL Extended Latin, then other sets
 /// For non-combining characters, searches in this preference order:
 /// 1. Basic Latin (0x20-0x7E)
 /// 2. ANSEL Extended Latin (non-combining only)
 /// 3. Subscript/Superscript if character matches those sets
 /// 4. Other character sets
+#[must_use]
 pub fn find_unicode_in_marc8(unicode_char: u32) -> Option<(CharacterSetId, u32)> {
     // Prefer Basic Latin first (ASCII range)
     if let Some((byte, _)) = find_in_charset(CharacterSetId::BasicLatin, unicode_char) {
@@ -129,11 +137,11 @@ pub fn find_unicode_in_marc8(unicode_char: u32) -> Option<(CharacterSetId, u32)>
     None
 }
 
-/// Internal helper: search for unicode_char in a charset
-/// Returns (byte_value, is_combining) if found
+/// Internal helper: search for `unicode_char` in a charset
+/// Returns (`byte_value`, `is_combining`) if found
 fn find_in_charset(charset: CharacterSetId, unicode_char: u32) -> Option<(u32, bool)> {
     let table = get_charset_table(charset);
-    for (&byte, &(unicode, is_combining)) in table.iter() {
+    for (&byte, &(unicode, is_combining)) in table {
         if unicode == unicode_char {
             return Some((byte as u32, is_combining));
         }

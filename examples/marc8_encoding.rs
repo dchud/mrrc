@@ -8,7 +8,7 @@
 
 use mrrc::encoding::MarcEncoding;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     println!("=== MARC-8 Encoding Support ===\n");
 
     // Example 1: Detecting encoding from MARC leader
@@ -19,8 +19,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 3: Handling multilingual records
     multilingual_example();
-
-    Ok(())
 }
 
 /// Demonstrates detecting the character encoding from a MARC record's leader.
@@ -102,9 +100,7 @@ fn character_sets_example() {
     println!("   {}", "-".repeat(75));
 
     for (name, final_char, escape, examples) in character_sets {
-        println!(
-            "   {name:<22} | {final_char:<10} | {escape:<15} | {examples}"
-        );
+        println!("   {name:<22} | {final_char:<10} | {escape:<15} | {examples}");
     }
     println!();
 }

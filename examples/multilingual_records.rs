@@ -28,7 +28,7 @@ fn create_leader() -> Leader {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     println!("=== Multilingual MARC Records ===\n");
 
     // Example 1: Hebrew-language book
@@ -42,8 +42,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 4: Mixed language record
     mixed_language_record_example();
-
-    Ok(())
 }
 
 /// Create a record for a Hebrew-language book.

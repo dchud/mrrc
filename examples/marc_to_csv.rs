@@ -1,17 +1,24 @@
-/// Extract bibliographic data from MARC records and export to CSV.
-///
-/// This example demonstrates reading MARC records (from gzip-compressed files or raw binary)
-/// and extracting publication dates, authors, and titles into a CSV format.
-///
-/// Usage:
-///     cargo run --example `marc_to_csv` -- <`input_file.mrc`[.gz]> [`output_file.csv`]
-///
-/// If no output file is specified, writes to stdout.
-///
-/// Examples:
-///     cargo run --example `marc_to_csv` -- records.mrc
-///     cargo run --example `marc_to_csv` -- records.mrc.gz output.csv
-///     cargo run --example `marc_to_csv` -- BooksAll.2016.part01.utf8.gz books.csv
+//! Extract bibliographic data from MARC records and export to CSV.
+//!
+//! This example demonstrates reading MARC records (from gzip-compressed files or raw binary)
+//! and extracting publication dates, authors, and titles into a CSV format.
+//!
+//! # Usage
+//!
+//! ```sh
+//! cargo run --example marc_to_csv -- <input_file.mrc[.gz]> [output_file.csv]
+//! ```
+//!
+//! If no output file is specified, writes to stdout.
+//!
+//! # Examples
+//!
+//! ```sh
+//! cargo run --example marc_to_csv -- records.mrc
+//! cargo run --example marc_to_csv -- records.mrc.gz output.csv
+//! cargo run --example marc_to_csv -- BooksAll.2016.part01.utf8.gz books.csv
+//! ```
+
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, Write};
@@ -39,7 +46,9 @@ fn main() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to open input file '{input_path}': {e}"))?;
 
     // Determine if file is gzipped
-    let is_gzip = input_path.ends_with(".gz");
+    let is_gzip = std::path::Path::new(input_path)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("gz"));
 
     // Create appropriate reader based on compression
     let reader: Box<dyn std::io::Read> = if is_gzip {
@@ -130,9 +139,7 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    eprintln!(
-        "Processed {record_count} records with {error_count} errors"
-    );
+    eprintln!("Processed {record_count} records with {error_count} errors");
     if let Some(path) = output_path {
         eprintln!("CSV written to: {path}");
     }

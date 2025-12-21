@@ -37,7 +37,7 @@ pub struct Subfield {
 
 impl Record {
     /// Create a new MARC record with the given leader
-    #[must_use] 
+    #[must_use]
     pub fn new(leader: Leader) -> Self {
         Record {
             leader,
@@ -60,7 +60,7 @@ impl Record {
     ///         .build())
     ///     .build();
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn builder(leader: Leader) -> RecordBuilder {
         RecordBuilder {
             record: Record {
@@ -84,9 +84,11 @@ impl Record {
     }
 
     /// Get a control field value
-    #[must_use] 
+    #[must_use]
     pub fn get_control_field(&self, tag: &str) -> Option<&str> {
-        self.control_fields.get(tag).map(std::string::String::as_str)
+        self.control_fields
+            .get(tag)
+            .map(std::string::String::as_str)
     }
 
     /// Add a data field
@@ -98,13 +100,13 @@ impl Record {
     }
 
     /// Get all fields with a given tag
-    #[must_use] 
+    #[must_use]
     pub fn get_fields(&self, tag: &str) -> Option<&[Field]> {
         self.data_fields.get(tag).map(std::vec::Vec::as_slice)
     }
 
     /// Get first field with a given tag
-    #[must_use] 
+    #[must_use]
     pub fn get_field(&self, tag: &str) -> Option<&Field> {
         self.data_fields.get(tag).and_then(|v| v.first())
     }
@@ -156,7 +158,7 @@ impl Record {
     ///     println!("Title: {}", title);
     /// }
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn title(&self) -> Option<&str> {
         self.get_field("245").and_then(|f| f.get_subfield('a'))
     }
@@ -165,7 +167,7 @@ impl Record {
     ///
     /// Returns a tuple of (title, `statement_of_responsibility`) if available.
     /// Title comes from subfield 'a', responsibility from subfield 'c'.
-    #[must_use] 
+    #[must_use]
     pub fn title_with_responsibility(&self) -> (Option<&str>, Option<&str>) {
         match self.get_field("245") {
             Some(field) => (field.get_subfield('a'), field.get_subfield('c')),
@@ -176,7 +178,7 @@ impl Record {
     /// Get the primary author from field 100 (personal name), subfield 'a'
     ///
     /// Returns the first author found. Use `authors()` to get all authors.
-    #[must_use] 
+    #[must_use]
     pub fn author(&self) -> Option<&str> {
         self.get_field("100").and_then(|f| f.get_subfield('a'))
     }
@@ -184,7 +186,7 @@ impl Record {
     /// Get all authors from field 700 (added entry for personal name), subfield 'a'
     ///
     /// This includes secondary authors/contributors. For the primary author, use `author()`.
-    #[must_use] 
+    #[must_use]
     pub fn authors(&self) -> Vec<&str> {
         self.get_fields("700")
             .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
@@ -192,13 +194,13 @@ impl Record {
     }
 
     /// Get the corporate body (publisher or organization) from field 110, subfield 'a'
-    #[must_use] 
+    #[must_use]
     pub fn corporate_author(&self) -> Option<&str> {
         self.get_field("110").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get the publisher from field 260, subfield 'b'
-    #[must_use] 
+    #[must_use]
     pub fn publisher(&self) -> Option<&str> {
         self.get_field("260").and_then(|f| f.get_subfield('b'))
     }
@@ -207,7 +209,7 @@ impl Record {
     ///
     /// Falls back to the publication year extracted from field 008 (positions 7-10)
     /// if field 260$c is not available.
-    #[must_use] 
+    #[must_use]
     pub fn publication_date(&self) -> Option<&str> {
         self.get_field("260")
             .and_then(|f| f.get_subfield('c'))
@@ -233,13 +235,13 @@ impl Record {
     /// Get the ISBN from field 020, subfield 'a'
     ///
     /// Returns the first ISBN. Use `isbns()` to get all ISBNs.
-    #[must_use] 
+    #[must_use]
     pub fn isbn(&self) -> Option<&str> {
         self.get_field("020").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get all ISBNs from field 020, subfield 'a'
-    #[must_use] 
+    #[must_use]
     pub fn isbns(&self) -> Vec<&str> {
         self.get_fields("020")
             .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
@@ -247,13 +249,13 @@ impl Record {
     }
 
     /// Get the ISSN from field 022, subfield 'a'
-    #[must_use] 
+    #[must_use]
     pub fn issn(&self) -> Option<&str> {
         self.get_field("022").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get all subject headings from field 650, subfield 'a'
-    #[must_use] 
+    #[must_use]
     pub fn subjects(&self) -> Vec<&str> {
         self.get_fields("650")
             .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
@@ -263,7 +265,7 @@ impl Record {
     /// Get the language code from field 008 (positions 35-37)
     ///
     /// Returns a 3-character language code (e.g., "eng" for English).
-    #[must_use] 
+    #[must_use]
     pub fn language(&self) -> Option<&str> {
         self.get_control_field("008").and_then(|field_008| {
             if field_008.len() >= 38 {
@@ -280,13 +282,13 @@ impl Record {
     }
 
     /// Get the control number (system number) from field 001
-    #[must_use] 
+    #[must_use]
     pub fn control_number(&self) -> Option<&str> {
         self.get_control_field("001")
     }
 
     /// Get the Library of Congress Control Number (LCCN) from field 010, subfield 'a'
-    #[must_use] 
+    #[must_use]
     pub fn lccn(&self) -> Option<&str> {
         self.get_field("010").and_then(|f| f.get_subfield('a'))
     }
@@ -294,37 +296,37 @@ impl Record {
     /// Get the physical description from field 300, subfield 'a'
     ///
     /// Typically describes the extent of the resource (e.g., "256 pages").
-    #[must_use] 
+    #[must_use]
     pub fn physical_description(&self) -> Option<&str> {
         self.get_field("300").and_then(|f| f.get_subfield('a'))
     }
 
     /// Get the series statement from field 490, subfield 'a'
-    #[must_use] 
+    #[must_use]
     pub fn series(&self) -> Option<&str> {
         self.get_field("490").and_then(|f| f.get_subfield('a'))
     }
 
     /// Check if this is a book (leader type 'a' for language material and bib level 'm' for monograph)
-    #[must_use] 
+    #[must_use]
     pub fn is_book(&self) -> bool {
         self.leader.record_type == 'a' && self.leader.bibliographic_level == 'm'
     }
 
     /// Check if this is a serial (bib level 's')
-    #[must_use] 
+    #[must_use]
     pub fn is_serial(&self) -> bool {
         self.leader.bibliographic_level == 's'
     }
 
     /// Check if this is music (leader type 'c' or 'd')
-    #[must_use] 
+    #[must_use]
     pub fn is_music(&self) -> bool {
         matches!(self.leader.record_type, 'c' | 'd')
     }
 
     /// Check if this is audiovisual material (leader type 'g')
-    #[must_use] 
+    #[must_use]
     pub fn is_audiovisual(&self) -> bool {
         self.leader.record_type == 'g'
     }
@@ -352,28 +354,28 @@ pub struct RecordBuilder {
 
 impl RecordBuilder {
     /// Add a control field to the record being built
-    #[must_use] 
+    #[must_use]
     pub fn control_field(mut self, tag: String, value: String) -> Self {
         self.record.add_control_field(tag, value);
         self
     }
 
     /// Add a control field using string slices
-    #[must_use] 
+    #[must_use]
     pub fn control_field_str(mut self, tag: &str, value: &str) -> Self {
         self.record.add_control_field_str(tag, value);
         self
     }
 
     /// Add a data field to the record being built
-    #[must_use] 
+    #[must_use]
     pub fn field(mut self, field: Field) -> Self {
         self.record.add_field(field);
         self
     }
 
     /// Build the record
-    #[must_use] 
+    #[must_use]
     pub fn build(self) -> Record {
         self.record
     }
@@ -381,7 +383,7 @@ impl RecordBuilder {
 
 impl Field {
     /// Create a new data field
-    #[must_use] 
+    #[must_use]
     pub fn new(tag: String, indicator1: char, indicator2: char) -> Self {
         Field {
             tag,
@@ -403,7 +405,7 @@ impl Field {
     ///     .subfield('c', "F. Scott Fitzgerald".to_string())
     ///     .build();
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn builder(tag: String, indicator1: char, indicator2: char) -> FieldBuilder {
         FieldBuilder {
             field: Field {
@@ -428,7 +430,7 @@ impl Field {
     }
 
     /// Get all values for a subfield code
-    #[must_use] 
+    #[must_use]
     pub fn get_subfield_values(&self, code: char) -> Vec<&str> {
         self.subfields
             .iter()
@@ -438,7 +440,7 @@ impl Field {
     }
 
     /// Get first value for a subfield code
-    #[must_use] 
+    #[must_use]
     pub fn get_subfield(&self, code: char) -> Option<&str> {
         self.subfields
             .iter()
@@ -495,21 +497,21 @@ pub struct FieldBuilder {
 
 impl FieldBuilder {
     /// Add a subfield to the field being built
-    #[must_use] 
+    #[must_use]
     pub fn subfield(mut self, code: char, value: String) -> Self {
         self.field.add_subfield(code, value);
         self
     }
 
     /// Add a subfield using a string slice
-    #[must_use] 
+    #[must_use]
     pub fn subfield_str(mut self, code: char, value: &str) -> Self {
         self.field.add_subfield_str(code, value);
         self
     }
 
     /// Build the field
-    #[must_use] 
+    #[must_use]
     pub fn build(self) -> Field {
         self.field
     }

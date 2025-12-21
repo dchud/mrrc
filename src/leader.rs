@@ -75,27 +75,24 @@ impl Leader {
         let control_record_type = bytes[8] as char;
         let character_coding = bytes[9] as char;
 
-        let indicator_count = u8::try_from(
-            (bytes[10] as char).to_digit(10).ok_or_else(|| {
-                MarcError::InvalidLeader(format!(
-                    "Invalid indicator count at position 10: {}",
-                    bytes[10] as char
-                ))
-            })?
-        ).map_err(|_| MarcError::InvalidLeader(
-            "Indicator count exceeds valid range".to_string()
-        ))?;
+        let indicator_count = u8::try_from((bytes[10] as char).to_digit(10).ok_or_else(|| {
+            MarcError::InvalidLeader(format!(
+                "Invalid indicator count at position 10: {}",
+                bytes[10] as char
+            ))
+        })?)
+        .map_err(|_| MarcError::InvalidLeader("Indicator count exceeds valid range".to_string()))?;
 
-        let subfield_code_count = u8::try_from(
-            (bytes[11] as char).to_digit(10).ok_or_else(|| {
+        let subfield_code_count =
+            u8::try_from((bytes[11] as char).to_digit(10).ok_or_else(|| {
                 MarcError::InvalidLeader(format!(
                     "Invalid subfield code count at position 11: {}",
                     bytes[11] as char
                 ))
-            })?
-        ).map_err(|_| MarcError::InvalidLeader(
-            "Subfield code count exceeds valid range".to_string()
-        ))?;
+            })?)
+            .map_err(|_| {
+                MarcError::InvalidLeader("Subfield code count exceeds valid range".to_string())
+            })?;
 
         let data_base_address = parse_digits(&bytes[12..17])?;
         let encoding_level = bytes[17] as char;

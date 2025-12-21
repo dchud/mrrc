@@ -1,3 +1,5 @@
+//! Integration tests for the mrrc library
+
 use mrrc::{MarcReader, MarcWriter};
 use std::fs::File;
 use std::io::Cursor;

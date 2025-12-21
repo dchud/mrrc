@@ -74,6 +74,21 @@ bd close bd-42 --reason "Completed" --json
 - `3` - Low (polish, optimization)
 - `4` - Backlog (future ideas)
 
+## Pre-Push CI Checks (Local)
+
+Before pushing, run all CI checks locally to match GitHub Actions:
+
+```bash
+.cargo/check.sh
+```
+
+This runs (in order):
+1. **Rustfmt** - `cargo fmt --all -- --check`
+2. **Clippy** - `cargo clippy --all --all-targets --all-features -- -D warnings`
+3. **Documentation** - `RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items`
+
+If any check fails, fix locally and re-run `.cargo/check.sh` before pushing.
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
