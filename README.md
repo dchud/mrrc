@@ -243,9 +243,93 @@ let mut writer = MarcWriter::new(buffer);
 writer.write_record(&record)?;
 ```
 
+### Character Encoding Detection
+
+```rust,ignore
+use mrrc::encoding::MarcEncoding;
+
+// Detect encoding from leader's character coding field (position 9)
+let encoding = MarcEncoding::from_leader_char(leader_char)?;
+
+// Use encoding for field data processing
+match encoding {
+    MarcEncoding::Marc8 => {
+        // Handle MARC-8 with escape sequences and character set switching
+    }
+    MarcEncoding::Utf8 => {
+        // Handle UTF-8 directly (all Unicode supported)
+    }
+}
+```
+
+## Character Encoding Support
+
+MRRC provides comprehensive support for both MARC-8 and UTF-8 encodings, with special emphasis on proper handling of multilingual records.
+
+### MARC-8 Encoding (Legacy)
+
+MARC-8 is the historical character encoding for MARC records, still widely used in library systems. It uses ISO 2022 escape sequences to switch between different character sets:
+
+```rust,ignore
+use mrrc::encoding::MarcEncoding;
+
+// Detect encoding from MARC leader position 9
+let encoding = match leader_char {
+    ' ' => MarcEncoding::Marc8,   // Space = MARC-8
+    'a' => MarcEncoding::Utf8,    // 'a' = UTF-8
+    _ => panic!("Unknown encoding"),
+};
+```
+
+**Supported MARC-8 Character Sets:**
+- **Basic Latin (ASCII)**: Standard ASCII characters
+- **ANSEL Extended Latin**: Extended Latin with diacritical marks
+- **Hebrew**: Full Hebrew alphabet (Escape: `ESC ) 2`)
+- **Arabic**: Basic and Extended Arabic (Escape: `ESC ) 3` / `ESC ) 4`)
+- **Cyrillic**: Russian and other Slavic languages (Escape: `ESC ( N`)
+- **Greek**: Greek alphabet (Escape: `ESC ( S`)
+- **Special Sets**: Subscripts (`ESC b`), Superscripts (`ESC p`), Greek Symbols (`ESC g`)
+- **East Asian**: Chinese, Japanese, Korean (EACC) via 3-byte sequences
+
+**Key Features:**
+- Proper handling of combining characters (diacritics) that precede base characters
+- Logical data ordering: Text stored left-to-right internally, regardless of display direction
+- Bidirectional script support for Hebrew and Arabic records
+- Unicode normalization (NFC) for combining character representation
+
+### UTF-8 Encoding (Modern)
+
+Modern MARC records use UTF-8, the Unicode standard. This is the recommended encoding for new systems:
+
+```rust,ignore
+// UTF-8 encoded records require 'a' in leader position 9
+let encoding = MarcEncoding::Utf8;
+
+// All Unicode characters are supported directly
+```
+
+### Handling Multilingual Records
+
+MARC-8 records with multiple scripts require careful handling of escape sequences:
+
+```rust,ignore
+// Example: Hebrew text in an otherwise English record
+// MARC-8 bytes: [English text] ESC)2 [Hebrew text] ESC)E [more English]
+//
+// The library automatically:
+// - Parses escape sequences
+// - Switches character set context
+// - Applies combining marks correctly
+// - Normalizes to Unicode (NFC)
+```
+
+See the examples directory for detailed demonstrations:
+- `examples/marc8_encoding.rs` - MARC-8 character set overview and encoding detection
+- `examples/multilingual_records.rs` - Building and handling multilingual records
+
 ## Testing
 
-The library includes 97 comprehensive tests covering:
+The library includes 107 comprehensive tests covering:
 
 - **Unit tests** (89): Individual component functionality, including builder and iterator API
 - **Integration tests** (8): End-to-end reading, writing, and format conversions
