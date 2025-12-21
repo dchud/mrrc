@@ -39,6 +39,15 @@ pub enum IndicatorValidation {
     Obsolete,
 }
 
+/// Semantic meaning of an indicator value for a specific field
+#[derive(Debug, Clone)]
+pub struct IndicatorMeaning {
+    /// The character value
+    pub value: char,
+    /// Human-readable meaning
+    pub meaning: String,
+}
+
 impl IndicatorValidation {
     /// Check if the given character is valid for this indicator
     #[must_use]
@@ -60,10 +69,14 @@ impl IndicatorValidation {
     }
 }
 
+/// Semantic descriptions for indicator values
+type SemanticMap = HashMap<char, String>;
+
 /// Validator for MARC field indicators
 #[derive(Debug)]
 pub struct IndicatorValidator {
     rules: HashMap<String, IndicatorRules>,
+    semantics: HashMap<String, (SemanticMap, SemanticMap)>, // (ind1_meanings, ind2_meanings)
 }
 
 impl IndicatorValidator {
@@ -71,7 +84,8 @@ impl IndicatorValidator {
     #[must_use]
     pub fn new() -> Self {
         let rules = Self::build_standard_rules();
-        IndicatorValidator { rules }
+        let semantics = Self::build_semantic_rules();
+        IndicatorValidator { rules, semantics }
     }
 
     /// Build MARC21 standard indicator validation rules
@@ -341,6 +355,229 @@ impl IndicatorValidator {
         Ok(())
     }
 
+    /// Build semantic meaning mappings for common field indicators
+    #[allow(clippy::too_many_lines)]
+    fn build_semantic_rules() -> HashMap<String, (SemanticMap, SemanticMap)> {
+        let mut semantics = HashMap::new();
+
+        // 100 - Main entry -- Personal name
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "Forename".to_string());
+        ind1.insert('1', "Surname".to_string());
+        ind1.insert('3', "Family name".to_string());
+        let ind2 = HashMap::new(); // undefined
+        semantics.insert("100".to_string(), (ind1, ind2));
+
+        // 110 - Main entry -- Corporate name
+        let mut ind1 = HashMap::new();
+        ind1.insert('1', "Jurisdiction".to_string());
+        ind1.insert('2', "Name in direct order".to_string());
+        let ind2 = HashMap::new(); // undefined
+        semantics.insert("110".to_string(), (ind1, ind2));
+
+        // 111 - Main entry -- Meeting name
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "Inverted name".to_string());
+        ind1.insert('1', "Jurisdiction".to_string());
+        ind1.insert('2', "Name in direct order".to_string());
+        let ind2 = HashMap::new(); // undefined
+        semantics.insert("111".to_string(), (ind1, ind2));
+
+        // 130 - Main entry -- Uniform title
+        // Ind1: 0-9 = nonfiling characters (semantic value is the digit count itself)
+        let ind2 = HashMap::new(); // undefined
+        semantics.insert("130".to_string(), (HashMap::new(), ind2));
+
+        // 240 - Uniform title
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "Not printed".to_string());
+        ind1.insert('1', "Printed".to_string());
+        // Ind2: 0-9 = nonfiling characters
+        semantics.insert("240".to_string(), (ind1, HashMap::new()));
+
+        // 245 - Title statement
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "No title added entry".to_string());
+        ind1.insert('1', "Title added entry".to_string());
+        // Ind2: 0-9 = nonfiling characters
+        semantics.insert("245".to_string(), (ind1, HashMap::new()));
+
+        // 490 - Series statement
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "Not traced".to_string());
+        ind1.insert('1', "Traced".to_string());
+        let ind2 = HashMap::new(); // undefined
+        semantics.insert("490".to_string(), (ind1, ind2));
+
+        // 600 - Subject added entry -- Personal name
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "Forename".to_string());
+        ind1.insert('1', "Surname".to_string());
+        ind1.insert('3', "Family name".to_string());
+        let mut ind2 = HashMap::new();
+        ind2.insert('0', "LCSH".to_string());
+        ind2.insert('1', "LCSH (conflict)".to_string());
+        ind2.insert('2', "MeSH".to_string());
+        ind2.insert('3', "NAL".to_string());
+        ind2.insert('4', "Source not specified".to_string());
+        ind2.insert('5', "Canadian subjects".to_string());
+        ind2.insert('6', "RVM (répertoire de vedettes-matière)".to_string());
+        ind2.insert('7', "Source in $2".to_string());
+        semantics.insert("600".to_string(), (ind1, ind2));
+
+        // 610 - Subject added entry -- Corporate name
+        let mut ind1 = HashMap::new();
+        ind1.insert('1', "Jurisdiction".to_string());
+        ind1.insert('2', "Name in direct order".to_string());
+        let mut ind2 = HashMap::new();
+        ind2.insert('0', "LCSH".to_string());
+        ind2.insert('1', "LCSH (conflict)".to_string());
+        ind2.insert('2', "MeSH".to_string());
+        ind2.insert('3', "NAL".to_string());
+        ind2.insert('4', "Source not specified".to_string());
+        ind2.insert('5', "Canadian subjects".to_string());
+        ind2.insert('6', "RVM".to_string());
+        ind2.insert('7', "Source in $2".to_string());
+        semantics.insert("610".to_string(), (ind1, ind2));
+
+        // 611 - Subject added entry -- Meeting name
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "Inverted name".to_string());
+        ind1.insert('1', "Jurisdiction".to_string());
+        ind1.insert('2', "Name in direct order".to_string());
+        let mut ind2 = HashMap::new();
+        ind2.insert('0', "LCSH".to_string());
+        ind2.insert('1', "LCSH (conflict)".to_string());
+        ind2.insert('2', "MeSH".to_string());
+        ind2.insert('3', "NAL".to_string());
+        ind2.insert('4', "Source not specified".to_string());
+        ind2.insert('5', "Canadian subjects".to_string());
+        ind2.insert('6', "RVM".to_string());
+        ind2.insert('7', "Source in $2".to_string());
+        semantics.insert("611".to_string(), (ind1, ind2));
+
+        // 650 - Subject added entry -- Topical term
+        let ind1 = HashMap::new(); // undefined
+        let mut ind2 = HashMap::new();
+        ind2.insert('0', "LCSH".to_string());
+        ind2.insert('1', "LCSH (conflict)".to_string());
+        ind2.insert('2', "MeSH".to_string());
+        ind2.insert('3', "NAL".to_string());
+        ind2.insert('4', "Source not specified".to_string());
+        ind2.insert('5', "Canadian subjects".to_string());
+        ind2.insert('6', "RVM".to_string());
+        ind2.insert('7', "Source in $2".to_string());
+        semantics.insert("650".to_string(), (ind1, ind2));
+
+        // 651 - Subject added entry -- Geographic name
+        let ind1 = HashMap::new(); // undefined
+        let mut ind2 = HashMap::new();
+        ind2.insert('0', "LCSH".to_string());
+        ind2.insert('1', "LCSH (conflict)".to_string());
+        ind2.insert('2', "MeSH".to_string());
+        ind2.insert('3', "NAL".to_string());
+        ind2.insert('4', "Source not specified".to_string());
+        ind2.insert('5', "Canadian subjects".to_string());
+        ind2.insert('6', "RVM".to_string());
+        ind2.insert('7', "Source in $2".to_string());
+        semantics.insert("651".to_string(), (ind1, ind2));
+
+        // 700 - Added entry -- Personal name
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "Forename".to_string());
+        ind1.insert('1', "Surname".to_string());
+        ind1.insert('3', "Family name".to_string());
+        let mut ind2 = HashMap::new();
+        ind2.insert('#', "No additional information".to_string());
+        ind2.insert(' ', "No additional information".to_string());
+        ind2.insert('2', "Analytical entry".to_string());
+        semantics.insert("700".to_string(), (ind1, ind2));
+
+        // 710 - Added entry -- Corporate name
+        let mut ind1 = HashMap::new();
+        ind1.insert('1', "Jurisdiction".to_string());
+        ind1.insert('2', "Name in direct order".to_string());
+        let mut ind2 = HashMap::new();
+        ind2.insert('#', "No additional information".to_string());
+        ind2.insert(' ', "No additional information".to_string());
+        ind2.insert('2', "Analytical entry".to_string());
+        semantics.insert("710".to_string(), (ind1, ind2));
+
+        // 711 - Added entry -- Meeting name
+        let mut ind1 = HashMap::new();
+        ind1.insert('0', "Inverted".to_string());
+        ind1.insert('1', "Jurisdiction".to_string());
+        ind1.insert('2', "Name in direct order".to_string());
+        let mut ind2 = HashMap::new();
+        ind2.insert('#', "No additional information".to_string());
+        ind2.insert(' ', "No additional information".to_string());
+        ind2.insert('2', "Analytical entry".to_string());
+        semantics.insert("711".to_string(), (ind1, ind2));
+
+        // 740 - Added entry -- Uncontrolled related/analytical title
+        // Ind1: 0-9 = nonfiling characters
+        let mut ind2 = HashMap::new();
+        ind2.insert('#', "No additional information".to_string());
+        ind2.insert(' ', "No additional information".to_string());
+        ind2.insert('2', "Analytical entry".to_string());
+        semantics.insert("740".to_string(), (HashMap::new(), ind2));
+
+        semantics
+    }
+
+    /// Get the semantic meaning of an indicator value for a field
+    ///
+    /// Returns the human-readable meaning if available, or `None` if the indicator
+    /// is semantic or not defined for this field.
+    #[must_use]
+    pub fn get_indicator_meaning(
+        &self,
+        tag: &str,
+        indicator_num: u8,
+        value: char,
+    ) -> Option<String> {
+        if indicator_num != 1 && indicator_num != 2 {
+            return None;
+        }
+
+        self.semantics.get(tag).and_then(|(ind1, ind2)| {
+            if indicator_num == 1 {
+                ind1.get(&value).cloned()
+            } else {
+                ind2.get(&value).cloned()
+            }
+        })
+    }
+
+    /// Get all semantic meanings for a field's indicator
+    ///
+    /// Returns a vector of (value, meaning) pairs for a given field indicator.
+    #[must_use]
+    pub fn get_indicator_meanings(&self, tag: &str, indicator_num: u8) -> Vec<IndicatorMeaning> {
+        if indicator_num != 1 && indicator_num != 2 {
+            return Vec::new();
+        }
+
+        self.semantics
+            .get(tag)
+            .and_then(|(ind1, ind2)| {
+                let map = if indicator_num == 1 { ind1 } else { ind2 };
+                if map.is_empty() {
+                    None
+                } else {
+                    Some(
+                        map.iter()
+                            .map(|(&value, meaning)| IndicatorMeaning {
+                                value,
+                                meaning: meaning.clone(),
+                            })
+                            .collect(),
+                    )
+                }
+            })
+            .unwrap_or_default()
+    }
+
     /// Get the validation rules for a tag
     #[must_use]
     pub fn get_rules(&self, tag: &str) -> Option<&IndicatorRules> {
@@ -424,5 +661,91 @@ mod tests {
         assert!(validator.validate_indicators("700", '1', ' ').is_ok());
         assert!(validator.validate_indicators("700", '3', '2').is_ok());
         assert!(validator.validate_indicators("700", '1', '0').is_err()); // Invalid ind2
+    }
+
+    #[test]
+    fn test_indicator_meaning_100() {
+        let validator = IndicatorValidator::new();
+        assert_eq!(
+            validator.get_indicator_meaning("100", 1, '0'),
+            Some("Forename".to_string())
+        );
+        assert_eq!(
+            validator.get_indicator_meaning("100", 1, '1'),
+            Some("Surname".to_string())
+        );
+        assert_eq!(
+            validator.get_indicator_meaning("100", 1, '3'),
+            Some("Family name".to_string())
+        );
+        assert_eq!(validator.get_indicator_meaning("100", 2, '0'), None); // Ind2 undefined
+    }
+
+    #[test]
+    fn test_indicator_meaning_245() {
+        let validator = IndicatorValidator::new();
+        assert_eq!(
+            validator.get_indicator_meaning("245", 1, '0'),
+            Some("No title added entry".to_string())
+        );
+        assert_eq!(
+            validator.get_indicator_meaning("245", 1, '1'),
+            Some("Title added entry".to_string())
+        );
+        // Ind2 has numeric meanings for nonfiling chars, not stored individually
+        assert_eq!(validator.get_indicator_meaning("245", 2, '0'), None);
+    }
+
+    #[test]
+    fn test_indicator_meaning_650() {
+        let validator = IndicatorValidator::new();
+        assert_eq!(
+            validator.get_indicator_meaning("650", 2, '0'),
+            Some("LCSH".to_string())
+        );
+        assert_eq!(
+            validator.get_indicator_meaning("650", 2, '2'),
+            Some("MeSH".to_string())
+        );
+        assert_eq!(
+            validator.get_indicator_meaning("650", 2, '7'),
+            Some("Source in $2".to_string())
+        );
+        assert_eq!(validator.get_indicator_meaning("650", 1, '0'), None); // Ind1 undefined
+    }
+
+    #[test]
+    fn test_get_indicator_meanings_100() {
+        let validator = IndicatorValidator::new();
+        let meanings = validator.get_indicator_meanings("100", 1);
+        assert!(!meanings.is_empty());
+        assert!(meanings
+            .iter()
+            .any(|m| m.value == '0' && m.meaning == "Forename"));
+        assert!(meanings
+            .iter()
+            .any(|m| m.value == '1' && m.meaning == "Surname"));
+    }
+
+    #[test]
+    fn test_get_indicator_meanings_empty() {
+        let validator = IndicatorValidator::new();
+        // Ind2 for field 100 is undefined (empty)
+        let meanings = validator.get_indicator_meanings("100", 2);
+        assert!(meanings.is_empty());
+    }
+
+    #[test]
+    fn test_get_indicator_meanings_650() {
+        let validator = IndicatorValidator::new();
+        let meanings = validator.get_indicator_meanings("650", 2);
+        assert!(!meanings.is_empty());
+        assert_eq!(meanings.len(), 8); // 0-7 thesaurus codes
+        assert!(meanings
+            .iter()
+            .any(|m| m.value == '0' && m.meaning == "LCSH"));
+        assert!(meanings
+            .iter()
+            .any(|m| m.value == '7' && m.meaning == "Source in $2"));
     }
 }
