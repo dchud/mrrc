@@ -117,16 +117,16 @@ fn main() -> anyhow::Result<()> {
 
                 // Write CSV row with proper escaping
                 write_csv_row(&mut output, &[title, author, pub_date])?;
-            }
+            },
             Ok(None) => {
                 // End of file
                 break;
-            }
+            },
             Err(e) => {
                 error_count += 1;
                 eprintln!("Error reading record {}: {}", record_count + 1, e);
                 // Continue processing remaining records
-            }
+            },
         }
     }
 

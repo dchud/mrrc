@@ -5,20 +5,6 @@
 # Reduce to encourage simpler functions
 cognitive-complexity-threshold = 20
 
-# Maximum line width for docs
-doc-valid-ident = [
-    "MARC",
-    "EACC",
-    "CJK",
-    "UTF",
-    "ISO",
-    "ANSEL",
-    "MarcReader",
-    "MarcWriter",
-    "MarcEncoding",
-    "CharacterSetId",
-]
-
 # Too many arguments threshold (default: 7)
 # Libraries often need more parameters
 too-many-arguments-threshold = 8

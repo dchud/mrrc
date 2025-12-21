@@ -768,8 +768,14 @@ mod tests {
         let bytes = b"\x1B\x293\xA1\xA2\xA3\x1B\x29\x45"; // Designate Arabic to G1, 3 Arabic letters, designate ANSEL to G1 (reset)
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
         assert!(decoded.contains('ء'), "Should contain Arabic hamza");
-        assert!(decoded.contains('آ'), "Should contain Arabic alef with madda");
-        assert!(decoded.contains('أ'), "Should contain Arabic alef with hamza above");
+        assert!(
+            decoded.contains('آ'),
+            "Should contain Arabic alef with madda"
+        );
+        assert!(
+            decoded.contains('أ'),
+            "Should contain Arabic alef with hamza above"
+        );
     }
 
     #[test]
@@ -789,7 +795,10 @@ mod tests {
         // ESC ) 2 designates Hebrew to G1, then shin(0xB5)+lamed(0xAC)+vav(0xA6)+final_mem(0xB8)
         let bytes = b"Hello\x1B\x292\xB5\xAC\xA6\xB8\x1B\x29\x45!"; // "Hello", designate Hebrew to G1, Hebrew text, reset to ANSEL, "!"
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
-        assert!(decoded.starts_with("Hello"), "Should start with ASCII Hello");
+        assert!(
+            decoded.starts_with("Hello"),
+            "Should start with ASCII Hello"
+        );
         assert!(decoded.contains('ש'), "Should contain Hebrew shin");
         assert!(decoded.contains('ל'), "Should contain Hebrew lamed");
         assert!(decoded.contains('ו'), "Should contain Hebrew vav");
@@ -805,7 +814,10 @@ mod tests {
         let bytes = b"\x1B\x292\xE0\xA1\x1B\x29\x45AB"; // Designate Hebrew to G1, combining grave + alef, reset to ANSEL, ASCII 'AB'
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
         // Combining marks are applied to the following character
-        assert!(decoded.contains('א'), "Should contain Hebrew alef (may have combining mark)");
+        assert!(
+            decoded.contains('א'),
+            "Should contain Hebrew alef (may have combining mark)"
+        );
         assert!(decoded.contains('A'), "Should contain ASCII A");
     }
 
