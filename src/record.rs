@@ -45,9 +45,40 @@ impl Record {
         }
     }
 
+    /// Create a builder for fluently constructing MARC records
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use mrrc::{Record, Leader, Field};
+    ///
+    /// let record = Record::builder(Leader::default())
+    ///     .control_field("001".to_string(), "12345".to_string())
+    ///     .field(Field::builder("245".to_string(), '1', '0')
+    ///         .subfield('a', "Title".to_string())
+    ///         .build())
+    ///     .build();
+    /// ```
+    pub fn builder(leader: Leader) -> RecordBuilder {
+        RecordBuilder {
+            record: Record {
+                leader,
+                control_fields: BTreeMap::new(),
+                data_fields: BTreeMap::new(),
+            },
+        }
+    }
+
     /// Add a control field (000-009)
     pub fn add_control_field(&mut self, tag: String, value: String) {
         self.control_fields.insert(tag, value);
+    }
+
+    /// Add a control field using string slices
+    ///
+    /// Convenience method that converts &str arguments to String automatically.
+    pub fn add_control_field_str(&mut self, tag: &str, value: &str) {
+        self.add_control_field(tag.to_string(), value.to_string());
     }
 
     /// Get a control field value
@@ -76,6 +107,36 @@ impl Record {
     /// Iterate over all fields in tag order
     pub fn fields(&self) -> impl Iterator<Item = &Field> {
         self.data_fields.values().flat_map(|v| v.iter())
+    }
+
+    /// Iterate over fields matching a specific tag
+    ///
+    /// Returns an iterator over all fields with the given tag.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// for field in record.fields_by_tag("650") {
+    ///     if let Some(subject) = field.get_subfield('a') {
+    ///         println!("Subject: {}", subject);
+    ///     }
+    /// }
+    /// ```
+    pub fn fields_by_tag(&self, tag: &str) -> impl Iterator<Item = &Field> {
+        self.data_fields
+            .get(tag)
+            .map(|v| v.iter())
+            .into_iter()
+            .flatten()
+    }
+
+    /// Iterate over all control fields
+    ///
+    /// Returns an iterator of (tag, value) tuples.
+    pub fn control_fields_iter(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.control_fields
+            .iter()
+            .map(|(tag, value)| (tag.as_str(), value.as_str()))
     }
 
     // ============================================================================
@@ -244,6 +305,50 @@ impl Record {
     }
 }
 
+/// Builder for fluently constructing MARC records
+///
+/// # Examples
+///
+/// ```ignore
+/// use mrrc::{Record, Leader, Field};
+///
+/// let record = Record::builder(Leader::default())
+///     .control_field_str("001", "12345")
+///     .field(Field::builder("245".to_string(), '1', '0')
+///         .subfield_str('a', "The Great Gatsby")
+///         .subfield_str('c', "F. Scott Fitzgerald")
+///         .build())
+///     .build();
+/// ```
+pub struct RecordBuilder {
+    record: Record,
+}
+
+impl RecordBuilder {
+    /// Add a control field to the record being built
+    pub fn control_field(mut self, tag: String, value: String) -> Self {
+        self.record.add_control_field(tag, value);
+        self
+    }
+
+    /// Add a control field using string slices
+    pub fn control_field_str(mut self, tag: &str, value: &str) -> Self {
+        self.record.add_control_field_str(tag, value);
+        self
+    }
+
+    /// Add a data field to the record being built
+    pub fn field(mut self, field: Field) -> Self {
+        self.record.add_field(field);
+        self
+    }
+
+    /// Build the record
+    pub fn build(self) -> Record {
+        self.record
+    }
+}
+
 impl Field {
     /// Create a new data field
     pub fn new(tag: String, indicator1: char, indicator2: char) -> Self {
@@ -255,9 +360,39 @@ impl Field {
         }
     }
 
+    /// Create a builder for constructing fields fluently
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mrrc::Field;
+    ///
+    /// let field = Field::builder("245".to_string(), '1', '0')
+    ///     .subfield('a', "The Great Gatsby".to_string())
+    ///     .subfield('c', "F. Scott Fitzgerald".to_string())
+    ///     .build();
+    /// ```
+    pub fn builder(tag: String, indicator1: char, indicator2: char) -> FieldBuilder {
+        FieldBuilder {
+            field: Field {
+                tag,
+                indicator1,
+                indicator2,
+                subfields: Vec::new(),
+            },
+        }
+    }
+
     /// Add a subfield
     pub fn add_subfield(&mut self, code: char, value: String) {
         self.subfields.push(Subfield { code, value });
+    }
+
+    /// Add a subfield using a string slice
+    ///
+    /// Convenience method that converts &str to String automatically.
+    pub fn add_subfield_str(&mut self, code: char, value: &str) {
+        self.add_subfield(code, value.to_string());
     }
 
     /// Get all values for a subfield code
@@ -275,6 +410,70 @@ impl Field {
             .iter()
             .find(|sf| sf.code == code)
             .map(|sf| sf.value.as_str())
+    }
+
+    /// Iterate over all subfields
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// for subfield in field.subfields() {
+    ///     println!("Code: {}, Value: {}", subfield.code, subfield.value);
+    /// }
+    /// ```
+    pub fn subfields(&self) -> impl Iterator<Item = &Subfield> {
+        self.subfields.iter()
+    }
+
+    /// Iterate over subfields with a specific code
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// for value in field.subfields_by_code('a') {
+    ///     println!("Author: {}", value);
+    /// }
+    /// ```
+    pub fn subfields_by_code(&self, code: char) -> impl Iterator<Item = &str> {
+        self.subfields
+            .iter()
+            .filter(move |sf| sf.code == code)
+            .map(|sf| sf.value.as_str())
+    }
+}
+
+/// Builder for fluently constructing MARC fields
+///
+/// # Examples
+///
+/// ```
+/// use mrrc::Field;
+///
+/// let field = Field::builder("245".to_string(), '1', '0')
+///     .subfield('a', "Title".to_string())
+///     .subfield('b', "Subtitle".to_string())
+///     .build();
+/// ```
+pub struct FieldBuilder {
+    field: Field,
+}
+
+impl FieldBuilder {
+    /// Add a subfield to the field being built
+    pub fn subfield(mut self, code: char, value: String) -> Self {
+        self.field.add_subfield(code, value);
+        self
+    }
+
+    /// Add a subfield using a string slice
+    pub fn subfield_str(mut self, code: char, value: &str) -> Self {
+        self.field.add_subfield_str(code, value);
+        self
+    }
+
+    /// Build the field
+    pub fn build(self) -> Field {
+        self.field
     }
 }
 
@@ -647,5 +846,109 @@ mod tests {
         let record = Record::new(leader);
 
         assert_eq!(record.authors(), Vec::<&str>::new());
+    }
+
+    // ============================================================================
+    // Tests for builder API
+    // ============================================================================
+
+    #[test]
+    fn test_field_builder() {
+        let field = Field::builder("245".to_string(), '1', '0')
+            .subfield('a', "The Great Gatsby".to_string())
+            .subfield('c', "F. Scott Fitzgerald".to_string())
+            .build();
+
+        assert_eq!(field.tag, "245");
+        assert_eq!(field.indicator1, '1');
+        assert_eq!(field.indicator2, '0');
+        assert_eq!(field.get_subfield('a'), Some("The Great Gatsby"));
+        assert_eq!(field.get_subfield('c'), Some("F. Scott Fitzgerald"));
+    }
+
+    #[test]
+    fn test_field_builder_with_str() {
+        let field = Field::builder("650".to_string(), ' ', '0')
+            .subfield_str('a', "Computer science")
+            .subfield_str('x', "History")
+            .build();
+
+        assert_eq!(field.get_subfield('a'), Some("Computer science"));
+        assert_eq!(field.get_subfield('x'), Some("History"));
+    }
+
+    #[test]
+    fn test_record_builder() {
+        let record = Record::builder(make_leader())
+            .control_field_str("001", "12345")
+            .field(
+                Field::builder("245".to_string(), '1', '0')
+                    .subfield_str('a', "Test Title")
+                    .build(),
+            )
+            .build();
+
+        assert_eq!(record.get_control_field("001"), Some("12345"));
+        assert_eq!(record.title(), Some("Test Title"));
+    }
+
+    #[test]
+    fn test_field_subfields_iterator() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('a', "Subject 1");
+        field.add_subfield_str('x', "Subdivision");
+
+        let mut count = 0;
+        for _ in field.subfields() {
+            count += 1;
+        }
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_field_subfields_by_code_iterator() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('a', "Primary Subject");
+        field.add_subfield_str('x', "Subdivision 1");
+        field.add_subfield_str('x', "Subdivision 2");
+
+        let x_values: Vec<&str> = field.subfields_by_code('x').collect();
+        assert_eq!(x_values.len(), 2);
+        assert!(x_values.contains(&"Subdivision 1"));
+        assert!(x_values.contains(&"Subdivision 2"));
+    }
+
+    #[test]
+    fn test_record_fields_by_tag_iterator() {
+        let mut record = Record::new(make_leader());
+
+        for i in 0..3 {
+            let mut field = Field::new("650".to_string(), ' ', '0');
+            field.add_subfield('a', format!("Subject {}", i));
+            record.add_field(field);
+        }
+
+        let subjects: Vec<&str> = record
+            .fields_by_tag("650")
+            .filter_map(|f| f.get_subfield('a'))
+            .collect();
+
+        assert_eq!(subjects.len(), 3);
+    }
+
+    #[test]
+    fn test_record_control_fields_iterator() {
+        let mut record = Record::new(make_leader());
+        record.add_control_field_str("001", "id1");
+        record.add_control_field_str("003", "source");
+
+        let mut found = 0;
+        for (tag, _value) in record.control_fields_iter() {
+            if tag == "001" || tag == "003" {
+                found += 1;
+            }
+        }
+
+        assert_eq!(found, 2);
     }
 }

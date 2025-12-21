@@ -102,5 +102,5 @@ pub mod xml;
 pub use error::{MarcError, Result};
 pub use leader::Leader;
 pub use reader::MarcReader;
-pub use record::{Field, Record, Subfield};
+pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
 pub use writer::MarcWriter;
