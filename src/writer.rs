@@ -42,7 +42,7 @@
 //! # }
 //! ```
 
-use crate::error::Result;
+use crate::error::{MarcError, Result};
 use crate::record::Record;
 use std::io::Write;
 
