@@ -99,7 +99,9 @@ pub fn find_unicode_in_marc8(unicode_char: u32) -> Option<(CharacterSetId, u32)>
     }
 
     // Try ANSEL Extended Latin (but skip combining marks for encoding)
-    if let Some((byte, is_combining)) = find_in_charset(CharacterSetId::AnselExtendedLatin, unicode_char) {
+    if let Some((byte, is_combining)) =
+        find_in_charset(CharacterSetId::AnselExtendedLatin, unicode_char)
+    {
         if !is_combining {
             return Some((CharacterSetId::AnselExtendedLatin, byte));
         }

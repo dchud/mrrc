@@ -299,7 +299,9 @@ fn encode_marc8(s: &str) -> Result<Vec<u8>> {
         let unicode = c as u32;
 
         // Try to find this character in the MARC-8 tables
-        if let Some((target_charset, byte_value)) = crate::marc8_tables::find_unicode_in_marc8(unicode) {
+        if let Some((target_charset, byte_value)) =
+            crate::marc8_tables::find_unicode_in_marc8(unicode)
+        {
             // If we need to switch character sets, emit escape sequence
             if target_charset != current_charset {
                 match target_charset {
