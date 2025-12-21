@@ -3,10 +3,15 @@ name = "mrrc"
 version = "0.1.0"
 edition = "2021"
 authors = ["MARC Rust Community"]
-description = "A Rust library for working with MARC bibliographic data"
+description = "A Rust library for reading, writing, and manipulating MARC bibliographic records in ISO 2709 binary format"
 license = "MIT"
-repository = "https://github.com/mrrc/mrrc"
+repository = "https://github.com/dchud/mrrc"
+homepage = "https://github.com/dchud/mrrc"
+documentation = "https://docs.rs/mrrc"
+readme = "README.md"
 rust-version = "1.71"
+keywords = ["marc", "bibliographic", "library", "metadata"]
+categories = ["encoding", "parser-implementations"]
 
 [dependencies]
 # Core parsing and data handling
@@ -36,3 +41,21 @@ flate2 = "1.0"
 
 [dev-dependencies]
 proptest = "1.0"
+
+# Lint configuration following Rust API Guidelines
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+# Restrict to reasonable cognitive complexity
+cognitive_complexity = "warn"
+# Allow module name in error messages
+module_name_repetitions = "allow"
+# Allow similar names in tests
+similar_names = "allow"
+# Type complexity is managed separately
+type_complexity = "allow"

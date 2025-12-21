@@ -1,0 +1,36 @@
+# Rust formatting configuration
+# Reference: https://rust-lang.github.io/rustfmt/
+# Only uses stable (non-nightly) features
+
+# Edition to target
+edition = "2021"
+
+# Line width limit (default: 100) - standard community practice
+max_width = 100
+
+# Use soft tabs (spaces)
+hard_tabs = false
+
+# Number of spaces per indent level
+tab_spaces = 4
+
+# Normalize (sort and group) imports
+reorder_imports = true
+
+# Merge derives
+merge_derives = true
+
+# Match block trailing comma (always use for consistency)
+match_block_trailing_comma = true
+
+# Wrap function arguments on new line
+fn_params_layout = "Tall"
+
+# Newline style (Unix = LF)
+newline_style = "Unix"
+
+# Wrap at appropriate chain length
+chain_width = 60
+
+# Remove nested parentheses where possible
+remove_nested_parens = true
