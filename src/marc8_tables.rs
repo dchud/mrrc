@@ -30,6 +30,12 @@ pub enum CharacterSetId {
     ExtendedCyrillic = 0x51,
     /// Basic Greek - escape sequence final character 'S' (0x53)
     BasicGreek = 0x53,
+    /// Subscript characters - custom MARC set, escape sequence ESCb (0x1B 0x62)
+    Subscript = 0x62,
+    /// Superscript characters - custom MARC set, escape sequence ESCp (0x1B 0x70)
+    Superscript = 0x70,
+    /// Greek Symbols - custom MARC set, escape sequence ESCg (0x1B 0x67)
+    GreekSymbols = 0x67,
     /// EACC (East Asian Character Code) - escape sequence final character '1' (0x31), multibyte
     EACC = 0x31,
 }
@@ -64,6 +70,9 @@ pub fn get_charset_table(id: CharacterSetId) -> &'static HashMap<u8, CharacterMa
         CharacterSetId::BasicCyrillic => &BASIC_CYRILLIC,
         CharacterSetId::ExtendedCyrillic => &EXTENDED_CYRILLIC,
         CharacterSetId::BasicGreek => &BASIC_GREEK,
+        CharacterSetId::Subscript => &SUBSCRIPT,
+        CharacterSetId::Superscript => &SUPERSCRIPT,
+        CharacterSetId::GreekSymbols => &GREEK_SYMBOLS,
         CharacterSetId::EACC => unreachable!("Use get_eacc_character() for EACC lookup"),
     }
 }
@@ -73,6 +82,59 @@ pub fn get_charset_table(id: CharacterSetId) -> &'static HashMap<u8, CharacterMa
 /// Example: bytes [0x21, 0x23, 0x20] become key 0x212320
 pub fn get_eacc_character(key: u32) -> Option<CharacterMapping> {
     EACC_TABLE.get(&key).copied()
+}
+
+/// Try to find a Unicode character in any MARC-8 character set and return the best encoding
+/// Returns (charset_id, byte_value) for single-byte sets, or (charset_id, key) for multi-byte
+/// Prefers Basic Latin, then ANSEL Extended Latin, then other sets
+/// For non-combining characters, searches in this preference order:
+/// 1. Basic Latin (0x20-0x7E)
+/// 2. ANSEL Extended Latin (non-combining only)
+/// 3. Subscript/Superscript if character matches those sets
+/// 4. Other character sets
+pub fn find_unicode_in_marc8(unicode_char: u32) -> Option<(CharacterSetId, u32)> {
+    // Prefer Basic Latin first (ASCII range)
+    if let Some((byte, _)) = find_in_charset(CharacterSetId::BasicLatin, unicode_char) {
+        return Some((CharacterSetId::BasicLatin, byte));
+    }
+
+    // Try ANSEL Extended Latin (but skip combining marks for encoding)
+    if let Some((byte, is_combining)) = find_in_charset(CharacterSetId::AnselExtendedLatin, unicode_char) {
+        if !is_combining {
+            return Some((CharacterSetId::AnselExtendedLatin, byte));
+        }
+    }
+
+    // Try single-byte character sets in order
+    for &charset_id in &[
+        CharacterSetId::Subscript,
+        CharacterSetId::Superscript,
+        CharacterSetId::BasicHebrew,
+        CharacterSetId::BasicArabic,
+        CharacterSetId::ExtendedArabic,
+        CharacterSetId::BasicCyrillic,
+        CharacterSetId::ExtendedCyrillic,
+        CharacterSetId::BasicGreek,
+        CharacterSetId::GreekSymbols,
+    ] {
+        if let Some((byte, _)) = find_in_charset(charset_id, unicode_char) {
+            return Some((charset_id, byte));
+        }
+    }
+
+    None
+}
+
+/// Internal helper: search for unicode_char in a charset
+/// Returns (byte_value, is_combining) if found
+fn find_in_charset(charset: CharacterSetId, unicode_char: u32) -> Option<(u32, bool)> {
+    let table = get_charset_table(charset);
+    for (&byte, &(unicode, is_combining)) in table.iter() {
+        if unicode == unicode_char {
+            return Some((byte as u32, is_combining));
+        }
+    }
+    None
 }
 
 lazy_static::lazy_static! {
@@ -414,6 +476,62 @@ lazy_static::lazy_static! {
         m.insert(0xE6, (0x03C7, false)); // GREEK SMALL LETTER CHI
         m.insert(0xE7, (0x03C8, false)); // GREEK SMALL LETTER PSI
         m.insert(0xE8, (0x03C9, false)); // GREEK SMALL LETTER OMEGA
+        m
+    };
+
+    /// Subscript characters - custom MARC set, escape sequence ESCb (0x1B 0x62)
+    /// Contains 14 subscript characters: parentheses, plus, minus, and digits 0-9
+    static ref SUBSCRIPT: HashMap<u8, CharacterMapping> = {
+        let mut m = HashMap::new();
+        m.insert(0x28, (0x208D, false)); // SUBSCRIPT OPENING PARENTHESIS
+        m.insert(0x29, (0x208E, false)); // SUBSCRIPT CLOSING PARENTHESIS
+        m.insert(0x2B, (0x208A, false)); // SUBSCRIPT PLUS SIGN
+        m.insert(0x2D, (0x208B, false)); // SUBSCRIPT HYPHEN-MINUS / SUBSCRIPT MINUS
+        m.insert(0x30, (0x2080, false)); // SUBSCRIPT DIGIT ZERO
+        m.insert(0x31, (0x2081, false)); // SUBSCRIPT DIGIT ONE
+        m.insert(0x32, (0x2082, false)); // SUBSCRIPT DIGIT TWO
+        m.insert(0x33, (0x2083, false)); // SUBSCRIPT DIGIT THREE
+        m.insert(0x34, (0x2084, false)); // SUBSCRIPT DIGIT FOUR
+        m.insert(0x35, (0x2085, false)); // SUBSCRIPT DIGIT FIVE
+        m.insert(0x36, (0x2086, false)); // SUBSCRIPT DIGIT SIX
+        m.insert(0x37, (0x2087, false)); // SUBSCRIPT DIGIT SEVEN
+        m.insert(0x38, (0x2088, false)); // SUBSCRIPT DIGIT EIGHT
+        m.insert(0x39, (0x2089, false)); // SUBSCRIPT DIGIT NINE
+        m
+    };
+
+    /// Superscript characters - custom MARC set, escape sequence ESCp (0x1B 0x70)
+    /// Contains 14 superscript characters: parentheses, plus, minus, and digits 0-9
+    static ref SUPERSCRIPT: HashMap<u8, CharacterMapping> = {
+        let mut m = HashMap::new();
+        m.insert(0x28, (0x207D, false)); // SUPERSCRIPT OPENING PARENTHESIS
+        m.insert(0x29, (0x207E, false)); // SUPERSCRIPT CLOSING PARENTHESIS
+        m.insert(0x2B, (0x207A, false)); // SUPERSCRIPT PLUS SIGN
+        m.insert(0x2D, (0x207B, false)); // SUPERSCRIPT HYPHEN-MINUS / SUPERSCRIPT MINUS
+        m.insert(0x30, (0x2070, false)); // SUPERSCRIPT DIGIT ZERO
+        m.insert(0x31, (0x00B9, false)); // SUPERSCRIPT DIGIT ONE
+        m.insert(0x32, (0x00B2, false)); // SUPERSCRIPT DIGIT TWO
+        m.insert(0x33, (0x00B3, false)); // SUPERSCRIPT DIGIT THREE
+        m.insert(0x34, (0x2074, false)); // SUPERSCRIPT DIGIT FOUR
+        m.insert(0x35, (0x2075, false)); // SUPERSCRIPT DIGIT FIVE
+        m.insert(0x36, (0x2076, false)); // SUPERSCRIPT DIGIT SIX
+        m.insert(0x37, (0x2077, false)); // SUPERSCRIPT DIGIT SEVEN
+        m.insert(0x38, (0x2078, false)); // SUPERSCRIPT DIGIT EIGHT
+        m.insert(0x39, (0x2079, false)); // SUPERSCRIPT DIGIT NINE
+        m
+    };
+
+    /// Greek Symbols - custom MARC set, escape sequence ESCg (0x1B 0x67)
+    /// Contains 3 Greek symbol characters (alpha, beta, gamma)
+    /// Note: These characters have mapping difficulties and usage is discouraged
+    /// Reference: https://www.loc.gov/marc/specifications/speccharmarc8.html
+    static ref GREEK_SYMBOLS: HashMap<u8, CharacterMapping> = {
+        let mut m = HashMap::new();
+        // Greek symbol characters (deprecated - mapping difficulties)
+        // These map to their equivalents but round-tripping is problematic
+        m.insert(0x41, (0x03B1, false)); // GREEK SMALL LETTER ALPHA
+        m.insert(0x42, (0x03B2, false)); // GREEK SMALL LETTER BETA
+        m.insert(0x43, (0x03B3, false)); // GREEK SMALL LETTER GAMMA
         m
     };
 
