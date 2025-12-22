@@ -1,3 +1,4 @@
+use crate::bibliographic_helpers::PublicationInfo;
 use crate::leader::Leader;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -329,6 +330,71 @@ impl Record {
     #[must_use]
     pub fn is_audiovisual(&self) -> bool {
         self.leader.record_type == 'g'
+    }
+
+    /// Extract publication information from field 260
+    ///
+    /// Returns a `PublicationInfo` struct containing place of publication (subfield 'a'),
+    /// publisher (subfield 'b'), and date (subfield 'c').
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// if let Some(info) = record.publication_info() {
+    ///     println!("Published in {} by {}", info.place.unwrap_or("unknown"), info.publisher.unwrap_or("unknown"));
+    ///     if let Some(year) = info.publication_year() {
+    ///         println!("Year: {}", year);
+    ///     }
+    /// }
+    /// ```
+    #[must_use]
+    pub fn publication_info(&self) -> Option<PublicationInfo> {
+        self.get_field("260").map(|field| {
+            PublicationInfo::new(
+                field.get_subfield('a').map(ToString::to_string),
+                field.get_subfield('b').map(ToString::to_string),
+                field.get_subfield('c').map(ToString::to_string),
+            )
+        })
+    }
+
+    /// Get the publication year extracted from field 260$c or field 008
+    ///
+    /// Attempts to extract a 4-digit year from the publication date statement.
+    /// Falls back to field 008 (positions 7-10) if field 260 is not available.
+    #[must_use]
+    pub fn publication_year(&self) -> Option<u32> {
+        // Try from field 260 first
+        if let Some(info) = self.publication_info() {
+            if let Some(year) = info.publication_year() {
+                return Some(year);
+            }
+        }
+
+        // Fall back to field 008
+        self.get_control_field("008").and_then(|field_008| {
+            if field_008.len() >= 11 {
+                let year_str = &field_008[7..11];
+                if year_str != "    "
+                    && year_str != "0000"
+                    && year_str.chars().all(|c| c.is_ascii_digit())
+                {
+                    year_str.parse().ok()
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Get the place of publication from field 260, subfield 'a'
+    ///
+    /// Alias for accessing the 'a' subfield of field 260.
+    #[must_use]
+    pub fn place_of_publication(&self) -> Option<&str> {
+        self.get_field("260").and_then(|f| f.get_subfield('a'))
     }
 }
 
