@@ -1,6 +1,6 @@
 //! Integration tests for the mrrc library
 
-use mrrc::{MarcReader, MarcWriter};
+use mrrc::{MarcReader, MarcWriter, AuthorityMarcReader, AuthorityMarcWriter};
 use std::fs::File;
 use std::io::Cursor;
 
@@ -201,4 +201,67 @@ fn test_marcjson_serialization_with_file_data() {
     let orig_title = record.get_fields("245").unwrap()[0].get_subfield('a');
     let restored_title = restored.get_fields("245").unwrap()[0].get_subfield('a');
     assert_eq!(orig_title, restored_title);
+}
+
+#[test]
+fn test_read_simple_authority_record() {
+    let file = File::open("tests/data/simple_authority.mrc").expect("Could not open test file");
+    let mut reader = AuthorityMarcReader::new(file);
+
+    let record = reader.read_record().expect("Failed to read record");
+    let record = record.expect("No record found");
+
+    // Verify record structure
+    assert_eq!(record.leader.record_type, 'z'); // Authority record
+
+    // Check control field 001 (control number)
+    assert_eq!(record.get_control_field("001"), Some("n79021800"));
+
+    // Check heading field
+    assert!(record.heading().is_some());
+    let heading = record.heading().unwrap();
+    assert_eq!(heading.tag, "100");
+    assert_eq!(heading.get_subfield('a'), Some("Smith, John"));
+}
+
+#[test]
+fn test_authority_record_roundtrip() {
+    // Read the original file
+    let file = File::open("tests/data/simple_authority.mrc").expect("Could not open test file");
+    let mut reader = AuthorityMarcReader::new(file);
+    let original = reader.read_record().expect("Failed to read record");
+    let original = original.expect("No record found");
+
+    // Write to buffer
+    let mut buffer = Vec::new();
+    {
+        let mut writer = AuthorityMarcWriter::new(&mut buffer);
+        writer
+            .write_record(&original)
+            .expect("Failed to write record");
+    }
+
+    // Read back from buffer
+    let cursor = Cursor::new(buffer);
+    let mut reader = AuthorityMarcReader::new(cursor);
+    let restored = reader
+        .read_record()
+        .expect("Failed to read restored record");
+    let restored = restored.expect("No restored record");
+
+    // Verify the roundtrip preserved data
+    assert_eq!(original.leader.record_type, restored.leader.record_type);
+    assert_eq!(
+        original.get_control_field("001"),
+        restored.get_control_field("001")
+    );
+
+    if let Some(orig_heading) = original.heading() {
+        let restored_heading = restored.heading().expect("Restored heading missing");
+        assert_eq!(orig_heading.tag, restored_heading.tag);
+        assert_eq!(
+            orig_heading.get_subfield('a'),
+            restored_heading.get_subfield('a')
+        );
+    }
 }

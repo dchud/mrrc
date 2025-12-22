@@ -87,7 +87,9 @@
 //! - **XML** — XML representation with proper field/subfield structure
 //! - **Character Encodings** — MARC-8 and UTF-8 with automatic detection
 
+pub mod authority_reader;
 pub mod authority_record;
+pub mod authority_writer;
 pub mod bibliographic_helpers;
 pub mod encoding;
 pub mod encoding_validation;
@@ -105,9 +107,11 @@ pub mod validation;
 pub mod writer;
 pub mod xml;
 
+pub use authority_reader::AuthorityMarcReader;
 pub use authority_record::{
     AuthorityRecord, AuthorityRecordBuilder, HeadingType, KindOfRecord, LevelOfEstablishment,
 };
+pub use authority_writer::AuthorityMarcWriter;
 pub use bibliographic_helpers::{IsbnValidator, PublicationInfo};
 pub use encoding_validation::{EncodingAnalysis, EncodingValidator};
 pub use error::{MarcError, Result};
