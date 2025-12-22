@@ -96,6 +96,7 @@ pub mod marcjson;
 pub mod reader;
 /// Core MARC record structures (`Record`, `Field`, `Subfield`)
 pub mod record;
+pub mod record_validation;
 pub mod validation;
 pub mod writer;
 pub mod xml;
@@ -104,5 +105,6 @@ pub use error::{MarcError, Result};
 pub use leader::Leader;
 pub use reader::MarcReader;
 pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
+pub use record_validation::RecordStructureValidator;
 pub use validation::IndicatorValidator;
 pub use writer::MarcWriter;
