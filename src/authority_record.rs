@@ -5,7 +5,7 @@
 //! from bibliographic records in structure and purpose.
 
 use crate::leader::Leader;
-use crate::record::{Field, Subfield};
+use crate::record::Field;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -117,7 +117,7 @@ impl AuthorityRecord {
     /// Get a control field value
     #[must_use]
     pub fn get_control_field(&self, tag: &str) -> Option<&str> {
-        self.control_fields.get(tag).map(|s| s.as_str())
+        self.control_fields.get(tag).map(String::as_str)
     }
 
     /// Set the heading (1XX field)
@@ -134,18 +134,16 @@ impl AuthorityRecord {
     /// Get the heading type from the 1XX field tag
     #[must_use]
     pub fn heading_type(&self) -> Option<HeadingType> {
-        self.heading.as_ref().and_then(|f| {
-            match f.tag.as_str() {
-                "100" => Some(HeadingType::PersonalName),
-                "110" => Some(HeadingType::CorporateName),
-                "111" => Some(HeadingType::MeetingName),
-                "130" => Some(HeadingType::UniformTitle),
-                "148" => Some(HeadingType::ChronologicalTerm),
-                "150" => Some(HeadingType::TopicalTerm),
-                "151" => Some(HeadingType::GeographicName),
-                "155" => Some(HeadingType::GenreFormTerm),
-                _ => None,
-            }
+        self.heading.as_ref().and_then(|f| match f.tag.as_str() {
+            "100" => Some(HeadingType::PersonalName),
+            "110" => Some(HeadingType::CorporateName),
+            "111" => Some(HeadingType::MeetingName),
+            "130" => Some(HeadingType::UniformTitle),
+            "148" => Some(HeadingType::ChronologicalTerm),
+            "150" => Some(HeadingType::TopicalTerm),
+            "151" => Some(HeadingType::GeographicName),
+            "155" => Some(HeadingType::GenreFormTerm),
+            _ => None,
         })
     }
 
@@ -185,19 +183,13 @@ impl AuthorityRecord {
     /// Get source data found notes (670)
     #[must_use]
     pub fn source_data_found(&self) -> Vec<&Field> {
-        self.notes
-            .iter()
-            .filter(|f| f.tag == "670")
-            .collect()
+        self.notes.iter().filter(|f| f.tag == "670").collect()
     }
 
     /// Get source data not found notes (671)
     #[must_use]
     pub fn source_data_not_found(&self) -> Vec<&Field> {
-        self.notes
-            .iter()
-            .filter(|f| f.tag == "671")
-            .collect()
+        self.notes.iter().filter(|f| f.tag == "671").collect()
     }
 
     /// Add a heading linking entry field (7XX)
@@ -211,18 +203,18 @@ impl AuthorityRecord {
         &self.linking_entries
     }
 
-    /// Add a field to other_fields
+    /// Add a field to `other_fields`
     pub fn add_field(&mut self, field: Field) {
         self.other_fields
             .entry(field.tag.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(field);
     }
 
-    /// Get fields by tag from other_fields
+    /// Get fields by tag from `other_fields`
     #[must_use]
     pub fn get_fields(&self, tag: &str) -> Option<&[Field]> {
-        self.other_fields.get(tag).map(|v| v.as_slice())
+        self.other_fields.get(tag).map(Vec::as_slice)
     }
 
     /// Get kind of record from 008/09
@@ -270,8 +262,7 @@ impl AuthorityRecord {
     pub fn is_established(&self) -> bool {
         matches!(
             self.kind_of_record(),
-            Some(KindOfRecord::EstablishedHeading)
-                | Some(KindOfRecord::EstablishedHeadingAndSubdivision)
+            Some(KindOfRecord::EstablishedHeading | KindOfRecord::EstablishedHeadingAndSubdivision)
         )
     }
 
@@ -280,9 +271,11 @@ impl AuthorityRecord {
     pub fn is_reference(&self) -> bool {
         matches!(
             self.kind_of_record(),
-            Some(KindOfRecord::ReferenceUntracted)
-                | Some(KindOfRecord::ReferenceTraced)
-                | Some(KindOfRecord::ReferenceAndSubdivision)
+            Some(
+                KindOfRecord::ReferenceUntracted
+                    | KindOfRecord::ReferenceTraced
+                    | KindOfRecord::ReferenceAndSubdivision
+            )
         )
     }
 }
@@ -295,42 +288,49 @@ pub struct AuthorityRecordBuilder {
 
 impl AuthorityRecordBuilder {
     /// Add a control field
+    #[must_use]
     pub fn control_field(mut self, tag: String, value: String) -> Self {
         self.record.add_control_field(tag, value);
         self
     }
 
     /// Set the main heading (1XX)
+    #[must_use]
     pub fn heading(mut self, field: Field) -> Self {
         self.record.set_heading(field);
         self
     }
 
     /// Add a See From Tracing field (4XX)
+    #[must_use]
     pub fn add_see_from(mut self, field: Field) -> Self {
         self.record.add_see_from_tracing(field);
         self
     }
 
     /// Add a See Also From Tracing field (5XX)
+    #[must_use]
     pub fn add_see_also(mut self, field: Field) -> Self {
         self.record.add_see_also_tracing(field);
         self
     }
 
     /// Add a note field
+    #[must_use]
     pub fn add_note(mut self, field: Field) -> Self {
         self.record.add_note(field);
         self
     }
 
     /// Add a heading linking entry field (7XX)
+    #[must_use]
     pub fn add_linking_entry(mut self, field: Field) -> Self {
         self.record.add_linking_entry(field);
         self
     }
 
-    /// Add a field to other_fields
+    /// Add a field to `other_fields`
+    #[must_use]
     pub fn add_field(mut self, field: Field) -> Self {
         self.record.add_field(field);
         self
@@ -346,6 +346,7 @@ impl AuthorityRecordBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::record::Subfield;
 
     fn create_test_leader() -> Leader {
         // Create a minimal authority record leader
@@ -380,10 +381,16 @@ mod tests {
     fn test_authority_record_builder() {
         let leader = create_test_leader();
         let record = AuthorityRecord::builder(leader)
-            .control_field("008".to_string(), "850101n| a azannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "850101n| a azannaabn          |a aaa      ".to_string(),
+            )
             .build();
 
-        assert_eq!(record.get_control_field("008"), Some("850101n| a azannaabn          |a aaa      "));
+        assert_eq!(
+            record.get_control_field("008"),
+            Some("850101n| a azannaabn          |a aaa      ")
+        );
     }
 
     #[test]
@@ -397,9 +404,7 @@ mod tests {
             indicator2: ' ',
             subfields: vec![],
         };
-        let record = AuthorityRecord::builder(leader)
-            .heading(field)
-            .build();
+        let record = AuthorityRecord::builder(leader).heading(field).build();
         assert_eq!(record.heading_type(), Some(HeadingType::PersonalName));
 
         // Test topical term heading
@@ -422,19 +427,34 @@ mod tests {
         // Test established heading (position 9 = 'a')
         // 008 field is 40 chars: yymmdd (0-5) + 06 (6-7) + 07 (8-8) + 08 (9-9) + ...
         let record = AuthorityRecord::builder(leader)
-            .control_field("008".to_string(), "850101n| a azannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "850101n| a azannaabn          |a aaa      ".to_string(),
+            )
             .build();
-        assert_eq!(record.kind_of_record(), Some(KindOfRecord::EstablishedHeading));
+        assert_eq!(
+            record.kind_of_record(),
+            Some(KindOfRecord::EstablishedHeading)
+        );
 
         // Test reference record (position 9 = 'b')
         let record = AuthorityRecord::builder(create_test_leader())
-            .control_field("008".to_string(), "850101n| b azannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "850101n| b azannaabn          |a aaa      ".to_string(),
+            )
             .build();
-        assert_eq!(record.kind_of_record(), Some(KindOfRecord::ReferenceUntracted));
+        assert_eq!(
+            record.kind_of_record(),
+            Some(KindOfRecord::ReferenceUntracted)
+        );
 
         // Test subdivision (position 9 = 'd')
         let record = AuthorityRecord::builder(create_test_leader())
-            .control_field("008".to_string(), "850101n| d azannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "850101n| d azannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert_eq!(record.kind_of_record(), Some(KindOfRecord::Subdivision));
     }
@@ -448,7 +468,10 @@ mod tests {
         // Create string with exact 40 chars: position 33 = 'a' (fully established)
         let mut field_008 = vec!['8', '5', '0', '1', '0', '1', 'n', '|', ' ', 'a'];
         // positions 10-32 (23 chars)
-        field_008.extend(vec!['z', 'a', 'n', 'n', 'a', 'a', 'b', 'n', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']);
+        field_008.extend(vec![
+            'z', 'a', 'n', 'n', 'a', 'a', 'b', 'n', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+            ' ', ' ', ' ', ' ', ' ', ' ',
+        ]);
         // position 33 (level of establishment)
         field_008.push('a');
         // positions 34-39 (6 chars)
@@ -458,11 +481,17 @@ mod tests {
         let record = AuthorityRecord::builder(leader)
             .control_field("008".to_string(), field_008_str)
             .build();
-        assert_eq!(record.level_of_establishment(), Some(LevelOfEstablishment::FullyEstablished));
+        assert_eq!(
+            record.level_of_establishment(),
+            Some(LevelOfEstablishment::FullyEstablished)
+        );
 
         // Same but with 'd' at position 33 (preliminary)
         let mut field_008 = vec!['8', '5', '0', '1', '0', '1', 'n', '|', ' ', 'a'];
-        field_008.extend(vec!['z', 'a', 'n', 'n', 'a', 'a', 'b', 'n', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']);
+        field_008.extend(vec![
+            'z', 'a', 'n', 'n', 'a', 'a', 'b', 'n', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+            ' ', ' ', ' ', ' ', ' ', ' ',
+        ]);
         field_008.push('d');
         field_008.extend(vec![' ', ' ', ' ', ' ', ' ', ' ']);
         let field_008_str: String = field_008.iter().collect();
@@ -470,7 +499,10 @@ mod tests {
         let record = AuthorityRecord::builder(create_test_leader())
             .control_field("008".to_string(), field_008_str)
             .build();
-        assert_eq!(record.level_of_establishment(), Some(LevelOfEstablishment::Preliminary));
+        assert_eq!(
+            record.level_of_establishment(),
+            Some(LevelOfEstablishment::Preliminary)
+        );
     }
 
     #[test]
@@ -479,13 +511,19 @@ mod tests {
 
         // Established heading (position 9 = 'a')
         let record = AuthorityRecord::builder(leader)
-            .control_field("008".to_string(), "850101n| a azannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "850101n| a azannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert!(record.is_established());
 
         // Reference record (position 9 = 'b')
         let record = AuthorityRecord::builder(create_test_leader())
-            .control_field("008".to_string(), "850101n| b azannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "850101n| b azannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert!(!record.is_established());
     }
@@ -496,13 +534,19 @@ mod tests {
 
         // Reference record (position 9 = 'b')
         let record = AuthorityRecord::builder(leader)
-            .control_field("008".to_string(), "850101n| b azannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "850101n| b azannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert!(record.is_reference());
 
         // Established heading (position 9 = 'a')
         let record = AuthorityRecord::builder(create_test_leader())
-            .control_field("008".to_string(), "850101n| a azannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "850101n| a azannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert!(!record.is_reference());
     }
