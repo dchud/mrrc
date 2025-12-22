@@ -327,12 +327,51 @@ See the examples directory for detailed demonstrations:
 - `examples/marc8_encoding.rs` - MARC-8 character set overview and encoding detection
 - `examples/multilingual_records.rs` - Building and handling multilingual records
 
+## Authority and Holdings Records
+
+MRRC supports Authority (Type Z) and Holdings (Type x/y/v/u) records in addition to standard bibliographic records:
+
+```rust,ignore
+use mrrc::{AuthorityMarcReader, AuthorityMarcWriter, HoldingsMarcReader, HoldingsMarcWriter};
+
+// Read Authority records
+let file = File::open("authorities.mrc")?;
+let mut reader = AuthorityMarcReader::new(file);
+while let Some(record) = reader.read_record()? {
+    println!("Authority type: {}", record.holdings_type());
+}
+
+// Read Holdings records
+let file = File::open("holdings.mrc")?;
+let mut reader = HoldingsMarcReader::new(file);
+while let Some(record) = reader.read_record()? {
+    println!("Holdings type: {}", record.holdings_type());
+}
+```
+
+### Authority Records
+
+Authority records use Type 'z' and organize fields by heading type:
+- **Headings** (1XX): Personal, corporate, topical, and geographic names
+- **Tracings** (4XX/5XX): See also references and related headings
+- **Notes** (6XX, 67X): Scope notes and historical information
+
+### Holdings Records
+
+Holdings records use Types x, y, v, or u (single-part, serial, multipart, unknown) and track physical items:
+- **Locations** (852): Library location and call numbers
+- **Captions & Pattern** (853-855): Serial enumeration schemes for basic units, supplements, indexes
+- **Enumeration & Chronology** (863-865): Specific enumeration data
+- **Textual Holdings** (866-868): Natural language descriptions
+- **Item Information** (876-878): Specific copy information
+
 ## Testing
 
-The library includes 107 comprehensive tests covering:
+The library includes 197 comprehensive tests covering:
 
-- **Unit tests** (89): Individual component functionality, including builder and iterator API
-- **Integration tests** (8): End-to-end reading, writing, and format conversions
+- **Unit tests**: Individual component functionality, including builder and iterator API
+- **Integration tests**: End-to-end reading, writing, and format conversions
+- **Authority/Holdings tests**: Specialized record type handling
 
 Run tests with:
 
@@ -345,6 +384,8 @@ Test data files are in `tests/data/`:
 - `music_score.mrc`: Musical notation record
 - `with_control_fields.mrc`: Record with 008 field
 - `multi_records.mrc`: Multiple records in one file
+- `simple_authority.mrc`: Sample Authority record
+- `simple_holdings.mrc`: Sample Holdings record
 
 ## Design Principles
 
@@ -356,8 +397,7 @@ Test data files are in `tests/data/`:
 ## Known Limitations
 
 - Limited validation of field indicators and indicator semantics
-- No support for MARC Authority records (planned)
-- No direct support for MARC Authorities or Holdings records yet
+- No support for MODS, Dublin Core, or CSV serialization formats (planned)
 
 ## Development Status
 
