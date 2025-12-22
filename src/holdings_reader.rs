@@ -13,7 +13,6 @@ use std::io::Read;
 
 const FIELD_TERMINATOR: u8 = 0x1E;
 const SUBFIELD_DELIMITER: u8 = 0x1F;
-const RECORD_TERMINATOR: u8 = 0x1D;
 
 /// Reader for ISO 2709 binary MARC Holdings records.
 ///
@@ -103,8 +102,10 @@ impl<R: Read> HoldingsMarcReader<R> {
         let data_section = &record_data[directory_size..];
 
         // Parse directory (entries are 12 bytes each: 3 bytes tag + 4 bytes length + 5 bytes start position)
-        let mut fields: std::collections::BTreeMap<String, Vec<Field>> = std::collections::BTreeMap::new();
-        let mut control_fields: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+        let mut fields: std::collections::BTreeMap<String, Vec<Field>> =
+            std::collections::BTreeMap::new();
+        let mut control_fields: std::collections::BTreeMap<String, String> =
+            std::collections::BTreeMap::new();
 
         let mut i = 0;
         while i + 12 <= directory_bytes.len() {
@@ -120,9 +121,9 @@ impl<R: Read> HoldingsMarcReader<R> {
 
             let start_str = std::str::from_utf8(&directory_bytes[i + 7..i + 12])
                 .map_err(|_| MarcError::InvalidRecord("Invalid start position".to_string()))?;
-            let start: usize = start_str
-                .parse()
-                .map_err(|_| MarcError::InvalidRecord("Invalid start position value".to_string()))?;
+            let start: usize = start_str.parse().map_err(|_| {
+                MarcError::InvalidRecord("Invalid start position value".to_string())
+            })?;
 
             let end = start + length;
             if end > data_section.len() {
@@ -137,7 +138,9 @@ impl<R: Read> HoldingsMarcReader<R> {
             if tag.chars().all(|c| c.is_ascii_digit()) && tag.parse::<u16>().unwrap_or(0) < 10 {
                 // Control field (000-009)
                 let value = std::str::from_utf8(&field_data[..field_data.len() - 1])
-                    .map_err(|_| MarcError::InvalidRecord("Invalid control field encoding".to_string()))?
+                    .map_err(|_| {
+                        MarcError::InvalidRecord("Invalid control field encoding".to_string())
+                    })?
                     .to_string();
                 control_fields.insert(tag, value);
             } else {
@@ -162,12 +165,17 @@ impl<R: Read> HoldingsMarcReader<R> {
                         let code = field_data[j] as char;
                         j += 1;
                         let mut value_bytes = Vec::new();
-                        while j < field_data.len() && field_data[j] != SUBFIELD_DELIMITER && field_data[j] != FIELD_TERMINATOR {
+                        while j < field_data.len()
+                            && field_data[j] != SUBFIELD_DELIMITER
+                            && field_data[j] != FIELD_TERMINATOR
+                        {
                             value_bytes.push(field_data[j]);
                             j += 1;
                         }
                         let value = std::str::from_utf8(&value_bytes)
-                            .map_err(|_| MarcError::InvalidRecord("Invalid subfield encoding".to_string()))?
+                            .map_err(|_| {
+                                MarcError::InvalidRecord("Invalid subfield encoding".to_string())
+                            })?
                             .to_string();
                         subfields.push(crate::record::Subfield { code, value });
                     } else {
@@ -182,7 +190,7 @@ impl<R: Read> HoldingsMarcReader<R> {
                     subfields,
                 };
 
-                fields.entry(tag).or_insert_with(Vec::new).push(field);
+                fields.entry(tag).or_default().push(field);
             }
 
             i += 12;
@@ -265,7 +273,9 @@ mod tests {
         let mut buffer = Vec::new();
         {
             let mut writer = crate::holdings_writer::HoldingsMarcWriter::new(&mut buffer);
-            writer.write_record(&record).expect("Failed to write record");
+            writer
+                .write_record(&record)
+                .expect("Failed to write record");
         }
 
         // Read it back

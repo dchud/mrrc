@@ -673,11 +673,11 @@ mod tests {
     #[test]
     fn test_acquisition_status_none() {
         let leader = create_test_leader();
-        
+
         // Missing 008 field
         let record = HoldingsRecord::new(leader.clone());
         assert_eq!(record.acquisition_status(), None);
-        
+
         // 008 field too short
         let record = HoldingsRecord::builder(leader)
             .control_field("008".to_string(), "000".to_string())
@@ -691,7 +691,10 @@ mod tests {
 
         // Unknown
         let record = HoldingsRecord::builder(leader.clone())
-            .control_field("008".to_string(), "00010n1uzannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "00010n1uzannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert_eq!(
             record.method_of_acquisition(),
@@ -700,7 +703,10 @@ mod tests {
 
         // Free
         let record = HoldingsRecord::builder(leader.clone())
-            .control_field("008".to_string(), "00010n1fzannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "00010n1fzannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert_eq!(
             record.method_of_acquisition(),
@@ -709,7 +715,10 @@ mod tests {
 
         // Legal deposit
         let record = HoldingsRecord::builder(leader.clone())
-            .control_field("008".to_string(), "00010n1lzannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "00010n1lzannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert_eq!(
             record.method_of_acquisition(),
@@ -718,7 +727,10 @@ mod tests {
 
         // Membership
         let record = HoldingsRecord::builder(leader.clone())
-            .control_field("008".to_string(), "00010n1mzannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "00010n1mzannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert_eq!(
             record.method_of_acquisition(),
@@ -727,7 +739,10 @@ mod tests {
 
         // Exchange
         let record = HoldingsRecord::builder(leader)
-            .control_field("008".to_string(), "00010n1ezannaabn          |a aaa      ".to_string())
+            .control_field(
+                "008".to_string(),
+                "00010n1ezannaabn          |a aaa      ".to_string(),
+            )
             .build();
         assert_eq!(
             record.method_of_acquisition(),
@@ -741,19 +756,28 @@ mod tests {
 
         // Incomplete
         let record = HoldingsRecord::builder(leader.clone())
-            .control_field("008".to_string(), "0000001pzzzzzzzz2                       ".to_string())
+            .control_field(
+                "008".to_string(),
+                "0000001pzzzzzzzz2                       ".to_string(),
+            )
             .build();
         assert_eq!(record.completeness(), Some(Completeness::Incomplete));
 
         // Scattered
         let record = HoldingsRecord::builder(leader.clone())
-            .control_field("008".to_string(), "0000001pzzzzzzzz3                       ".to_string())
+            .control_field(
+                "008".to_string(),
+                "0000001pzzzzzzzz3                       ".to_string(),
+            )
             .build();
         assert_eq!(record.completeness(), Some(Completeness::Scattered));
 
         // Not applicable
         let record = HoldingsRecord::builder(leader)
-            .control_field("008".to_string(), "0000001pzzzzzzzz4                       ".to_string())
+            .control_field(
+                "008".to_string(),
+                "0000001pzzzzzzzz4                       ".to_string(),
+            )
             .build();
         assert_eq!(record.completeness(), Some(Completeness::NotApplicable));
     }
@@ -761,7 +785,7 @@ mod tests {
     #[test]
     fn test_captions_and_enumeration_fields() {
         let leader = create_test_leader();
-        
+
         let caption_field = Field {
             tag: "853".to_string(),
             indicator1: ' ',
@@ -796,7 +820,7 @@ mod tests {
     #[test]
     fn test_item_information_fields() {
         let leader = create_test_leader();
-        
+
         let item_876 = Field {
             tag: "876".to_string(),
             indicator1: ' ',
@@ -830,7 +854,7 @@ mod tests {
     #[test]
     fn test_other_fields() {
         let leader = create_test_leader();
-        
+
         let field_500 = Field {
             tag: "500".to_string(),
             indicator1: ' ',
@@ -841,9 +865,7 @@ mod tests {
             }],
         };
 
-        let record = HoldingsRecord::builder(leader)
-            .add_field(field_500)
-            .build();
+        let record = HoldingsRecord::builder(leader).add_field(field_500).build();
 
         assert!(record.get_fields("500").is_some());
         assert_eq!(record.get_fields("500").unwrap()[0].tag, "500");

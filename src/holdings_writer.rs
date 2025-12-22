@@ -206,7 +206,7 @@ impl<W: Write> HoldingsMarcWriter<W> {
         }
 
         // Write item information fields (876-878)
-        for (_, fields) in &record.item_information {
+        for fields in record.item_information.values() {
             for field in fields {
                 add_field(
                     &field.tag,
@@ -220,7 +220,7 @@ impl<W: Write> HoldingsMarcWriter<W> {
         }
 
         // Write other fields
-        for (_, fields) in &record.other_fields {
+        for fields in record.other_fields.values() {
             for field in fields {
                 add_field(
                     &field.tag,
@@ -254,8 +254,11 @@ impl<W: Write> HoldingsMarcWriter<W> {
 
         // Write leader
         let mut leader = record.leader.clone();
-        leader.record_length = record_length as u32;
-        leader.data_base_address = base_address as u32;
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            leader.record_length = record_length as u32;
+            leader.data_base_address = base_address as u32;
+        }
         let leader_bytes = leader.as_bytes()?;
         self.writer.write_all(&leader_bytes)?;
 
@@ -277,7 +280,7 @@ mod tests {
     use super::*;
     use crate::holdings_record::HoldingsRecord;
     use crate::leader::Leader;
-    use crate::record::{Subfield, Field};
+    use crate::record::{Field, Subfield};
 
     fn create_test_leader() -> Leader {
         Leader {
@@ -315,7 +318,10 @@ mod tests {
         let mut record = HoldingsRecord::new(leader);
 
         record.add_control_field("001".to_string(), "ocm00098765".to_string());
-        record.add_control_field("008".to_string(), "0000001pzzzzzzzz1                       ".to_string());
+        record.add_control_field(
+            "008".to_string(),
+            "0000001pzzzzzzzz1                       ".to_string(),
+        );
 
         let mut buffer = Vec::new();
         let mut writer = HoldingsMarcWriter::new(&mut buffer);
