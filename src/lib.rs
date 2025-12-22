@@ -94,7 +94,9 @@ pub mod bibliographic_helpers;
 pub mod encoding;
 pub mod encoding_validation;
 pub mod error;
+pub mod holdings_reader;
 pub mod holdings_record;
+pub mod holdings_writer;
 pub mod json;
 pub mod leader;
 pub mod marc8_tables;
@@ -116,10 +118,12 @@ pub use authority_writer::AuthorityMarcWriter;
 pub use bibliographic_helpers::{IsbnValidator, PublicationInfo};
 pub use encoding_validation::{EncodingAnalysis, EncodingValidator};
 pub use error::{MarcError, Result};
+pub use holdings_reader::HoldingsMarcReader;
 pub use holdings_record::{
     AcquisitionStatus, Completeness, HoldingsRecord, HoldingsRecordBuilder, HoldingsType,
     MethodOfAcquisition,
 };
+pub use holdings_writer::HoldingsMarcWriter;
 pub use leader::Leader;
 pub use reader::MarcReader;
 pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
