@@ -36,6 +36,7 @@
 use crate::error::{MarcError, Result};
 use crate::leader::Leader;
 use crate::record::{Field, Record};
+use crate::recovery::RecoveryMode;
 use std::io::Read;
 
 const FIELD_TERMINATOR: u8 = 0x1E;
@@ -65,6 +66,7 @@ const SUBFIELD_DELIMITER: u8 = 0x1F;
 #[derive(Debug)]
 pub struct MarcReader<R: Read> {
     reader: R,
+    recovery_mode: RecoveryMode,
 }
 
 impl<R: Read> MarcReader<R> {
@@ -85,7 +87,35 @@ impl<R: Read> MarcReader<R> {
     /// let reader = MarcReader::new(cursor);
     /// ```
     pub fn new(reader: R) -> Self {
-        MarcReader { reader }
+        MarcReader {
+            reader,
+            recovery_mode: RecoveryMode::Strict,
+        }
+    }
+
+    /// Set the recovery mode for handling malformed records.
+    ///
+    /// The recovery mode determines how the reader handles truncated or
+    /// malformed MARC records:
+    /// - `Strict`: Return errors immediately (default)
+    /// - `Lenient`: Attempt to recover and salvage valid data
+    /// - `Permissive`: Be very lenient, accepting partial data
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mrrc::{MarcReader, RecoveryMode};
+    /// use std::io::Cursor;
+    ///
+    /// let data = vec![];
+    /// let cursor = Cursor::new(data);
+    /// let mut reader = MarcReader::new(cursor)
+    ///     .with_recovery_mode(RecoveryMode::Lenient);
+    /// ```
+    #[must_use]
+    pub fn with_recovery_mode(mut self, mode: RecoveryMode) -> Self {
+        self.recovery_mode = mode;
+        self
     }
 
     /// Read a single MARC record.
@@ -116,6 +146,7 @@ impl<R: Read> MarcReader<R> {
     /// - The binary data is malformed
     /// - The record structure is invalid
     /// - An I/O error occurs
+    #[allow(clippy::too_many_lines, clippy::redundant_else)]
     pub fn read_record(&mut self) -> Result<Option<Record>> {
         // Read the leader (24 bytes)
         let mut leader_bytes = vec![0u8; 24];
@@ -137,15 +168,46 @@ impl<R: Read> MarcReader<R> {
         // Directory starts after leader, ends at base_address
         let directory_size = base_address - 24;
 
-        // Read directory and data
+        // Try to read the full record data, but handle truncation gracefully
         let mut record_data = vec![0u8; record_length - 24];
-        self.reader
-            .read_exact(&mut record_data)
-            .map_err(MarcError::IoError)?;
+        match self.reader.read_exact(&mut record_data) {
+            Ok(()) => {},
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                // Record is truncated
+                if self.recovery_mode == RecoveryMode::Strict {
+                    return Err(MarcError::TruncatedRecord(
+                        "Unexpected end of file while reading record data".to_string(),
+                    ));
+                }
+                // For lenient/permissive modes, attempt recovery with partial data
+            },
+            Err(e) => return Err(MarcError::IoError(e)),
+        }
+
+        // If the record is truncated and we're in recovery mode, use recovery logic
+        if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
+            return crate::recovery::try_recover_record(
+                leader,
+                &record_data,
+                base_address,
+                self.recovery_mode,
+            )
+            .map(Some);
+        }
 
         // Parse directory
-        let directory = &record_data[..directory_size];
-        let data = &record_data[directory_size..];
+        let directory_end = std::cmp::min(directory_size, record_data.len());
+        let directory = if directory_end > 0 {
+            &record_data[..directory_end]
+        } else {
+            &[]
+        };
+        let data_start = std::cmp::min(base_address - 24, record_data.len());
+        let data = if data_start < record_data.len() {
+            &record_data[data_start..]
+        } else {
+            &[]
+        };
 
         let mut record = Record::new(leader);
 
@@ -159,22 +221,69 @@ impl<R: Read> MarcReader<R> {
             }
 
             if pos + 12 > directory.len() {
-                return Err(MarcError::InvalidRecord(
-                    "Incomplete directory entry".to_string(),
-                ));
+                if self.recovery_mode == RecoveryMode::Strict {
+                    return Err(MarcError::InvalidRecord(
+                        "Incomplete directory entry".to_string(),
+                    ));
+                } else {
+                    break;
+                }
             }
 
             let entry_chunk = &directory[pos..pos + 12];
             let tag = String::from_utf8_lossy(&entry_chunk[0..3]).to_string();
-            let field_length = parse_4digits(&entry_chunk[3..7])?;
-            let start_position = parse_digits(&entry_chunk[7..12])?;
+            let field_length = match parse_4digits(&entry_chunk[3..7]) {
+                Ok(len) => len,
+                Err(e) => {
+                    if self.recovery_mode == RecoveryMode::Strict {
+                        return Err(e);
+                    } else {
+                        pos += 12;
+                        continue;
+                    }
+                },
+            };
+            let start_position = match parse_digits(&entry_chunk[7..12]) {
+                Ok(pos) => pos,
+                Err(e) => {
+                    if self.recovery_mode == RecoveryMode::Strict {
+                        return Err(e);
+                    } else {
+                        pos += 12;
+                        continue;
+                    }
+                },
+            };
             pos += 12;
 
             let end_position = start_position + field_length;
             if end_position > data.len() {
-                return Err(MarcError::InvalidRecord(format!(
-                    "Field {tag} exceeds data area"
-                )));
+                if self.recovery_mode == RecoveryMode::Strict {
+                    return Err(MarcError::InvalidRecord(format!(
+                        "Field {tag} exceeds data area"
+                    )));
+                } else {
+                    // Try to read what we have
+                    let available_end = std::cmp::min(end_position, data.len());
+                    if available_end > start_position {
+                        let field_data = &data[start_position..available_end];
+                        if tag != "LDR" {
+                            if tag.starts_with('0')
+                                && tag.chars().all(char::is_numeric)
+                                && tag.as_str() < "010"
+                            {
+                                let value = String::from_utf8_lossy(
+                                    &field_data[..field_data.len().saturating_sub(1)],
+                                )
+                                .to_string();
+                                record.add_control_field(tag, value);
+                            } else if let Ok(field) = parse_data_field(field_data, &tag) {
+                                record.add_field(field);
+                            }
+                        }
+                    }
+                    continue;
+                }
             }
 
             let field_data = &data[start_position..end_position];
@@ -191,9 +300,15 @@ impl<R: Read> MarcReader<R> {
                     record.add_control_field(tag, value);
                 } else {
                     // Data field (010+)
-                    parse_data_field(field_data, &tag)
-                        .map(|field| record.add_field(field))
-                        .map_err(|e| MarcError::InvalidField(format!("Tag {tag}: {e}")))?;
+                    match parse_data_field(field_data, &tag) {
+                        Ok(field) => record.add_field(field),
+                        Err(e) => {
+                            if self.recovery_mode == RecoveryMode::Strict {
+                                return Err(MarcError::InvalidField(format!("Tag {tag}: {e}")));
+                            }
+                            // In lenient/permissive mode, skip this field and continue
+                        },
+                    }
                 }
             }
         }

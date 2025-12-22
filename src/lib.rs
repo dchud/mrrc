@@ -88,6 +88,7 @@
 //! - **Character Encodings** — MARC-8 and UTF-8 with automatic detection
 
 pub mod encoding;
+pub mod encoding_validation;
 pub mod error;
 pub mod json;
 pub mod leader;
@@ -97,14 +98,17 @@ pub mod reader;
 /// Core MARC record structures (`Record`, `Field`, `Subfield`)
 pub mod record;
 pub mod record_validation;
+pub mod recovery;
 pub mod validation;
 pub mod writer;
 pub mod xml;
 
+pub use encoding_validation::{EncodingAnalysis, EncodingValidator};
 pub use error::{MarcError, Result};
 pub use leader::Leader;
 pub use reader::MarcReader;
 pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
 pub use record_validation::RecordStructureValidator;
+pub use recovery::{RecoveryContext, RecoveryMode};
 pub use validation::IndicatorValidator;
 pub use writer::MarcWriter;

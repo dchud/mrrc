@@ -31,6 +31,10 @@ pub enum MarcError {
     #[error("Parse error: {0}")]
     ParseError(String),
 
+    /// Error indicating a truncated or incomplete record.
+    #[error("Truncated record: {0}")]
+    TruncatedRecord(String),
+
     /// IO error from the underlying source/destination.
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
