@@ -5,6 +5,7 @@
 //! They are linked to bibliographic records but maintain separate MARC records.
 
 use crate::leader::Leader;
+use crate::marc_record::MarcRecord;
 use crate::record::Field;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -357,6 +358,32 @@ impl HoldingsRecord {
     #[must_use]
     pub fn is_multipart(&self) -> bool {
         self.holdings_type() == HoldingsType::MultipartItem
+    }
+}
+
+impl MarcRecord for HoldingsRecord {
+    fn leader(&self) -> &Leader {
+        &self.leader
+    }
+
+    fn leader_mut(&mut self) -> &mut Leader {
+        &mut self.leader
+    }
+
+    fn add_control_field(&mut self, tag: impl Into<String>, value: impl Into<String>) {
+        self.control_fields.insert(tag.into(), value.into());
+    }
+
+    fn get_control_field(&self, tag: &str) -> Option<&str> {
+        self.control_fields.get(tag).map(String::as_str)
+    }
+
+    fn control_fields_iter(&self) -> Box<dyn Iterator<Item = (&str, &str)> + '_> {
+        Box::new(
+            self.control_fields
+                .iter()
+                .map(|(tag, value)| (tag.as_str(), value.as_str())),
+        )
     }
 }
 

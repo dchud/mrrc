@@ -100,6 +100,7 @@ pub mod holdings_writer;
 pub mod json;
 pub mod leader;
 pub mod marc8_tables;
+pub mod marc_record;
 pub mod marcjson;
 pub mod reader;
 /// Core MARC record structures (`Record`, `Field`, `Subfield`)
@@ -125,6 +126,7 @@ pub use holdings_record::{
 };
 pub use holdings_writer::HoldingsMarcWriter;
 pub use leader::Leader;
+pub use marc_record::MarcRecord;
 pub use reader::MarcReader;
 pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
 pub use record_validation::RecordStructureValidator;
