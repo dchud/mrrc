@@ -203,7 +203,11 @@ fn write_type_of_resource(xml: &mut String, record: &Record) {
         _ => "unknown",
     };
 
-    writeln!(xml, "  <mods:typeOfResource>{resource_type}</mods:typeOfResource>").ok();
+    writeln!(
+        xml,
+        "  <mods:typeOfResource>{resource_type}</mods:typeOfResource>"
+    )
+    .ok();
 }
 
 fn write_origin_info(xml: &mut String, record: &Record) {
