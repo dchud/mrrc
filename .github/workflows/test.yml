@@ -90,7 +90,7 @@ jobs:
         run: cargo tarpaulin --out Html --all --timeout 300 --exclude-files examples/ --exclude-files tests/
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
