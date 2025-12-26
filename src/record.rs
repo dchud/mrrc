@@ -195,6 +195,154 @@ impl Record {
     }
 
     // ============================================================================
+    // Advanced field queries
+    // ============================================================================
+
+    /// Iterate over fields matching a specific indicator pattern.
+    ///
+    /// # Arguments
+    ///
+    /// * `tag` - The field tag to search
+    /// * `indicator1` - First indicator value, or `None` to match any
+    /// * `indicator2` - Second indicator value, or `None` to match any
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Find all 650 fields with indicator2='0' (LCSH)
+    /// for field in record.fields_by_indicator("650", None, Some('0')) {
+    ///     println!("LCSH: {:?}", field);
+    /// }
+    /// ```
+    pub fn fields_by_indicator(
+        &self,
+        tag: &str,
+        indicator1: Option<char>,
+        indicator2: Option<char>,
+    ) -> impl Iterator<Item = &Field> {
+        self.fields_by_tag(tag).filter(move |field| {
+            if let Some(ind1) = indicator1 {
+                if field.indicator1 != ind1 {
+                    return false;
+                }
+            }
+            if let Some(ind2) = indicator2 {
+                if field.indicator2 != ind2 {
+                    return false;
+                }
+            }
+            true
+        })
+    }
+
+    /// Iterate over fields within a tag range (inclusive).
+    ///
+    /// # Arguments
+    ///
+    /// * `start_tag` - Start of range (inclusive)
+    /// * `end_tag` - End of range (inclusive)
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Find all subject-related fields (600-699)
+    /// for field in record.fields_in_range("600", "699") {
+    ///     println!("Subject field: {}", field.tag);
+    /// }
+    /// ```
+    pub fn fields_in_range(&self, start_tag: &str, end_tag: &str) -> impl Iterator<Item = &Field> {
+        let start = start_tag.to_string();
+        let end = end_tag.to_string();
+        self.fields
+            .range(start..=end)
+            .flat_map(|(_, fields)| fields.iter())
+    }
+
+    /// Iterate over fields that have a specific subfield code.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Find all fields with subfield 'a'
+    /// for field in record.fields_with_subfield("650", 'a') {
+    ///     println!("Field: {}", field.tag);
+    /// }
+    /// ```
+    pub fn fields_with_subfield(&self, tag: &str, code: char) -> impl Iterator<Item = &Field> {
+        self.fields_by_tag(tag)
+            .filter(move |field| field.get_subfield(code).is_some())
+    }
+
+    /// Iterate over fields that have all of the specified subfield codes.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Find all 650 fields with both 'a' and 'x' subfields
+    /// for field in record.fields_with_subfields("650", &['a', 'x']) {
+    ///     println!("Subject: {:?}", field);
+    /// }
+    /// ```
+    pub fn fields_with_subfields<'a>(
+        &'a self,
+        tag: &'a str,
+        codes: &'a [char],
+    ) -> impl Iterator<Item = &'a Field> + 'a {
+        self.fields_by_tag(tag)
+            .filter(move |field| codes.iter().all(|&code| field.get_subfield(code).is_some()))
+    }
+
+    /// Iterate over fields matching a query.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use mrrc::FieldQuery;
+    ///
+    /// let query = FieldQuery::new()
+    ///     .tag("650")
+    ///     .indicator2(Some('0'))
+    ///     .has_subfield('a');
+    ///
+    /// for field in record.fields_matching(&query) {
+    ///     println!("LCSH: {:?}", field);
+    /// }
+    /// ```
+    pub fn fields_matching<'a>(
+        &'a self,
+        query: &'a crate::field_query::FieldQuery,
+    ) -> impl Iterator<Item = &'a Field> + 'a {
+        self.fields().filter(move |field| query.matches(field))
+    }
+
+    /// Iterate over fields matching a tag range query.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use mrrc::TagRangeQuery;
+    ///
+    /// let query = TagRangeQuery {
+    ///     start_tag: "600".to_string(),
+    ///     end_tag: "699".to_string(),
+    ///     indicator1: None,
+    ///     indicator2: Some('0'),
+    ///     required_subfields: vec!['a'],
+    /// };
+    ///
+    /// for field in record.fields_matching_range(&query) {
+    ///     println!("Subject: {:?}", field);
+    /// }
+    /// ```
+    pub fn fields_matching_range<'a>(
+        &'a self,
+        query: &'a crate::field_query::TagRangeQuery,
+    ) -> impl Iterator<Item = &'a Field> + 'a {
+        self.fields_in_range(&query.start_tag, &query.end_tag)
+            .filter(move |field| query.matches(field))
+    }
+
+    // ============================================================================
     // Mutable field operations
     // ============================================================================
 
