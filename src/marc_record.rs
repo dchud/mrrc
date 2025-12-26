@@ -4,12 +4,14 @@
 //! all MARC record types (bibliographic, authority, and holdings records).
 
 use crate::leader::Leader;
+use crate::record::Field;
 
 /// Common trait for all MARC record types.
 ///
 /// This trait defines the operations that all MARC records must support:
 /// - Leader management
 /// - Control field operations (fields 000-009)
+/// - Data field operations (fields 010+)
 ///
 /// This trait enables generic code that works with any MARC record type.
 ///
@@ -79,4 +81,16 @@ pub trait MarcRecord {
     /// Returns an iterator of (tag, value) tuples for all control fields
     /// in tag order.
     fn control_fields_iter(&self) -> Box<dyn Iterator<Item = (&str, &str)> + '_>;
+
+    /// Get all fields with a given tag.
+    ///
+    /// Returns a slice of all fields matching the tag, or `None` if no fields exist.
+    #[must_use]
+    fn get_fields(&self, tag: &str) -> Option<&[Field]>;
+
+    /// Get the first field with a given tag.
+    ///
+    /// Returns the first field matching the tag, or `None` if no fields exist.
+    #[must_use]
+    fn get_field(&self, tag: &str) -> Option<&Field>;
 }

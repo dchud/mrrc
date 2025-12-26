@@ -313,6 +313,14 @@ impl MarcRecord for HoldingsRecord {
                 .map(|(tag, value)| (tag.as_str(), value.as_str())),
         )
     }
+
+    fn get_fields(&self, tag: &str) -> Option<&[Field]> {
+        self.other_fields.get(tag).map(std::vec::Vec::as_slice)
+    }
+
+    fn get_field(&self, tag: &str) -> Option<&Field> {
+        self.other_fields.get(tag).and_then(|v| v.first())
+    }
 }
 
 /// Builder for fluently constructing holdings records
