@@ -105,6 +105,7 @@ pub mod marcjson;
 pub mod reader;
 /// Core MARC record structures (`Record`, `Field`, `Subfield`)
 pub mod record;
+pub mod record_builder_generic;
 pub mod record_validation;
 pub mod recovery;
 pub mod validation;
@@ -129,6 +130,7 @@ pub use leader::Leader;
 pub use marc_record::MarcRecord;
 pub use reader::MarcReader;
 pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
+pub use record_builder_generic::GenericRecordBuilder;
 pub use record_validation::RecordStructureValidator;
 pub use recovery::{RecoveryContext, RecoveryMode};
 pub use validation::IndicatorValidator;
