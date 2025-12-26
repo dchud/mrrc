@@ -423,7 +423,7 @@ Holdings records use Types x, y, v, or u (single-part, serial, multipart, unknow
 
 ## Testing
 
-The library includes 202 comprehensive tests covering:
+The library includes 239 comprehensive tests covering:
 
 - **Unit tests**: Individual component functionality, including builder and iterator API
 - **Integration tests**: End-to-end reading, writing, and format conversions
@@ -470,7 +470,6 @@ open tarpaulin-report.html
 ## Known Limitations
 
 - Limited validation of field indicators and indicator semantics
-- No support for MODS, Dublin Core, or CSV serialization formats (planned)
 
 ## Development Status
 
