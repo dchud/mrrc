@@ -1,15 +1,21 @@
 # Advanced Field Query DSL Patterns
 
-## Overview
+## Status: Phase 1 ✅ Completed, Phases 2-3 Planned
 
-This document outlines domain-specific patterns for finding fields based on complex criteria in the MARC record. The goal is to provide Rust-idiomatic query patterns that are more powerful than simple tag-based lookups.
+Phase 1 of the field query DSL has been fully implemented with comprehensive testing (9 unit tests, 17 integration tests). See epic **mrrc-9n8** for implementation details.
 
-## Current State
+## Current State - Phase 1 Delivered
 
-The mrrc library currently supports:
-- `get_fields(tag: &str)` - Get all fields with a specific tag
-- `fields_by_tag(tag: &str)` - Iterator over fields with a specific tag
-- `remove_fields_where(predicate)` - Generic predicate-based filtering
+The mrrc library now supports:
+- `FieldQuery` builder for complex criteria (tag, indicators, subfields)
+- `TagRangeQuery` for range-based field lookups (e.g., 600-699)
+- `Record::fields_by_indicator()` - Filter by first/second indicators
+- `Record::fields_in_range()` - Get fields within tag range
+- `Record::fields_matching()` - Apply FieldQuery to records
+- `Record::fields_matching_range()` - Apply TagRangeQuery to records
+- `Record::fields_with_subfield()` - Get fields containing specific subfield
+- `Record::remove_fields_where()` - Generic predicate-based filtering
+- `Record::fields_mut_with_subfield()` - Mutable access for batch operations
 - Helper methods like `title()`, `author()`, `subjects()` for common bibliographic fields
 
 ## Proposed Query Patterns
@@ -140,20 +146,25 @@ record.get_field_pairs("100")
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation (High-value, Low-complexity)
-1. Indicator-based filtering
-2. Tag range queries
-3. Basic subfield existence checks
+### Phase 1: Foundation ✅ COMPLETED
+- ✅ Indicator-based filtering (`fields_by_indicator()`)
+- ✅ Tag range queries (`fields_in_range()`, `TagRangeQuery`)
+- ✅ Basic subfield existence checks (`fields_with_subfield()`)
+- ✅ FieldQuery builder pattern (`FieldQuery` struct with fluent API)
+- ✅ Comprehensive test coverage (9 unit tests, 17 integration tests)
+- ✅ Mutable field iterators for batch operations (epic mrrc-4zn)
 
-### Phase 2: Advanced Patterns (Higher-complexity)
-1. Subfield pattern matching with regex
-2. FieldQuery builder pattern
-3. Value-based filtering helpers
+**Source**: `/src/field_query.rs`, `/src/record.rs` (query methods)
 
-### Phase 3: Specialized Queries (Domain-specific)
-1. Linked field navigation
-2. Authority control helpers
-3. Format-specific queries
+### Phase 2: Advanced Patterns (Planned)
+1. Subfield pattern matching with regex (e.g., `matches_pattern()`)
+2. Value-based filtering helpers (e.g., `fields_where_subfield_matches()`)
+3. Convenience methods for common searches (e.g., `subjects_with_subdivision()`)
+
+### Phase 3: Specialized Queries (Planned)
+1. Linked field navigation (880 field linkage via subfield 6)
+2. Authority control helpers (find related authority headings)
+3. Format-specific queries (record-type specific patterns)
 
 ## Design Principles
 

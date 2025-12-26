@@ -5,19 +5,23 @@ This directory contains architectural and design documentation for the MRRC (MAR
 ## Active Design Documents
 
 ### [FIELD_QUERY_DSL.md](./FIELD_QUERY_DSL.md)
-**Status**: Phase 1 Complete, Phases 2-3 Planned  
+**Status**: Phase 1 ✅ Complete, Phases 2-3 Planned  
 **Overview**: Domain-specific query patterns for finding MARC fields based on complex criteria.
 
-**What's Implemented**:
-- FieldQuery builder pattern for combining criteria (tag, indicators, subfields)
-- TagRangeQuery for finding fields within tag ranges (e.g., 600-699)
-- Record API methods for indicator-based filtering
-- Record API methods for tag range queries
-- Record API methods for subfield-based filtering
+**Phase 1 Delivered**:
+- ✅ FieldQuery builder pattern for combining criteria (tag, indicators, subfields)
+- ✅ TagRangeQuery for finding fields within tag ranges (e.g., 600-699)
+- ✅ Record API methods for indicator-based filtering (`fields_by_indicator()`)
+- ✅ Record API methods for tag range queries (`fields_in_range()`)
+- ✅ Record API methods for subfield-based filtering (`fields_with_subfield()`)
+- ✅ Record API methods for complex queries (`fields_matching()`, `fields_matching_range()`)
+- ✅ Mutable field iterators for batch operations
+
+**Completed**: Epic mrrc-9n8 (Phase 1 field query DSL). Epic mrrc-4zn (mutable field iterators).
 
 **What's Planned**:
-- Phase 2: Subfield pattern matching with regex
-- Phase 3: Value-based filtering helpers, linked field navigation, authority control helpers
+- Phase 2: Subfield pattern matching with regex, value-based filtering helpers, convenience methods
+- Phase 3: Linked field navigation (880), authority control helpers, format-specific queries
 
 ### [AUTHORITY_RECORD_DESIGN.md](./AUTHORITY_RECORD_DESIGN.md)
 **Status**: ✅ Completed  
