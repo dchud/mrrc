@@ -52,9 +52,25 @@ while let Some(record) = reader.read_record()? {
 
 ```rust,ignore
 use mrrc::{MarcWriter, Record, Field, Leader};
-use std::io::Cursor;
 
-let mut record = Record::new(Leader::default());
+// Create a leader for a new bibliographic record
+let leader = Leader {
+    record_length: 0,  // Will be calculated during write
+    record_status: 'n',
+    record_type: 'a',  // 'a' = language material
+    bibliographic_level: 'm',  // 'm' = monograph
+    control_record_type: ' ',
+    character_coding: ' ',  // ' ' = MARC-8, 'a' = UTF-8
+    indicator_count: 2,
+    subfield_code_count: 2,
+    data_base_address: 0,  // Will be calculated during write
+    encoding_level: ' ',
+    cataloging_form: 'a',
+    multipart_level: ' ',
+    reserved: "4500".to_string(),
+};
+
+let mut record = Record::new(leader);
 
 // Add control field
 record.add_control_field("008".to_string(), "200101s2020    xxu||||||||||||||||eng||".to_string());
@@ -83,9 +99,25 @@ writer.write_record(&record)?;
 For a more fluent, idiomatic Rust experience, use the builder pattern:
 
 ```rust,ignore
-use mrrc::{Record, Field, Leader};
+use mrrc::{Record, Field, Leader, MarcWriter};
 
-let record = Record::builder(Leader::default())
+let leader = Leader {
+    record_length: 0,
+    record_status: 'n',
+    record_type: 'a',
+    bibliographic_level: 'm',
+    control_record_type: ' ',
+    character_coding: ' ',
+    indicator_count: 2,
+    subfield_code_count: 2,
+    data_base_address: 0,
+    encoding_level: ' ',
+    cataloging_form: 'a',
+    multipart_level: ' ',
+    reserved: "4500".to_string(),
+};
+
+let record = Record::builder(leader)
     .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
     .field(
         Field::builder("245".to_string(), '1', '0')
@@ -113,7 +145,8 @@ let record = Record::builder(Leader::default())
     )
     .build();
 
-let mut writer = MarcWriter::new(buffer);
+let mut buffer = Vec::new();
+let mut writer = MarcWriter::new(&mut buffer);
 writer.write_record(&record)?;
 ```
 
@@ -367,7 +400,7 @@ Holdings records use Types x, y, v, or u (single-part, serial, multipart, unknow
 
 ## Testing
 
-The library includes 197 comprehensive tests covering:
+The library includes 202 comprehensive tests covering:
 
 - **Unit tests**: Individual component functionality, including builder and iterator API
 - **Integration tests**: End-to-end reading, writing, and format conversions
