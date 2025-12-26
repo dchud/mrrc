@@ -1,5 +1,9 @@
 # MARC Authority Record Data Structure Design
 
+## Status: ✅ COMPLETED
+
+This design has been fully implemented. Authority records (Type Z) and Holdings records are now fully supported with readers, writers, and comprehensive test coverage. See epic **mrrc-fzy** for implementation details (4 subtasks completed 2025-12-21 through 2025-12-26).
+
 ## Overview
 
 MARC Authority records (Type Z, Leader/06='z') are used to maintain standardized forms of names, subjects, and titles. They differ fundamentally from bibliographic records:
@@ -227,22 +231,27 @@ pub enum LevelOfEstablishment {
 }
 ```
 
-## Implementation Phases
+## Implementation Phases - COMPLETED
 
-1. **Phase 1 (mrrc-fzy.1)**: Design and define data structures
-   - Create `AuthorityRecord` struct
-   - Implement enums for authority-specific values
-   - Create helper methods for common operations
-   - Add unit tests for structure validation
+1. **Phase 1 (mrrc-fzy.1)**: Design and define data structures ✅
+   - ✅ Create `AuthorityRecord` struct with unified `BTreeMap` field storage
+   - ✅ Implement enums for authority-specific values (HeadingType, KindOfRecord, LevelOfEstablishment)
+   - ✅ Create helper methods for common operations
+   - ✅ Add unit tests for structure validation
 
-2. **Phase 2 (mrrc-fzy.2)**: Reader/Writer
-   - Extend reader to detect and parse authority records
-   - Implement authority record writer
-   - Test roundtrip serialization
+2. **Phase 2 (mrrc-fzy.2)**: Reader/Writer ✅
+   - ✅ Extended reader to detect and parse authority records
+   - ✅ Implemented authority record writer
+   - ✅ Roundtrip serialization tested
 
-3. **Phase 3 (mrrc-fzy.3)**: Holdings records design
+3. **Phase 3 (mrrc-fzy.3)**: Holdings records design ✅
+   - ✅ Designed HoldingsRecord data structures
+   - ✅ Implemented comprehensive unit tests
 
-4. **Phase 4 (mrrc-fzy.4)**: Holdings reader/writer
+4. **Phase 4 (mrrc-fzy.4)**: Holdings reader/writer ✅
+   - ✅ Implemented holdings record reader
+   - ✅ Implemented holdings record writer
+   - ✅ Comprehensive roundtrip testing
 
 ## Key Considerations
 

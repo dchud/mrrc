@@ -20,27 +20,31 @@ This directory contains architectural and design documentation for the MRRC (MAR
 - Phase 3: Value-based filtering helpers, linked field navigation, authority control helpers
 
 ### [AUTHORITY_RECORD_DESIGN.md](./AUTHORITY_RECORD_DESIGN.md)
-**Status**: Implemented  
-**Overview**: Specialized support for MARC Authority records (Type Z).
+**Status**: ✅ Completed  
+**Overview**: Specialized support for MARC Authority and Holdings records (Types Z, x, y, v, u).
 
 Covers:
 - Authority record structure and field organization
 - Heading types (1XX) and tracing fields (4XX/5XX)
-- Implementation details for AuthorityRecord type
+- Implementation details for AuthorityRecord and HoldingsRecord types
+- 008 fixed field interpretation for authority records
+
+**Completed**: Epic mrrc-fzy with all 4 phases (phases 1-2 for authority, phases 3-4 for holdings). Readers, writers, and comprehensive tests implemented.
 
 ## Historical & Proposal Documents
 
 ### [api-refactor-proposal.md](./api-refactor-proposal.md)
-**Status**: Proposal (Not Yet Started)  
-**Overview**: Comprehensive proposal for reducing code duplication across Record, AuthorityRecord, and HoldingsRecord types.
+**Status**: ✅ Completed  
+**Overview**: Comprehensive refactoring to reduce code duplication across Record, AuthorityRecord, and HoldingsRecord types.
 
-**Key Points**:
-- Eliminates ~350 LOC of redundant code
-- Proposes trait-based common operations (`MarcRecord` trait)
-- Suggests generic builder pattern
-- 5-phase implementation plan with backward compatibility strategy
+**Delivered**:
+- `MarcRecord` trait for common operations (`src/marc_record.rs`)
+- `GenericRecordBuilder<T>` for unified interface (`src/record_builder_generic.rs`)
+- `RecordHelpers` trait with 20+ helper methods (`src/record_helpers.rs`)
+- `FieldCollection` pattern for field accessors (`src/field_collection.rs`)
+- Unified field storage across all record types
 
-**Recommendation**: Review before implementing mrrc-y37 (documentation and examples) to avoid documenting patterns that may change.
+**Impact**: ~300+ LOC of duplication eliminated. Zero breaking changes. Full backward compatibility maintained. See epic mrrc-c4v.
 
 ## Project History
 
