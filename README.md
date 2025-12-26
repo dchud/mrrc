@@ -220,14 +220,32 @@ Breaking down:
 ### Record
 
 ```rust,ignore
+use mrrc::{Record, Leader};
+
+let leader = Leader {
+    record_length: 0,
+    record_status: 'n',
+    record_type: 'a',
+    bibliographic_level: 'm',
+    control_record_type: ' ',
+    character_coding: ' ',
+    indicator_count: 2,
+    subfield_code_count: 2,
+    data_base_address: 0,
+    encoding_level: ' ',
+    cataloging_form: 'a',
+    multipart_level: ' ',
+    reserved: "4500".to_string(),
+};
+
 // Create using builder (recommended)
-let record = Record::builder(Leader::default())
+let record = Record::builder(leader.clone())
     .control_field_str("001", "123456")
     .field(field)
     .build();
 
 // Or create manually
-let mut record = Record::new(Leader::default());
+let mut record = Record::new(leader);
 record.add_control_field_str("001", "123456");
 record.add_field(field);
 

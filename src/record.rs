@@ -1,3 +1,53 @@
+//! MARC bibliographic record structures and operations.
+//!
+//! This module provides the core record types for working with MARC bibliographic records:
+//! - [`Record`] — Main bibliographic record structure
+//! - [`Field`] — Variable data fields (010+)
+//! - [`Subfield`] — Named data elements within fields
+//!
+//! # Examples
+//!
+//! Create a record with the builder API:
+//!
+//! ```ignore
+//! use mrrc::{Record, Field, Leader};
+//!
+//! let leader = Leader {
+//!     record_length: 0,
+//!     record_status: 'n',
+//!     record_type: 'a',
+//!     bibliographic_level: 'm',
+//!     control_record_type: ' ',
+//!     character_coding: ' ',
+//!     indicator_count: 2,
+//!     subfield_code_count: 2,
+//!     data_base_address: 0,
+//!     encoding_level: ' ',
+//!     cataloging_form: 'a',
+//!     multipart_level: ' ',
+//!     reserved: "4500".to_string(),
+//! };
+//!
+//! let record = Record::builder(leader)
+//!     .control_field_str("001", "12345")
+//!     .field(
+//!         Field::builder("245".to_string(), '1', '0')
+//!             .subfield_str('a', "Title")
+//!             .build()
+//!     )
+//!     .build();
+//! ```
+//!
+//! Iterate over fields:
+//!
+//! ```ignore
+//! for field in record.fields_by_tag("650") {
+//!     for value in field.subfields_by_code('a') {
+//!         println!("Subject: {}", value);
+//!     }
+//! }
+//! ```
+
 use crate::bibliographic_helpers::PublicationInfo;
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
