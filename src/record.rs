@@ -342,6 +342,62 @@ impl Record {
             .filter(move |field| query.matches(field))
     }
 
+    /// Find all fields where a subfield value matches a regex pattern.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - A SubfieldPatternQuery defining tag, subfield code, and regex pattern
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use mrrc::field_query::SubfieldPatternQuery;
+    ///
+    /// // Find all ISBNs starting with 978
+    /// let query = SubfieldPatternQuery::new("020", 'a', r"^978-.*")?;
+    /// for field in record.fields_matching_pattern(&query) {
+    ///     println!("ISBN: {:?}", field);
+    /// }
+    /// ```
+    pub fn fields_matching_pattern<'a>(
+        &'a self,
+        query: &'a crate::field_query::SubfieldPatternQuery,
+    ) -> impl Iterator<Item = &'a Field> + 'a {
+        self.fields_by_tag(&query.tag)
+            .filter(move |field| query.matches(field))
+    }
+
+    /// Find all fields where a subfield value matches a specific string.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - A SubfieldValueQuery defining tag, subfield code, and value to match
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use mrrc::field_query::SubfieldValueQuery;
+    ///
+    /// // Find exact match
+    /// let query = SubfieldValueQuery::new("650", 'a', "History");
+    /// for field in record.fields_matching_value(&query) {
+    ///     println!("Subject: {:?}", field);
+    /// }
+    ///
+    /// // Find partial match
+    /// let query = SubfieldValueQuery::partial("650", 'a', "History");
+    /// for field in record.fields_matching_value(&query) {
+    ///     println!("Subject: {:?}", field);
+    /// }
+    /// ```
+    pub fn fields_matching_value<'a>(
+        &'a self,
+        query: &'a crate::field_query::SubfieldValueQuery,
+    ) -> impl Iterator<Item = &'a Field> + 'a {
+        self.fields_by_tag(&query.tag)
+            .filter(move |field| query.matches(field))
+    }
+
     // ============================================================================
     // Mutable field operations
     // ============================================================================
@@ -791,6 +847,51 @@ impl MarcRecord for Record {
 
     fn get_field(&self, tag: &str) -> Option<&Field> {
         self.fields.get(tag).and_then(|v| v.first())
+    }
+}
+
+impl crate::field_query_helpers::FieldQueryHelpers for Record {
+    fn fields_matching_pattern(&self, query: &crate::field_query::SubfieldPatternQuery) -> Vec<&Field> {
+        self.fields_by_tag(&query.tag)
+            .filter(|field| query.matches(field))
+            .collect()
+    }
+
+    fn fields_matching_value(&self, query: &crate::field_query::SubfieldValueQuery) -> Vec<&Field> {
+        self.fields_by_tag(&query.tag)
+            .filter(|field| query.matches(field))
+            .collect()
+    }
+
+    fn names_in_range(&self, start_tag: &str, end_tag: &str) -> Vec<&Field> {
+        self.fields_in_range(start_tag, end_tag)
+            .collect()
+    }
+
+    fn authors_with_dates(&self) -> Vec<(&str, &str)> {
+        let mut results = Vec::new();
+
+        // Check primary author (100)
+        if let Some(field) = self.get_field("100") {
+            if let Some(name) = field.get_subfield('a') {
+                if let Some(dates) = field.get_subfield('d') {
+                    results.push((name, dates));
+                }
+            }
+        }
+
+        // Check added entry authors (700)
+        if let Some(fields) = self.get_fields("700") {
+            for field in fields {
+                if let Some(name) = field.get_subfield('a') {
+                    if let Some(dates) = field.get_subfield('d') {
+                        results.push((name, dates));
+                    }
+                }
+            }
+        }
+
+        results
     }
 }
 
@@ -1538,5 +1639,206 @@ mod tests {
         }
 
         assert_eq!(found, 2);
+    }
+
+    // =======================================================================
+    // Integration tests for Phase 2 field query helpers
+    // =======================================================================
+
+    #[test]
+    fn test_fields_matching_pattern_isbn() {
+        use crate::field_query::SubfieldPatternQuery;
+
+        let mut record = Record::new(make_leader());
+
+        // Add ISBNs with different patterns
+        let mut isbn1 = Field::new("020".to_string(), ' ', ' ');
+        isbn1.add_subfield_str('a', "978-0-12345-678-9");
+        record.add_field(isbn1);
+
+        let mut isbn2 = Field::new("020".to_string(), ' ', ' ');
+        isbn2.add_subfield_str('a', "979-10-000000-00-0");
+        record.add_field(isbn2);
+
+        let mut isbn3 = Field::new("020".to_string(), ' ', ' ');
+        isbn3.add_subfield_str('a', "978-1-111111-11-1");
+        record.add_field(isbn3);
+
+        // Find all ISBNs starting with 978
+        let query = SubfieldPatternQuery::new("020", 'a', r"^978-.*").unwrap();
+        let matches: Vec<_> = record.fields_matching_pattern(&query).collect();
+        assert_eq!(matches.len(), 2);
+    }
+
+    #[test]
+    fn test_fields_matching_value_exact() {
+        use crate::field_query::SubfieldValueQuery;
+
+        let mut record = Record::new(make_leader());
+
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
+        subject1.add_subfield_str('a', "History");
+        record.add_field(subject1);
+
+        let mut subject2 = Field::new("650".to_string(), ' ', '0');
+        subject2.add_subfield_str('a', "Science");
+        record.add_field(subject2);
+
+        let mut subject3 = Field::new("650".to_string(), ' ', '0');
+        subject3.add_subfield_str('a', "History");
+        record.add_field(subject3);
+
+        let query = SubfieldValueQuery::new("650", 'a', "History");
+        let matches: Vec<_> = record.fields_matching_value(&query).collect();
+        assert_eq!(matches.len(), 2);
+    }
+
+    #[test]
+    fn test_fields_matching_value_partial() {
+        use crate::field_query::SubfieldValueQuery;
+
+        let mut record = Record::new(make_leader());
+
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
+        subject1.add_subfield_str('a', "World History");
+        record.add_field(subject1);
+
+        let mut subject2 = Field::new("650".to_string(), ' ', '0');
+        subject2.add_subfield_str('a', "Medieval History");
+        record.add_field(subject2);
+
+        let mut subject3 = Field::new("650".to_string(), ' ', '0');
+        subject3.add_subfield_str('a', "Science");
+        record.add_field(subject3);
+
+        let query = SubfieldValueQuery::partial("650", 'a', "History");
+        let matches: Vec<_> = record.fields_matching_value(&query).collect();
+        assert_eq!(matches.len(), 2);
+    }
+
+    #[test]
+    fn test_subjects_with_subdivision() {
+        use crate::FieldQueryHelpers;
+
+        let mut record = Record::new(make_leader());
+
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
+        subject1.add_subfield_str('a', "World");
+        subject1.add_subfield_str('x', "History");
+        record.add_field(subject1);
+
+        let mut subject2 = Field::new("650".to_string(), ' ', '0');
+        subject2.add_subfield_str('a', "Philosophy");
+        subject2.add_subfield_str('x', "History");
+        record.add_field(subject2);
+
+        let mut subject3 = Field::new("650".to_string(), ' ', '0');
+        subject3.add_subfield_str('a', "Science");
+        subject3.add_subfield_str('y', "Geography");
+        record.add_field(subject3);
+
+        let results = record.subjects_with_subdivision('x', "History");
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_isbns_matching() {
+        use crate::FieldQueryHelpers;
+
+        let mut record = Record::new(make_leader());
+
+        // Add multiple ISBNs
+        let mut isbn1 = Field::new("020".to_string(), ' ', ' ');
+        isbn1.add_subfield_str('a', "978-0-201-61622-4");
+        record.add_field(isbn1);
+
+        let mut isbn2 = Field::new("020".to_string(), ' ', ' ');
+        isbn2.add_subfield_str('a', "979-10-90636-07-1");
+        record.add_field(isbn2);
+
+        let mut isbn3 = Field::new("020".to_string(), ' ', ' ');
+        isbn3.add_subfield_str('a', "978-1-449-35582-1");
+        record.add_field(isbn3);
+
+        let results = record.isbns_matching(r"^978-.*").unwrap();
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_names_in_range() {
+        use crate::FieldQueryHelpers;
+
+        let mut record = Record::new(make_leader());
+
+        // Add primary author
+        let mut field100 = Field::new("100".to_string(), ' ', ' ');
+        field100.add_subfield_str('a', "Smith, John");
+        record.add_field(field100);
+
+        // Add added entries
+        let mut field700 = Field::new("700".to_string(), ' ', ' ');
+        field700.add_subfield_str('a', "Doe, Jane");
+        record.add_field(field700);
+
+        let mut field710 = Field::new("710".to_string(), ' ', ' ');
+        field710.add_subfield_str('a', "Publisher Inc.");
+        record.add_field(field710);
+
+        let names = record.names_in_range("700", "711");
+        assert_eq!(names.len(), 2);
+    }
+
+    #[test]
+    fn test_authors_with_dates() {
+        use crate::FieldQueryHelpers;
+
+        let mut record = Record::new(make_leader());
+
+        // Add primary author with dates
+        let mut field100 = Field::new("100".to_string(), ' ', ' ');
+        field100.add_subfield_str('a', "Smith, John");
+        field100.add_subfield_str('d', "1873-1944");
+        record.add_field(field100);
+
+        // Add added entry with dates
+        let mut field700a = Field::new("700".to_string(), ' ', ' ');
+        field700a.add_subfield_str('a', "Doe, Jane");
+        field700a.add_subfield_str('d', "1902-1989");
+        record.add_field(field700a);
+
+        // Add added entry without dates
+        let mut field700b = Field::new("700".to_string(), ' ', ' ');
+        field700b.add_subfield_str('a', "Johnson, Robert");
+        record.add_field(field700b);
+
+        let authors = record.authors_with_dates();
+        assert_eq!(authors.len(), 2);
+        assert_eq!(authors[0], ("Smith, John", "1873-1944"));
+        assert_eq!(authors[1], ("Doe, Jane", "1902-1989"));
+    }
+
+    #[test]
+    fn test_subjects_with_note() {
+        use crate::FieldQueryHelpers;
+
+        let mut record = Record::new(make_leader());
+
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
+        subject1.add_subfield_str('a', "World");
+        subject1.add_subfield_str('x', "Medieval History");
+        record.add_field(subject1);
+
+        let mut subject2 = Field::new("650".to_string(), ' ', '0');
+        subject2.add_subfield_str('a', "Philosophy");
+        subject2.add_subfield_str('x', "Ancient History");
+        record.add_field(subject2);
+
+        let mut subject3 = Field::new("650".to_string(), ' ', '0');
+        subject3.add_subfield_str('a', "Science");
+        subject3.add_subfield_str('y', "Geography");
+        record.add_field(subject3);
+
+        let results = record.subjects_with_note("History");
+        assert_eq!(results.len(), 2);
     }
 }

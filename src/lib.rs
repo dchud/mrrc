@@ -104,6 +104,7 @@ pub mod encoding_validation;
 pub mod error;
 pub mod field_collection;
 pub mod field_query;
+pub mod field_query_helpers;
 pub mod holdings_reader;
 pub mod holdings_record;
 pub mod holdings_writer;
@@ -133,7 +134,8 @@ pub use authority_writer::AuthorityMarcWriter;
 pub use bibliographic_helpers::{IsbnValidator, PublicationInfo};
 pub use encoding_validation::{EncodingAnalysis, EncodingValidator};
 pub use error::{MarcError, Result};
-pub use field_query::{FieldQuery, TagRangeQuery};
+pub use field_query::{FieldQuery, SubfieldPatternQuery, SubfieldValueQuery, TagRangeQuery};
+pub use field_query_helpers::FieldQueryHelpers;
 pub use holdings_reader::HoldingsMarcReader;
 pub use holdings_record::{
     AcquisitionStatus, Completeness, HoldingsRecord, HoldingsRecordBuilder, HoldingsType,

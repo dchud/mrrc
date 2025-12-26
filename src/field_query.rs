@@ -1,7 +1,7 @@
 //! Advanced field query patterns for MARC records.
 //!
 //! This module provides domain-specific query patterns for finding fields based on
-//! complex criteria such as indicators, tag ranges, and subfield patterns.
+//! complex criteria such as indicators, tag ranges, subfield patterns, and regex matching.
 //!
 //! # Examples
 //!
@@ -39,6 +39,7 @@
 //! ```
 
 use crate::record::Field;
+use regex::Regex;
 
 /// A query builder for finding fields matching complex criteria.
 ///
@@ -242,6 +243,128 @@ impl TagRangeQuery {
     }
 }
 
+/// Query for fields with subfield values matching a regex pattern.
+///
+/// This enables finding fields where a specific subfield's value matches
+/// a regular expression pattern.
+///
+/// # Examples
+///
+/// ```ignore
+/// // Find all ISBNs that start with 978
+/// let query = SubfieldPatternQuery::new("020", 'a', "^978-.*");
+/// for field in record.fields_matching_pattern(&query) {
+///     println!("ISBN: {:?}", field);
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct SubfieldPatternQuery {
+    /// Tag to match
+    pub tag: String,
+    /// Subfield code to match
+    pub subfield_code: char,
+    /// Regex pattern for subfield value
+    pattern: Regex,
+}
+
+impl SubfieldPatternQuery {
+    /// Create a new subfield pattern query.
+    ///
+    /// # Arguments
+    ///
+    /// * `tag` - The field tag to search in
+    /// * `subfield_code` - The subfield code to match against
+    /// * `pattern` - A regex pattern string
+    ///
+    /// # Returns
+    ///
+    /// `Ok(SubfieldPatternQuery)` if the pattern is valid regex, or `Err` if invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let query = SubfieldPatternQuery::new("650", 'a', r"^[A-Z]")?;
+    /// ```
+    pub fn new(tag: impl Into<String>, subfield_code: char, pattern: &str) -> Result<Self, regex::Error> {
+        Ok(SubfieldPatternQuery {
+            tag: tag.into(),
+            subfield_code,
+            pattern: Regex::new(pattern)?,
+        })
+    }
+
+    /// Check if a field matches this pattern query.
+    #[must_use]
+    pub fn matches(&self, field: &Field) -> bool {
+        if field.tag != self.tag {
+            return false;
+        }
+
+        field
+            .get_subfield(self.subfield_code)
+            .map(|value| self.pattern.is_match(value))
+            .unwrap_or(false)
+    }
+}
+
+/// Query for fields with a subfield value matching a specific string.
+///
+/// Supports exact matches, partial matches, and wildcards.
+#[derive(Debug, Clone)]
+pub struct SubfieldValueQuery {
+    /// Tag to match
+    pub tag: String,
+    /// Subfield code to match
+    pub subfield_code: char,
+    /// Value to match
+    pub value: String,
+    /// If true, match substrings (contains); if false, exact match
+    pub partial: bool,
+}
+
+impl SubfieldValueQuery {
+    /// Create a new exact subfield value query.
+    #[must_use]
+    pub fn new(tag: impl Into<String>, subfield_code: char, value: impl Into<String>) -> Self {
+        SubfieldValueQuery {
+            tag: tag.into(),
+            subfield_code,
+            value: value.into(),
+            partial: false,
+        }
+    }
+
+    /// Create a new partial/substring subfield value query.
+    #[must_use]
+    pub fn partial(tag: impl Into<String>, subfield_code: char, value: impl Into<String>) -> Self {
+        SubfieldValueQuery {
+            tag: tag.into(),
+            subfield_code,
+            value: value.into(),
+            partial: true,
+        }
+    }
+
+    /// Check if a field matches this value query.
+    #[must_use]
+    pub fn matches(&self, field: &Field) -> bool {
+        if field.tag != self.tag {
+            return false;
+        }
+
+        field
+            .get_subfield(self.subfield_code)
+            .map(|value| {
+                if self.partial {
+                    value.contains(self.value.as_str())
+                } else {
+                    value == self.value.as_str()
+                }
+            })
+            .unwrap_or(false)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -375,5 +498,74 @@ mod tests {
         let query = FieldQuery::default();
         let field = create_test_field("650", ' ', '0', &[('a', "Subject")]);
         assert!(query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_pattern_query_matches_isbn() {
+        let field = create_test_field("020", ' ', ' ', &[('a', "978-0-12345-678-9")]);
+        let query = SubfieldPatternQuery::new("020", 'a', r"^978-.*").unwrap();
+        assert!(query.matches(&field));
+
+        let query = SubfieldPatternQuery::new("020", 'a', r"^979-.*").unwrap();
+        assert!(!query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_pattern_query_different_tag() {
+        let field = create_test_field("020", ' ', ' ', &[('a', "978-0-12345-678-9")]);
+        let query = SubfieldPatternQuery::new("022", 'a', r"^978-.*").unwrap();
+        assert!(!query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_pattern_query_no_matching_subfield() {
+        let field = create_test_field("020", ' ', ' ', &[('a', "978-0-12345-678-9")]);
+        let query = SubfieldPatternQuery::new("020", 'b', r"^978-.*").unwrap();
+        assert!(!query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_pattern_query_complex_pattern() {
+        let field = create_test_field("100", ' ', ' ', &[('a', "Smith, John"), ('d', "1873-1944")]);
+        // Match years in format YYYY-YYYY
+        let query = SubfieldPatternQuery::new("100", 'd', r"\d{4}-\d{4}").unwrap();
+        assert!(query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_value_query_exact_match() {
+        let field = create_test_field("650", ' ', '0', &[('a', "History")]);
+        let query = SubfieldValueQuery::new("650", 'a', "History");
+        assert!(query.matches(&field));
+
+        let query = SubfieldValueQuery::new("650", 'a', "history");
+        assert!(!query.matches(&field)); // Case sensitive
+    }
+
+    #[test]
+    fn test_subfield_value_query_partial_match() {
+        let field = create_test_field("650", ' ', '0', &[('a', "World History")]);
+        let query = SubfieldValueQuery::partial("650", 'a', "History");
+        assert!(query.matches(&field));
+
+        let query = SubfieldValueQuery::partial("650", 'a', "World");
+        assert!(query.matches(&field));
+
+        let query = SubfieldValueQuery::partial("650", 'a', "Medieval");
+        assert!(!query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_value_query_different_tag() {
+        let field = create_test_field("650", ' ', '0', &[('a', "History")]);
+        let query = SubfieldValueQuery::new("651", 'a', "History");
+        assert!(!query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_value_query_no_subfield() {
+        let field = create_test_field("650", ' ', '0', &[('a', "History")]);
+        let query = SubfieldValueQuery::new("650", 'x', "Subdivision");
+        assert!(!query.matches(&field));
     }
 }

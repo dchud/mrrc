@@ -32,6 +32,9 @@ quick-xml = { version = "0.31", features = ["serialize"] }
 anyhow = "1.0"
 thiserror = "1.0"
 
+# Pattern matching
+regex = "1.10"
+
 # Testing and examples
 #proptest = "1.0"
 
