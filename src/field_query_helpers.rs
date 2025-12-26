@@ -65,6 +65,10 @@ pub trait FieldQueryHelpers {
     /// An iterator of fields (020) with ISBNs matching the pattern, or an error if
     /// the pattern is invalid.
     ///
+    /// # Errors
+    ///
+    /// Returns a `regex::Error` if the pattern is not a valid regular expression.
+    ///
     /// # Examples
     ///
     /// ```ignore
@@ -75,10 +79,7 @@ pub trait FieldQueryHelpers {
     ///     }
     /// }
     /// ```
-    fn isbns_matching(
-        &self,
-        pattern: &str,
-    ) -> Result<Vec<&Field>, regex::Error> {
+    fn isbns_matching(&self, pattern: &str) -> Result<Vec<&Field>, regex::Error> {
         let query = SubfieldPatternQuery::new("020", 'a', pattern)?;
         Ok(self.fields_matching_pattern(&query))
     }

@@ -346,7 +346,7 @@ impl Record {
     ///
     /// # Arguments
     ///
-    /// * `query` - A SubfieldPatternQuery defining tag, subfield code, and regex pattern
+    /// * `query` - A `SubfieldPatternQuery` defining tag, subfield code, and regex pattern
     ///
     /// # Examples
     ///
@@ -371,7 +371,7 @@ impl Record {
     ///
     /// # Arguments
     ///
-    /// * `query` - A SubfieldValueQuery defining tag, subfield code, and value to match
+    /// * `query` - A `SubfieldValueQuery` defining tag, subfield code, and value to match
     ///
     /// # Examples
     ///
@@ -851,7 +851,10 @@ impl MarcRecord for Record {
 }
 
 impl crate::field_query_helpers::FieldQueryHelpers for Record {
-    fn fields_matching_pattern(&self, query: &crate::field_query::SubfieldPatternQuery) -> Vec<&Field> {
+    fn fields_matching_pattern(
+        &self,
+        query: &crate::field_query::SubfieldPatternQuery,
+    ) -> Vec<&Field> {
         self.fields_by_tag(&query.tag)
             .filter(|field| query.matches(field))
             .collect()
@@ -864,8 +867,7 @@ impl crate::field_query_helpers::FieldQueryHelpers for Record {
     }
 
     fn names_in_range(&self, start_tag: &str, end_tag: &str) -> Vec<&Field> {
-        self.fields_in_range(start_tag, end_tag)
-            .collect()
+        self.fields_in_range(start_tag, end_tag).collect()
     }
 
     fn authors_with_dates(&self) -> Vec<(&str, &str)> {

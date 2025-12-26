@@ -280,12 +280,20 @@ impl SubfieldPatternQuery {
     ///
     /// `Ok(SubfieldPatternQuery)` if the pattern is valid regex, or `Err` if invalid.
     ///
+    /// # Errors
+    ///
+    /// Returns a `regex::Error` if the pattern is not a valid regular expression.
+    ///
     /// # Examples
     ///
     /// ```ignore
     /// let query = SubfieldPatternQuery::new("650", 'a', r"^[A-Z]")?;
     /// ```
-    pub fn new(tag: impl Into<String>, subfield_code: char, pattern: &str) -> Result<Self, regex::Error> {
+    pub fn new(
+        tag: impl Into<String>,
+        subfield_code: char,
+        pattern: &str,
+    ) -> Result<Self, regex::Error> {
         Ok(SubfieldPatternQuery {
             tag: tag.into(),
             subfield_code,
@@ -302,8 +310,7 @@ impl SubfieldPatternQuery {
 
         field
             .get_subfield(self.subfield_code)
-            .map(|value| self.pattern.is_match(value))
-            .unwrap_or(false)
+            .is_some_and(|value| self.pattern.is_match(value))
     }
 }
 
@@ -352,16 +359,13 @@ impl SubfieldValueQuery {
             return false;
         }
 
-        field
-            .get_subfield(self.subfield_code)
-            .map(|value| {
-                if self.partial {
-                    value.contains(self.value.as_str())
-                } else {
-                    value == self.value.as_str()
-                }
-            })
-            .unwrap_or(false)
+        field.get_subfield(self.subfield_code).is_some_and(|value| {
+            if self.partial {
+                value.contains(self.value.as_str())
+            } else {
+                value == self.value.as_str()
+            }
+        })
     }
 }
 
