@@ -195,6 +195,173 @@ impl Record {
     }
 
     // ============================================================================
+    // Mutable field operations
+    // ============================================================================
+
+    /// Get mutable reference to first field with a given tag
+    pub fn get_field_mut(&mut self, tag: &str) -> Option<&mut Field> {
+        self.fields.get_mut(tag).and_then(|v| v.first_mut())
+    }
+
+    /// Get mutable slice of fields with a given tag
+    pub fn get_fields_mut(&mut self, tag: &str) -> Option<&mut [Field]> {
+        self.fields.get_mut(tag).map(std::vec::Vec::as_mut_slice)
+    }
+
+    /// Iterate mutably over all fields
+    pub fn fields_mut(&mut self) -> impl Iterator<Item = &mut Field> {
+        self.fields.values_mut().flat_map(|v| v.iter_mut())
+    }
+
+    /// Iterate mutably over fields matching a specific tag
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// for field in record.fields_by_tag_mut("650") {
+    ///     field.indicator2 = '0';
+    /// }
+    /// ```
+    pub fn fields_by_tag_mut(&mut self, tag: &str) -> impl Iterator<Item = &mut Field> {
+        let tag_str = tag.to_string();
+        self.fields
+            .get_mut(tag_str.as_str())
+            .map(|v| v.iter_mut())
+            .into_iter()
+            .flatten()
+    }
+
+    // ============================================================================
+    // Batch field operations
+    // ============================================================================
+
+    /// Remove all fields with a given tag
+    ///
+    /// Returns the removed fields.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let removed = record.remove_fields_by_tag("852");  // Remove holdings
+    /// ```
+    pub fn remove_fields_by_tag(&mut self, tag: &str) -> Vec<Field> {
+        self.fields.remove(tag).unwrap_or_default()
+    }
+
+    /// Remove fields matching a predicate
+    ///
+    /// Returns the removed fields.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let removed = record.remove_fields_where(|field| field.tag == "852");
+    /// ```
+    pub fn remove_fields_where<F>(&mut self, predicate: F) -> Vec<Field>
+    where
+        F: Fn(&Field) -> bool,
+    {
+        let mut removed = Vec::new();
+        for fields in self.fields.values_mut() {
+            fields.retain(|f| {
+                if predicate(f) {
+                    removed.push(f.clone());
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+        // Clean up empty tag entries
+        self.fields.retain(|_, v| !v.is_empty());
+        removed
+    }
+
+    /// Update fields matching a predicate
+    ///
+    /// Applies the given operation to each matching field.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// record.update_fields_where(
+    ///     |field| field.tag == "245",
+    ///     |field| field.indicator2 = '0'
+    /// );
+    /// ```
+    pub fn update_fields_where<F, G>(&mut self, predicate: F, mut operation: G)
+    where
+        F: Fn(&Field) -> bool,
+        G: FnMut(&mut Field),
+    {
+        for fields in self.fields.values_mut() {
+            for field in fields.iter_mut() {
+                if predicate(field) {
+                    operation(field);
+                }
+            }
+        }
+    }
+
+    /// Update all subfield values in fields with a given tag
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Update all authority codes in 650 fields
+    /// record.update_subfield_values("650", 'd', "updated-value");
+    /// ```
+    pub fn update_subfield_values(&mut self, tag: &str, subfield_code: char, new_value: &str) {
+        if let Some(fields) = self.fields.get_mut(tag) {
+            for field in fields {
+                for subfield in &mut field.subfields {
+                    if subfield.code == subfield_code {
+                        subfield.value = new_value.to_string();
+                    }
+                }
+            }
+        }
+    }
+
+    /// Update subfield values in fields matching a predicate
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// record.update_subfields_where(
+    ///     |field| field.tag == "650",
+    ///     |subfield| subfield.code == 'd',
+    ///     "updated-value"
+    /// );
+    /// ```
+    pub fn update_subfields_where<F>(&mut self, field_pred: F, subfield_code: char, new_value: &str)
+    where
+        F: Fn(&Field) -> bool,
+    {
+        for fields in self.fields.values_mut() {
+            for field in fields {
+                if field_pred(field) {
+                    for subfield in &mut field.subfields {
+                        if subfield.code == subfield_code {
+                            subfield.value = new_value.to_string();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Remove all fields from the record
+    pub fn clear_fields(&mut self) {
+        self.fields.clear();
+    }
+
+    /// Clear all control fields from the record
+    pub fn clear_control_fields(&mut self) {
+        self.control_fields.clear();
+    }
+
+    // ============================================================================
     // Helper methods for common bibliographic fields
     // ============================================================================
 
@@ -622,6 +789,92 @@ impl Field {
             .iter()
             .filter(move |sf| sf.code == code)
             .map(|sf| sf.value.as_str())
+    }
+
+    // ============================================================================
+    // Mutable subfield operations
+    // ============================================================================
+
+    /// Get mutable reference to first subfield with a given code
+    pub fn get_subfield_mut(&mut self, code: char) -> Option<&mut Subfield> {
+        self.subfields.iter_mut().find(|sf| sf.code == code)
+    }
+
+    /// Iterate mutably over all subfields
+    pub fn subfields_mut(&mut self) -> impl Iterator<Item = &mut Subfield> {
+        self.subfields.iter_mut()
+    }
+
+    /// Iterate mutably over subfields with a specific code
+    pub fn subfields_by_code_mut(&mut self, code: char) -> impl Iterator<Item = &mut Subfield> {
+        self.subfields.iter_mut().filter(move |sf| sf.code == code)
+    }
+
+    /// Remove all subfields with a given code
+    ///
+    /// Returns the removed subfields.
+    pub fn remove_subfields(&mut self, code: char) -> Vec<Subfield> {
+        let mut removed = Vec::new();
+        self.subfields.retain(|sf| {
+            if sf.code == code {
+                removed.push(sf.clone());
+                false
+            } else {
+                true
+            }
+        });
+        removed
+    }
+
+    /// Remove subfields matching a predicate
+    ///
+    /// Returns the removed subfields.
+    pub fn remove_subfields_where<F>(&mut self, predicate: F) -> Vec<Subfield>
+    where
+        F: Fn(&Subfield) -> bool,
+    {
+        let mut removed = Vec::new();
+        self.subfields.retain(|sf| {
+            if predicate(sf) {
+                removed.push(sf.clone());
+                false
+            } else {
+                true
+            }
+        });
+        removed
+    }
+
+    /// Update all subfield values with a given code
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// field.update_subfield_values('a', "new value");
+    /// ```
+    pub fn update_subfield_values(&mut self, code: char, new_value: &str) {
+        for subfield in &mut self.subfields {
+            if subfield.code == code {
+                subfield.value = new_value.to_string();
+            }
+        }
+    }
+
+    /// Update subfield values matching a predicate
+    pub fn update_subfields_where<F>(&mut self, predicate: F, new_value: &str)
+    where
+        F: Fn(&Subfield) -> bool,
+    {
+        for subfield in &mut self.subfields {
+            if predicate(subfield) {
+                subfield.value = new_value.to_string();
+            }
+        }
+    }
+
+    /// Clear all subfields from the field
+    pub fn clear_subfields(&mut self) {
+        self.subfields.clear();
     }
 }
 
