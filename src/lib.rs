@@ -77,6 +77,7 @@
 //! - [`xml`] — XML serialization/deserialization
 //! - [`csv`] — CSV (Comma-Separated Values) export format
 //! - [`dublin_core`] — Dublin Core metadata serialization
+//! - [`mods`] — MODS (Metadata Object Description Schema) serialization
 //! - [`encoding`] — Character encoding support (MARC-8 and UTF-8)
 //! - [`error`] — Error types and result type
 //!
@@ -89,6 +90,7 @@
 //! - **XML** — XML representation with proper field/subfield structure
 //! - **CSV** — Tabular export format for spreadsheet applications
 //! - **Dublin Core** — Simplified metadata schema for discovery
+//! - **MODS** — Detailed metadata description schema for libraries
 //! - **Character Encodings** — MARC-8 and UTF-8 with automatic detection
 
 pub mod authority_reader;
@@ -110,6 +112,7 @@ pub mod macros;
 pub mod marc8_tables;
 pub mod marc_record;
 pub mod marcjson;
+pub mod mods;
 pub mod reader;
 /// Core MARC record structures (`Record`, `Field`, `Subfield`)
 pub mod record;
