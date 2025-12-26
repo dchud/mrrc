@@ -1,5 +1,10 @@
 # MRRC: MARC Rust Crate
 
+[![Tests](https://github.com/dchud/mrrc/actions/workflows/test.yml/badge.svg)](https://github.com/dchud/mrrc/actions/workflows/test.yml)
+[![Lint](https://github.com/dchud/mrrc/actions/workflows/lint.yml/badge.svg)](https://github.com/dchud/mrrc/actions/workflows/lint.yml)
+[![Build](https://github.com/dchud/mrrc/actions/workflows/build.yml/badge.svg)](https://github.com/dchud/mrrc/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/dchud/mrrc/branch/main/graph/badge.svg)](https://codecov.io/gh/dchud/mrrc)
+
 A Rust library for reading, writing, and manipulating MARC bibliographic records in the ISO 2709 binary format.
 
 > **⚠️ EXPERIMENTAL**: This library is a work in progress, generated with AI coding tools (Amp) and issue tracking (Beads). APIs may change significantly. Use at your own risk in production.
@@ -437,6 +442,23 @@ Test data files are in `tests/data/`:
 - `multi_records.mrc`: Multiple records in one file
 - `simple_authority.mrc`: Sample Authority record
 - `simple_holdings.mrc`: Sample Holdings record
+
+### Code Coverage
+
+Code coverage is automatically measured on each push and pull request via [codecov.io](https://codecov.io/gh/dchud/mrrc). 
+
+To generate a local coverage report:
+
+```bash
+# Install cargo-tarpaulin
+cargo install cargo-tarpaulin
+
+# Generate coverage report
+cargo tarpaulin --out Html --all --timeout 300
+
+# Open the report in your browser
+open tarpaulin-report.html
+```
 
 ## Design Principles
 

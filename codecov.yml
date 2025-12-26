@@ -1,0 +1,22 @@
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+ignore:
+  - "examples/"
+  - "tests/"
+  - "src/marc8_tables.rs"
+
+flags:
+  unit:
+    carryforward: true
+  integration:
+    carryforward: true

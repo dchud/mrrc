@@ -19,6 +19,8 @@ Cargo.lock
 *.profdata
 /coverage/
 *.lcov
+cobertura.xml
+tarpaulin-report.html
 
 # Documentation
 /doc/
