@@ -59,7 +59,7 @@ impl EncodingValidator {
         }
 
         // Check data fields and subfields
-        for fields in record.data_fields.values() {
+        for fields in record.fields.values() {
             for field in fields {
                 for subfield in &field.subfields {
                     if Self::is_likely_different_encoding(&subfield.value, primary_encoding) {

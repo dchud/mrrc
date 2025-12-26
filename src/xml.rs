@@ -118,7 +118,7 @@ pub fn record_to_xml(record: &Record) -> Result<String> {
     }
 
     let mut datafields = Vec::new();
-    for (tag, field_list) in &record.data_fields {
+    for (tag, field_list) in &record.fields {
         for field in field_list {
             let mut subfields = Vec::new();
             for subfield in &field.subfields {

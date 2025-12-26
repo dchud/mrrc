@@ -12,7 +12,7 @@ pub struct Record {
     /// Control fields (000-009) - tag -> value
     pub control_fields: BTreeMap<String, String>,
     /// Data fields (010+) - tag -> fields
-    pub data_fields: BTreeMap<String, Vec<Field>>,
+    pub fields: BTreeMap<String, Vec<Field>>,
 }
 
 /// A data field in a MARC record (fields 010 and higher)
@@ -44,7 +44,7 @@ impl Record {
         Record {
             leader,
             control_fields: BTreeMap::new(),
-            data_fields: BTreeMap::new(),
+            fields: BTreeMap::new(),
         }
     }
 
@@ -68,7 +68,7 @@ impl Record {
             record: Record {
                 leader,
                 control_fields: BTreeMap::new(),
-                data_fields: BTreeMap::new(),
+                fields: BTreeMap::new(),
             },
         }
     }
@@ -95,7 +95,7 @@ impl Record {
 
     /// Add a data field
     pub fn add_field(&mut self, field: Field) {
-        self.data_fields
+        self.fields
             .entry(field.tag.clone())
             .or_default()
             .push(field);
@@ -104,18 +104,18 @@ impl Record {
     /// Get all fields with a given tag
     #[must_use]
     pub fn get_fields(&self, tag: &str) -> Option<&[Field]> {
-        self.data_fields.get(tag).map(std::vec::Vec::as_slice)
+        self.fields.get(tag).map(std::vec::Vec::as_slice)
     }
 
     /// Get first field with a given tag
     #[must_use]
     pub fn get_field(&self, tag: &str) -> Option<&Field> {
-        self.data_fields.get(tag).and_then(|v| v.first())
+        self.fields.get(tag).and_then(|v| v.first())
     }
 
     /// Iterate over all fields in tag order
     pub fn fields(&self) -> impl Iterator<Item = &Field> {
-        self.data_fields.values().flat_map(|v| v.iter())
+        self.fields.values().flat_map(|v| v.iter())
     }
 
     /// Iterate over fields matching a specific tag
@@ -132,11 +132,7 @@ impl Record {
     /// }
     /// ```
     pub fn fields_by_tag(&self, tag: &str) -> impl Iterator<Item = &Field> {
-        self.data_fields
-            .get(tag)
-            .map(|v| v.iter())
-            .into_iter()
-            .flatten()
+        self.fields.get(tag).map(|v| v.iter()).into_iter().flatten()
     }
 
     /// Iterate over all control fields
@@ -425,11 +421,11 @@ impl MarcRecord for Record {
     }
 
     fn get_fields(&self, tag: &str) -> Option<&[Field]> {
-        self.data_fields.get(tag).map(std::vec::Vec::as_slice)
+        self.fields.get(tag).map(std::vec::Vec::as_slice)
     }
 
     fn get_field(&self, tag: &str) -> Option<&Field> {
-        self.data_fields.get(tag).and_then(|v| v.first())
+        self.fields.get(tag).and_then(|v| v.first())
     }
 }
 
@@ -647,7 +643,7 @@ mod tests {
         let record = Record::new(leader.clone());
         assert_eq!(record.leader, leader);
         assert!(record.control_fields.is_empty());
-        assert!(record.data_fields.is_empty());
+        assert!(record.fields.is_empty());
     }
 
     #[test]

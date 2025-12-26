@@ -91,68 +91,8 @@ impl<W: Write> AuthorityMarcWriter<W> {
             add_field(tag, None, Some(value), None, &mut directory, &mut data)?;
         }
 
-        // Write main heading (1XX)
-        if let Some(field) = &record.heading {
-            add_field(
-                &field.tag,
-                Some((field.indicator1, field.indicator2)),
-                None,
-                Some(&field.subfields),
-                &mut directory,
-                &mut data,
-            )?;
-        }
-
-        // Write see-from tracings (4XX)
-        for field in &record.tracings_see_from {
-            add_field(
-                &field.tag,
-                Some((field.indicator1, field.indicator2)),
-                None,
-                Some(&field.subfields),
-                &mut directory,
-                &mut data,
-            )?;
-        }
-
-        // Write see-also tracings (5XX)
-        for field in &record.tracings_see_also {
-            add_field(
-                &field.tag,
-                Some((field.indicator1, field.indicator2)),
-                None,
-                Some(&field.subfields),
-                &mut directory,
-                &mut data,
-            )?;
-        }
-
-        // Write notes (66X-68X)
-        for field in &record.notes {
-            add_field(
-                &field.tag,
-                Some((field.indicator1, field.indicator2)),
-                None,
-                Some(&field.subfields),
-                &mut directory,
-                &mut data,
-            )?;
-        }
-
-        // Write linking entries (7XX)
-        for field in &record.linking_entries {
-            add_field(
-                &field.tag,
-                Some((field.indicator1, field.indicator2)),
-                None,
-                Some(&field.subfields),
-                &mut directory,
-                &mut data,
-            )?;
-        }
-
-        // Write other fields
-        for (tag, fields) in &record.other_fields {
+        // Write all variable fields (010+) in tag order
+        for (tag, fields) in &record.fields {
             for field in fields {
                 add_field(
                     tag,

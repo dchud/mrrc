@@ -152,7 +152,7 @@ impl RecordStructureValidator {
         }
 
         // Validate field tags are valid 3-digit strings
-        for (tag, fields) in &record.data_fields {
+        for (tag, fields) in &record.fields {
             if tag.len() != 3 || !tag.chars().all(char::is_numeric) {
                 return Err(MarcError::InvalidField(format!(
                     "Invalid field tag: '{tag}' (must be 3 digits)"
@@ -198,7 +198,7 @@ impl RecordStructureValidator {
     pub fn validate_directory_structure(record: &Record) -> Result<()> {
         // Calculate expected directory length (12 bytes per field entry + 1 for terminator)
         let total_fields =
-            record.control_fields.len() + record.data_fields.values().map(Vec::len).sum::<usize>();
+            record.control_fields.len() + record.fields.values().map(Vec::len).sum::<usize>();
         let directory_length = (total_fields * 12) + 1;
 
         // Validate that base address would fit in 5-digit field
@@ -215,7 +215,7 @@ impl RecordStructureValidator {
             total_length += value.len() + 1; // +1 for field terminator
         }
 
-        for fields in record.data_fields.values() {
+        for fields in record.fields.values() {
             for field in fields {
                 // 2 bytes for indicators
                 let mut field_length = 2;

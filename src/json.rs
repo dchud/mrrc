@@ -65,7 +65,7 @@ pub fn record_to_json(record: &Record) -> Result<Value> {
     }
 
     // Add data fields
-    for (tag, field_list) in &record.data_fields {
+    for (tag, field_list) in &record.fields {
         for field in field_list {
             let mut subfield_map = serde_json::Map::new();
             for subfield in &field.subfields {

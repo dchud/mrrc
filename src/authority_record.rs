@@ -17,18 +17,8 @@ pub struct AuthorityRecord {
     pub leader: Leader,
     /// Control fields (000-009)
     pub control_fields: BTreeMap<String, String>,
-    /// Main heading (1XX field) - the established form
-    pub heading: Option<Field>,
-    /// See From Tracing fields (4XX) - variant forms NOT used
-    pub tracings_see_from: Vec<Field>,
-    /// See Also From Tracing fields (5XX) - related authorized headings
-    pub tracings_see_also: Vec<Field>,
-    /// Note fields (660s, 67X, 68X)
-    pub notes: Vec<Field>,
-    /// Heading Linking Entry fields (7XX)
-    pub linking_entries: Vec<Field>,
-    /// Other variable fields not in above categories
-    pub other_fields: BTreeMap<String, Vec<Field>>,
+    /// Variable fields (010+) - unified storage for all field types
+    pub fields: BTreeMap<String, Vec<Field>>,
 }
 
 /// Type of heading in the authority record
@@ -93,12 +83,7 @@ impl AuthorityRecord {
         AuthorityRecord {
             leader,
             control_fields: BTreeMap::new(),
-            heading: None,
-            tracings_see_from: Vec::new(),
-            tracings_see_also: Vec::new(),
-            notes: Vec::new(),
-            linking_entries: Vec::new(),
-            other_fields: BTreeMap::new(),
+            fields: BTreeMap::new(),
         }
     }
 
@@ -123,19 +108,30 @@ impl AuthorityRecord {
 
     /// Set the heading (1XX field)
     pub fn set_heading(&mut self, field: Field) {
-        self.heading = Some(field);
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
     }
 
     /// Get the main heading (1XX field)
     #[must_use]
     pub fn heading(&self) -> Option<&Field> {
-        self.heading.as_ref()
+        // Get the first 1XX field
+        for tag in &["100", "110", "111", "130", "148", "150", "151", "155"] {
+            if let Some(fields) = self.fields.get(*tag) {
+                if let Some(field) = fields.first() {
+                    return Some(field);
+                }
+            }
+        }
+        None
     }
 
     /// Get the heading type from the 1XX field tag
     #[must_use]
     pub fn heading_type(&self) -> Option<HeadingType> {
-        self.heading.as_ref().and_then(|f| match f.tag.as_str() {
+        self.heading().and_then(|f| match f.tag.as_str() {
             "100" => Some(HeadingType::PersonalName),
             "110" => Some(HeadingType::CorporateName),
             "111" => Some(HeadingType::MeetingName),
@@ -150,72 +146,109 @@ impl AuthorityRecord {
 
     /// Add a See From Tracing field (4XX)
     pub fn add_see_from_tracing(&mut self, field: Field) {
-        self.tracings_see_from.push(field);
-    }
-
-    /// Get all See From Tracing fields (4XX)
-    #[must_use]
-    pub fn see_from_tracings(&self) -> &[Field] {
-        &self.tracings_see_from
-    }
-
-    /// Add a See Also From Tracing field (5XX)
-    pub fn add_see_also_tracing(&mut self, field: Field) {
-        self.tracings_see_also.push(field);
-    }
-
-    /// Get all See Also From Tracing fields (5XX)
-    #[must_use]
-    pub fn see_also_tracings(&self) -> &[Field] {
-        &self.tracings_see_also
-    }
-
-    /// Add a note field
-    pub fn add_note(&mut self, field: Field) {
-        self.notes.push(field);
-    }
-
-    /// Get all note fields
-    #[must_use]
-    pub fn notes(&self) -> &[Field] {
-        &self.notes
-    }
-
-    /// Get source data found notes (670)
-    #[must_use]
-    pub fn source_data_found(&self) -> Vec<&Field> {
-        self.notes.iter().filter(|f| f.tag == "670").collect()
-    }
-
-    /// Get source data not found notes (671)
-    #[must_use]
-    pub fn source_data_not_found(&self) -> Vec<&Field> {
-        self.notes.iter().filter(|f| f.tag == "671").collect()
-    }
-
-    /// Add a heading linking entry field (7XX)
-    pub fn add_linking_entry(&mut self, field: Field) {
-        self.linking_entries.push(field);
-    }
-
-    /// Get all heading linking entry fields (7XX)
-    #[must_use]
-    pub fn linking_entries(&self) -> &[Field] {
-        &self.linking_entries
-    }
-
-    /// Add a field to `other_fields`
-    pub fn add_field(&mut self, field: Field) {
-        self.other_fields
+        self.fields
             .entry(field.tag.clone())
             .or_default()
             .push(field);
     }
 
-    /// Get fields by tag from `other_fields`
+    /// Get all See From Tracing fields (4XX)
+    #[must_use]
+    pub fn see_from_tracings(&self) -> Vec<&Field> {
+        self.fields
+            .iter()
+            .filter(|(tag, _)| tag.starts_with('4'))
+            .flat_map(|(_, fields)| fields.iter())
+            .collect()
+    }
+
+    /// Add a See Also From Tracing field (5XX)
+    pub fn add_see_also_tracing(&mut self, field: Field) {
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
+    }
+
+    /// Get all See Also From Tracing fields (5XX)
+    #[must_use]
+    pub fn see_also_tracings(&self) -> Vec<&Field> {
+        self.fields
+            .iter()
+            .filter(|(tag, _)| tag.starts_with('5'))
+            .flat_map(|(_, fields)| fields.iter())
+            .collect()
+    }
+
+    /// Add a note field
+    pub fn add_note(&mut self, field: Field) {
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
+    }
+
+    /// Get all note fields
+    #[must_use]
+    pub fn notes(&self) -> Vec<&Field> {
+        // Notes are typically in 6XX, 67X, 68X fields
+        self.fields
+            .iter()
+            .filter(|(tag, _)| {
+                tag.starts_with('6') && (tag != &"650" && tag != &"651" && tag != &"655")
+            })
+            .flat_map(|(_, fields)| fields.iter())
+            .collect()
+    }
+
+    /// Get source data found notes (670)
+    #[must_use]
+    pub fn source_data_found(&self) -> Vec<&Field> {
+        self.fields
+            .get("670")
+            .map(|fields| fields.iter().collect())
+            .unwrap_or_default()
+    }
+
+    /// Get source data not found notes (671)
+    #[must_use]
+    pub fn source_data_not_found(&self) -> Vec<&Field> {
+        self.fields
+            .get("671")
+            .map(|fields| fields.iter().collect())
+            .unwrap_or_default()
+    }
+
+    /// Add a heading linking entry field (7XX)
+    pub fn add_linking_entry(&mut self, field: Field) {
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
+    }
+
+    /// Get all heading linking entry fields (7XX)
+    #[must_use]
+    pub fn linking_entries(&self) -> Vec<&Field> {
+        self.fields
+            .iter()
+            .filter(|(tag, _)| tag.starts_with('7'))
+            .flat_map(|(_, fields)| fields.iter())
+            .collect()
+    }
+
+    /// Add a field to `fields`
+    pub fn add_field(&mut self, field: Field) {
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
+    }
+
+    /// Get fields by tag
     #[must_use]
     pub fn get_fields(&self, tag: &str) -> Option<&[Field]> {
-        self.other_fields.get(tag).map(Vec::as_slice)
+        self.fields.get(tag).map(Vec::as_slice)
     }
 
     /// Get kind of record from 008/09
@@ -307,11 +340,11 @@ impl MarcRecord for AuthorityRecord {
     }
 
     fn get_fields(&self, tag: &str) -> Option<&[Field]> {
-        self.other_fields.get(tag).map(std::vec::Vec::as_slice)
+        self.fields.get(tag).map(std::vec::Vec::as_slice)
     }
 
     fn get_field(&self, tag: &str) -> Option<&Field> {
-        self.other_fields.get(tag).and_then(|v| v.first())
+        self.fields.get(tag).and_then(|v| v.first())
     }
 }
 
@@ -407,9 +440,9 @@ mod tests {
     fn test_create_authority_record() {
         let leader = create_test_leader();
         let record = AuthorityRecord::new(leader);
-        assert!(record.heading.is_none());
-        assert!(record.tracings_see_from.is_empty());
-        assert!(record.tracings_see_also.is_empty());
+        assert!(record.heading().is_none());
+        assert!(record.see_from_tracings().is_empty());
+        assert!(record.see_also_tracings().is_empty());
     }
 
     #[test]

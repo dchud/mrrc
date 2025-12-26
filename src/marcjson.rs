@@ -56,7 +56,7 @@ pub fn record_to_marcjson(record: &Record) -> Result<Value> {
     }
 
     // Add data fields (010+)
-    for (tag, field_list) in &record.data_fields {
+    for (tag, field_list) in &record.fields {
         for field in field_list {
             let mut subfields = Vec::new();
             for subfield in &field.subfields {

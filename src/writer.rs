@@ -151,7 +151,7 @@ impl<W: Write> MarcWriter<W> {
         }
 
         // Write data fields (010+)
-        for (tag, fields) in &record.data_fields {
+        for (tag, fields) in &record.fields {
             for field in fields {
                 let mut field_data = Vec::new();
                 field_data.push(field.indicator1 as u8);
