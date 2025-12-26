@@ -76,6 +76,7 @@
 //! - [`marcjson`] — MARCJSON format (standard JSON-LD format for MARC)
 //! - [`xml`] — XML serialization/deserialization
 //! - [`csv`] — CSV (Comma-Separated Values) export format
+//! - [`dublin_core`] — Dublin Core metadata serialization
 //! - [`encoding`] — Character encoding support (MARC-8 and UTF-8)
 //! - [`error`] — Error types and result type
 //!
@@ -87,6 +88,7 @@
 //! - **MARCJSON** — Standard JSON-LD format for MARC records
 //! - **XML** — XML representation with proper field/subfield structure
 //! - **CSV** — Tabular export format for spreadsheet applications
+//! - **Dublin Core** — Simplified metadata schema for discovery
 //! - **Character Encodings** — MARC-8 and UTF-8 with automatic detection
 
 pub mod authority_reader;
@@ -94,6 +96,7 @@ pub mod authority_record;
 pub mod authority_writer;
 pub mod bibliographic_helpers;
 pub mod csv;
+pub mod dublin_core;
 pub mod encoding;
 pub mod encoding_validation;
 pub mod error;
