@@ -102,13 +102,13 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::{Record, Leader, Field};
     ///
     /// let record = Record::builder(Leader::default())
-    ///     .control_field("001".to_string(), "12345".to_string())
+    ///     .control_field_str("001", "12345")
     ///     .field(Field::builder("245".to_string(), '1', '0')
-    ///         .subfield('a', "Title".to_string())
+    ///         .subfield_str('a', "Title")
     ///         .build())
     ///     .build();
     /// ```
