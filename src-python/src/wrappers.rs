@@ -4,6 +4,18 @@ use mrrc::{Field, Leader, Record, Subfield};
 use pyo3::prelude::*;
 
 /// Python wrapper for a MARC Leader (24-byte record header)
+///
+/// The MARC leader is a 24-byte fixed-length field at the start of every MARC record.
+/// It contains metadata describing the record's structure, content type, and encoding.
+///
+/// # Examples
+///
+/// ```python
+/// import mrrc
+/// leader = mrrc.Leader()
+/// leader.record_type = 'a'  # Language material
+/// leader.bibliographic_level = 'm'  # Monograph
+/// ```
 #[pyclass(name = "Leader")]
 #[derive(Clone)]
 pub struct PyLeader {
@@ -219,6 +231,18 @@ impl Default for PyLeader {
 }
 
 /// Python wrapper for a Subfield (code + value pair)
+///
+/// Subfields are named data elements within fields, consisting of a
+/// single-character code and a value. For example, subfield 'a' in a
+/// 245 field typically contains the main title.
+///
+/// # Examples
+///
+/// ```python
+/// import mrrc
+/// sf = mrrc.Subfield('a', 'The Great Gatsby')
+/// print(f"Code: {sf.code}, Value: {sf.value}")
+/// ```
 #[pyclass(name = "Subfield")]
 #[derive(Clone)]
 pub struct PySubfield {
@@ -278,6 +302,18 @@ impl PySubfield {
 }
 
 /// Python wrapper for a Field
+///
+/// A MARC field consists of a 3-character tag, two indicators, and one or more subfields.
+/// Fields can represent bibliographic data (like 245 for title) or subject headings (like 650).
+///
+/// # Examples
+///
+/// ```python
+/// import mrrc
+/// field = mrrc.Field('245', '1', '0')
+/// field.add_subfield('a', 'The Great Gatsby')
+/// field.add_subfield('c', 'F. Scott Fitzgerald')
+/// ```
 #[pyclass(name = "Field")]
 #[derive(Clone)]
 pub struct PyField {
@@ -401,6 +437,28 @@ impl PyField {
 }
 
 /// Python wrapper for a Record
+///
+/// A MARC bibliographic record is the fundamental unit of MARC data.
+/// It consists of a leader (24-byte header), control fields (000-009),
+/// and data fields (010 and above).
+///
+/// # Examples
+///
+/// ```python
+/// import mrrc
+/// leader = mrrc.Leader()
+/// leader.record_type = 'a'
+/// leader.bibliographic_level = 'm'
+///
+/// record = mrrc.Record(leader)
+/// record.add_control_field('001', '12345')
+///
+/// field = mrrc.Field('245', '1', '0')
+/// field.add_subfield('a', 'Example Title')
+/// record.add_field(field)
+///
+/// print(f"Title: {record.title()}")
+/// ```
 #[pyclass(name = "Record")]
 pub struct PyRecord {
     pub inner: Record,

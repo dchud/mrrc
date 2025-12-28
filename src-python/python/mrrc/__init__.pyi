@@ -1,0 +1,387 @@
+"""
+Type stubs for MRRC - Fast MARC library written in Rust with Python bindings.
+
+This module provides Python access to the Rust MARC library, enabling fast
+reading, writing, and manipulation of MARC bibliographic records.
+"""
+
+from typing import Optional, Iterator, Any, Union, List, Tuple
+
+__version__: str
+
+class Leader:
+    """MARC Leader - 24-byte record header.
+    
+    The MARC leader contains metadata about the record structure and content.
+    All MARC records must begin with exactly 24 bytes of leader information.
+    """
+    
+    def __new__(cls) -> Leader: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __eq__(self, other: object) -> bool: ...
+    
+    @property
+    def record_length(self) -> int:
+        """Record length (5 digits) - positions 0-4"""
+        ...
+    
+    @record_length.setter
+    def record_length(self, value: int) -> None: ...
+    
+    @property
+    def record_status(self) -> str:
+        """Record status (1 char) - position 5"""
+        ...
+    
+    @record_status.setter
+    def record_status(self, value: str) -> None: ...
+    
+    @property
+    def record_type(self) -> str:
+        """Type of record (1 char) - position 6 (a=language, c=music, etc)"""
+        ...
+    
+    @record_type.setter
+    def record_type(self, value: str) -> None: ...
+    
+    @property
+    def bibliographic_level(self) -> str:
+        """Bibliographic level (1 char) - position 7 (m=monograph, s=serial, etc)"""
+        ...
+    
+    @bibliographic_level.setter
+    def bibliographic_level(self, value: str) -> None: ...
+    
+    @property
+    def control_record_type(self) -> str:
+        """Type of control record (1 char) - position 8"""
+        ...
+    
+    @control_record_type.setter
+    def control_record_type(self, value: str) -> None: ...
+    
+    @property
+    def character_coding(self) -> str:
+        """Character coding scheme (1 char) - position 9 (space=MARC-8, a=UTF-8)"""
+        ...
+    
+    @character_coding.setter
+    def character_coding(self, value: str) -> None: ...
+    
+    @property
+    def indicator_count(self) -> int:
+        """Indicator count (1 digit) - position 10 (usually 2)"""
+        ...
+    
+    @indicator_count.setter
+    def indicator_count(self, value: int) -> None: ...
+    
+    @property
+    def subfield_code_count(self) -> int:
+        """Subfield code count (1 digit) - position 11 (usually 2)"""
+        ...
+    
+    @subfield_code_count.setter
+    def subfield_code_count(self, value: int) -> None: ...
+    
+    @property
+    def data_base_address(self) -> int:
+        """Base address of data (5 digits) - positions 12-16"""
+        ...
+    
+    @data_base_address.setter
+    def data_base_address(self, value: int) -> None: ...
+    
+    @property
+    def encoding_level(self) -> str:
+        """Encoding level (1 char) - position 17"""
+        ...
+    
+    @encoding_level.setter
+    def encoding_level(self, value: str) -> None: ...
+    
+    @property
+    def cataloging_form(self) -> str:
+        """Cataloging form (1 char) - position 18"""
+        ...
+    
+    @cataloging_form.setter
+    def cataloging_form(self, value: str) -> None: ...
+    
+    @property
+    def multipart_level(self) -> str:
+        """Multipart resource record level (1 char) - position 19"""
+        ...
+    
+    @multipart_level.setter
+    def multipart_level(self, value: str) -> None: ...
+    
+    @property
+    def reserved(self) -> str:
+        """Reserved (4 chars) - positions 20-23 (usually "4500")"""
+        ...
+    
+    @reserved.setter
+    def reserved(self, value: str) -> None: ...
+
+
+class Subfield:
+    """A subfield within a MARC field.
+    
+    Subfields are named data elements within fields, consisting of a
+    single-character code and a value.
+    """
+    
+    def __new__(cls, code: str, value: str) -> Subfield: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __eq__(self, other: object) -> bool: ...
+    
+    @property
+    def code(self) -> str:
+        """Subfield code (single character)"""
+        ...
+    
+    @property
+    def value(self) -> str:
+        """Subfield value"""
+        ...
+    
+    @value.setter
+    def value(self, val: str) -> None: ...
+
+
+class Field:
+    """A MARC field (data fields with tag 010 and higher).
+    
+    A field consists of a 3-character tag, two indicators, and one or more subfields.
+    """
+    
+    def __new__(cls, tag: str, indicator1: str = " ", indicator2: str = " ") -> Field: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __eq__(self, other: object) -> bool: ...
+    
+    @property
+    def tag(self) -> str:
+        """Field tag (3 digits)"""
+        ...
+    
+    @property
+    def indicator1(self) -> str:
+        """First indicator"""
+        ...
+    
+    @indicator1.setter
+    def indicator1(self, value: str) -> None: ...
+    
+    @property
+    def indicator2(self) -> str:
+        """Second indicator"""
+        ...
+    
+    @indicator2.setter
+    def indicator2(self, value: str) -> None: ...
+    
+    def add_subfield(self, code: str, value: str) -> None:
+        """Add a subfield to the field.
+        
+        Args:
+            code: Subfield code (single character)
+            value: Subfield value
+        
+        Raises:
+            ValueError: If code is empty
+        """
+        ...
+    
+    def subfields(self) -> List[Subfield]:
+        """Get all subfields in this field."""
+        ...
+    
+    def subfields_by_code(self, code: str) -> List[str]:
+        """Get all subfield values for a given code.
+        
+        Args:
+            code: Subfield code to search for
+        
+        Returns:
+            List of subfield values matching the code
+        
+        Raises:
+            ValueError: If code is empty
+        """
+        ...
+
+
+class Record:
+    """A MARC bibliographic record.
+    
+    A MARC record consists of a leader, control fields (000-009), and data fields (010+).
+    """
+    
+    def __new__(cls, leader: Leader) -> Record: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __eq__(self, other: object) -> bool: ...
+    
+    def leader(self) -> Leader:
+        """Get the record's leader."""
+        ...
+    
+    def add_control_field(self, tag: str, value: str) -> None:
+        """Add a control field (000-009).
+        
+        Args:
+            tag: 3-character field tag
+            value: Field value
+        
+        Raises:
+            ValueError: If tag is not 3 characters
+        """
+        ...
+    
+    def control_field(self, tag: str) -> Optional[str]:
+        """Get a control field value.
+        
+        Args:
+            tag: 3-character field tag
+        
+        Returns:
+            The field value, or None if not found
+        """
+        ...
+    
+    def add_field(self, field: Field) -> None:
+        """Add a data field to the record.
+        
+        Args:
+            field: Field instance to add
+        """
+        ...
+    
+    def fields_by_tag(self, tag: str) -> List[Field]:
+        """Get all fields with a given tag.
+        
+        Args:
+            tag: 3-character field tag
+        
+        Returns:
+            List of Field instances matching the tag
+        """
+        ...
+    
+    def fields(self) -> List[Field]:
+        """Get all fields in the record."""
+        ...
+    
+    def control_fields(self) -> List[Tuple[str, str]]:
+        """Get all control fields as (tag, value) tuples."""
+        ...
+    
+    def title(self) -> Optional[str]:
+        """Get title from 245 field (first subfield $a).
+        
+        Returns:
+            The title value, or None if not found
+        """
+        ...
+    
+    def author(self) -> Optional[str]:
+        """Get author from 100/110/111 field.
+        
+        Returns:
+            The author value, or None if not found
+        """
+        ...
+    
+    def isbn(self) -> Optional[str]:
+        """Get ISBN from 020 field.
+        
+        Returns:
+            The ISBN value, or None if not found
+        """
+        ...
+
+
+class MARCReader:
+    """Reader for ISO 2709 binary MARC format.
+    
+    Reads MARC records one at a time from a Python file-like object.
+    Supports iteration protocol for easy use in for-loops.
+    
+    Examples:
+        Reading all records from a file:
+        
+        ```python
+        import mrrc
+        
+        with open('records.mrc', 'rb') as f:
+            reader = mrrc.MARCReader(f)
+            for record in reader:
+                print(record.title())
+        ```
+    """
+    
+    def __new__(cls, file: Any) -> MARCReader: ...
+    def __repr__(self) -> str: ...
+    def __iter__(self) -> Iterator[Record]: ...
+    def __next__(self) -> Record: ...
+    
+    def read_record(self) -> Optional[Record]:
+        """Read the next record from the file.
+        
+        Returns:
+            A Record instance, or None if EOF reached
+        
+        Raises:
+            ValueError: If the binary data is malformed
+            IOError: If an I/O error occurs
+        """
+        ...
+
+
+class MARCWriter:
+    """Writer for ISO 2709 binary MARC format.
+    
+    Writes MARC records one at a time to a Python file-like object.
+    Supports context manager protocol for proper resource cleanup.
+    
+    Examples:
+        Writing records to a file:
+        
+        ```python
+        import mrrc
+        
+        with open('output.mrc', 'wb') as f:
+            with mrrc.MARCWriter(f) as writer:
+                writer.write_record(record)
+        ```
+    """
+    
+    def __new__(cls, file: Any) -> MARCWriter: ...
+    def __repr__(self) -> str: ...
+    def __enter__(self) -> MARCWriter: ...
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool: ...
+    
+    def write_record(self, record: Record) -> None:
+        """Write a record to the file.
+        
+        Serializes the record to ISO 2709 binary format.
+        
+        Args:
+            record: Record instance to write
+        
+        Raises:
+            ValueError: If the record is invalid
+            IOError: If an I/O error occurs
+        """
+        ...
+    
+    def close(self) -> None:
+        """Close the writer and flush the buffer.
+        
+        This is automatically called when using the context manager.
+        """
+        ...

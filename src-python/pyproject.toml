@@ -39,6 +39,9 @@ dev = [
 module-name = "mrrc._mrrc"
 bindings = "pyo3"
 python-source = "python"
+include = [
+    { path = "python/mrrc/py.typed", format = "sdist" },
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
