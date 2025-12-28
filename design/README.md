@@ -2,53 +2,41 @@
 
 This directory contains architectural and design documentation for the MRRC (MARC Rust Crate) project.
 
-## Active Design Documents
+## Completed Design Documents (Archived to /history)
 
 ### [FIELD_QUERY_DSL.md](./FIELD_QUERY_DSL.md)
-**Status**: Phase 1 ✅ Complete, Phases 2-3 Planned  
+**Status**: ✅ Phase 1, 2 & 3 All Completed  
 **Overview**: Domain-specific query patterns for finding MARC fields based on complex criteria.
 
-**Phase 1 Delivered**:
-- ✅ FieldQuery builder pattern for combining criteria (tag, indicators, subfields)
-- ✅ TagRangeQuery for finding fields within tag ranges (e.g., 600-699)
-- ✅ Record API methods for indicator-based filtering (`fields_by_indicator()`)
-- ✅ Record API methods for tag range queries (`fields_in_range()`)
-- ✅ Record API methods for subfield-based filtering (`fields_with_subfield()`)
-- ✅ Record API methods for complex queries (`fields_matching()`, `fields_matching_range()`)
-- ✅ Mutable field iterators for batch operations
+**All Phases Delivered**:
+- ✅ **Phase 1** (mrrc-9n8): FieldQuery builder, TagRangeQuery, indicator/subfield filtering, mutable iterators
+- ✅ **Phase 2** (mrrc-131): Subfield pattern matching with regex, value-based filtering, convenience methods
+- ✅ **Phase 3** (mrrc-08k, mrrc-69n): Linked field navigation (880), authority helpers, format-specific traits
 
-**Completed**: Epic mrrc-9n8 (Phase 1 field query DSL). Epic mrrc-4zn (mutable field iterators).
-
-**What's Planned**:
-- Phase 2: Subfield pattern matching with regex, value-based filtering helpers, convenience methods
-- Phase 3: Linked field navigation (880), authority control helpers, format-specific queries
+**Test Coverage**: 97+ specialized tests + 282 library tests passing. See `/history/FIELD_QUERY_DSL_COMPLETED.md`.
 
 ### [AUTHORITY_RECORD_DESIGN.md](./AUTHORITY_RECORD_DESIGN.md)
 **Status**: ✅ Completed  
 **Overview**: Specialized support for MARC Authority and Holdings records (Types Z, x, y, v, u).
 
-Covers:
-- Authority record structure and field organization
-- Heading types (1XX) and tracing fields (4XX/5XX)
-- Implementation details for AuthorityRecord and HoldingsRecord types
-- 008 fixed field interpretation for authority records
-
-**Completed**: Epic mrrc-fzy with all 4 phases (phases 1-2 for authority, phases 3-4 for holdings). Readers, writers, and comprehensive tests implemented.
-
-## Historical & Proposal Documents
+**Delivered**:
+- Authority record structure with heading types (1XX) and tracing fields (4XX/5XX)
+- Holdings record implementation with location and call number support
+- Readers, writers, and comprehensive test coverage
+- Epic mrrc-fzy (all 4 phases completed)
 
 ### [api-refactor-proposal.md](./api-refactor-proposal.md)
-**Status**: ✅ Completed  
-**Overview**: Comprehensive refactoring to reduce code duplication across Record, AuthorityRecord, and HoldingsRecord types.
+**Status**: ✅ All 5 Phases Completed  
+**Overview**: Comprehensive refactoring to reduce code duplication across Record, AuthorityRecord, and HoldingsRecord.
 
-**Delivered**:
-- `MarcRecord` trait for common operations (`src/marc_record.rs`)
-- `GenericRecordBuilder<T>` for unified interface (`src/record_builder_generic.rs`)
-- `RecordHelpers` trait with 20+ helper methods (`src/record_helpers.rs`)
-- `FieldCollection` pattern for field accessors (`src/field_collection.rs`)
-- Unified field storage across all record types
+**All Phases Delivered**:
+- ✅ **Phase 1**: `MarcRecord` trait for common operations
+- ✅ **Phase 2**: `GenericRecordBuilder<T>` unified builder interface
+- ✅ **Phase 3**: `FieldCollection` trait for field accessors
+- ✅ **Phase 4**: `RecordHelpers` trait with blanket implementation
+- ✅ **Phase 5**: Unified field storage across all record types
 
-**Impact**: ~300+ LOC of duplication eliminated. Zero breaking changes. Full backward compatibility maintained. See epic mrrc-c4v.
+**Impact**: ~300+ LOC of duplication eliminated. Zero breaking changes. Full backward compatibility. Epic mrrc-c4v. See `/history/API_REFACTOR_COMPLETED.md`.
 
 ## Project History
 
