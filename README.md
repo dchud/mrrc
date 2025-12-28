@@ -421,6 +421,151 @@ Holdings records use Types x, y, v, or u (single-part, serial, multipart, unknow
 - **Textual Holdings** (866-868): Natural language descriptions
 - **Item Information** (876-878): Specific copy information
 
+## Python Wrapper 🦀
+
+MRRC is available as a Python package, providing Rust-backed performance with Python's ease of use.
+
+### Installation
+
+Install from PyPI:
+
+```bash
+pip install mrrc
+```
+
+Supported Python versions: **3.9+** (3.9, 3.10, 3.11, 3.12)  
+Wheels available for: Linux (x86_64, aarch64), macOS (x86_64, arm64), Windows (x64, arm64)
+
+### Quick Start (Python)
+
+```python
+from mrrc import MARCReader, MARCWriter, Record, Field, Leader
+import io
+
+# Read MARC records
+with open("records.mrc", "rb") as f:
+    reader = MARCReader(f)
+    for record in reader:  # or use while record := reader.read_record()
+        title = record.title()  # Convenience method
+        print(f"Title: {title}")
+        
+        # Access fields
+        fields_245 = record.get_fields("245")
+        if fields_245:
+            print(f"Field 245: {fields_245[0]}")
+
+# Create and write records
+leader = Leader(
+    record_type='a',           # 'a' = language material
+    bibliographic_level='m',   # 'm' = monograph
+    character_coding='a',      # 'a' = UTF-8
+)
+
+record = Record(leader)
+record.add_control_field("008", "200101s2020    xxu||||||||||||||||eng||")
+
+field_245 = Field("245", '1', '0')
+field_245.add_subfield('a', "The Great Gatsby /")
+field_245.add_subfield('c', "F. Scott Fitzgerald.")
+record.add_field(field_245)
+
+# Write to file
+with open("output.mrc", "wb") as f:
+    writer = MARCWriter(f)
+    writer.write_record(record)
+```
+
+### Performance
+
+The Python wrapper maintains >90% of pure Python performance with the benefits of Rust:
+
+- **Reading 10k records**: ~161 ms (62,000 rec/s)
+- **Overhead vs pymarc**: 10-15% (acceptable for memory safety & maintainability)
+- **GIL released**: I/O operations allow true parallelism with threading
+
+See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis.
+
+### Threading & Concurrency
+
+MRRC's I/O operations release the Python GIL, enabling true parallelism:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+from mrrc import MARCReader
+
+def process_file(filename):
+    count = 0
+    with open(filename, 'rb') as f:
+        reader = MARCReader(f)
+        while record := reader.read_record():
+            # Process record
+            count += 1
+    return count
+
+with ThreadPoolExecutor(max_workers=4) as executor:
+    futures = [executor.submit(process_file, f) for f in ["file1.mrc", "file2.mrc", "file3.mrc", "file4.mrc"]]
+    results = [f.result() for f in futures]
+```
+
+See [docs/threading.md](docs/threading.md) for detailed threading patterns.
+
+### Format Conversion (Python)
+
+```python
+from mrrc import MARCReader
+
+with open("records.mrc", "rb") as f:
+    reader = MARCReader(f)
+    record = reader.read_record()
+    
+    # Convert to JSON
+    json_str = record.to_json()
+    
+    # Convert to XML
+    xml_str = record.to_xml()
+    
+    # Convert to MARCJSON
+    marcjson_str = record.to_marcjson()
+```
+
+### Error Handling
+
+MRRC provides typed exceptions for better error handling:
+
+```python
+from mrrc import MARCReader, MarcException, MarcEncodingError
+
+try:
+    with open("records.mrc", "rb") as f:
+        reader = MARCReader(f)
+        while record := reader.read_record():
+            process(record)
+except MarcEncodingError as e:
+    print(f"Encoding issue: {e}")
+except MarcException as e:
+    print(f"MARC error: {e}")
+```
+
+### Migration from pymarc
+
+If migrating from `pymarc`, the APIs are similar:
+
+```python
+# pymarc
+from pymarc import MARCReader
+reader = MARCReader(open("file.mrc", "rb"))
+for record in reader:
+    title = record['245']['a']
+
+# mrrc (compatible patterns)
+from mrrc import MARCReader
+reader = MARCReader(open("file.mrc", "rb"))
+while record := reader.read_record():
+    title = record.title()  # or record.get_fields("245")[0].get_subfield('a')
+```
+
+See [MIGRATION_GUIDE.md](src-python/MIGRATION_GUIDE.md) for detailed migration instructions.
+
 ## Testing
 
 The library includes 239 comprehensive tests covering:
