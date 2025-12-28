@@ -34,3 +34,16 @@ test-output/
 .DS_Store
 Thumbs.db
 BooksAll*.gz
+
+# Python virtual environments
+venv/
+.venv/
+env/
+.env
+
+# Python build artifacts
+*.egg-info/
+__pycache__/
+dist/
+build/
+*.so
