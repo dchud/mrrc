@@ -1,12 +1,17 @@
 # Advanced Field Query DSL Patterns
 
-## Status: Phase 1 ✅ Completed, Phases 2-3 Planned
+## Status: Phase 1 & 2 ✅ Completed, Phase 3 Partial (Linkage Complete)
 
-Phase 1 of the field query DSL has been fully implemented with comprehensive testing (9 unit tests, 17 integration tests). See epic **mrrc-9n8** for implementation details.
+- **Phase 1**: ✅ Completed (mrrc-9n8) - 9 unit tests, 17 integration tests
+- **Phase 2**: ✅ Completed (mrrc-131) - 39 comprehensive tests for pattern matching and convenience methods
+- **Phase 3**: ⚠️ Partially completed
+  - ✅ Linked field navigation (880 field linkage) - 28 integration tests, bidirectional lookups
+  - ❌ Authority control helpers - Not yet implemented
+  - ❌ Format-specific query traits - Not yet implemented
 
-## Current State - Phase 1 Delivered
+## Current State - Phases 1-3 (Partial) Delivered
 
-The mrrc library now supports:
+### Phase 1 & 2: Core Query DSL
 - `FieldQuery` builder for complex criteria (tag, indicators, subfields)
 - `TagRangeQuery` for range-based field lookups (e.g., 600-699)
 - `Record::fields_by_indicator()` - Filter by first/second indicators
@@ -17,6 +22,19 @@ The mrrc library now supports:
 - `Record::remove_fields_where()` - Generic predicate-based filtering
 - `Record::fields_mut_with_subfield()` - Mutable access for batch operations
 - Helper methods like `title()`, `author()`, `subjects()` for common bibliographic fields
+
+### Phase 2: Advanced Patterns
+- **Subfield pattern matching**: `SubfieldPatternQuery`, regex-based field matching
+- **Value-based filtering**: `SubfieldValueQuery` with exact and partial matching
+- **Convenience methods**: `subjects_with_subdivision()`, `isbns_matching()`, `names_in_range()`, `authors_with_dates()`, `subjects_with_note()`
+
+### Phase 3 (Partial): Linked Field Navigation
+- `Record::get_linked_field()` - Get 880 field linked to an original field
+- `Record::get_original_field()` - Get original field from an 880 field (reverse lookup)
+- `Record::get_all_880_fields()` - Get all alternate graphical representation fields
+- `Record::get_field_pairs()` - Get (original, Option<880>) pairs for a tag
+- `Record::find_linked_by_occurrence()` - Find all fields linked by occurrence number
+- `LinkageInfo` struct for parsing subfield 6 (linkage information)
 
 ## Proposed Query Patterns
 
@@ -156,15 +174,15 @@ record.get_field_pairs("100")
 
 **Source**: `/src/field_query.rs`, `/src/record.rs` (query methods)
 
-### Phase 2: Advanced Patterns (Planned)
-1. Subfield pattern matching with regex (e.g., `matches_pattern()`)
-2. Value-based filtering helpers (e.g., `fields_where_subfield_matches()`)
-3. Convenience methods for common searches (e.g., `subjects_with_subdivision()`)
+### Phase 2: Advanced Patterns ✅ COMPLETED
+1. ✅ Subfield pattern matching with regex (e.g., `fields_where_subfield_matches()`)
+2. ✅ Value-based filtering helpers (e.g., `SubfieldValueQuery`)
+3. ✅ Convenience methods for common searches (e.g., `subjects_with_subdivision()`)
 
-### Phase 3: Specialized Queries (Planned)
-1. Linked field navigation (880 field linkage via subfield 6)
-2. Authority control helpers (find related authority headings)
-3. Format-specific queries (record-type specific patterns)
+### Phase 3: Specialized Queries (In Progress)
+1. ✅ Linked field navigation (880 field linkage via subfield 6) - COMPLETED
+2. ❌ Authority control helpers (find related authority headings) - TODO
+3. ❌ Format-specific queries (record-type specific patterns) - TODO
 
 ## Design Principles
 
