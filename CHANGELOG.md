@@ -111,8 +111,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known Limitations
 
-- Limited validation of field indicators and indicator semantics
-- MARC-8 combining character handling follows Unicode NFC normalization (may differ slightly from some legacy systems)
+None known at this time. The following have been resolved:
+- ✓ Field indicator validation with MARC21 semantics (implemented in 0.1.0)
+- ✓ MARC-8 combining character handling with Unicode NFC normalization (implemented in 0.1.0)
 
 ### Technical Details
 

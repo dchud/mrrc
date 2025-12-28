@@ -469,7 +469,7 @@ open tarpaulin-report.html
 
 ## Known Limitations
 
-- Limited validation of field indicators and indicator semantics
+None known at this time. The library now includes comprehensive MARC21 indicator validation and full MARC-8 encoding support.
 
 ## Development Status
 
