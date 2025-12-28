@@ -25,7 +25,45 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+    "mypy>=1.0",
+    "pyright>=1.1",
+    "ruff>=0.1",
+]
+benchmark = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+]
+
 [tool.maturin]
 python-packages = ["mrrc"]
 module-name = "mrrc._mrrc"
 manifest-path = "src-python/Cargo.toml"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "benchmark: mark test as a benchmark",
+    "slow: mark test as slow running",
+]
+# Benchmark settings
+benchmark_min_rounds = 3
+benchmark_disable_gc = true
+benchmark_warmup = true
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+strict = false
+
+[tool.pyright]
+pythonVersion = "3.9"
+typeCheckingMode = "basic"
