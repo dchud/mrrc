@@ -1,3 +1,7 @@
+[workspace]
+members = [".", "src-python"]
+resolver = "2"
+
 [package]
 name = "mrrc"
 version = "0.1.0"
@@ -62,3 +66,6 @@ module_name_repetitions = "allow"
 similar_names = "allow"
 # Type complexity is managed separately
 type_complexity = "allow"
+
+[profile.release]
+opt-level = 3

@@ -1,0 +1,12 @@
+[package]
+name = "mrrc-python"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+mrrc = { path = ".." }
+
+[lib]
+name = "mrrc"
+crate-type = ["cdylib"]
