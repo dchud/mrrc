@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 Generate EACC character table for Rust from pymarc's marc8_mapping.py
+
+Requires pymarc source code to be available at /tmp/pymarc
 """
 
 import sys

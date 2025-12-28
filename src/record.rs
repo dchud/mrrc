@@ -399,6 +399,196 @@ impl Record {
     }
 
     // ============================================================================
+    // Linked field navigation (880 field linkage)
+    // ============================================================================
+
+    /// Find the 880 field linked to a given original field.
+    ///
+    /// In MARC records, 880 fields provide alternate graphical representations
+    /// (e.g., romanized text paired with original script). The linkage is
+    /// established via subfield 6 which contains an occurrence number.
+    ///
+    /// # Arguments
+    ///
+    /// * `field` - The original field to find the linked 880 for
+    ///
+    /// # Returns
+    ///
+    /// The linked 880 field if found, or None if:
+    /// - Field has no subfield 6
+    /// - Subfield 6 is malformed
+    /// - No matching 880 field exists
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let field_100 = record.get_field("100").unwrap();
+    /// if let Some(field_880) = record.get_linked_field(field_100) {
+    ///     println!("Original: {}", field_100.get_subfield('a').unwrap());
+    ///     println!("Romanized: {}", field_880.get_subfield('a').unwrap());
+    /// }
+    /// ```
+    #[must_use]
+    pub fn get_linked_field(&self, field: &Field) -> Option<&Field> {
+        // Get subfield 6 from the field
+        let subfield_6 = field.get_subfield('6')?;
+
+        // Parse the linkage information
+        let linkage = crate::field_linkage::LinkageInfo::parse(subfield_6)?;
+
+        // Find all 880 fields
+        let mut found = None;
+        for field_880 in self.fields_by_tag("880") {
+            if let Some(sf6) = field_880.get_subfield('6') {
+                if let Some(linkage_880) = crate::field_linkage::LinkageInfo::parse(sf6) {
+                    // Check if this 880's linkage points back to our original field
+                    if linkage_880.occurrence == linkage.occurrence {
+                        found = Some(field_880);
+                        break;
+                    }
+                }
+            }
+        }
+
+        found
+    }
+
+    /// Find the original field linked from a given 880 field.
+    ///
+    /// If an 880 field is provided, finds its linked original field.
+    /// This is the reverse of [`Self::get_linked_field`].
+    ///
+    /// # Arguments
+    ///
+    /// * `field_880` - An 880 field
+    ///
+    /// # Returns
+    ///
+    /// The linked original field if found, or None if:
+    /// - Field is not an 880
+    /// - 880 has no subfield 6
+    /// - Subfield 6 is malformed
+    /// - No matching original field exists
+    #[must_use]
+    pub fn get_original_field(&self, field_880: &Field) -> Option<&Field> {
+        // 880 fields should link to original fields
+        if field_880.tag != "880" {
+            return None;
+        }
+
+        // Get subfield 6 from the 880 field
+        let subfield_6 = field_880.get_subfield('6')?;
+
+        // Parse the linkage information
+        let linkage = crate::field_linkage::LinkageInfo::parse(subfield_6)?;
+
+        // The linkage tells us which field and occurrence to find
+        // Subfield 6 in 880 has format: "TAG-OCC[/r]"
+        // We need to extract the TAG part
+        let original_tag = if subfield_6.len() >= 3 {
+            &subfield_6[0..3]
+        } else {
+            return None;
+        };
+
+        // Find the original field with matching tag and occurrence
+        for field_orig in self.fields_by_tag(original_tag) {
+            if let Some(sf6_orig) = field_orig.get_subfield('6') {
+                if let Some(linkage_orig) = crate::field_linkage::LinkageInfo::parse(sf6_orig) {
+                    // Check if this original field links to our 880
+                    if linkage_orig.occurrence == linkage.occurrence {
+                        return Some(field_orig);
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Get all 880 fields (alternate graphical representations).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// for field_880 in record.get_all_880_fields() {
+    ///     println!("880 field: {:?}", field_880);
+    /// }
+    /// ```
+    #[must_use]
+    pub fn get_all_880_fields(&self) -> Vec<&Field> {
+        self.fields_by_tag("880").collect()
+    }
+
+    /// Get field pairs of original fields with their linked 880 counterparts.
+    ///
+    /// For a given tag, returns tuples of (`original_field`, Option<`linked_880`>).
+    /// The Option will be None if the original field has no linked 880.
+    ///
+    /// # Arguments
+    ///
+    /// * `tag` - The original field tag to pair with 880s
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// for (orig, linked_880) in record.get_field_pairs("100") {
+    ///     let name = orig.get_subfield('a').unwrap_or("unknown");
+    ///     if let Some(field_880) = linked_880 {
+    ///         let romanized = field_880.get_subfield('a').unwrap_or("unknown");
+    ///         println!("Name: {} (romanized: {})", name, romanized);
+    ///     } else {
+    ///         println!("Name: {} (no alternate form)", name);
+    ///     }
+    /// }
+    /// ```
+    #[must_use]
+    pub fn get_field_pairs(&self, tag: &str) -> Vec<(&Field, Option<&Field>)> {
+        let mut pairs = Vec::new();
+
+        for orig_field in self.fields_by_tag(tag) {
+            let linked = self.get_linked_field(orig_field);
+            pairs.push((orig_field, linked));
+        }
+
+        pairs
+    }
+
+    /// Find all fields linked by a specific occurrence number.
+    ///
+    /// # Arguments
+    ///
+    /// * `occurrence` - The occurrence number to search for (e.g., "01")
+    ///
+    /// # Returns
+    ///
+    /// Vector of all fields (original and 880) with matching occurrence in subfield 6
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let fields = record.find_linked_by_occurrence("01");
+    /// // Returns both original field and its 880 counterpart, if both exist
+    /// ```
+    #[must_use]
+    pub fn find_linked_by_occurrence(&self, occurrence: &str) -> Vec<&Field> {
+        let mut results = Vec::new();
+
+        // Search all fields
+        for field in self.fields() {
+            if let Some(sf6) = field.get_subfield('6') {
+                if let Some(linkage) = crate::field_linkage::LinkageInfo::parse(sf6) {
+                    if linkage.occurrence == occurrence {
+                        results.push(field);
+                    }
+                }
+            }
+        }
+
+        results
+    }
+
+    // ============================================================================
     // Mutable field operations
     // ============================================================================
 
