@@ -547,6 +547,94 @@ impl PyRecord {
         self.inner.isbn().map(|s| s.to_string())
     }
 
+    /// Convert record to JSON string
+    ///
+    /// # Example
+    /// ```python
+    /// json_str = record.to_json()
+    /// ```
+    pub fn to_json(&self) -> PyResult<String> {
+        use mrrc::json;
+        json::record_to_json(&self.inner)
+            .map(|v| v.to_string())
+            .map_err(crate::error::marc_error_to_py_err)
+    }
+
+    /// Convert record to XML string
+    ///
+    /// # Example
+    /// ```python
+    /// xml_str = record.to_xml()
+    /// ```
+    pub fn to_xml(&self) -> PyResult<String> {
+        use mrrc::xml;
+        xml::record_to_xml(&self.inner)
+            .map_err(crate::error::marc_error_to_py_err)
+    }
+
+    /// Convert record to MARCJSON format
+    ///
+    /// # Example
+    /// ```python
+    /// marcjson_str = record.to_marcjson()
+    /// ```
+    pub fn to_marcjson(&self) -> PyResult<String> {
+        use mrrc::marcjson;
+        marcjson::record_to_marcjson(&self.inner)
+            .map(|v| v.to_string())
+            .map_err(crate::error::marc_error_to_py_err)
+    }
+
+    /// Convert record to Dublin Core metadata
+    ///
+    /// # Returns
+    /// A dictionary mapping Dublin Core field names to lists of values
+    ///
+    /// # Example
+    /// ```python
+    /// dc = record.to_dublin_core()
+    /// print(dc['title'])
+    /// ```
+    pub fn to_dublin_core(&self) -> PyResult<std::collections::HashMap<String, Vec<String>>> {
+        use mrrc::dublin_core;
+        dublin_core::record_to_dublin_core(&self.inner)
+            .map(|dc| {
+                let mut map = std::collections::HashMap::new();
+                map.insert("title".to_string(), dc.title);
+                map.insert("creator".to_string(), dc.creator);
+                map.insert("subject".to_string(), dc.subject);
+                map.insert("description".to_string(), dc.description);
+                map.insert("publisher".to_string(), dc.publisher);
+                map.insert("contributor".to_string(), dc.contributor);
+                map.insert("date".to_string(), dc.date);
+                map.insert("type".to_string(), dc.dc_type);
+                map.insert("format".to_string(), dc.format);
+                map.insert("identifier".to_string(), dc.identifier);
+                map.insert("source".to_string(), dc.source);
+                map.insert("language".to_string(), dc.language);
+                map.insert("relation".to_string(), dc.relation);
+                map.insert("coverage".to_string(), dc.coverage);
+                map.insert("rights".to_string(), dc.rights);
+                map
+            })
+            .map_err(crate::error::marc_error_to_py_err)
+    }
+
+    /// Convert record to MODS XML format
+    ///
+    /// MODS (Metadata Object Description Schema) is a more detailed
+    /// XML representation than Dublin Core.
+    ///
+    /// # Example
+    /// ```python
+    /// mods_xml = record.to_mods()
+    /// ```
+    pub fn to_mods(&self) -> PyResult<String> {
+        use mrrc::mods;
+        mods::record_to_mods_xml(&self.inner)
+            .map_err(crate::error::marc_error_to_py_err)
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "<Record type={} fields={}>",

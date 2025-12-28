@@ -1,0 +1,31 @@
+[build-system]
+requires = ["maturin"]
+build-backend = "maturin"
+
+[project]
+name = "mrrc"
+version = "0.1.0"
+description = "MRRC: A fast MARC library written in Rust with Python bindings"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "MRRC Contributors", email = "contact@example.com"}
+]
+requires-python = ">=3.9"
+keywords = ["marc", "bibliographic", "data", "rust"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+
+[tool.maturin]
+python-packages = ["mrrc"]
+module-name = "mrrc._mrrc"
+manifest-path = "src-python/Cargo.toml"
