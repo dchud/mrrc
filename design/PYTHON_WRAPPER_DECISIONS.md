@@ -2,7 +2,7 @@
 
 **Date:** 2025-12-28  
 **Task:** mrrc-9ic.6  
-**Status:** AWAITING DECISION
+**Status:** ✅ DECIDED (2025-12-28)
 
 This document captures the three critical architectural decisions needed before Phase 1 can begin.
 
@@ -286,28 +286,36 @@ except mrrc.MarcException as e:
 
 ## Implementation Checklist
 
-- [ ] **Decision 1 Confirmed:** Package published as `mrrc` on PyPI
-  - [ ] Update `pyproject.toml` with package name
-  - [ ] Document in README: "🦀 Rust-backed Python library"
+- [x] **Decision 1 Confirmed:** Package published as `mrrc` on PyPI
+  - [ ] Update `pyproject.toml` with package name (Phase 1)
+  - [ ] Document in README: "🦀 Rust-backed Python library" (Phase 4)
   
-- [ ] **Decision 2 Confirmed:** Python 3.9+ support
-  - [ ] Set `python_requires = ">=3.9"` in `pyproject.toml`
-  - [ ] Configure CI matrix for 3.9, 3.10, 3.11, 3.12
-  - [ ] Document Python version support in README
+- [x] **Decision 2 Confirmed:** Python 3.9+ support
+  - [ ] Set `python_requires = ">=3.9"` in `pyproject.toml` (Phase 1)
+  - [ ] Configure CI matrix for 3.9, 3.10, 3.11, 3.12 (mrrc-9ic.8)
+  - [ ] Document Python version support in README (Phase 4)
   
-- [ ] **Decision 3 Confirmed:** Custom exception hierarchy
-  - [ ] Create `src-python/src/errors.rs`
-  - [ ] Define 4 exception classes with proper extends
-  - [ ] Implement `From<mrrc::error::MarcError>` mapping
-  - [ ] Add tests for exception propagation
+- [x] **Decision 3 Confirmed:** Custom exception hierarchy
+  - [ ] Create `src-python/src/errors.rs` (Phase 1)
+  - [ ] Define 4 exception classes with proper extends (Phase 2)
+  - [ ] Implement `From<mrrc::error::MarcError>` mapping (Phase 2)
+  - [ ] Add tests for exception propagation (Phase 2)
+
+---
+
+## Status: DECISIONS FINALIZED ✅
+
+All three architectural decisions have been confirmed and approved.
+
+**Phase 1 (mrrc-9ic.2) is now UNBLOCKED** and ready to begin.
 
 ---
 
 ## Next Steps
 
-1. **Review & Approve** these decisions (team/stakeholder sign-off)
-2. **Document Decisions** in this file (mark DECIDED)
-3. **Proceed to Phase 1** once all confirmed
+1. ✅ **Decisions Confirmed** (see checklist above)
+2. ✅ **Documented** in design/PYTHON_WRAPPER_DECISIONS.md
+3. 🚀 **Proceed to Phase 1:** Workspace & Maturin skeleton setup
 
 ---
 
