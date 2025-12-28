@@ -73,16 +73,16 @@ fn simple_record() {
     );
 
     if let Some(title) = record.title() {
-        println!("Title: {}", title);
+        println!("Title: {title}");
     }
 
     if let Some(author) = record.author() {
-        println!("Author: {}", author);
+        println!("Author: {author}");
     }
 
     println!("Subjects:");
     for subject in record.subjects() {
-        println!("  - {}", subject);
+        println!("  - {subject}");
     }
 }
 
@@ -119,16 +119,16 @@ fn record_with_subjects() {
     println!("Subjects with subdivisions:");
     for field in record.fields_by_tag("650") {
         if let Some(main) = field.get_subfield('a') {
-            println!("  Main: {}", main);
+            println!("  Main: {main}");
 
             if let Some(subdivision) = field.get_subfield('x') {
-                println!("    Topical subdivision: {}", subdivision);
+                println!("    Topical subdivision: {subdivision}");
             }
             if let Some(subdivision) = field.get_subfield('z') {
-                println!("    Geographic subdivision: {}", subdivision);
+                println!("    Geographic subdivision: {subdivision}");
             }
             if let Some(form) = field.get_subfield('v') {
-                println!("    Form subdivision: {}", form);
+                println!("    Form subdivision: {form}");
             }
         }
     }
@@ -210,17 +210,17 @@ fn complex_record() {
             publication.place.as_deref().unwrap_or("unknown place"),
         );
         if let Some(publisher) = &publication.publisher {
-            println!("Publisher: {}", publisher);
+            println!("Publisher: {publisher}");
         }
     }
 
     println!("\nSubjects:");
     for subject in record.subjects() {
-        println!("  {}", subject);
+        println!("  {subject}");
     }
 
     println!("\nISBN:");
     for isbn in record.isbns() {
-        println!("  {}", isbn);
+        println!("  {isbn}");
     }
 }

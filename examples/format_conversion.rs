@@ -13,46 +13,32 @@ fn main() {
     println!("Authors: {:?}", record.authors());
 
     // JSON format
-    #[cfg(feature = "json")]
-    {
-        println!("\n=== JSON Format ===\n");
-        if let Ok(json) = mrrc::json::record_to_json(&record) {
-            println!("{}", json);
-        }
+    println!("\n=== JSON Format ===\n");
+    if let Ok(json) = mrrc::json::record_to_json(&record) {
+        println!("{json}");
     }
 
     // MARCJSON format
-    #[cfg(feature = "marcjson")]
-    {
-        println!("\n=== MARCJSON Format ===\n");
-        if let Ok(json) = mrrc::marcjson::record_to_marcjson(&record) {
-            println!("{}", json.to_string());
-        }
+    println!("\n=== MARCJSON Format ===\n");
+    if let Ok(json) = mrrc::marcjson::record_to_marcjson(&record) {
+        println!("{json}");
     }
 
     // XML format
-    #[cfg(feature = "xml")]
-    {
-        println!("\n=== XML Format ===\n");
-        if let Ok(xml) = mrrc::xml::record_to_xml(&record) {
-            println!("{}", xml);
-        }
+    println!("\n=== XML Format ===\n");
+    if let Ok(xml) = mrrc::xml::record_to_xml(&record) {
+        println!("{xml}");
     }
 
     // CSV format
-    #[cfg(feature = "csv")]
-    {
-        println!("\n=== CSV Format ===\n");
-        if let Ok(csv) = mrrc::csv::record_to_csv(&record) {
-            println!("{}", csv);
-        }
+    println!("\n=== CSV Format ===\n");
+    if let Ok(csv) = mrrc::csv::records_to_csv(std::slice::from_ref(&record)) {
+        println!("{csv}");
     }
 
     // Dublin Core format
-    #[cfg(feature = "dublin_core")]
-    {
-        println!("\n=== Dublin Core Format ===\n");
-        let dc = mrrc::dublin_core::record_to_dublin_core(&record);
+    println!("\n=== Dublin Core Format ===\n");
+    if let Ok(dc) = mrrc::dublin_core::record_to_dublin_core(&record) {
         println!("Title: {:?}", dc.title);
         println!("Creator: {:?}", dc.creator);
         println!("Subject: {:?}", dc.subject);
@@ -60,12 +46,9 @@ fn main() {
     }
 
     // MODS format
-    #[cfg(feature = "mods")]
-    {
-        println!("\n=== MODS Format ===\n");
-        if let Ok(mods) = mrrc::mods::record_to_mods(&record) {
-            println!("{}", mods);
-        }
+    println!("\n=== MODS Format ===\n");
+    if let Ok(mods) = mrrc::mods::record_to_mods_xml(&record) {
+        println!("{mods}");
     }
 }
 

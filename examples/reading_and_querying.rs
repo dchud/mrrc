@@ -84,7 +84,7 @@ fn basic_field_access(record: &Record) {
         println!("Found {} subject fields", subjects.len());
         for field in subjects {
             if let Some(value) = field.get_subfield('a') {
-                println!("  Subject: {}", value);
+                println!("  Subject: {value}");
             }
         }
     }
@@ -113,7 +113,7 @@ fn filter_by_indicators(record: &Record) {
     println!("LCSH subjects (indicator2 = '0'): {}", lcsh_subjects.len());
     for field in lcsh_subjects {
         if let Some(value) = field.get_subfield('a') {
-            println!("  {}", value);
+            println!("  {value}");
         }
     }
 
@@ -129,7 +129,7 @@ fn filter_by_indicators(record: &Record) {
     );
     for field in other_subjects {
         if let Some(value) = field.get_subfield('a') {
-            println!("  {}", value);
+            println!("  {value}");
         }
     }
 }
@@ -145,7 +145,7 @@ fn working_with_subfields(record: &Record) {
 
     println!("All subfield 'a' values in 650 fields:");
     for subject in all_subjects {
-        println!("  {}", subject);
+        println!("  {subject}");
     }
 
     // Get 650 fields with subfield 'x' (topical subdivision)
@@ -153,7 +153,7 @@ fn working_with_subfields(record: &Record) {
     for field in record.fields_by_tag("650") {
         if let Some(main) = field.get_subfield('a') {
             if let Some(subd) = field.get_subfield('x') {
-                println!("  {} -- {}", main, subd);
+                println!("  {main} -- {subd}");
             }
         }
     }
@@ -184,6 +184,6 @@ fn advanced_queries(record: &Record) {
     }
 
     for (tag, count) in tag_counts.iter().take(10) {
-        println!("  {}: {} field(s)", tag, count);
+        println!("  {tag}: {count} field(s)");
     }
 }

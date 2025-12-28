@@ -89,10 +89,10 @@ fn working_with_authority_records() {
     // Access the main heading
     if let Some(heading) = record.heading() {
         if let Some(name) = heading.get_subfield('a') {
-            println!("Main Heading: {}", name);
+            println!("Main Heading: {name}");
         }
         if let Some(dates) = heading.get_subfield('d') {
-            println!("Dates: {}", dates);
+            println!("Dates: {dates}");
         }
     }
 
@@ -100,7 +100,7 @@ fn working_with_authority_records() {
     println!("\nVariant Forms (See From Tracings):");
     for field in record.see_from_tracings() {
         if let Some(name) = field.get_subfield('a') {
-            println!("  {}", name);
+            println!("  {name}");
         }
     }
 
@@ -108,7 +108,7 @@ fn working_with_authority_records() {
     println!("\nRelated Headings (See Also Tracings):");
     for field in record.see_also_tracings() {
         if let Some(name) = field.get_subfield('a') {
-            println!("  {}", name);
+            println!("  {name}");
         }
     }
 
@@ -116,13 +116,13 @@ fn working_with_authority_records() {
     println!("\nNotes:");
     for field in record.source_data_found() {
         if let Some(note) = field.get_subfield('a') {
-            println!("  Source found: {}", note);
+            println!("  Source found: {note}");
         }
     }
 
     for field in record.notes() {
         if let Some(note) = field.get_subfield('a') {
-            println!("  General note: {}", note);
+            println!("  General note: {note}");
         }
     }
 }
@@ -172,13 +172,13 @@ fn working_with_holdings_records() {
         if let Some(field) = fields.first() {
             println!("\nLocation Information:");
             if let Some(inst) = field.get_subfield('a') {
-                println!("  Institution: {}", inst);
+                println!("  Institution: {inst}");
             }
             if let Some(location) = field.get_subfield('b') {
-                println!("  Location: {}", location);
+                println!("  Location: {location}");
             }
             if let Some(call_num) = field.get_subfield('c') {
-                println!("  Call number: {}", call_num);
+                println!("  Call number: {call_num}");
             }
         }
     }
@@ -188,13 +188,13 @@ fn working_with_holdings_records() {
     if let Some(fields) = record.get_fields("876") {
         for field in fields {
             if let Some(id) = field.get_subfield('a') {
-                println!("  Item ID: {}", id);
+                println!("  Item ID: {id}");
             }
             if let Some(copy) = field.get_subfield('p') {
-                println!("  Copy: {}", copy);
+                println!("  Copy: {copy}");
             }
             if let Some(status) = field.get_subfield('x') {
-                println!("  Status: {}", status);
+                println!("  Status: {status}");
             }
         }
     }
@@ -203,7 +203,7 @@ fn working_with_holdings_records() {
     if let Some(fields) = record.get_fields("866") {
         if let Some(field) = fields.first() {
             if let Some(note) = field.get_subfield('a') {
-                println!("\nHoldings Note: {}", note);
+                println!("\nHoldings Note: {note}");
             }
         }
     }
