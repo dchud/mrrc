@@ -4,7 +4,7 @@ This directory contains architectural and design documentation for the MRRC (MAR
 
 ## Completed Design Documents (Archived to /history)
 
-### [FIELD_QUERY_DSL.md](./FIELD_QUERY_DSL.md)
+### [FIELD_QUERY_DSL.md](../history/FIELD_QUERY_DSL.md)
 **Status**: ✅ Phase 1, 2 & 3 All Completed  
 **Overview**: Domain-specific query patterns for finding MARC fields based on complex criteria.
 
@@ -15,7 +15,7 @@ This directory contains architectural and design documentation for the MRRC (MAR
 
 **Test Coverage**: 97+ specialized tests + 282 library tests passing. See `/history/FIELD_QUERY_DSL_COMPLETED.md`.
 
-### [AUTHORITY_RECORD_DESIGN.md](./AUTHORITY_RECORD_DESIGN.md)
+### [AUTHORITY_RECORD_DESIGN.md](../history/AUTHORITY_RECORD_DESIGN.md)
 **Status**: ✅ Completed  
 **Overview**: Specialized support for MARC Authority and Holdings records (Types Z, x, y, v, u).
 
@@ -25,7 +25,7 @@ This directory contains architectural and design documentation for the MRRC (MAR
 - Readers, writers, and comprehensive test coverage
 - Epic mrrc-fzy (all 4 phases completed)
 
-### [api-refactor-proposal.md](./api-refactor-proposal.md)
+### [api-refactor-proposal.md](../history/api-refactor-proposal.md)
 **Status**: ✅ All 5 Phases Completed  
 **Overview**: Comprehensive refactoring to reduce code duplication across Record, AuthorityRecord, and HoldingsRecord.
 
@@ -37,6 +37,14 @@ This directory contains architectural and design documentation for the MRRC (MAR
 - ✅ **Phase 5**: Unified field storage across all record types
 
 **Impact**: ~300+ LOC of duplication eliminated. Zero breaking changes. Full backward compatibility. Epic mrrc-c4v. See `/history/API_REFACTOR_COMPLETED.md`.
+
+## Active Design Documents
+
+### [PYTHON_WRAPPER_PROPOSAL.md](./PYTHON_WRAPPER_PROPOSAL.md)
+**Status**: 📝 Draft  
+**Overview**: Strategy for creating a PyO3-based Python extension module offering near 100% API compatibility with `pymarc`.
+
+**Scope**: Workspace restructuring, PyO3/Maturin integration, stateful wrapper pattern, performance optimization.
 
 ## Project History
 
