@@ -93,6 +93,7 @@
 //! - **MODS** — Detailed metadata description schema for libraries
 //! - **Character Encodings** — MARC-8 and UTF-8 with automatic detection
 
+pub mod authority_queries;
 pub mod authority_reader;
 pub mod authority_record;
 pub mod authority_writer;
@@ -106,6 +107,7 @@ pub mod field_collection;
 pub mod field_linkage;
 pub mod field_query;
 pub mod field_query_helpers;
+pub mod format_queries;
 pub mod holdings_reader;
 pub mod holdings_record;
 pub mod holdings_writer;
@@ -127,6 +129,7 @@ pub mod validation;
 pub mod writer;
 pub mod xml;
 
+pub use authority_queries::AuthorityQueries;
 pub use authority_reader::AuthorityMarcReader;
 pub use authority_record::{
     AuthorityRecord, AuthorityRecordBuilder, HeadingType, KindOfRecord, LevelOfEstablishment,
@@ -138,6 +141,7 @@ pub use error::{MarcError, Result};
 pub use field_linkage::LinkageInfo;
 pub use field_query::{FieldQuery, SubfieldPatternQuery, SubfieldValueQuery, TagRangeQuery};
 pub use field_query_helpers::FieldQueryHelpers;
+pub use format_queries::{AuthoritySpecificQueries, BibliographicQueries, HoldingsSpecificQueries};
 pub use holdings_reader::HoldingsMarcReader;
 pub use holdings_record::{
     AcquisitionStatus, Completeness, HoldingsRecord, HoldingsRecordBuilder, HoldingsType,
