@@ -105,7 +105,23 @@ impl Record {
     /// ```
     /// use mrrc::{Record, Leader, Field};
     ///
-    /// let record = Record::builder(Leader::default())
+    /// let leader = Leader {
+    ///     record_length: 0,
+    ///     record_status: 'n',
+    ///     record_type: 'a',
+    ///     bibliographic_level: 'm',
+    ///     control_record_type: 'a',
+    ///     character_coding: ' ',
+    ///     indicator_count: 2,
+    ///     subfield_code_count: 2,
+    ///     data_base_address: 0,
+    ///     encoding_level: ' ',
+    ///     cataloging_form: ' ',
+    ///     multipart_level: ' ',
+    ///     reserved: "4500".to_string(),
+    /// };
+    ///
+    /// let record = Record::builder(leader)
     ///     .control_field_str("001", "12345")
     ///     .field(Field::builder("245".to_string(), '1', '0')
     ///         .subfield_str('a', "Title")
