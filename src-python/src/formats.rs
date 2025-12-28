@@ -11,8 +11,8 @@
 use crate::error::marc_error_to_py_err;
 use crate::wrappers::PyRecord;
 use mrrc::{dublin_core, json, marcjson, mods, xml};
-use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
 use serde_json::Value;
 
 /// Convert a MARC record to JSON.
@@ -161,7 +161,9 @@ pub fn marcjson_to_record(marcjson_str: &str) -> PyResult<PyRecord> {
 /// print(dc['title'])
 /// ```
 #[pyfunction]
-pub fn record_to_dublin_core(record: &PyRecord) -> PyResult<std::collections::HashMap<String, Vec<String>>> {
+pub fn record_to_dublin_core(
+    record: &PyRecord,
+) -> PyResult<std::collections::HashMap<String, Vec<String>>> {
     dublin_core::record_to_dublin_core(&record.inner)
         .map(|dc| {
             let mut map = std::collections::HashMap::new();
@@ -222,14 +224,12 @@ pub fn record_to_mods(record: &PyRecord) -> PyResult<String> {
 /// dc_xml = mrrc.dublin_core_to_xml(dc)
 /// ```
 #[pyfunction]
-pub fn dublin_core_to_xml(dublin_core: std::collections::HashMap<String, Vec<String>>) -> PyResult<String> {
+pub fn dublin_core_to_xml(
+    dublin_core: std::collections::HashMap<String, Vec<String>>,
+) -> PyResult<String> {
     // Helper to extract list from map, defaulting to empty vec
-    let get_string_list = |key: &str| -> Vec<String> {
-        dublin_core
-            .get(key)
-            .cloned()
-            .unwrap_or_default()
-    };
+    let get_string_list =
+        |key: &str| -> Vec<String> { dublin_core.get(key).cloned().unwrap_or_default() };
 
     let dc_record = mrrc::dublin_core::DublinCoreRecord {
         title: get_string_list("title"),

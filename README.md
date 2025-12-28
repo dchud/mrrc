@@ -427,14 +427,14 @@ MRRC is available as a Python package, providing Rust-backed performance with Py
 
 ### Installation
 
-Install from PyPI:
+Install from `PyPI`:
 
 ```bash
 pip install mrrc
 ```
 
 Supported Python versions: **3.9+** (3.9, 3.10, 3.11, 3.12)  
-Wheels available for: Linux (x86_64, aarch64), macOS (x86_64, arm64), Windows (x64, arm64)
+Wheels available for: Linux (`x86_64`, `aarch64`), macOS (`x86_64`, `arm64`), Windows (`x64`, `arm64`)
 
 ### Quick Start (Python)
 

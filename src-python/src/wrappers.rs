@@ -568,8 +568,7 @@ impl PyRecord {
     /// ```
     pub fn to_xml(&self) -> PyResult<String> {
         use mrrc::xml;
-        xml::record_to_xml(&self.inner)
-            .map_err(crate::error::marc_error_to_py_err)
+        xml::record_to_xml(&self.inner).map_err(crate::error::marc_error_to_py_err)
     }
 
     /// Convert record to MARCJSON format
@@ -631,8 +630,7 @@ impl PyRecord {
     /// ```
     pub fn to_mods(&self) -> PyResult<String> {
         use mrrc::mods;
-        mods::record_to_mods_xml(&self.inner)
-            .map_err(crate::error::marc_error_to_py_err)
+        mods::record_to_mods_xml(&self.inner).map_err(crate::error::marc_error_to_py_err)
     }
 
     fn __repr__(&self) -> String {
