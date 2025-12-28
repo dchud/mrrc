@@ -1,6 +1,5 @@
 // Python wrapper classes for core MARC data structures
 
-use crate::error::marc_error_to_py_err;
 use mrrc::{Field, Leader, Record, Subfield};
 use pyo3::prelude::*;
 

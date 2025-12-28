@@ -1,7 +1,7 @@
 // Error handling and mapping from Rust to Python exceptions
 
 use mrrc::MarcError;
-use pyo3::exceptions::{PyIOError, PyTypeError, PyValueError};
+use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::PyErr;
 
 /// Map Rust MarcError to Python exceptions
