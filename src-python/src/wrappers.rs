@@ -554,6 +554,26 @@ impl PyRecord {
             .collect()
     }
 
+    /// Get the first field with a given tag (pymarc compatibility)
+    pub fn get_field(&self, tag: &str) -> Option<PyField> {
+        self.inner
+            .get_field(tag)
+            .map(|f| PyField { inner: f.clone() })
+    }
+
+    /// Get all fields with a given tag (pymarc compatibility)
+    pub fn get_fields(&self, tag: &str) -> Vec<PyField> {
+        self.inner
+            .get_fields(tag)
+            .map(|fields| {
+                fields
+                    .iter()
+                    .map(|f| PyField { inner: f.clone() })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     /// Get all fields
     pub fn fields(&self) -> Vec<PyField> {
         let mut result = vec![];
@@ -573,6 +593,17 @@ impl PyRecord {
             .control_fields
             .iter()
             .map(|(tag, value)| (tag.clone(), value.clone()))
+            .collect()
+    }
+
+    /// Remove all fields with a given tag
+    ///
+    /// Returns the removed fields.
+    pub fn remove_field(&mut self, tag: &str) -> Vec<PyField> {
+        self.inner
+            .remove_fields_by_tag(tag)
+            .into_iter()
+            .map(|f| PyField { inner: f })
             .collect()
     }
 

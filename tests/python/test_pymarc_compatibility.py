@@ -66,9 +66,8 @@ class TestRecordFieldOperations:
         field = create_field('245', '1', '0', a='Test Title')
         record.add_field(field)
 
-        # Use fields_by_tag instead of get_field
-        retrieved = record.fields_by_tag('245')
-        assert len(retrieved) > 0
+        retrieved = record.get_field('245')
+        assert retrieved is not None
 
     def test_add_multiple_fields(self):
         """Test adding multiple fields with same tag."""
@@ -77,7 +76,7 @@ class TestRecordFieldOperations:
             field = create_field('650', ' ', '0', a=f'Subject {i}')
             record.add_field(field)
 
-        fields = record.fields_by_tag('650')
+        fields = record.get_fields('650')
         assert len(fields) == 3
 
     def test_add_control_field(self):
@@ -92,8 +91,8 @@ class TestRecordFieldOperations:
     def test_get_nonexistent_field(self):
         """Test getting a field that doesn't exist."""
         record = Record(Leader())
-        fields = record.fields_by_tag('999')
-        assert len(fields) == 0
+        field = record.get_field('999')
+        assert field is None
 
     def test_get_all_fields(self):
         """Test retrieving all fields from a record."""
@@ -110,10 +109,15 @@ class TestRecordFieldOperations:
         field = create_field('245', '1', '0', a='Title')
         record.add_field(field)
 
-        fields = record.fields_by_tag('245')
-        assert len(fields) > 0
-        # Note: remove_field not yet implemented in wrapper
-        pytest.skip("remove_field not yet implemented")
+        # Verify field exists
+        assert record.get_field('245') is not None
+        
+        # Remove the field
+        removed = record.remove_field('245')
+        assert len(removed) > 0
+        
+        # Verify field is gone
+        assert record.get_field('245') is None
 
 
 class TestFieldSubfieldOperations:
