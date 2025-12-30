@@ -1267,6 +1267,50 @@ impl Field {
             .map(|sf| sf.value.as_str())
     }
 
+    /// Get all subfield values matching any of the given codes
+    ///
+    /// Returns a list of subfield values in the order they appear in the field.
+    /// Accepts one or more subfield codes.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let values = field.get_subfields('a', 'b', 'c');
+    /// ```
+    #[must_use]
+    pub fn get_subfields(&self, codes: &[char]) -> Vec<&str> {
+        self.subfields
+            .iter()
+            .filter(|sf| codes.contains(&sf.code))
+            .map(|sf| sf.value.as_str())
+            .collect()
+    }
+
+    /// Get all subfields as a dictionary
+    ///
+    /// Returns a `BTreeMap` where keys are subfield codes (as `String`)
+    /// and values are vectors of subfield values. Since subfield codes
+    /// can repeat, the values are always vectors.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let subfields = field.subfields_as_dict();
+    /// for (code, values) in subfields {
+    ///     println!("Code {}: {:?}", code, values);
+    /// }
+    /// ```
+    pub fn subfields_as_dict(&self) -> BTreeMap<String, Vec<String>> {
+        let mut result = BTreeMap::new();
+        for subfield in &self.subfields {
+            result
+                .entry(subfield.code.to_string())
+                .or_insert_with(Vec::new)
+                .push(subfield.value.clone());
+        }
+        result
+    }
+
     // ============================================================================
     // Mutable subfield operations
     // ============================================================================
@@ -2147,5 +2191,123 @@ mod tests {
         // Test chained index access: record["245"]['a']
         assert_eq!(&record["245"]['a'], "Title");
         assert_eq!(&record["245"]['c'], "Author");
+    }
+
+    #[test]
+    fn test_field_get_subfields_single_code() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Title");
+        field.add_subfield_str('b', "Subtitle");
+        field.add_subfield_str('c', "Author");
+
+        let values = field.get_subfields(&['a']);
+        assert_eq!(values, vec!["Title"]);
+    }
+
+    #[test]
+    fn test_field_get_subfields_multiple_codes() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Title");
+        field.add_subfield_str('b', "Subtitle");
+        field.add_subfield_str('c', "Author");
+
+        let values = field.get_subfields(&['a', 'c']);
+        assert_eq!(values, vec!["Title", "Author"]);
+    }
+
+    #[test]
+    fn test_field_get_subfields_preserves_order() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('a', "Subject");
+        field.add_subfield_str('x', "Subdivision 1");
+        field.add_subfield_str('y', "Subdivision 2");
+        field.add_subfield_str('z', "Geographic");
+
+        let values = field.get_subfields(&['z', 'a', 'y']);
+        assert_eq!(values.len(), 3);
+        // Should preserve the order they appear in the field, not the order of codes requested
+        assert_eq!(values, vec!["Subject", "Subdivision 2", "Geographic"]);
+    }
+
+    #[test]
+    fn test_field_get_subfields_with_repeating_codes() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('a', "Subject 1");
+        field.add_subfield_str('x', "Subdivision 1");
+        field.add_subfield_str('x', "Subdivision 2");
+        field.add_subfield_str('z', "Geographic");
+
+        let values = field.get_subfields(&['x']);
+        assert_eq!(values, vec!["Subdivision 1", "Subdivision 2"]);
+    }
+
+    #[test]
+    fn test_field_get_subfields_empty_result() {
+        let field = Field::new("245".to_string(), '1', '0');
+        let values = field.get_subfields(&['z']);
+        assert!(values.is_empty());
+    }
+
+    #[test]
+    fn test_field_subfields_as_dict_basic() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Title");
+        field.add_subfield_str('b', "Subtitle");
+        field.add_subfield_str('c', "Author");
+
+        let dict = field.subfields_as_dict();
+        assert_eq!(dict.get("a"), Some(&vec!["Title".to_string()]));
+        assert_eq!(dict.get("b"), Some(&vec!["Subtitle".to_string()]));
+        assert_eq!(dict.get("c"), Some(&vec!["Author".to_string()]));
+    }
+
+    #[test]
+    fn test_field_subfields_as_dict_repeating_codes() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('a', "Subject 1");
+        field.add_subfield_str('x', "Subdivision 1");
+        field.add_subfield_str('x', "Subdivision 2");
+        field.add_subfield_str('y', "Geographic 1");
+        field.add_subfield_str('y', "Geographic 2");
+
+        let dict = field.subfields_as_dict();
+        assert_eq!(dict.get("a"), Some(&vec!["Subject 1".to_string()]));
+        assert_eq!(
+            dict.get("x"),
+            Some(&vec![
+                "Subdivision 1".to_string(),
+                "Subdivision 2".to_string()
+            ])
+        );
+        assert_eq!(
+            dict.get("y"),
+            Some(&vec![
+                "Geographic 1".to_string(),
+                "Geographic 2".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn test_field_subfields_as_dict_empty_field() {
+        let field = Field::new("245".to_string(), '1', '0');
+        let dict = field.subfields_as_dict();
+        assert!(dict.is_empty());
+    }
+
+    #[test]
+    fn test_field_subfields_as_dict_keys_sorted() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('z', "Geographic");
+        field.add_subfield_str('a', "Subject");
+        field.add_subfield_str('x', "Subdivision");
+
+        let dict = field.subfields_as_dict();
+        let keys: Vec<_> = dict.keys().cloned().collect();
+        // BTreeMap should keep keys sorted
+        assert_eq!(
+            keys,
+            vec!["a".to_string(), "x".to_string(), "z".to_string()]
+        );
     }
 }
