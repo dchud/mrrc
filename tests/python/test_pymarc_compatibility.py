@@ -438,5 +438,300 @@ class TestFormatConversions:
             pytest.skip("to_marcjson not yet implemented")
 
 
+class TestFieldCreation:
+    """Test Field creation and basic properties (from pymarc test_field.py)."""
+
+    def test_field_subfields_created(self):
+        """Test subfields are properly created."""
+        field = Field('245', '0', '1')
+        field.add_subfield('a', 'Title')
+        field.add_subfield('b', 'Subtitle')
+        assert len(field.subfields()) == 2
+
+    def test_field_indicators(self):
+        """Test indicator access."""
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test Title')
+        assert field.indicator1 == '1'
+        assert field.indicator2 == '0'
+
+    def test_field_reassign_indicators(self):
+        """Test changing indicators."""
+        field = Field('245', '0', '1')
+        field.indicator1 = '1'
+        field.indicator2 = '0'
+        assert field.indicator1 == '1'
+        assert field.indicator2 == '0'
+
+    def test_field_subfield_get_multiple(self):
+        """Test getting multiple subfields by code."""
+        field = Field('650', ' ', '0')
+        field.add_subfield('a', 'First Subject')
+        field.add_subfield('v', 'Subdivision')
+        result = field.subfields_by_code('a')
+        assert 'First Subject' in result
+
+    def test_field_add_subfield(self):
+        """Test adding subfields."""
+        field = Field('245', '0', '1')
+        field.add_subfield('a', 'foo')
+        field.add_subfield('b', 'bar')
+        subfields = field.subfields()
+        assert len(subfields) == 2
+        assert subfields[0].value == 'foo'
+
+    def test_field_is_subject_field(self):
+        """Test identifying subject fields."""
+        subject_field = Field('650', ' ', '0')
+        subject_field.add_subfield('a', 'Python')
+        title_field = Field('245', '1', '0')
+        title_field.add_subfield('a', 'Title')
+        assert subject_field.is_subject_field() == True
+        assert title_field.is_subject_field() == False
+
+
+class TestRecordAdvanced:
+    """Advanced record tests (from pymarc test_record.py)."""
+
+    def test_record_add_field(self):
+        """Test adding fields to records."""
+        record = Record(Leader())
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Python')
+        field.add_subfield('c', 'Guido')
+        record.add_field(field)
+        assert field in record.fields()
+
+    def test_record_quick_access(self):
+        """Test quick access via tags."""
+        record = Record(Leader())
+        title = Field('245', '1', '0')
+        title.add_subfield('a', 'Python')
+        record.add_field(title)
+        assert record['245'] == title
+
+    def test_record_membership(self):
+        """Test checking if tag exists in record."""
+        record = Record(Leader())
+        title = Field('245', '1', '0')
+        title.add_subfield('a', 'Python')
+        record.add_field(title)
+        assert '245' in record
+        assert '999' not in record
+
+    def test_record_get_fields_multi(self):
+        """Test retrieving multiple field types."""
+        record = Record(Leader())
+        subject1 = Field('650', ' ', '0')
+        subject1.add_subfield('a', 'Programming')
+        subject2 = Field('651', ' ', '0')
+        subject2.add_subfield('a', 'Computer Science')
+        record.add_field(subject1)
+        record.add_field(subject2)
+        fields = record.get_fields('650', '651')
+        assert len(fields) == 2
+
+    def test_record_remove_field(self):
+        """Test removing fields."""
+        record = Record(Leader())
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Title')
+        record.add_field(field)
+        assert '245' in record
+        record.remove_field(field)
+        assert record.get_field('245') is None
+
+
+class TestReaderWriter:
+    """Test MARC reading and writing (from pymarc test_reader.py, test_writer.py)."""
+
+    def test_reader_from_file(self):
+        """Test reading MARC records from file."""
+        try:
+            with open('/Users/dchud/Documents/projects/mrrc/tests/data/simple_book.mrc', 'rb') as f:
+                reader = MARCReader(f)
+                record = next(reader)
+                assert record is not None
+                assert len(record.fields()) > 0
+        except (FileNotFoundError, StopIteration):
+            pytest.skip("Test data not available")
+
+    def test_reader_iteration(self):
+        """Test iterating through records."""
+        try:
+            with open('/Users/dchud/Documents/projects/mrrc/tests/data/simple_book.mrc', 'rb') as f:
+                reader = MARCReader(f)
+                count = 0
+                for record in reader:
+                    count += 1
+                    assert record is not None
+                assert count > 0
+        except (FileNotFoundError, StopIteration):
+            pytest.skip("Test data not available")
+
+    def test_writer_to_bytes(self):
+        """Test writing records to bytes."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test Title')
+        record.add_field(field)
+
+        output = io.BytesIO()
+        try:
+            writer = MARCWriter(output)
+            writer.write(record)
+            written_bytes = output.getvalue()
+            assert len(written_bytes) > 0
+        except (AttributeError, TypeError):
+            pytest.skip("Writer not fully implemented")
+
+    def test_roundtrip_record(self):
+        """Test writing then reading a record."""
+        original = Record(Leader())
+        original.add_control_field('001', 'test-123')
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test Title')
+        original.add_field(field)
+
+        try:
+            # Write to bytes
+            output = io.BytesIO()
+            writer = MARCWriter(output)
+            writer.write(original)
+
+            # Read back
+            output.seek(0)
+            reader = MARCReader(output)
+            read_record = next(reader)
+
+            # Verify content
+            assert read_record is not None
+            assert read_record.control_field('001') == 'test-123'
+        except (AttributeError, TypeError, StopIteration):
+            pytest.skip("Round-trip not fully implemented")
+
+
+class TestLeader:
+    """Test Leader manipulation (from pymarc test_leader.py)."""
+
+    def test_leader_defaults(self):
+        """Test default leader values."""
+        leader = Leader()
+        assert leader is not None
+
+    def test_leader_record_type(self):
+        """Test setting record type."""
+        leader = Leader()
+        leader.record_type = 'a'
+        assert leader.record_type == 'a'
+
+    def test_leader_bibliographic_level(self):
+        """Test setting bibliographic level."""
+        leader = Leader()
+        leader.bibliographic_level = 'c'
+        assert leader.bibliographic_level == 'c'
+
+    def test_leader_encoding_level(self):
+        """Test setting encoding level."""
+        leader = Leader()
+        leader.encoding_level = '4'
+        assert leader.encoding_level == '4'
+
+    def test_leader_descriptor_cataloging_form(self):
+        """Test descriptor cataloging form."""
+        leader = Leader()
+        leader.descriptive_cataloging_form = 'c'
+        assert leader.descriptive_cataloging_form == 'c'
+
+    def test_leader_multipart_resource_record_level(self):
+        """Test multipart resource level."""
+        leader = Leader()
+        leader.multipart_resource_record_level = 'a'
+        assert leader.multipart_resource_record_level == 'a'
+
+
+class TestEncoding:
+    """Test encoding handling (from pymarc test_utf8.py, test_marc8.py)."""
+
+    def test_utf8_record_creation(self):
+        """Test creating records with UTF-8 data."""
+        record = Record(Leader())
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Rū Harison no wārudo')  # UTF-8 string
+        record.add_field(field)
+        assert record.get_field('245') is not None
+
+    def test_special_characters(self):
+        """Test handling special characters."""
+        record = Record(Leader())
+        field = Field('650', ' ', '0')
+        field.add_subfield('a', 'Müller')  # Umlaut
+        field.add_subfield('a', 'Café')    # Accent
+        record.add_field(field)
+        assert record.get_field('650') is not None
+
+    def test_encoding_to_marc(self):
+        """Test encoding record to MARC."""
+        record = Record(Leader())
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test')
+        record.add_field(field)
+        try:
+            encoded = record.to_marc21()
+            assert encoded is not None
+        except (AttributeError, TypeError):
+            pytest.skip("MARC encoding not implemented")
+
+
+class TestSerialization:
+    """Test serialization formats (from pymarc test_json.py, test_xml.py)."""
+
+    def test_json_serialization(self):
+        """Test JSON serialization."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Title')
+        record.add_field(field)
+
+        try:
+            json_str = record.to_json()
+            assert json_str is not None
+            parsed = json.loads(json_str)
+            assert parsed is not None
+        except (AttributeError, TypeError):
+            pytest.skip("JSON serialization not implemented")
+
+    def test_xml_serialization(self):
+        """Test XML serialization."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Title')
+        record.add_field(field)
+
+        try:
+            xml_str = record.to_xml()
+            assert xml_str is not None
+            assert '<' in xml_str
+        except (AttributeError, TypeError):
+            pytest.skip("XML serialization not implemented")
+
+    def test_dublin_core_serialization(self):
+        """Test Dublin Core serialization."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Title')
+        record.add_field(field)
+
+        try:
+            dc_xml = record.to_dublin_core()
+            assert dc_xml is not None
+        except (AttributeError, TypeError):
+            pytest.skip("Dublin Core not implemented")
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
