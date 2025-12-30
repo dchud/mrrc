@@ -34,7 +34,6 @@ jobs:
       
       - uses: PyO3/maturin-action@v1
         with:
-          python-version: ${{ matrix.python-version }}
           manylinux: auto
           args: --release --out dist
       
