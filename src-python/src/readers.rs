@@ -8,18 +8,18 @@ use std::io::Read;
 
 /// Wrapper around a Python file-like object to implement Rust's Read trait
 struct PyFileWrapper {
-    file_obj: PyObject,
+    file_obj: Py<PyAny>,
 }
 
 impl PyFileWrapper {
-    fn new(file_obj: PyObject) -> Self {
+    fn new(file_obj: Py<PyAny>) -> Self {
         PyFileWrapper { file_obj }
     }
 }
 
 impl Read for PyFileWrapper {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let file_ref = self.file_obj.bind(py);
             let read_method = file_ref
                 .getattr("read")
@@ -53,7 +53,7 @@ pub struct PyMARCReader {
 impl PyMARCReader {
     /// Create a new MARCReader from a Python file-like object
     #[new]
-    pub fn new(file: PyObject) -> PyResult<Self> {
+    pub fn new(file: Py<PyAny>) -> PyResult<Self> {
         let wrapper = PyFileWrapper::new(file);
         let reader = MarcReader::new(wrapper);
         Ok(PyMARCReader {

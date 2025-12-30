@@ -14,7 +14,11 @@ cargo clippy --package mrrc --all-targets -- -D warnings
 
 echo ""
 echo "=== Documentation check ==="
-RUSTDOCFLAGS="-D warnings" cargo doc --package mrrc --no-deps --document-private-items
+RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items
+
+echo ""
+echo "=== Security audit ==="
+cargo audit
 
 echo ""
 echo "✓ All checks passed"

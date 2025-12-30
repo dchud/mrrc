@@ -8,28 +8,26 @@ use std::io::Write;
 
 /// Wrapper around a Python file-like object to implement Rust's Write trait
 struct PyFileWriteWrapper {
-    file_obj: PyObject,
+    file_obj: Py<PyAny>,
 }
 
 impl PyFileWriteWrapper {
-    fn new(file_obj: PyObject) -> Self {
+    fn new(file_obj: Py<PyAny>) -> Self {
         PyFileWriteWrapper { file_obj }
     }
 }
 
 impl Write for PyFileWriteWrapper {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let file_ref = self.file_obj.bind(py);
             let write_method = file_ref
                 .getattr("write")
                 .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "No write method"))?;
 
-            // Create Python bytes object
-            let py_bytes = pyo3::types::PyBytes::new_bound(py, buf);
-
+            // Create Python bytes object from slice
             let result = write_method
-                .call1((py_bytes,))
+                .call1((buf,))
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
 
             let written = result
@@ -41,7 +39,7 @@ impl Write for PyFileWriteWrapper {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let file_ref = self.file_obj.bind(py);
             if let Ok(flush_method) = file_ref.getattr("flush") {
                 flush_method
@@ -63,7 +61,7 @@ pub struct PyMARCWriter {
 impl PyMARCWriter {
     /// Create a new MARCWriter for a Python file-like object
     #[new]
-    pub fn new(file: PyObject) -> PyResult<Self> {
+    pub fn new(file: Py<PyAny>) -> PyResult<Self> {
         let wrapper = PyFileWriteWrapper::new(file);
         let writer = MarcWriter::new(wrapper);
         Ok(PyMARCWriter {
@@ -102,9 +100,9 @@ impl PyMARCWriter {
     #[pyo3(signature = (_exc_type=None, _exc_val=None, _exc_tb=None))]
     fn __exit__(
         &mut self,
-        _exc_type: Option<PyObject>,
-        _exc_val: Option<PyObject>,
-        _exc_tb: Option<PyObject>,
+        _exc_type: Option<Py<PyAny>>,
+        _exc_val: Option<Py<PyAny>>,
+        _exc_tb: Option<Py<PyAny>>,
     ) -> PyResult<bool> {
         self.close()?;
         Ok(false)
