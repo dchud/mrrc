@@ -313,8 +313,7 @@ class TestRecordTypeDetection:
         leader.bibliographic_level = 'm'
         record = Record(leader)
 
-        # is_book() not yet implemented in wrapper
-        pytest.skip("is_book() not yet implemented")
+        assert record.is_book()
 
     def test_is_serial(self):
         """Test is_serial() detection."""
@@ -322,8 +321,7 @@ class TestRecordTypeDetection:
         leader.bibliographic_level = 's'
         record = Record(leader)
 
-        # is_serial() not yet implemented in wrapper
-        pytest.skip("is_serial() not yet implemented")
+        assert record.is_serial()
 
     def test_is_music(self):
         """Test is_music() detection."""
@@ -331,8 +329,7 @@ class TestRecordTypeDetection:
         leader.record_type = 'c'
         record = Record(leader)
 
-        # is_music() not yet implemented in wrapper
-        pytest.skip("is_music() not yet implemented")
+        assert record.is_music()
 
     def test_is_audiovisual(self):
         """Test is_audiovisual() detection."""
@@ -340,8 +337,7 @@ class TestRecordTypeDetection:
         leader.record_type = 'g'
         record = Record(leader)
 
-        # is_audiovisual() not yet implemented in wrapper
-        pytest.skip("is_audiovisual() not yet implemented")
+        assert record.is_audiovisual()
 
 
 class TestMARCReaderWriter:

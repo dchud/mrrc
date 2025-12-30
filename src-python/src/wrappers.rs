@@ -659,6 +659,26 @@ impl PyRecord {
         self.inner.physical_description().map(|s| s.to_string())
     }
 
+    /// Check if this record is a book (record type 'a' + bibliographic level 'm')
+    pub fn is_book(&self) -> bool {
+        self.inner.is_book()
+    }
+
+    /// Check if this record is a serial (bibliographic level 's')
+    pub fn is_serial(&self) -> bool {
+        self.inner.is_serial()
+    }
+
+    /// Check if this record is music (record type 'c' or 'd')
+    pub fn is_music(&self) -> bool {
+        self.inner.is_music()
+    }
+
+    /// Check if this record is audiovisual material (record type 'g')
+    pub fn is_audiovisual(&self) -> bool {
+        self.inner.is_audiovisual()
+    }
+
     /// Convert record to JSON string
     ///
     /// # Example
