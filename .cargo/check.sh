@@ -5,6 +5,11 @@
 
 set -e
 
+# Activate Python virtual environment for maturin builds
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+fi
+
 echo "=== Rustfmt check ==="
 cargo fmt --all -- --check
 
@@ -19,6 +24,10 @@ RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items
 echo ""
 echo "=== Security audit ==="
 cargo audit
+
+echo ""
+echo "=== Maturin Python extension build ==="
+maturin develop
 
 echo ""
 echo "✓ All checks passed"
