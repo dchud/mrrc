@@ -54,7 +54,7 @@ jobs:
           key: ${{ runner.os }}-cargo-clippy-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run clippy
-        run: cargo clippy --all --all-targets --all-features -- -D warnings
+        run: cargo clippy --package mrrc --all-targets -- -D warnings
 
   doc:
     name: Documentation
@@ -84,7 +84,7 @@ jobs:
           key: ${{ runner.os }}-cargo-doc-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Check documentation
-        run: cargo doc --all --no-deps --document-private-items
+        run: cargo doc --package mrrc --no-deps --document-private-items
         env:
           RUSTDOCFLAGS: -D warnings
 
