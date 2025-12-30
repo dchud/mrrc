@@ -1,6 +1,6 @@
 // Python wrapper classes for core MARC data structures
 
-use mrrc::{Field, Leader, Record, Subfield};
+use mrrc::{Field, Leader, Record, RecordHelpers, Subfield};
 use pyo3::prelude::*;
 
 /// Python wrapper for a MARC Leader (24-byte record header)
@@ -545,6 +545,74 @@ impl PyRecord {
     /// Get ISBN from 020 field
     pub fn isbn(&self) -> Option<String> {
         self.inner.isbn().map(|s| s.to_string())
+    }
+
+    /// Get all subject headings from 650 field
+    pub fn subjects(&self) -> Vec<String> {
+        self.inner
+            .subjects()
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    /// Get all location fields (852)
+    pub fn location(&self) -> Vec<String> {
+        self.inner
+            .location()
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    /// Get all notes from 5xx fields
+    pub fn notes(&self) -> Vec<String> {
+        self.inner.notes().iter().map(|s| s.to_string()).collect()
+    }
+
+    /// Get publisher from 260 field
+    pub fn publisher(&self) -> Option<String> {
+        self.inner.publisher().map(|s| s.to_string())
+    }
+
+    /// Get uniform title from 130 field
+    pub fn uniform_title(&self) -> Option<String> {
+        self.inner.uniform_title().map(|s| s.to_string())
+    }
+
+    /// Get SuDoc (government document classification) from 086 field
+    pub fn sudoc(&self) -> Option<String> {
+        self.inner.sudoc().map(|s| s.to_string())
+    }
+
+    /// Get ISSN title from 222 field
+    pub fn issn_title(&self) -> Option<String> {
+        self.inner.issn_title().map(|s| s.to_string())
+    }
+
+    /// Get ISSN-L from 024 field
+    pub fn issnl(&self) -> Option<String> {
+        self.inner.issnl().map(|s| s.to_string())
+    }
+
+    /// Get publication year (alias for publication_year)
+    pub fn pubyear(&self) -> Option<u32> {
+        self.inner.pubyear()
+    }
+
+    /// Get ISSN from 022 field
+    pub fn issn(&self) -> Option<String> {
+        self.inner.issn().map(|s| s.to_string())
+    }
+
+    /// Get series from 490 field
+    pub fn series(&self) -> Option<String> {
+        self.inner.series().map(|s| s.to_string())
+    }
+
+    /// Get physical description from 300 field
+    pub fn physical_description(&self) -> Option<String> {
+        self.inner.physical_description().map(|s| s.to_string())
     }
 
     /// Convert record to JSON string

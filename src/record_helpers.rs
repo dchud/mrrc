@@ -270,6 +270,78 @@ pub trait RecordHelpers: MarcRecord {
     fn place_of_publication(&self) -> Option<&str> {
         self.get_field("260").and_then(|f| f.get_subfield('a'))
     }
+
+    /// Get all location fields (field 852)
+    ///
+    /// Returns a list of location fields, which contain institution-specific
+    /// shelving locations and call numbers.
+    #[must_use]
+    fn location(&self) -> Vec<&str> {
+        self.get_fields("852")
+            .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
+            .unwrap_or_default()
+    }
+
+    /// Get all note fields (all 5xx fields)
+    ///
+    /// Returns a vector of all general note, bibliography, etc. fields.
+    /// This includes fields 500-599.
+    #[must_use]
+    fn notes(&self) -> Vec<&str> {
+        let mut result = Vec::new();
+        for tag_num in 500..=599 {
+            let tag = format!("{tag_num:03}");
+            if let Some(fields) = self.get_fields(&tag) {
+                for field in fields {
+                    if let Some(note) = field.get_subfield('a') {
+                        result.push(note);
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    /// Get the uniform title from field 130, subfield 'a'
+    ///
+    /// The uniform title is a standardized form of the title used for cataloging.
+    #[must_use]
+    fn uniform_title(&self) -> Option<&str> {
+        self.get_field("130").and_then(|f| f.get_subfield('a'))
+    }
+
+    /// Get the government document classification from field 086, subfield 'a'
+    ///
+    /// Also known as `SuDoc` (Superintendent of Documents) number.
+    #[must_use]
+    fn sudoc(&self) -> Option<&str> {
+        self.get_field("086").and_then(|f| f.get_subfield('a'))
+    }
+
+    /// Get the key title (ISSN title) from field 222
+    ///
+    /// Returns the key title from subfield 'a', optionally with the remainder
+    /// from subfield 'b' if present.
+    #[must_use]
+    fn issn_title(&self) -> Option<&str> {
+        self.get_field("222").and_then(|f| f.get_subfield('a'))
+    }
+
+    /// Get the ISSN-L (ISSN Linking number) from field 024, subfield 'a'
+    ///
+    /// The ISSN-L is a standardized identifier that links all versions of a serial.
+    #[must_use]
+    fn issnl(&self) -> Option<&str> {
+        self.get_field("024").and_then(|f| f.get_subfield('a'))
+    }
+
+    /// Alias for `publication_year()` for pymarc compatibility
+    ///
+    /// Returns the publication year as extracted from field 260$c or field 008.
+    #[must_use]
+    fn pubyear(&self) -> Option<u32> {
+        self.publication_year()
+    }
 }
 
 // Implement RecordHelpers for all types that implement MarcRecord
@@ -336,5 +408,94 @@ mod tests {
         assert_eq!(record.control_number(), Some("12345"));
         assert!(record.is_book());
         assert!(!record.is_serial());
+    }
+
+    #[test]
+    fn test_trait_location() {
+        let mut record = create_test_record();
+        let mut location_field = Field::new("852".to_string(), ' ', ' ');
+        location_field.subfields.push(Subfield {
+            code: 'a',
+            value: "Main Library".to_string(),
+        });
+        record.add_field(location_field);
+
+        let locations = record.location();
+        assert_eq!(locations.len(), 1);
+        assert_eq!(locations[0], "Main Library");
+    }
+
+    #[test]
+    fn test_trait_notes() {
+        let mut record = create_test_record();
+        let mut notes_field = Field::new("500".to_string(), ' ', ' ');
+        notes_field.subfields.push(Subfield {
+            code: 'a',
+            value: "General note".to_string(),
+        });
+        record.add_field(notes_field);
+
+        let notes = record.notes();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0], "General note");
+    }
+
+    #[test]
+    fn test_trait_pubyear_alias() {
+        let record = create_test_record();
+        // Since our test record doesn't have publication info, this should return None
+        assert_eq!(record.pubyear(), None);
+    }
+
+    #[test]
+    fn test_trait_uniform_title() {
+        let mut record = create_test_record();
+        let mut uniform_title_field = Field::new("130".to_string(), ' ', ' ');
+        uniform_title_field.subfields.push(Subfield {
+            code: 'a',
+            value: "Standardized Title".to_string(),
+        });
+        record.add_field(uniform_title_field);
+
+        assert_eq!(record.uniform_title(), Some("Standardized Title"));
+    }
+
+    #[test]
+    fn test_trait_sudoc() {
+        let mut record = create_test_record();
+        let mut sudoc_field = Field::new("086".to_string(), ' ', ' ');
+        sudoc_field.subfields.push(Subfield {
+            code: 'a',
+            value: "I 19.2:En 3".to_string(),
+        });
+        record.add_field(sudoc_field);
+
+        assert_eq!(record.sudoc(), Some("I 19.2:En 3"));
+    }
+
+    #[test]
+    fn test_trait_issn_title() {
+        let mut record = create_test_record();
+        let mut issn_title_field = Field::new("222".to_string(), ' ', ' ');
+        issn_title_field.subfields.push(Subfield {
+            code: 'a',
+            value: "Key Title".to_string(),
+        });
+        record.add_field(issn_title_field);
+
+        assert_eq!(record.issn_title(), Some("Key Title"));
+    }
+
+    #[test]
+    fn test_trait_issnl() {
+        let mut record = create_test_record();
+        let mut issnl_field = Field::new("024".to_string(), ' ', ' ');
+        issnl_field.subfields.push(Subfield {
+            code: 'a',
+            value: "1234-5678".to_string(),
+        });
+        record.add_field(issnl_field);
+
+        assert_eq!(record.issnl(), Some("1234-5678"));
     }
 }

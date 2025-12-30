@@ -8,6 +8,14 @@ from mrrc import MARCReader, Record, Field, Leader, Subfield
 import io
 
 
+def create_field(tag, ind1='0', ind2='0', **subfields):
+    """Helper to create a field with subfields."""
+    field = Field(tag, ind1, ind2)
+    for code, value in subfields.items():
+        field.add_subfield(code, value)
+    return field
+
+
 class TestLeaderBasics:
     """Test Leader functionality."""
     
@@ -134,11 +142,9 @@ class TestConvenienceMethods:
         leader = Leader()
         record = Record(leader)
         
-        subfields = [
-            Subfield('a', 'The pragmatic programmer :'),
-            Subfield('b', 'from journeyman to master /')
-        ]
-        field = Field('245', subfields=subfields)
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'The pragmatic programmer :')
+        field.add_subfield('b', 'from journeyman to master /')
         record.add_field(field)
         
         title = record.title()
@@ -149,10 +155,7 @@ class TestConvenienceMethods:
         """Test the author() convenience method."""
         leader = Leader()
         record = Record(leader)
-        
-        subfields = [Subfield('a', 'Hunt, Andrew')]
-        field = Field('100', subfields=subfields)
-        record.add_field(field)
+        record.add_field(create_field('100', '1', ' ', a='Hunt, Andrew'))
         
         author = record.author()
         assert author is not None
@@ -162,14 +165,150 @@ class TestConvenienceMethods:
         """Test the isbn() convenience method."""
         leader = Leader()
         record = Record(leader)
-        
-        subfields = [Subfield('a', '0201616165')]
-        field = Field('020', subfields=subfields)
-        record.add_field(field)
+        record.add_field(create_field('020', ' ', ' ', a='0201616165'))
         
         isbn = record.isbn()
         assert isbn is not None
         assert '0201616165' in isbn
+    
+    def test_subjects_method(self):
+        """Test the subjects() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        
+        # Add multiple subject fields (650)
+        for i in range(3):
+            record.add_field(create_field('650', ' ', '0', a=f'Subject {i}'))
+        
+        subjects = record.subjects()
+        assert len(subjects) == 3
+        assert 'Subject 0' in subjects
+    
+    def test_location_method(self):
+        """Test the location() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field('852', ' ', ' ', a='Main Library'))
+        
+        locations = record.location()
+        assert len(locations) >= 1
+        assert 'Main Library' in locations
+    
+    def test_notes_method(self):
+        """Test the notes() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field('500', ' ', ' ', a='General note'))
+        
+        notes = record.notes()
+        assert len(notes) >= 1
+        assert 'General note' in notes
+    
+    def test_uniform_title_method(self):
+        """Test the uniform_title() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field('130', ' ', '0', a='Standardized Title'))
+        
+        uniform_title = record.uniform_title()
+        assert uniform_title is not None
+        assert uniform_title == 'Standardized Title'
+    
+    def test_sudoc_method(self):
+        """Test the sudoc() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field('086', ' ', ' ', a='I 19.2:En 3'))
+        
+        sudoc = record.sudoc()
+        assert sudoc is not None
+        assert sudoc == 'I 19.2:En 3'
+    
+    def test_issn_title_method(self):
+        """Test the issn_title() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field('222', ' ', ' ', a='Key Title'))
+        
+        issn_title = record.issn_title()
+        assert issn_title is not None
+        assert issn_title == 'Key Title'
+    
+    def test_issnl_method(self):
+        """Test the issnl() convenience method for ISSN-L."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field('024', ' ', ' ', a='1234-5678'))
+        
+        issnl = record.issnl()
+        assert issnl is not None
+        assert issnl == '1234-5678'
+    
+    def test_pubyear_method(self):
+        """Test the pubyear() convenience method (alias for publication_year)."""
+        leader = Leader()
+        record = Record(leader)
+        
+        # Add publication info
+        field = Field('260', ' ', ' ')
+        field.add_subfield('a', 'New York :')
+        field.add_subfield('b', 'Penguin,')
+        field.add_subfield('c', '2023')
+        record.add_field(field)
+        
+        # pubyear() should work as alias
+        year = record.pubyear()
+        assert year is not None
+        assert year == 2023
+    
+    def test_publisher_method(self):
+        """Test the publisher() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        
+        field = Field('260', ' ', ' ')
+        field.add_subfield('a', 'New York :')
+        field.add_subfield('b', 'Addison-Wesley,')
+        field.add_subfield('c', '2000')
+        record.add_field(field)
+        
+        publisher = record.publisher()
+        assert publisher is not None
+        assert 'Addison-Wesley' in publisher
+    
+    def test_issn_method(self):
+        """Test the issn() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field('022', ' ', ' ', a='0028-0836'))
+        
+        issn = record.issn()
+        assert issn is not None
+        assert issn == '0028-0836'
+    
+    def test_series_method(self):
+        """Test the series() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field('490', ' ', ' ', a='Programming Patterns'))
+        
+        series = record.series()
+        assert series is not None
+        assert 'Programming' in series
+    
+    def test_physical_description_method(self):
+        """Test the physical_description() convenience method."""
+        leader = Leader()
+        record = Record(leader)
+        
+        field = Field('300', ' ', ' ')
+        field.add_subfield('a', '256 pages ;')
+        field.add_subfield('c', '24 cm')
+        record.add_field(field)
+        
+        phys_desc = record.physical_description()
+        assert phys_desc is not None
+        assert '256' in phys_desc
 
 
 class TestFieldDictLike:
