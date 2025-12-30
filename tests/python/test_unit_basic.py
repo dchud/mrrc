@@ -29,10 +29,10 @@ class TestLeaderBasics:
     def test_leader_properties(self):
         """Test setting/getting leader properties."""
         leader = Leader()
-        leader.set_record_type('c')
+        leader.record_type = 'c'
         assert leader.record_type == 'c'
         
-        leader.set_bibliographic_level('d')
+        leader.bibliographic_level = 'd'
         assert leader.bibliographic_level == 'd'
 
 
@@ -77,12 +77,11 @@ class TestFieldCreation:
     
     def test_create_field_with_subfields(self):
         """Test creating a field with subfields."""
-        subfields = [
-            Subfield('a', 'The pragmatic programmer :'),
-            Subfield('b', 'from journeyman to master /')
-        ]
-        field = Field('245', subfields=subfields)
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'The pragmatic programmer :')
+        field.add_subfield('b', 'from journeyman to master /')
         assert field.tag == '245'
+        assert len(field.subfields()) == 2
     
     def test_subfield_creation(self):
         """Test creating individual Subfield."""
@@ -99,8 +98,8 @@ class TestRecordFieldOperations:
         leader = Leader()
         record = Record(leader)
         
-        subfields = [Subfield('a', 'Test Title')]
-        field = Field('245', subfields=subfields)
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test Title')
         record.add_field(field)
         
         fields = record.fields_by_tag('245')
@@ -113,8 +112,8 @@ class TestRecordFieldOperations:
         
         # Add multiple 650 fields
         for i in range(3):
-            subfields = [Subfield('a', f'Subject {i}')]
-            field = Field('650', subfields=subfields)
+            field = Field('650', ' ', '0')
+            field.add_subfield('a', f'Subject {i}')
             record.add_field(field)
         
         fields = record.fields_by_tag('650')
@@ -126,8 +125,8 @@ class TestRecordFieldOperations:
         record = Record(leader)
         
         for i in range(2):
-            subfields = [Subfield('a', f'Title {i}')]
-            field = Field('245', subfields=subfields)
+            field = Field('245', '1', '0')
+            field.add_subfield('a', f'Title {i}')
             record.add_field(field)
         
         all_fields = record.fields()
@@ -323,8 +322,8 @@ class TestFieldDictLike:
         leader = Leader()
         record = Record(leader)
         
-        subfields = [Subfield('a', 'Test Title')]
-        field = Field('245', subfields=subfields)
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test Title')
         record.add_field(field)
         
         # This should work in pymarc but doesn't in mrrc yet
@@ -340,17 +339,15 @@ class TestFieldSubfieldDict:
     
     def test_get_subfield_values(self):
         """Test getting subfield values from a field."""
-        subfields = [
-            Subfield('a', 'value_a'),
-            Subfield('b', 'value_b'),
-            Subfield('c', 'value_c')
-        ]
-        field = Field('245', subfields=subfields)
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'value_a')
+        field.add_subfield('b', 'value_b')
+        field.add_subfield('c', 'value_c')
         
         # This pattern works in pymarc
         # field.get_subfields('a', 'b')
         # We need to test what mrrc currently supports
-        assert len(field.subfields) == 3
+        assert len(field.subfields()) == 3
 
 
 class TestRecordEquality:
@@ -399,8 +396,8 @@ class TestRecordSerialization:
         record = Record(leader)
         
         # Add title
-        subfields = [Subfield('a', 'Test Title')]
-        field = Field('245', subfields=subfields)
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test Title')
         record.add_field(field)
         
         dc = record.to_dublin_core()
@@ -432,10 +429,12 @@ class TestIndicators:
     def test_field_indicators(self):
         """Test setting and getting field indicators."""
         # pymarc allows: indicators=['1', '0']
-        subfields = [Subfield('a', 'Test')]
-        field = Field('245', indicators=['1', '0'], subfields=subfields)
+        # mrrc uses positional args: Field(tag, ind1, ind2)
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test')
         assert field.tag == '245'
-        # Note: need to verify indicator access methods
+        assert field.indicator1 == '1'
+        assert field.indicator2 == '0'
 
 
 if __name__ == '__main__':

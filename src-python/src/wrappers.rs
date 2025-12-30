@@ -323,23 +323,71 @@ pub struct PyField {
 #[pymethods]
 impl PyField {
     /// Create a new Field
+    ///
+    /// # Arguments
+    /// * `tag` - 3-character field tag (e.g., '245')
+    /// * `indicator1` - First indicator (default: '0')
+    /// * `indicator2` - Second indicator (default: '0')
+    /// * `subfields` - Optional list of Subfield objects to initialize
+    /// * `indicators` - Optional list [ind1, ind2] (alternative to positional args)
     #[new]
-    pub fn new(tag: &str, indicator1: &str, indicator2: &str) -> PyResult<Self> {
+    #[pyo3(signature = (tag, indicator1=None, indicator2=None, *, subfields=None, indicators=None))]
+    pub fn new(
+        py: Python,
+        tag: &str,
+        indicator1: Option<&str>,
+        indicator2: Option<&str>,
+        subfields: Option<Vec<PySubfield>>,
+        indicators: Option<PyObject>,
+    ) -> PyResult<Self> {
         if tag.len() != 3 {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "Tag must be exactly 3 characters",
             ));
         }
 
-        let ind1 = indicator1.chars().next().unwrap_or(' ');
-        let ind2 = indicator2.chars().next().unwrap_or(' ');
+        // Determine indicators: prefer explicit indicators list, then positional args
+        let (ind1, ind2) = if let Some(inds) = indicators {
+            // Try to extract [ind1, ind2] from Python list
+            if let Ok(list) = inds.extract::<Vec<String>>(py) {
+                if list.len() < 2 {
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        "indicators must have at least 2 elements",
+                    ));
+                }
+                (
+                    list[0].chars().next().unwrap_or(' '),
+                    list[1].chars().next().unwrap_or(' '),
+                )
+            } else {
+                return Err(pyo3::exceptions::PyTypeError::new_err(
+                    "indicators must be a list of strings",
+                ));
+            }
+        } else {
+            (
+                indicator1
+                    .and_then(|s| s.chars().next())
+                    .unwrap_or('0'),
+                indicator2
+                    .and_then(|s| s.chars().next())
+                    .unwrap_or('0'),
+            )
+        };
+
+        // Convert PySubfield objects to inner Subfield objects
+        let sfs = if let Some(sfs) = subfields {
+            sfs.iter().map(|psf| psf.inner.clone()).collect()
+        } else {
+            vec![]
+        };
 
         Ok(PyField {
             inner: Field {
                 tag: tag.to_string(),
                 indicator1: ind1,
                 indicator2: ind2,
-                subfields: vec![],
+                subfields: sfs,
             },
         })
     }
