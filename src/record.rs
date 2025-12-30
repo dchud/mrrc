@@ -53,6 +53,7 @@ use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::ops::Index;
 
 /// A MARC bibliographic record
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1103,6 +1104,24 @@ impl crate::field_query_helpers::FieldQueryHelpers for Record {
     }
 }
 
+/// Enable dictionary-like access to Record fields using `record["245"]`.
+///
+/// Returns the first field with the given tag, or panics if not found.
+/// For fallible access, use `Record::get_field()` instead.
+///
+/// # Examples
+///
+/// ```ignore
+/// let field = &record["245"];
+/// ```
+impl Index<&str> for Record {
+    type Output = Field;
+
+    fn index(&self, tag: &str) -> &Self::Output {
+        self.get_field(tag).expect("field not found")
+    }
+}
+
 /// Builder for fluently constructing MARC records
 ///
 /// # Examples
@@ -1332,6 +1351,24 @@ impl Field {
     /// Clear all subfields from the field
     pub fn clear_subfields(&mut self) {
         self.subfields.clear();
+    }
+}
+
+/// Enable dictionary-like access to Field subfields using `field['a']`.
+///
+/// Returns the first subfield with the given code, or panics if not found.
+/// For fallible access, use `Field::get_subfield()` instead.
+///
+/// # Examples
+///
+/// ```ignore
+/// let title = &field['a'];
+/// ```
+impl Index<char> for Field {
+    type Output = str;
+
+    fn index(&self, code: char) -> &Self::Output {
+        self.get_subfield(code).expect("subfield not found")
     }
 }
 
@@ -2048,5 +2085,67 @@ mod tests {
 
         let results = record.subjects_with_note("History");
         assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_record_index_field_by_tag() {
+        let mut record = Record::new(make_leader());
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Test Title");
+        record.add_field(field);
+
+        let indexed_field = &record["245"];
+        assert_eq!(indexed_field.tag, "245");
+        assert_eq!(indexed_field.indicator1, '1');
+        assert_eq!(indexed_field.indicator2, '0');
+    }
+
+    #[test]
+    #[should_panic(expected = "field not found")]
+    fn test_record_index_missing_field() {
+        let record = Record::new(make_leader());
+        let _ = &record["999"];
+    }
+
+    #[test]
+    fn test_field_index_subfield_by_code() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Test Title");
+        field.add_subfield_str('b', "Subtitle");
+
+        assert_eq!(&field['a'], "Test Title");
+        assert_eq!(&field['b'], "Subtitle");
+    }
+
+    #[test]
+    #[should_panic(expected = "subfield not found")]
+    fn test_field_index_missing_subfield() {
+        let field = Field::new("245".to_string(), '1', '0');
+        let _ = &field['a'];
+    }
+
+    #[test]
+    fn test_field_index_multiple_subfields_same_code() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('a', "First Subject");
+        field.add_subfield_str('x', "Subdivision 1");
+        field.add_subfield_str('x', "Subdivision 2");
+
+        // Index access should return the first matching subfield
+        assert_eq!(&field['a'], "First Subject");
+        assert_eq!(&field['x'], "Subdivision 1");
+    }
+
+    #[test]
+    fn test_chained_index_access() {
+        let mut record = Record::new(make_leader());
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Title");
+        field.add_subfield_str('c', "Author");
+        record.add_field(field);
+
+        // Test chained index access: record["245"]['a']
+        assert_eq!(&record["245"]['a'], "Title");
+        assert_eq!(&record["245"]['c'], "Author");
     }
 }
