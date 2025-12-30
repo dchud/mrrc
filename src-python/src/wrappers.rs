@@ -366,12 +366,8 @@ impl PyField {
             }
         } else {
             (
-                indicator1
-                    .and_then(|s| s.chars().next())
-                    .unwrap_or('0'),
-                indicator2
-                    .and_then(|s| s.chars().next())
-                    .unwrap_or('0'),
+                indicator1.and_then(|s| s.chars().next()).unwrap_or('0'),
+                indicator2.and_then(|s| s.chars().next()).unwrap_or('0'),
             )
         };
 
