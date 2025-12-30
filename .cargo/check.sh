@@ -30,4 +30,8 @@ echo "=== Maturin Python extension build ==="
 maturin develop
 
 echo ""
+echo "=== Python tests ==="
+python -m pytest tests/python/test_unit_basic.py tests/python/test_pymarc_compatibility.py -q
+
+echo ""
 echo "✓ All checks passed"

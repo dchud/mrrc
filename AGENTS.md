@@ -86,6 +86,9 @@ This runs (in order):
 1. **Rustfmt** - `cargo fmt --all -- --check`
 2. **Clippy** - `cargo clippy --all --all-targets --all-features -- -D warnings`
 3. **Documentation** - `RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items`
+4. **Security audit** - `cargo audit`
+5. **Python extension** - `maturin develop` (builds PyO3 bindings)
+6. **Python tests** - Runs full test suite (75+ tests)
 
 If any check fails, fix locally and re-run `.cargo/check.sh` before pushing.
 
