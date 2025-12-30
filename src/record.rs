@@ -1311,6 +1311,62 @@ impl Field {
         result
     }
 
+    /// Get the field's content as a formatted string
+    ///
+    /// For control fields (000-009), returns the field data.
+    /// For data fields, concatenates all subfield values with spaces.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let value_str = field.value();
+    /// ```
+    #[must_use]
+    pub fn value(&self) -> String {
+        self.subfields
+            .iter()
+            .map(|sf| sf.value.as_str())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    /// Get the field's content as a pretty-formatted string
+    ///
+    /// For control fields, returns the field data.
+    /// For data fields, concatenates subfield values with spaces.
+    /// For subject fields (6xx), uses " -- " before subdivision subfields (v, x, y, z).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let formatted = field.format_field();
+    /// // For 650 (subject): "Subject -- Subdivision -- Geographic"
+    /// ```
+    #[must_use]
+    pub fn format_field(&self) -> String {
+        if self.subfields.is_empty() {
+            return String::new();
+        }
+
+        let is_subject = self.tag.starts_with('6');
+        let mut result = Vec::new();
+
+        for subfield in &self.subfields {
+            // Skip field linking subfield
+            if subfield.code == '6' {
+                continue;
+            }
+
+            if is_subject && matches!(subfield.code, 'v' | 'x' | 'y' | 'z') {
+                result.push(format!(" -- {}", subfield.value));
+            } else {
+                result.push(format!(" {}", subfield.value));
+            }
+        }
+
+        result.join("").trim().to_string()
+    }
+
     // ============================================================================
     // Mutable subfield operations
     // ============================================================================
@@ -2309,5 +2365,111 @@ mod tests {
             keys,
             vec!["a".to_string(), "x".to_string(), "z".to_string()]
         );
+    }
+
+    #[test]
+    fn test_field_value_simple() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Title");
+        field.add_subfield_str('b', "Subtitle");
+        field.add_subfield_str('c', "Author");
+
+        assert_eq!(field.value(), "Title Subtitle Author");
+    }
+
+    #[test]
+    fn test_field_value_empty_field() {
+        let field = Field::new("245".to_string(), '1', '0');
+        assert_eq!(field.value(), "");
+    }
+
+    #[test]
+    fn test_field_value_single_subfield() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Title");
+
+        assert_eq!(field.value(), "Title");
+    }
+
+    #[test]
+    fn test_field_value_preserves_spaces_in_values() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "The Title");
+        field.add_subfield_str('b', "With Spaces");
+
+        assert_eq!(field.value(), "The Title With Spaces");
+    }
+
+    #[test]
+    fn test_field_format_field_non_subject() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Title");
+        field.add_subfield_str('b', "Subtitle");
+        field.add_subfield_str('c', "Author");
+
+        // Non-subject fields should just have spaces between values
+        assert_eq!(field.format_field(), "Title Subtitle Author");
+    }
+
+    #[test]
+    fn test_field_format_field_subject_with_subdivisions() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('a', "Subject");
+        field.add_subfield_str('x', "Subdivision 1");
+        field.add_subfield_str('y', "Geographic");
+        field.add_subfield_str('z', "Time");
+
+        // Subject field with subdivisions should use " -- " before v, x, y, z
+        assert_eq!(
+            field.format_field(),
+            "Subject -- Subdivision 1 -- Geographic -- Time"
+        );
+    }
+
+    #[test]
+    fn test_field_format_field_subject_skips_linking() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('a', "Subject");
+        field.add_subfield_str('6', "880-01");
+        field.add_subfield_str('x', "Subdivision");
+
+        // Field linking subfield (6) should be skipped
+        assert_eq!(field.format_field(), "Subject -- Subdivision");
+    }
+
+    #[test]
+    fn test_field_format_field_empty() {
+        let field = Field::new("245".to_string(), '1', '0');
+        assert_eq!(field.format_field(), "");
+    }
+
+    #[test]
+    fn test_field_format_field_only_linking() {
+        let mut field = Field::new("650".to_string(), ' ', '0');
+        field.add_subfield_str('6', "880-01");
+
+        // Only linking subfield should result in empty string
+        assert_eq!(field.format_field(), "");
+    }
+
+    #[test]
+    fn test_field_format_field_non_subject_ignores_subdivision_markers() {
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield_str('a', "Title");
+        field.add_subfield_str('x', "Something");
+        field.add_subfield_str('y', "Something Else");
+
+        // Non-subject fields don't treat x, y, z as subdivisions
+        assert_eq!(field.format_field(), "Title Something Something Else");
+    }
+
+    #[test]
+    fn test_field_format_field_other_subject_fields() {
+        // Test that any 6xx field uses subdivision formatting
+        let mut field = Field::new("651".to_string(), ' ', '0');
+        field.add_subfield_str('a', "Geographic Name");
+        field.add_subfield_str('x', "Subdivision");
+
+        assert_eq!(field.format_field(), "Geographic Name -- Subdivision");
     }
 }
