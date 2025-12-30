@@ -28,7 +28,6 @@ jobs:
       - name: Build mrrc wheel
         uses: PyO3/maturin-action@v1
         with:
-          python-version: ${{ matrix.python-version }}
           manylinux: auto
           args: --release
       
@@ -71,7 +70,6 @@ jobs:
       - name: Build mrrc wheel
         uses: PyO3/maturin-action@v1
         with:
-          python-version: "3.12"
           manylinux: auto
           args: --release
       
