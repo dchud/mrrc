@@ -517,7 +517,24 @@ class MARCWriter:
     
     def write(self, record: Record) -> None:
         """Write a record."""
-        self._inner.write(record._inner)
+        self._inner.write_record(record._inner)
+    
+    def write_record(self, record: Record) -> None:
+        """Write a record (alias for write)."""
+        self.write(record)
+    
+    def close(self) -> None:
+        """Close the writer."""
+        self._inner.close()
+    
+    def __enter__(self):
+        """Context manager support."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager support."""
+        self.close()
+        return False
 
 
 __all__ = [
