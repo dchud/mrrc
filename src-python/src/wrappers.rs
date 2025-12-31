@@ -796,6 +796,32 @@ impl PyRecord {
         mods::record_to_mods_xml(&self.inner).map_err(crate::error::marc_error_to_py_err)
     }
 
+    /// Convert record to MARC21 binary format (ISO 2709)
+    ///
+    /// Returns the record as bytes in MARC21 format following the ISO 2709 standard.
+    /// This is the standard MARC binary interchange format used by libraries worldwide.
+    ///
+    /// # Returns
+    /// Bytes object containing the MARC21-encoded record
+    ///
+    /// # Example
+    /// ```python
+    /// marc_bytes = record.to_marc21()
+    /// with open('record.mrc', 'wb') as f:
+    ///     f.write(marc_bytes)
+    /// ```
+    pub fn to_marc21(&self) -> PyResult<Vec<u8>> {
+        use mrrc::MarcWriter;
+
+        let mut buffer = Vec::new();
+        let mut writer = MarcWriter::new(&mut buffer);
+        writer
+            .write_record(&self.inner)
+            .map_err(crate::error::marc_error_to_py_err)?;
+
+        Ok(buffer)
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "<Record type={} fields={}>",

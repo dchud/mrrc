@@ -403,6 +403,33 @@ class TestRecordSerialization:
         dc = record.to_dublin_core()
         assert isinstance(dc, dict)
         assert 'title' in dc
+    
+    def test_to_marc21(self):
+        """Test MARC21 binary serialization."""
+        leader = Leader()
+        record = Record(leader)
+        record.add_control_field('001', 'test-id-001')
+        
+        # Add a title field
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Test Title')
+        record.add_field(field)
+        
+        # Serialize to MARC21
+        marc_bytes = record.to_marc21()
+        
+        # Verify it's bytes and not empty
+        assert isinstance(marc_bytes, bytes)
+        assert len(marc_bytes) > 0
+        
+        # MARC21 should start with a leader (24 bytes)
+        assert len(marc_bytes) >= 24
+        
+        # Verify it can be read back
+        reader = MARCReader(io.BytesIO(marc_bytes))
+        read_record = reader.read_record()
+        assert read_record is not None
+        assert read_record.control_field('001') == 'test-id-001'
 
 
 class TestReadingFromFile:

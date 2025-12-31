@@ -442,6 +442,20 @@ class Record:
         """Serialize to MARCJSON."""
         return self._inner.to_marcjson()
     
+    def to_marc21(self) -> bytes:
+        """Serialize to MARC21 binary format (ISO 2709).
+        
+        Returns:
+            bytes: The record in MARC21 binary format following ISO 2709 standard.
+        
+        Example:
+            >>> record = Record()
+            >>> marc_bytes = record.to_marc21()
+            >>> with open('record.mrc', 'wb') as f:
+            ...     f.write(marc_bytes)
+        """
+        return self._inner.to_marc21()
+    
     def leader(self) -> Leader:
         """Get the leader."""
         return self._leader
