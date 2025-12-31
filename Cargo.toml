@@ -48,6 +48,7 @@ flate2 = "1.0"
 
 [dev-dependencies]
 proptest = "1.0"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 # Lint configuration following Rust API Guidelines
 [lints.rust]
@@ -66,6 +67,10 @@ module_name_repetitions = "allow"
 similar_names = "allow"
 # Type complexity is managed separately
 type_complexity = "allow"
+
+[[bench]]
+name = "marc_benchmarks"
+harness = false
 
 [profile.release]
 opt-level = 3
