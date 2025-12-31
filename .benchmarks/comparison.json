@@ -1,379 +1,187 @@
 {
-  "metadata": {
-    "generated_at": "2025-12-31T16:30:00Z",
-    "environment": "macOS 15.7.2 (arm64), Python 3.12.8, Rust 1.71+",
-    "fixtures": {
-      "1k_records": {"size_kb": 257.37, "description": "1k records MARC binary"},
-      "10k_records": {"size_kb": 2583.35, "description": "10k records MARC binary"},
-      "100k_records": {"size_mb": 25.32, "description": "100k records MARC binary"}
+  "read_1k": {
+    "python": {
+      "speedup": 7.49621451640875,
+      "improvement": 86.65993351963098,
+      "pymarc_mean_ms": 14.599500029968718,
+      "mrrc_mean_ms": 1.9475830097993214
+    },
+    "three_way": {
+      "pymrrc_vs_pymarc": {
+        "speedup": 7.49621451640875,
+        "pymrrc_ms": 1.9475830097993214,
+        "pymarc_ms": 14.599500029968718
+      },
+      "pymrrc_vs_rust": {
+        "speedup": 0.0005006822771156396,
+        "rust_ms": 0.0009751202962180553,
+        "pymrrc_ms": 1.9475830097993214
+      },
+      "rust_vs_pymarc": {
+        "speedup": 14971.998928329142,
+        "rust_ms": 0.0009751202962180553,
+        "pymarc_ms": 14.599500029968718
+      }
     }
   },
-  "benchmarks": [
-    {
-      "id": "read_1k",
-      "title": "Raw Reading Performance (1,000 records)",
-      "category": "reading",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 0.975,
-          "throughput_rec_s": 1025641,
-          "relative": 1.0,
-          "notes": "Raw baseline (Criterion.rs)",
-          "source": "criterion"
-        },
-        {
-          "name": "Python (pymrrc)",
-          "time_ms": 2.060,
-          "throughput_rec_s": 485437,
-          "relative": 0.47,
-          "notes": "PyO3 wrapper (direct bench)",
-          "source": "direct_benchmark"
-        },
-        {
-          "name": "Python (pymarc)",
-          "time_ms": 14.154,
-          "throughput_rec_s": 70664,
-          "relative": 0.07,
-          "notes": "Pure Python baseline",
-          "source": "direct_benchmark"
-        }
-      ],
-      "analysis": {
-        "pymrrc_vs_pymarc": {
-          "speedup": 6.87,
-          "improvement_percent": 85.4
-        },
-        "rust_vs_pymarc": {
-          "speedup": 14.5,
-          "improvement_percent": 93.1
-        },
-        "pymrrc_vs_rust": {
-          "speedup": 0.47,
-          "pymrrc_percent_of_rust": 47
-        }
-      }
+  "read_10k": {
+    "python": {
+      "speedup": 7.56081697005213,
+      "improvement": 86.7739160468911,
+      "pymarc_mean_ms": 144.62834740212807,
+      "mrrc_mean_ms": 19.128666647399466
     },
-    {
-      "id": "read_10k",
-      "title": "Raw Reading Performance (10,000 records)",
-      "category": "reading",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 9.320,
-          "throughput_rec_s": 1072961,
-          "relative": 1.0,
-          "notes": "Consistent baseline (Criterion.rs)",
-          "source": "criterion"
-        },
-        {
-          "name": "Python (pymrrc)",
-          "time_ms": 19.174,
-          "throughput_rec_s": 521548,
-          "relative": 0.49,
-          "notes": "PyO3 wrapper (direct bench)",
-          "source": "direct_benchmark"
-        },
-        {
-          "name": "Python (pymarc)",
-          "time_ms": 144.860,
-          "throughput_rec_s": 69060,
-          "relative": 0.06,
-          "notes": "Pure Python baseline",
-          "source": "direct_benchmark"
-        }
-      ],
-      "analysis": {
-        "pymrrc_vs_pymarc": {
-          "speedup": 7.56,
-          "improvement_percent": 86.8
-        },
-        "rust_vs_pymarc": {
-          "speedup": 15.5,
-          "improvement_percent": 93.6
-        },
-        "pymrrc_vs_rust": {
-          "speedup": 0.49,
-          "pymrrc_percent_of_rust": 49
-        }
-      }
-    },
-    {
-      "id": "extract_titles_1k",
-      "title": "Reading + Field Extraction (1,000 records - Title Access)",
-      "category": "field_access",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 0.941,
-          "throughput_rec_s": 1062595,
-          "relative": 1.0,
-          "notes": "Field access native",
-          "source": "criterion"
-        },
-        {
-          "name": "Python (pymrrc)",
-          "time_ms": 1.975,
-          "throughput_rec_s": 506329,
-          "relative": 0.48,
-          "notes": "Wrapper + field access",
-          "source": "direct_benchmark"
-        },
-        {
-          "name": "Python (pymarc)",
-          "time_ms": 15.245,
-          "throughput_rec_s": 65595,
-          "relative": 0.06,
-          "notes": "Pure Python field access",
-          "source": "direct_benchmark"
-        }
-      ],
-      "analysis": {
-        "pymrrc_vs_pymarc": {
-          "speedup": 7.72,
-          "improvement_percent": 87.0
-        },
-        "rust_vs_pymarc": {
-          "speedup": 16.2,
-          "improvement_percent": 93.8
-        },
-        "pymrrc_vs_rust": {
-          "speedup": 0.48,
-          "pymrrc_percent_of_rust": 48
-        }
-      }
-    },
-    {
-      "id": "extract_titles_10k",
-      "title": "Reading + Field Extraction (10,000 records)",
-      "category": "field_access",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 9.567,
-          "throughput_rec_s": 1045279,
-          "relative": 1.0,
-          "notes": "Consistent field access",
-          "source": "criterion"
-        },
-        {
-          "name": "Python (pymrrc)",
-          "time_ms": 20.424,
-          "throughput_rec_s": 489625,
-          "relative": 0.47,
-          "notes": "Wrapper overhead stable",
-          "source": "direct_benchmark"
-        },
-        {
-          "name": "Python (pymarc)",
-          "time_ms": 150.800,
-          "throughput_rec_s": 66338,
-          "relative": 0.06,
-          "notes": "Pure Python baseline",
-          "source": "direct_benchmark"
-        }
-      ],
-      "analysis": {
-        "pymrrc_vs_pymarc": {
-          "speedup": 7.38,
-          "improvement_percent": 86.5
-        },
-        "rust_vs_pymarc": {
-          "speedup": 15.8,
-          "improvement_percent": 93.7
-        },
-        "pymrrc_vs_rust": {
-          "speedup": 0.47,
-          "pymrrc_percent_of_rust": 47
-        }
-      }
-    },
-    {
-      "id": "roundtrip_1k",
-      "title": "Full Round-trip (Read + Write - 1,000 records)",
-      "category": "roundtrip",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 2.164,
-          "throughput_rec_s": 462121,
-          "relative": 1.0,
-          "notes": "Read + write in Rust",
-          "source": "criterion"
-        },
-        {
-          "name": "Python (pymrrc)",
-          "time_ms": 3.688,
-          "throughput_rec_s": 271202,
-          "relative": 0.59,
-          "notes": "Python wrapper overhead",
-          "source": "direct_benchmark"
-        },
-        {
-          "name": "Python (pymarc)",
-          "time_ms": 23.569,
-          "throughput_rec_s": 42430,
-          "relative": 0.09,
-          "notes": "Pure Python baseline",
-          "source": "direct_benchmark"
-        }
-      ],
-      "analysis": {
-        "pymrrc_vs_pymarc": {
-          "speedup": 6.39,
-          "improvement_percent": 84.4
-        },
-        "rust_vs_pymarc": {
-          "speedup": 10.9,
-          "improvement_percent": 90.8
-        },
-        "pymrrc_vs_rust": {
-          "speedup": 0.59,
-          "pymrrc_percent_of_rust": 59
-        }
-      }
-    },
-    {
-      "id": "roundtrip_10k",
-      "title": "Full Round-trip (Read + Write - 10,000 records)",
-      "category": "roundtrip",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 23.260,
-          "throughput_rec_s": 429912,
-          "relative": 1.0,
-          "notes": "Consistent throughput",
-          "source": "criterion"
-        },
-        {
-          "name": "Python (pymrrc)",
-          "time_ms": 41.845,
-          "throughput_rec_s": 238943,
-          "relative": 0.56,
-          "notes": "Wrapper overhead increases with size",
-          "source": "direct_benchmark"
-        },
-        {
-          "name": "Python (pymarc)",
-          "time_ms": 254.020,
-          "throughput_rec_s": 39367,
-          "relative": 0.09,
-          "notes": "Pure Python baseline",
-          "source": "direct_benchmark"
-        }
-      ],
-      "analysis": {
-        "pymrrc_vs_pymarc": {
-          "speedup": 6.07,
-          "improvement_percent": 83.5
-        },
-        "rust_vs_pymarc": {
-          "speedup": 10.9,
-          "improvement_percent": 90.8
-        },
-        "pymrrc_vs_rust": {
-          "speedup": 0.56,
-          "pymrrc_percent_of_rust": 56
-        }
-      }
-    },
-    {
-      "id": "json_serialization_1k",
-      "title": "Serialization (JSON - 1,000 records)",
-      "category": "serialization",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 3.337,
-          "throughput_rec_s": 299667,
-          "relative": 1.0,
-          "notes": "Format conversion in Rust",
-          "source": "criterion"
-        }
-      ],
-      "analysis": {
-        "note": "JSON serialization is 3.4x slower than reading (more CPU work), still ~300k rec/s is production-ready"
-      }
-    },
-    {
-      "id": "xml_serialization_1k",
-      "title": "Serialization (XML - 1,000 records)",
-      "category": "serialization",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 3.928,
-          "throughput_rec_s": 254645,
-          "relative": 1.0,
-          "notes": "Efficient XML generation",
-          "source": "criterion"
-        }
-      ],
-      "analysis": {
-        "note": "XML is ~1.2x slower than JSON, still suitable for batch processing"
-      }
-    },
-    {
-      "id": "read_100k",
-      "title": "Comprehensive 100k Records (Local-Only)",
-      "category": "reading",
-      "implementations": [
-        {
-          "name": "Rust (mrrc)",
-          "time_ms": 93.502,
-          "throughput_rec_s": 1069551,
-          "relative": 1.0,
-          "notes": "Stable at scale",
-          "source": "criterion"
-        },
-        {
-          "name": "Python (pymrrc)",
-          "time_ms": 220.526,
-          "throughput_rec_s": 453445,
-          "relative": 0.42,
-          "notes": "Expected linear scaling",
-          "source": "direct_benchmark"
-        },
-        {
-          "name": "Python (pymarc)",
-          "time_ms": 1488.538,
-          "throughput_rec_s": 67172,
-          "relative": 0.06,
-          "notes": "Pure Python baseline",
-          "source": "direct_benchmark"
-        }
-      ],
-      "analysis": {
-        "pymrrc_vs_pymarc": {
-          "speedup": 6.75,
-          "improvement_percent": 85.2
-        },
-        "rust_vs_pymarc": {
-          "speedup": 15.9,
-          "improvement_percent": 93.7
-        },
-        "pymrrc_vs_rust": {
-          "speedup": 0.42,
-          "pymrrc_percent_of_rust": 42
-        }
+    "three_way": {
+      "pymrrc_vs_pymarc": {
+        "speedup": 7.56081697005213,
+        "pymrrc_ms": 19.128666647399466,
+        "pymarc_ms": 144.62834740212807
+      },
+      "pymrrc_vs_rust": {
+        "speedup": 0.0004872353524058654,
+        "rust_ms": 0.009320162635000002,
+        "pymrrc_ms": 19.128666647399466
+      },
+      "rust_vs_pymarc": {
+        "speedup": 15517.792238839837,
+        "rust_ms": 0.009320162635000002,
+        "pymarc_ms": 144.62834740212807
       }
     }
-  ],
-  "summary": {
-    "average_speedup_pymrrc_vs_pymarc": 7.0,
-    "best_case_pymrrc_vs_pymarc": 7.72,
-    "worst_case_pymrrc_vs_pymarc": 6.07,
-    "average_pymrrc_percent_of_rust": 0.50,
-    "key_findings": [
-      "pymrrc is 7.0x faster than pymarc on average (6.1x worst case, 7.7x best case)",
-      "Rust library achieves ~1.07M records/second consistently",
-      "pymrrc maintains 50% of Rust performance with PyO3 overhead",
-      "Linear scaling confirmed across all data sizes (1k, 10k, 100k)",
-      "pymrrc performance advantage is consistent across reading, field extraction, and roundtrip operations",
-      "Field access overhead is minimal in both Rust and pymrrc",
-      "Serialization (JSON/XML) is 3-4x slower than reading but still production-ready at 250-300k rec/s"
-    ]
+  },
+  "extract_titles_1k": {
+    "python": {
+      "speedup": 7.62173849311767,
+      "improvement": 86.879633814477,
+      "pymarc_mean_ms": 15.167152974754572,
+      "mrrc_mean_ms": 1.9899860102062426
+    },
+    "three_way": {
+      "pymrrc_vs_pymarc": {
+        "speedup": 7.62173849311767,
+        "pymrrc_ms": 1.9899860102062426,
+        "pymarc_ms": 15.167152974754572
+      },
+      "pymrrc_vs_rust": {
+        "speedup": 0.00047295719757292485,
+        "rust_ms": 0.0009411782065964703,
+        "pymrrc_ms": 1.9899860102062426
+      },
+      "rust_vs_pymarc": {
+        "speedup": 16115.070311288542,
+        "rust_ms": 0.0009411782065964703,
+        "pymarc_ms": 15.167152974754572
+      }
+    }
+  },
+  "extract_titles_10k": {
+    "python": {
+      "speedup": 7.659114644460787,
+      "improvement": 86.94366063937666,
+      "pymarc_mean_ms": 151.5455833481004,
+      "mrrc_mean_ms": 19.78630564796428
+    },
+    "three_way": {
+      "pymrrc_vs_pymarc": {
+        "speedup": 7.659114644460787,
+        "pymrrc_ms": 19.78630564796428,
+        "pymarc_ms": 151.5455833481004
+      },
+      "pymrrc_vs_rust": {
+        "speedup": 0.00048353096540035495,
+        "rust_ms": 0.009567291471666664,
+        "pymrrc_ms": 19.78630564796428
+      },
+      "rust_vs_pymarc": {
+        "speedup": 15839.967225509905,
+        "rust_ms": 0.009567291471666664,
+        "pymarc_ms": 151.5455833481004
+      }
+    }
+  },
+  "roundtrip_1k": {
+    "python": {
+      "speedup": 6.438548774899588,
+      "improvement": 84.46854974682402,
+      "pymarc_mean_ms": 24.19731963891536,
+      "mrrc_mean_ms": 3.758194662320117
+    },
+    "three_way": {
+      "pymrrc_vs_pymarc": {
+        "speedup": 6.438548774899588,
+        "pymrrc_ms": 3.758194662320117,
+        "pymarc_ms": 24.19731963891536
+      },
+      "pymrrc_vs_rust": {
+        "speedup": 0.0005758596623173863,
+        "rust_ms": 0.0021641927091666665,
+        "pymrrc_ms": 3.758194662320117
+      },
+      "rust_vs_pymarc": {
+        "speedup": 11180.760168179599,
+        "rust_ms": 0.0021641927091666665,
+        "pymarc_ms": 24.19731963891536
+      }
+    }
+  },
+  "roundtrip_10k": {
+    "python": {
+      "speedup": 6.331052315088748,
+      "improvement": 84.20483751782136,
+      "pymarc_mean_ms": 259.8142503217484,
+      "mrrc_mean_ms": 41.038082990174495
+    },
+    "three_way": {
+      "pymrrc_vs_pymarc": {
+        "speedup": 6.331052315088748,
+        "pymrrc_ms": 41.038082990174495,
+        "pymarc_ms": 259.8142503217484
+      },
+      "pymrrc_vs_rust": {
+        "speedup": 0.0005667837643773206,
+        "rust_ms": 0.02325971915999999,
+        "pymrrc_ms": 41.038082990174495
+      },
+      "rust_vs_pymarc": {
+        "speedup": 11170.137031084792,
+        "rust_ms": 0.02325971915999999,
+        "pymarc_ms": 259.8142503217484
+      }
+    }
+  },
+  "json_serialization_1k": {
+    "mrrc_only": true
+  },
+  "xml_serialization_1k": {
+    "mrrc_only": true
+  },
+  "parallel_2x_10k": {
+    "speedup": 0.9954733550636743,
+    "limited_by_gil": true
+  },
+  "parallel_4x_10k": {
+    "benchmark": {
+      "min": 0.075463708024472,
+      "max": 0.07649383402895182,
+      "mean": 0.07606165305090447,
+      "stddev": 0.0005346944791927082,
+      "median": 0.0762274170992896,
+      "runs": 3
+    }
+  },
+  "read_100k": {
+    "python": {
+      "speedup": 7.528434370244237,
+      "improvement": 86.71702573442826,
+      "pymarc_mean_ms": 1464.128667023033,
+      "mrrc_mean_ms": 194.47983405552804
+    },
+    "three_way": {
+      "pymrrc_vs_pymarc": {
+        "speedup": 7.528434370244237,
+        "pymrrc_ms": 194.47983405552804,
+        "pymarc_ms": 1464.128667023033
+      }
+    }
   }
 }

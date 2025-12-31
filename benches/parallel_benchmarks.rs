@@ -84,7 +84,12 @@ fn benchmark_parallel_4x_1k(c: &mut Criterion) {
 
     c.bench_function("parallel_4x_1k_records", |b| {
         b.iter(|| {
-            let files = vec![fixture.clone(), fixture.clone(), fixture.clone(), fixture.clone()];
+            let files = vec![
+                fixture.clone(),
+                fixture.clone(),
+                fixture.clone(),
+                fixture.clone(),
+            ];
 
             files
                 .par_iter()
@@ -184,7 +189,12 @@ fn benchmark_parallel_4x_10k(c: &mut Criterion) {
 
     c.bench_function("parallel_4x_10k_records", |b| {
         b.iter(|| {
-            let files = vec![fixture.clone(), fixture.clone(), fixture.clone(), fixture.clone()];
+            let files = vec![
+                fixture.clone(),
+                fixture.clone(),
+                fixture.clone(),
+                fixture.clone(),
+            ];
 
             files
                 .par_iter()

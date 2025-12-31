@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CharacterSetId"],"fn":["find_unicode_in_marc8","get_charset_table","get_eacc_character"],"type":["CharacterMapping"]};

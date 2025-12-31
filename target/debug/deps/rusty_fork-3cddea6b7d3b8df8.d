@@ -1,0 +1,11 @@
+/Users/dchud/Documents/projects/mrrc/target/debug/deps/rusty_fork-3cddea6b7d3b8df8.d: /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/lib.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/sugar.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/fork_test.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/error.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/cmdline.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/fork.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/child_wrapper.rs
+
+/Users/dchud/Documents/projects/mrrc/target/debug/deps/librusty_fork-3cddea6b7d3b8df8.rmeta: /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/lib.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/sugar.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/fork_test.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/error.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/cmdline.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/fork.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/child_wrapper.rs
+
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/lib.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/sugar.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/fork_test.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/error.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/cmdline.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/fork.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusty-fork-0.3.1/src/child_wrapper.rs:

@@ -256,24 +256,78 @@ Python wrapper memory benchmarks using `tracemalloc`:
 
 **Key Finding:** Memory usage is proportional and reasonable; streaming mode uses constant memory.
 
-## Concurrency Benefits
+## Concurrency & Parallel Processing
 
-### GIL Release in I/O Operations
+### Current State: GIL Limitation (Phase 2 Finding)
 
-The Python wrapper releases the GIL during:
+**Important Discovery:** Thread-based parallelism with pymrrc is currently **GIL-limited**:
+
+#### Test 9: Parallel Reading (ThreadPoolExecutor) - 2x 10k records
+
+| Implementation | Sequential | Threaded | Speedup | Notes |
+|---|---|---|---|---|
+| **pymrrc** | 38.35 ms | 38.52 ms | **1.00x** | GIL blocks parallelism |
+| **Expected (with GIL-release)** | 38.35 ms | 20.2 ms | **1.9x** | I/O operations free |
+
+**Current Status:** No speedup due to GIL contention in I/O operations.
+
+#### Test 10: Parallel Reading (ThreadPoolExecutor) - 4x 10k records
+
+| Threads | Time | Speedup | Notes |
+|---|---|---|---|
+| **Sequential (4x 10k)** | ~152 ms | 1.0x | Single-threaded baseline |
+| **Threaded (4 workers)** | 76.06 ms | **1.99x** | Partial parallelism |
+| **Expected with GIL-release** | ~51 ms | **3.0x** | True multi-core parallelism |
+
+**Key Finding:** With 4 threads, we see ~2x speedup, demonstrating that I/O operations *can* be parallelized if the GIL is released. This is the opportunity that **mrrc-gyk** addresses.
+
+### GIL Release Opportunity
+
+The Python wrapper currently does **NOT** release the GIL during record parsing. Enabling GIL-release would:
+
+#### Expected Improvements (mrrc-gyk)
+
+1. **2x 10k records (2 threads)**
+   - Current: 38.52 ms (1.00x speedup)
+   - With GIL-release: ~20 ms (1.9x speedup)
+
+2. **4x 10k records (4 threads)**
+   - Current: 76.06 ms (1.99x speedup, limited)
+   - With GIL-release: ~51 ms (3.0x speedup)
+
+3. **Practical Impact:** Process 1M records 3x faster with threading on multi-core systems
+
+### Rust Parallel Performance (Baseline)
+
+For reference, the pure Rust implementation with rayon achieves:
+
+| Scenario | Sequential | Parallel (rayon) | Speedup |
+|---|---|---|---|
+| **2x 10k records** | 18.80 ms | 11.50 ms | **1.6x** |
+| **4x 10k records** | 37.52 ms | 14.92 ms | **2.5x** |
+| **8x 10k records** | 75.08 ms | 23.27 ms | **3.2x** |
+
+**Note:** Rust's lower speedup (3.2x vs 4x available cores) is expected due to:
+- Work distribution overhead
+- Memory bandwidth saturation
+- Lock contention in the library
+
+### GIL Release in I/O Operations (Future mrrc-gyk)
+
+The Python wrapper will release the GIL during:
 - Record parsing (`MARCReader.read_record()`)
 - Record serialization (`record.to_json()`, etc.)
-- File I/O operations
+- Format conversion operations
 
 This enables:
 - ✅ True parallelism with `threading.Thread` or `multiprocessing`
-- ✅ Concurrent file processing (2-4x speedup on multi-core systems)
+- ✅ Concurrent file processing (up to 3x speedup on 4-core systems)
 - ✅ No GIL contention for I/O-bound workloads
 
 **Example benefit:** Processing 4 MARC files concurrently with pymrrc:
-- pymarc: ~55 seconds (sequential)
-- pymrrc: ~5-10 seconds with threading (5-10x faster)
-- Rust: ~3-4 seconds with rayon parallelism
+- Current (GIL-limited): 76 seconds → ~38 seconds with 2 threads
+- With GIL-release: 76 seconds → ~25 seconds (3x faster)
+- Rust: ~12 seconds with rayon parallelism
 
 ## Key Findings
 

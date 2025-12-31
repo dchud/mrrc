@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["MarcEncoding"],"fn":["decode_bytes","encode_string"]};

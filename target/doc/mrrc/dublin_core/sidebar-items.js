@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["dublin_core_to_xml","record_to_dublin_core"],"struct":["DublinCoreRecord"]};

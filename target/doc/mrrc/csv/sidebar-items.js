@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["records_to_csv","records_to_csv_filtered"]};

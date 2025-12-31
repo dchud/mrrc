@@ -1,0 +1,10 @@
+/Users/dchud/Documents/projects/mrrc/target/release/deps/_mrrc.d: src-python/src/lib.rs src-python/src/error.rs src-python/src/formats.rs src-python/src/readers.rs src-python/src/wrappers.rs src-python/src/writers.rs
+
+/Users/dchud/Documents/projects/mrrc/target/release/deps/lib_mrrc.dylib: src-python/src/lib.rs src-python/src/error.rs src-python/src/formats.rs src-python/src/readers.rs src-python/src/wrappers.rs src-python/src/writers.rs
+
+src-python/src/lib.rs:
+src-python/src/error.rs:
+src-python/src/formats.rs:
+src-python/src/readers.rs:
+src-python/src/wrappers.rs:
+src-python/src/writers.rs:

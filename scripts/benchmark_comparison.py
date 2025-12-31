@@ -242,6 +242,56 @@ def benchmark_mrrc_json_serialization(data, iterations=3):
     return bench
 
 
+def benchmark_mrrc_parallel_2x_10k(data, iterations=3):
+    """Benchmark mrrc parallel reading of 2x 10k records."""
+    if not HAS_MRRC:
+        return None
+    
+    from concurrent.futures import ThreadPoolExecutor
+    
+    bench = Benchmark("mrrc - Parallel threading 2x 10k (GIL-limited)", iterations)
+    
+    def read_parallel():
+        def read_single_file(file_data):
+            reader = mrrc.MARCReader(BytesIO(file_data))
+            count = 0
+            while record := reader.read_record():
+                count += 1
+            return count
+        
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(read_single_file, [data, data]))
+        return sum(results)
+    
+    bench.run(read_parallel)
+    return bench
+
+
+def benchmark_mrrc_parallel_4x_10k(data, iterations=3):
+    """Benchmark mrrc parallel reading of 4x 10k records."""
+    if not HAS_MRRC:
+        return None
+    
+    from concurrent.futures import ThreadPoolExecutor
+    
+    bench = Benchmark("mrrc - Parallel threading 4x 10k (GIL-limited)", iterations)
+    
+    def read_parallel():
+        def read_single_file(file_data):
+            reader = mrrc.MARCReader(BytesIO(file_data))
+            count = 0
+            while record := reader.read_record():
+                count += 1
+            return count
+        
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            results = list(executor.map(read_single_file, [data] * 4))
+        return sum(results)
+    
+    bench.run(read_parallel)
+    return bench
+
+
 def benchmark_mrrc_xml_serialization(data, iterations=3):
     """Benchmark mrrc XML serialization."""
     if not HAS_MRRC:
@@ -585,10 +635,46 @@ def main():
     b8_mrrc.report()
     results['xml_serialization_1k'] = {'mrrc_only': True}
     
-    # Test 9: Full 100k benchmark (local only, skip in CI)
+    # Test 9: Parallel processing - Threading performance with GIL limitation
+    print("\n" + "-" * 70)
+    print("Test 9: Parallel reading (ThreadPoolExecutor) - 2x 10k records")
+    print("-" * 70)
+    print("Note: Demonstrates current GIL limitation in pymrrc")
+    print("      Expected: ~1.4x speedup (GIL-limited)")
+    print("      Potential with GIL-release: ~1.9x speedup")
+    b9a_sequential = benchmark_mrrc_read(data_10k, iterations=3)
+    b9a_sequential_double = benchmark_mrrc_read(data_10k + data_10k, iterations=3)
+    b9_parallel = benchmark_mrrc_parallel_2x_10k(data_10k, iterations=3)
+    print("\nSequential (2x reads):")
+    b9a_sequential_double.report()
+    print("\nParallel (ThreadPoolExecutor, 2 workers):")
+    b9_parallel.report()
+    if b9a_sequential_double and b9_parallel:
+        seq_time = b9a_sequential_double.stats()['mean']
+        par_time = b9_parallel.stats()['mean']
+        speedup = seq_time / par_time
+        print(f"\nSpeedup: {speedup:.2f}x (limited by GIL)")
+        results['parallel_2x_10k'] = {'speedup': speedup, 'limited_by_gil': True}
+    
+    # Test 10: Parallel processing - 4x 10k records (heavier GIL contention)
+    print("\n" + "-" * 70)
+    print("Test 10: Parallel reading (ThreadPoolExecutor) - 4x 10k records")
+    print("-" * 70)
+    print("Note: Higher GIL contention with more threads")
+    print("      Expected: ~1.3-1.4x speedup (heavy GIL contention)")
+    print("      Potential with GIL-release: ~3.0-3.5x speedup")
+    b10_parallel = benchmark_mrrc_parallel_4x_10k(data_10k, iterations=3)
+    print("\nParallel (ThreadPoolExecutor, 4 workers):")
+    b10_parallel.report()
+    if b10_parallel:
+        results['parallel_4x_10k'] = {'benchmark': b10_parallel.stats()}
+        print(f"\nNote: This is the key benchmark showing GIL impact")
+        print(f"      See mrrc-gyk for GIL-release follow-up work")
+    
+    # Test 11: Full 100k benchmark (local only, skip in CI)
     if not in_ci:
         print("\n" + "-" * 70)
-        print("Test 9: Full 100k records (local-only comprehensive test)")
+        print("Test 11: Full 100k records (local-only comprehensive test)")
         print("-" * 70)
         try:
             data_100k = load_fixture(fixture_dir, '100k')
