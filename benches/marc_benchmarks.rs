@@ -1,16 +1,22 @@
+//! Benchmarks for MRRC MARC library.
+//!
+//! This benchmark suite tests the performance of reading, writing, and processing
+//! MARC records using Criterion.rs for statistical analysis.
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mrrc::{MarcReader, MarcWriter, json, xml};
+use mrrc::{json, xml, MarcReader, MarcWriter};
 use std::io::Cursor;
 
-// Load test fixtures
+/// Load test fixtures from the test data directory.
 fn load_fixture(filename: &str) -> Vec<u8> {
-    let path = format!("tests/data/fixtures/{}", filename);
-    std::fs::read(&path).expect(&format!("Failed to load fixture: {}", path))
+    let path = format!("tests/data/fixtures/{filename}");
+    std::fs::read(&path).unwrap_or_else(|_| panic!("Failed to load fixture: {path}"))
 }
 
+/// Benchmark reading 1,000 MARC records.
 fn benchmark_read_1k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("1k_records.mrc"));
-    
+
     c.bench_function("read_1k_records", |b| {
         b.iter(|| {
             let cursor = Cursor::new(fixture.clone());
@@ -24,9 +30,10 @@ fn benchmark_read_1k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark reading 10,000 MARC records.
 fn benchmark_read_10k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("10k_records.mrc"));
-    
+
     c.bench_function("read_10k_records", |b| {
         b.iter(|| {
             let cursor = Cursor::new(fixture.clone());
@@ -40,12 +47,13 @@ fn benchmark_read_10k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark reading 100,000 MARC records.
 fn benchmark_read_100k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("100k_records.mrc"));
-    
+
     let mut group = c.benchmark_group("slow");
     group.sample_size(10); // Reduce samples for slow tests
-    
+
     group.bench_function("read_100k_records", |b| {
         b.iter(|| {
             let cursor = Cursor::new(fixture.clone());
@@ -60,9 +68,10 @@ fn benchmark_read_100k(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark reading 1,000 MARC records with field access.
 fn benchmark_read_with_field_access_1k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("1k_records.mrc"));
-    
+
     c.bench_function("read_1k_with_field_access", |b| {
         b.iter(|| {
             let cursor = Cursor::new(fixture.clone());
@@ -80,9 +89,10 @@ fn benchmark_read_with_field_access_1k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark reading 10,000 MARC records with field access.
 fn benchmark_read_with_field_access_10k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("10k_records.mrc"));
-    
+
     c.bench_function("read_10k_with_field_access", |b| {
         b.iter(|| {
             let cursor = Cursor::new(fixture.clone());
@@ -98,9 +108,10 @@ fn benchmark_read_with_field_access_10k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark JSON serialization of 1,000 MARC records.
 fn benchmark_serialization_to_json_1k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("1k_records.mrc"));
-    
+
     c.bench_function("serialize_1k_to_json", |b| {
         b.iter(|| {
             let cursor = Cursor::new(fixture.clone());
@@ -115,9 +126,10 @@ fn benchmark_serialization_to_json_1k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark XML serialization of 1,000 MARC records.
 fn benchmark_serialization_to_xml_1k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("1k_records.mrc"));
-    
+
     c.bench_function("serialize_1k_to_xml", |b| {
         b.iter(|| {
             let cursor = Cursor::new(fixture.clone());
@@ -132,9 +144,10 @@ fn benchmark_serialization_to_xml_1k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark read + write roundtrip of 1,000 MARC records.
 fn benchmark_roundtrip_1k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("1k_records.mrc"));
-    
+
     c.bench_function("roundtrip_1k_records", |b| {
         b.iter(|| {
             // Read records
@@ -144,22 +157,23 @@ fn benchmark_roundtrip_1k(c: &mut Criterion) {
             while let Ok(Some(record)) = reader.read_record() {
                 records.push(record);
             }
-            
+
             // Write records
             let mut output = Vec::new();
             let mut writer = MarcWriter::new(&mut output);
             for record in records {
                 let _ = writer.write_record(&record);
             }
-            
+
             output.len()
         })
     });
 }
 
+/// Benchmark read + write roundtrip of 10,000 MARC records.
 fn benchmark_roundtrip_10k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("10k_records.mrc"));
-    
+
     c.bench_function("roundtrip_10k_records", |b| {
         b.iter(|| {
             let cursor = Cursor::new(fixture.clone());
@@ -168,18 +182,19 @@ fn benchmark_roundtrip_10k(c: &mut Criterion) {
             while let Ok(Some(record)) = reader.read_record() {
                 records.push(record);
             }
-            
+
             let mut output = Vec::new();
             let mut writer = MarcWriter::new(&mut output);
             for record in records {
                 let _ = writer.write_record(&record);
             }
-            
+
             output.len()
         })
     });
 }
 
+#[allow(missing_docs)]
 criterion_group!(
     benches,
     benchmark_read_1k,
@@ -192,4 +207,5 @@ criterion_group!(
     benchmark_roundtrip_1k,
     benchmark_roundtrip_10k,
 );
+#[allow(missing_docs)]
 criterion_main!(benches);
