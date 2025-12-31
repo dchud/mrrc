@@ -1,26 +1,26 @@
 {
   "read_1k": {
-    "speedup": 0.8607618381599885,
-    "improvement": -16.176154154052018,
-    "pymarc_mean_ms": 14.136458630673587,
-    "mrrc_mean_ms": 16.423193970695138
+    "speedup": 7.340140189097808,
+    "improvement": 86.37628200227996,
+    "pymarc_mean_ms": 13.75583365249137,
+    "mrrc_mean_ms": 1.8740559850508969
   },
   "read_10k": {
-    "speedup": 0.8811069696611384,
-    "improvement": -13.49359776198186,
-    "pymarc_mean_ms": 141.87324997813752,
-    "mrrc_mean_ms": 161.01705566203842
+    "speedup": 7.564518428680956,
+    "improvement": 86.78038781413382,
+    "pymarc_mean_ms": 137.68726404911527,
+    "mrrc_mean_ms": 18.201722336622577
   },
   "extract_titles_1k": {
-    "speedup": 0.8878651052367241,
-    "improvement": -12.629722026678616,
-    "pymarc_mean_ms": 14.859791340616843,
-    "mrrc_mean_ms": 16.73654168068121
+    "speedup": 7.503645658377957,
+    "improvement": 86.67314468822921,
+    "pymarc_mean_ms": 14.23504133708775,
+    "mrrc_mean_ms": 1.8970833625644445
   },
   "extract_titles_10k": {
-    "speedup": 0.8920193461537558,
-    "improvement": -12.105191923453166,
-    "pymarc_mean_ms": 148.62011136331907,
-    "mrrc_mean_ms": 166.61086108069867
+    "speedup": 7.44285999652152,
+    "improvement": 86.56430457556156,
+    "pymarc_mean_ms": 142.57387537509203,
+    "mrrc_mean_ms": 19.155791650215786
   }
 }
