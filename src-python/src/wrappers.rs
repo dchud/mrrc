@@ -338,7 +338,7 @@ impl PyField {
         indicator1: Option<&str>,
         indicator2: Option<&str>,
         subfields: Option<Vec<PySubfield>>,
-        indicators: Option<PyObject>,
+        indicators: Option<Py<PyAny>>,
     ) -> PyResult<Self> {
         if tag.len() != 3 {
             return Err(pyo3::exceptions::PyValueError::new_err(
