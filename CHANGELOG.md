@@ -168,14 +168,21 @@ None known at this time. The following have been resolved:
 
 ## Future Roadmap
 
-### Planned for 0.2.0
-- Python wrapper via PyO3/Maturin for `pymarc`-compatible Python package
-- Enhanced indicator validation
-- Field-level metadata (subfield constraints, cardinality)
-- Batch processing optimizations
-- Streaming reader for large file sets
+### Planned for 0.3.0 (Priority 1-2)
+- **Parallel Processing Enhancements** (mrrc-086): Complete parallel benchmarking suite with rayon and threading optimizations
+- **GIL Release in Python I/O** (mrrc-gyk): Enable PyO3's allow_threads for concurrent Python operations without GIL blocking
 
-### Long-term Vision
+### Planned for 0.4.0+ (Priority 3, Optional Enhancements)
+- **API Standardization** (mrrc-jwb): Code review enhancements including:
+  - Format conversion API naming standardization (mrrc-jwb.1)
+  - Dublin Core XML convenience function (mrrc-jwb.2)
+  - Query DSL and ValidationFramework documentation (mrrc-jwb.3)
+  - Shared test helpers module (mrrc-jwb.4)
+- **Performance Tracking** (mrrc-3od): Codspeed integration for CI performance regression detection
+
+### Long-term Vision (0.5.0+)
+- Field-level metadata (subfield constraints, cardinality)
+- Streaming reader for large file sets
 - Integration with library discovery systems
 - Web API support
 - Database backends for record storage
