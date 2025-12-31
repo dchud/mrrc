@@ -5,6 +5,13 @@ All notable changes to MRRC (MARC Rust Crate) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Fixed 20+ clippy linting violations in benchmark files (missing semicolons in closure statements)
+- Suppressed benchmark-specific documentation warnings at file level
+- Cleaned up CI pipeline to pass all quality gates
+
 ## [0.1.0] - 2025-12-28
 
 ### Added
