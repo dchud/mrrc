@@ -507,7 +507,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
     results = [f.result() for f in futures]
 ```
 
-See [docs/threading.md](docs/threading.md) for detailed threading patterns.
+See [docs/threading.md](docs/threading.md) and [docs/parallel_processing.md](docs/parallel_processing.md) for detailed threading patterns.
 
 ### Format Conversion (Python)
 
@@ -604,6 +604,17 @@ cargo tarpaulin --out Html --all --timeout 300
 # Open the report in your browser
 open tarpaulin-report.html
 ```
+
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- **[Documentation Index](docs/README.md)** - Overview of all documentation
+- **[Benchmarking Results](docs/benchmarks/RESULTS.md)** - Performance metrics and analysis
+- **[Parallel Processing Guide](docs/parallel_processing.md)** - Concurrent workload patterns
+- **[Threading Documentation](docs/threading.md)** - Multi-threaded usage patterns
+- **[Design Documents](docs/design/)** - Architecture and feature proposals
+- **[Project History](docs/history/)** - Code reviews, audits, and implementation notes
 
 ## Design Principles
 

@@ -219,12 +219,12 @@ pub fn my_function() -> Result<()> {
 
 For significant features:
 
-1. **Create a design document** in `design/`:
-   - Overview and problem statement
-   - Proposed solution with examples
-   - Implementation phases/roadmap
-   - Testing strategy
-   - Known limitations/risks
+1. **Create a design document** in `docs/design/`:
+    - Overview and problem statement
+    - Proposed solution with examples
+    - Implementation phases/roadmap
+    - Testing strategy
+    - Known limitations/risks
 
 2. **Create parent epic issue**:
    ```bash
@@ -268,6 +268,8 @@ For significant features:
 - **GitHub Discussions**: For questions and ideas
 - **Beads Issues**: For tracked work items
 - **Pull Requests**: For code review
+- **Design Documents**: See `docs/design/` for architectural decisions
+- **Project History**: See `docs/history/` for implementation notes and audits
 
 ## Release Process
 
@@ -290,6 +292,6 @@ Releases follow semantic versioning (MAJOR.MINOR.PATCH):
 
 - Open a GitHub issue for clarification
 - Check existing issues for similar questions
-- Review documentation in `docs/` and `design/` directories
+- Review documentation in `docs/` (including `docs/design/` and `docs/history/`)
 
 Thank you for contributing to MRRC!
