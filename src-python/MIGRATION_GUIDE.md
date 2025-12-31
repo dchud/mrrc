@@ -4,8 +4,9 @@ This guide helps existing pymarc users migrate to mrrc (MARC Rust Crate), a high
 
 ## Overview
 
-**mrrc** is a complete rewrite of MARC handling in Rust, providing:
-- **10-100x faster** performance compared to pure Python implementations
+**mrrc** is a Rust-based MARC library with Python bindings, providing:
+- **10-100x faster** performance compared to pure Python implementations  
+- **pymarc-compatible API** - Nearly drop-in replacement for existing pymarc code
 - **Type-safe** Rust implementation with comprehensive error handling
 - **Python compatibility** through PyO3 bindings with native data structures
 - **All standard MARC operations** including reading, writing, and format conversions
@@ -37,24 +38,29 @@ writer.write(record)
 writer.close()
 ```
 
-### After (mrrc)
+### After (mrrc) - pymarc-Compatible
+
+**mrrc now supports nearly identical pymarc syntax:**
+
 ```python
 import mrrc
 
-# Reading records - exactly the same interface
+# Reading records - 100% compatible with pymarc
 with open('records.mrc', 'rb') as f:
     reader = mrrc.MARCReader(f)
     for record in reader:
-        print(record.title())  # Or access fields directly
+        # Access fields using pymarc syntax
+        print(record['245']['a'])  # Works!
+        print(record.title())      # Also available as convenience method
 
 # Writing records
 with open('output.mrc', 'wb') as f:
-    with mrrc.MARCWriter(f) as writer:
-        field = mrrc.Field('245', '1', '0')
-        field.add_subfield('a', 'Title')
-        record = mrrc.Record(mrrc.Leader())
-        record.add_field(field)
-        writer.write_record(record)
+    writer = mrrc.MARCWriter(f)
+    field = mrrc.Field('245', '1', '0')
+    field.add_subfield('a', 'Title')
+    record = mrrc.Record(mrrc.Leader())
+    record.add_field(field)
+    writer.write(record)
 ```
 
 ## API Comparison
@@ -94,61 +100,80 @@ with open('output.mrc', 'wb') as f:
 | Get all fields | `for field in record:` | `for field in record.fields():` |
 | Control field | `record['001'].value` | `record.control_field('001')` |
 
-## Key Differences
+## API Compatibility
 
-### 1. Leaders Are Explicit
-**pymarc**: Creates a default leader automatically
+**mrrc now provides comprehensive pymarc API compatibility**, including:
+
+### ✅ Record Field Access (Subscript Operator)
 ```python
+# pymarc syntax now works in mrrc!
+title = record['245']['a']         # Get first 'a' subfield
+fields_245 = record.get_fields('245')  # Get all 245 fields
+if '650' in record:                # Check if field exists
+    subjects = record['650']
+```
+
+### ✅ Field Subfield Access
+```python
+field = record['245']
+value = field['a']                 # Get first subfield value
+field.get('a')                     # Get with default None
+field.get('z', 'default')          # Get with custom default
+'a' in field                       # Check if subfield exists
+field.get_subfields('a', 'b')      # Get all 'a' and 'b' subfields
+```
+
+### ✅ Field Operations
+```python
+field.add_subfield('a', 'value')   # Same as pymarc
+field.delete_subfield('a')         # Same as pymarc
+field.subfields_as_dict()          # Same as pymarc
+field.is_subject_field()           # Check if 6xx field
+```
+
+### ✅ Record Operations
+```python
+record.remove_field('245')         # Returns list of removed fields
+record.get_fields('650', '651')    # Multiple tags support
+record.title()                     # Convenience method (same as pymarc)
+record.author()                    # Convenience method (same as pymarc)
+record.isbn()                      # Convenience method (same as pymarc)
+```
+
+### ✅ Reader/Writer Interface
+```python
+reader = mrrc.MARCReader(f)
+record = reader.read_record()      # Same as pymarc
+for record in reader:              # Same as pymarc
+
+writer = mrrc.MARCWriter(f)
+writer.write(record)               # Same as pymarc
+```
+
+## Minimal API Differences
+
+Most code will work unchanged. Only a few patterns differ slightly:
+
+### 1. Leaders Require Explicit Creation
+**Minor difference** - needed once per record:
+```python
+# pymarc (implicit default)
 record = pymarc.Record()
+
+# mrrc (explicit, with defaults)
+record = mrrc.Record(mrrc.Leader())
 ```
 
-**mrrc**: Requires you to provide a leader
+### 2. Field Creation Style
+**Both work** - choose what fits your code:
 ```python
-leader = mrrc.Leader()  # Creates with defaults
-record = mrrc.Record(leader)
-```
-
-This is more explicit and type-safe.
-
-### 2. Indicators Are Separate Parameters
-**pymarc**: Tuple format
-```python
-field = Field('245', ['1', '0'], [('a', 'Title')])
-```
-
-**mrrc**: Separate parameters
-```python
+# pymarc style (still supported!)
 field = mrrc.Field('245', '1', '0')
 field.add_subfield('a', 'Title')
-```
+field.add_subfield('c', 'Author')
 
-### 3. Writing Uses Method Names
-**pymarc**: `write()` and `add_field()` are overloaded
-```python
-writer.write(record)
-record.append(field)  # Also add_field works
-```
-
-**mrrc**: Explicit method names
-```python
-writer.write_record(record)
-record.add_field(field)
-record.add_control_field('001', 'value')
-```
-
-### 4. Context Managers for Writers
-**pymarc**: Manual cleanup
-```python
-writer = pymarc.MARCWriter(f)
-# ... write records ...
-writer.close()
-```
-
-**mrrc**: Context manager support
-```python
-with mrrc.MARCWriter(f) as writer:
-    # ... write records ...
-    # Automatically closed
+# Direct access (new convenience)
+title = record['245']['a']
 ```
 
 ## Migration Checklist
