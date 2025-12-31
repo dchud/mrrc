@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Executive Summaries**: High-level overview of parallel processing capabilities
 - **Reorganized Docs**: Consolidated design/ and history/ into docs/ hierarchy
 - **Examples**: Real-world usage patterns demonstrating library features
+- **Migration Guide**: Comprehensive guide highlighting near-100% API compatibility with pymarc
 
 #### API Enhancements
 - **Record.to_marc21()**: Convert records back to ISO 2709 binary format
