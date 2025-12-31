@@ -107,21 +107,29 @@ XML is slightly slower than JSON, still suitable for batch processing.
 
 ### Test 7: Full Round-trip (Read + Write - 1,000 records)
 
-| Implementation | Time | Throughput | Notes |
-|---|---|---|---|
-| **Rust (mrrc)** | 2.12 ms | **470,000 rec/s** | Read + write in Rust |
-| **Python (pymrrc)** | 3.55 ms | **281,000 rec/s** | Python wrapper overhead |
+| Implementation | Time | Throughput | Relative | Notes |
+|---|---|---|---|---|
+| **Rust (mrrc)** | 2.164 ms | **462,000 rec/s** | 1.0x | Read + write in Rust |
+| **Python (pymrrc)** | 3.688 ms | **271,000 rec/s** | 0.59x | Python wrapper overhead |
+| **Python (pymarc)** | 23.569 ms | **42,400 rec/s** | 0.09x | Pure Python roundtrip |
 
-Round-trip requires both reading and writing; **pymrrc still performs well at 281k rec/s**.
+**Analysis:**
+- **pymrrc is 6.4x faster than pymarc** for roundtrip (3.688ms vs 23.569ms)
+- **Rust is 10.9x faster than pymarc** for roundtrip
+- pymrrc maintains 59% of Rust performance with wrapper overhead
 
 ### Test 8: Full Round-trip (Read + Write - 10,000 records)
 
-| Implementation | Time | Throughput | Notes |
-|---|---|---|---|
-| **Rust (mrrc)** | 23.08 ms | **433,000 rec/s** | Consistent throughput |
-| **Python (pymrrc)** | N/A | ~281,000 rec/s | Expected (not benchmarked) |
+| Implementation | Time | Throughput | Relative | Notes |
+|---|---|---|---|---|
+| **Rust (mrrc)** | 23.260 ms | **430,000 rec/s** | 1.0x | Consistent throughput |
+| **Python (pymrrc)** | 41.845 ms | **239,000 rec/s** | 0.56x | Wrapper overhead scales linearly |
+| **Python (pymarc)** | 254.020 ms | **39,400 rec/s** | 0.09x | Pure Python baseline |
 
-Round-trip at scale shows pymrrc performance remains consistent.
+**Scale Analysis:**
+- **pymrrc is 6.1x faster than pymarc** at 10k records (41.845ms vs 254.020ms)
+- **Rust is 10.9x faster than pymarc** at scale
+- pymrrc performance advantage is consistent across all scales (1k and 10k both ~6x)
 
 ### Test 9: 100k Records (Comprehensive, Local-Only)
 
