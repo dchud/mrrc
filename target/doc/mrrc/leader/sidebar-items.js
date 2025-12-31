@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Leader"]};
+window.SIDEBAR_ITEMS = {"fn":["parse_digits"],"struct":["Leader"]};

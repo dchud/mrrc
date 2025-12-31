@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["HoldingsMarcReader"]};
+window.SIDEBAR_ITEMS = {"constant":["FIELD_TERMINATOR","SUBFIELD_DELIMITER"],"struct":["HoldingsMarcReader"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MarcEncoding"],"fn":["decode_bytes","encode_string"]};
+window.SIDEBAR_ITEMS = {"enum":["MarcEncoding"],"fn":["decode_bytes","decode_marc8","encode_marc8","encode_string"],"struct":["Marc8Decoder"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["record_to_mods_xml"]};
+window.SIDEBAR_ITEMS = {"fn":["escape_xml","record_to_mods_xml","write_abstract","write_identifiers","write_language","write_names","write_origin_info","write_physical_description","write_subjects","write_titles","write_type_of_resource"]};

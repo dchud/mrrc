@@ -1,3 +1,4 @@
+#![allow(missing_docs, unused_doc_comments, unused_attributes)]
 //! Benchmarks for MRRC MARC library.
 //!
 //! This benchmark suite tests the performance of reading, writing, and processing
@@ -26,7 +27,7 @@ fn benchmark_read_1k(c: &mut Criterion) {
                 count += 1;
             }
             count
-        })
+        });
     });
 }
 
@@ -43,7 +44,7 @@ fn benchmark_read_10k(c: &mut Criterion) {
                 count += 1;
             }
             count
-        })
+        });
     });
 }
 
@@ -63,7 +64,7 @@ fn benchmark_read_100k(c: &mut Criterion) {
                 count += 1;
             }
             count
-        })
+        });
     });
     group.finish();
 }
@@ -85,7 +86,7 @@ fn benchmark_read_with_field_access_1k(c: &mut Criterion) {
                 count += 1;
             }
             count
-        })
+        });
     });
 }
 
@@ -104,7 +105,7 @@ fn benchmark_read_with_field_access_10k(c: &mut Criterion) {
                 count += 1;
             }
             count
-        })
+        });
     });
 }
 
@@ -122,7 +123,7 @@ fn benchmark_serialization_to_json_1k(c: &mut Criterion) {
                 count += 1;
             }
             count
-        })
+        });
     });
 }
 
@@ -140,7 +141,7 @@ fn benchmark_serialization_to_xml_1k(c: &mut Criterion) {
                 count += 1;
             }
             count
-        })
+        });
     });
 }
 
@@ -166,7 +167,7 @@ fn benchmark_roundtrip_1k(c: &mut Criterion) {
             }
 
             output.len()
-        })
+        });
     });
 }
 
@@ -190,11 +191,10 @@ fn benchmark_roundtrip_10k(c: &mut Criterion) {
             }
 
             output.len()
-        })
+        });
     });
 }
 
-#[allow(missing_docs)]
 criterion_group!(
     benches,
     benchmark_read_1k,
@@ -207,5 +207,4 @@ criterion_group!(
     benchmark_roundtrip_1k,
     benchmark_roundtrip_10k,
 );
-#[allow(missing_docs)]
 criterion_main!(benches);

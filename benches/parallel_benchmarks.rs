@@ -1,3 +1,4 @@
+#![allow(missing_docs, unused_doc_comments, unused_attributes)]
 //! Parallel processing benchmarks using rayon.
 //!
 //! These benchmarks demonstrate the performance advantage of concurrent processing
@@ -31,7 +32,7 @@ fn benchmark_sequential_2x_1k(c: &mut Criterion) {
                 }
             }
             total_count
-        })
+        });
     });
 }
 
@@ -55,7 +56,7 @@ fn benchmark_parallel_2x_1k(c: &mut Criterion) {
                     count
                 })
                 .sum::<usize>()
-        })
+        });
     });
 }
 
@@ -74,7 +75,7 @@ fn benchmark_sequential_4x_1k(c: &mut Criterion) {
                 }
             }
             total_count
-        })
+        });
     });
 }
 
@@ -103,7 +104,7 @@ fn benchmark_parallel_4x_1k(c: &mut Criterion) {
                     count
                 })
                 .sum::<usize>()
-        })
+        });
     });
 }
 
@@ -136,7 +137,7 @@ fn benchmark_parallel_8x_1k(c: &mut Criterion) {
                     count
                 })
                 .sum::<usize>()
-        })
+        });
     });
 }
 
@@ -155,7 +156,7 @@ fn benchmark_sequential_2x_10k(c: &mut Criterion) {
                 }
             }
             total_count
-        })
+        });
     });
 }
 
@@ -179,7 +180,7 @@ fn benchmark_parallel_2x_10k(c: &mut Criterion) {
                     count
                 })
                 .sum::<usize>()
-        })
+        });
     });
 }
 
@@ -208,11 +209,10 @@ fn benchmark_parallel_4x_10k(c: &mut Criterion) {
                     count
                 })
                 .sum::<usize>()
-        })
+        });
     });
 }
 
-#[allow(missing_docs)]
 criterion_group!(
     parallel_benches,
     benchmark_sequential_2x_1k,
@@ -224,5 +224,4 @@ criterion_group!(
     benchmark_parallel_2x_10k,
     benchmark_parallel_4x_10k,
 );
-#[allow(missing_docs)]
 criterion_main!(parallel_benches);

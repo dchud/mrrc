@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["dublin_core_to_xml","record_to_dublin_core"],"struct":["DublinCoreRecord"]};
+window.SIDEBAR_ITEMS = {"fn":["dublin_core_to_xml","escape_xml","extract_contributors","extract_coverage","extract_creators","extract_descriptions","extract_formats","extract_identifiers","extract_language","extract_publishers_and_dates","extract_rights","extract_subjects","extract_titles","record_to_dublin_core","write_elements"],"struct":["DublinCoreRecord"]};
