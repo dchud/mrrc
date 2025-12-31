@@ -55,12 +55,12 @@ with open('records.mrc', 'rb') as f:
 
 # Writing records
 with open('output.mrc', 'wb') as f:
-    writer = mrrc.MARCWriter(f)
-    field = mrrc.Field('245', '1', '0')
-    field.add_subfield('a', 'Title')
-    record = mrrc.Record(mrrc.Leader())
-    record.add_field(field)
-    writer.write(record)
+     writer = mrrc.MARCWriter(f)
+     field = mrrc.Field('245', '1', '0')
+     field.add_subfield('a', 'Title')
+     record = mrrc.Record(mrrc.Leader())
+     record.add_field(field)
+     writer.write_record(record)
 ```
 
 ## API Comparison
@@ -86,7 +86,7 @@ with open('output.mrc', 'wb') as f:
 
 | Operation | pymarc | mrrc |
 |-----------|--------|------|
-| Read record | `reader.next()` | `reader.read_record()` or iterate |
+| Read record | `reader.next()` | `reader.read_record()` or `next(reader)` |
 | Write record | `writer.write(record)` | `writer.write_record(record)` |
 | Iterate | `for record in reader:` | `for record in reader:` ✓ Same! |
 | Context manager | ✗ Manual close | `with MARCWriter(f) as w:` ✓ Supported |
@@ -143,11 +143,11 @@ record.isbn()                      # Convenience method (same as pymarc)
 ### ✅ Reader/Writer Interface
 ```python
 reader = mrrc.MARCReader(f)
-record = reader.read_record()      # Same as pymarc
+record = reader.read_record()      # Different from pymarc
 for record in reader:              # Same as pymarc
 
 writer = mrrc.MARCWriter(f)
-writer.write(record)               # Same as pymarc
+writer.write_record(record)        # Different from pymarc (mrrc uses write_record)
 ```
 
 ## Minimal API Differences
@@ -200,7 +200,8 @@ For workloads with millions of records, this can reduce processing time from hou
 
 1. **No leader builder**: Create and modify the leader directly
 2. **No automatic UTF-8 detection**: Must set `leader.character_coding` explicitly if needed
-3. **Limited format conversions**: JSON/XML coming in Phase 5
+3. **Different method names**: Use `write_record()` instead of `write()`, `read_record()` instead of `next()`
+4. **Format conversions**: JSON/XML and other formats available in Rust API, Python bindings available in Phase 2-3+
 
 ## Getting Help
 
