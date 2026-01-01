@@ -1,24 +1,26 @@
 # GIL Release Implementation Punchlist
 
-**Status:** Phase D Complete - Ready for Phase E  
+**Status:** Phase B Investigation Ongoing - Fixes Ready to Implement  
 **Last Updated:** January 1, 2026  
-**Overall Progress:** 43% (Phases A, B & D complete, 4 remaining phases)  
-**Critical Path:** A → B ✅ → D → E → F → G (6 weeks)  
-**Optional Path:** C (deferred if speedup ≥ 2x after Phase B)
+**Overall Progress:** 48% (Phases A, B & D code complete; B performance failing; investigation complete)  
+**Critical Path:** A → B (code) → **Investigation** → B (fixes) → D → E → F → G  
+**Blocker:** Phase B Performance Issue - Investigation complete, fixes in mrrc-18s, mrrc-69r, mrrc-kzw  
+**Optional Path:** C (deferred if speedup ≥ 2x after Phase B fixes)
 
 ---
 
 ## Quick Reference
 
-| Phase | Epic | Duration | Status | Ready? |
-|-------|------|----------|--------|--------|
-| **A** | Core Buffering | Week 1 | ✅ COMPLETE | ✅ Ready |
-| **B** | GIL Integration | Week 1-2 | ✅ COMPLETE (100%) | ✅ Ready |
-| **C** | Optimizations | Week 2-3 | ⏸️ Optional (deferred) | Optional (deferred) |
-| **D** | Writer Implementation | Week 3-4 | ✅ COMPLETE | ✅ Ready |
-| **E** | Validation | Week 4-5 | 🟢 Ready | ✅ Ready |
-| **F** | Benchmark Refresh | Week 5-6 | 🟠 Ready after E | Ready after E |
-| **G** | Documentation | Week 6-7 | 🟠 Ready after F | Ready after F |
+| Phase | Epic | Duration | Status | Blocker | Notes |
+|-------|------|----------|--------|---------|-------|
+| **A** | Core Buffering | Week 1 | ✅ COMPLETE | — | All 4 tasks done, 13 unit tests passing |
+| **B** | GIL Integration | Week 1-2 | ⚠️ CODE DONE, PERF FAILING | Investigation | 5 code tasks done; 0.85x speedup vs 2.0x target |
+| **Investigation** | GIL Performance Fix | 1-2 weeks | 🔄 IN PROGRESS | — | Root cause found; 5 fix tasks created |
+| **C** | Optimizations | Week 2-3 | ⏸️ Optional | Phase F gate | Only if speedup < 2.0x after fixes |
+| **D** | Writer Implementation | Week 3-4 | ✅ CODE DONE | B investigation | 3 tasks done; blocked by B performance issue |
+| **E** | Validation | Week 4-5 | 🔴 BLOCKED | B investigation | Blocked on B performance resolution |
+| **F** | Benchmark Refresh | Week 5-6 | 🔴 BLOCKED | B investigation | Blocked on B fixes; decides Phase C activation |
+| **G** | Documentation | Week 6-7 | 🔴 BLOCKED | Phase F gate | Ready after Phase F results |
 
 ---
 
@@ -386,6 +388,123 @@ def test_gil_release_verification():
 **Additional Time Needed:** TBD (investigation & fixes)  
 **Blocker for:** Phase D (incomplete), Phase E (blocked), Phase F (blocked)  
 **Progress:** 70% (Code complete, performance tests failing)
+
+---
+
+## 🔴 Phase B Investigation: GIL Release Performance Failure
+
+**Investigation Thread:** @T-019b7ba5-e7c0-750d-af6c-268f8566b912  
+**Investigation Document:** @docs/history/GIL_RELEASE_INVESTIGATION_ADDENDUM.md  
+**Status:** FINDINGS COMPLETE - FIXES READY TO IMPLEMENT  
+
+### Summary
+
+Investigation reveals that **GIL is being released** (confirmed by diagnostic tests) but performance remains poor due to **error handling code running inside allow_threads() closure without the GIL**.
+
+**Root Cause:** Phase 2 parsing attempts to create `PyErr` objects inside the `allow_threads()` closure, which is a GIL safety violation that forces implicit re-acquisition, blocking parallelism.
+
+**Solution:** Defer all error conversion to Phase 3 (after GIL re-acquisition) by returning a custom `ParseError` enum from the closure.
+
+### Investigation Findings
+
+1. **GIL Release Confirmed:** Background thread successfully runs during Phase 2
+2. **Performance Blocked:** Error handling prevents parallelism despite GIL release
+3. **Three Critical Issues Identified:**
+   - Issue #1: Borrow checker violation (Phase 2 closure) → Addressed in Phase A
+   - Issue #2: Nested Python::attach() panic (Phase 1) → Partially fixed
+   - Issue #3: Phase 2 error conversion without GIL (CRITICAL) → NOT FIXED (current blocker)
+
+### New Investigation Tasks Created
+
+#### I.1: SmallVec Verification (mrrc-18s)
+**Task:** mrrc-18s  
+**Priority:** P1  
+**Purpose:** Verify BufferedMarcReader SmallVec implementation solves borrow checker constraints  
+**Blocks:** mrrc-69r  
+**Timeline:** 1-2 hours  
+
+---
+
+#### I.2: ParseError Wrapper + Defer Error Conversion (mrrc-69r) [★ CRITICAL ★]
+**Task:** mrrc-69r  
+**Priority:** P1  
+**Purpose:** Implement deferred error conversion (Phase 2 returns ParseError, Phase 3 converts to PyErr)  
+**Impact:** This fix unblocks all performance improvements  
+**Expected Result:** 2-thread speedup ≥ 1.8x (vs 0.85x current)  
+**Dependencies:** mrrc-18s  
+**Blocks:** mrrc-kzw, Phase F benchmarks  
+**Timeline:** 4-6 hours  
+
+---
+
+#### I.3: Thread Safety Tests (mrrc-kzw)
+**Task:** mrrc-kzw  
+**Priority:** P1  
+**Purpose:** Validate mrrc-69r fix works in real threading scenarios  
+**Tests:**
+- `test_threading_concurrent_speedup` (2 & 4 threads)
+- `test_threading_contention` (speedup curve)
+- `test_eof_semantics` (idempotent behavior)
+- `test_exception_propagation` (no deadlocks)  
+**Expected:** 2-thread speedup ≥ 1.8x after mrrc-69r fix  
+**Dependencies:** mrrc-69r  
+**Timeline:** 3-4 hours  
+
+---
+
+#### I.4: Conditional Phase C Optimization (mrrc-5ph)
+**Task:** mrrc-5ph  
+**Priority:** P2  
+**Purpose:** Phase C optimizations (batch reading, method caching)  
+**Status:** CONDITIONAL - only implement if Phase F shows speedup < 2.0x  
+**Gate:** Depends on Phase F benchmark results  
+**If speedup ≥ 2.0x:** Task becomes optional (deferred)  
+**If speedup < 2.0x:** Task becomes required before release  
+**Timeline:** TBD (contingent on Phase F results)  
+
+---
+
+#### I.5: Documentation of Findings (mrrc-4rm)
+**Task:** mrrc-4rm  
+**Priority:** P2  
+**Purpose:** Permanent record of investigation, root cause, and solutions applied  
+**Contents:**
+- Root cause analysis (Phase 2 error conversion)
+- Three critical issues identified and status
+- Diagnostic test results
+- Performance bottleneck explanation
+- Solution roadmap and fixes applied  
+**Dependencies:** All investigation fixes validated (mrrc-18s, mrrc-69r, mrrc-kzw)  
+**Timeline:** 1-2 hours (after fixes validated)  
+
+---
+
+### Investigation Critical Path
+
+```
+mrrc-18s (verify SmallVec)
+    ↓
+mrrc-69r (error conversion fix) ← BLOCKS ALL PERFORMANCE GAINS
+    ↓
+mrrc-kzw (threading tests) ← validates fix
+    ↓
+Phase F re-benchmark (mrrc-9wi.5.1) ← measures speedup improvement
+    ↓
+Conditional mrrc-5ph (only if speedup < 2.0x)
+    ↓
+mrrc-4rm (documentation)
+```
+
+### Investigation Success Criteria
+
+- ✅ Root cause identified and documented (error handling in Phase 2)
+- ✅ Solution identified (defer error conversion to Phase 3)
+- ✅ Five investigation tasks created (mrrc-18s, mrrc-69r, mrrc-kzw, mrrc-5ph, mrrc-4rm)
+- ✅ Critical path sequenced for implementation
+- 🟠 Code fixes pending (mrrc-69r implementation)
+- 🟠 Performance validation pending (mrrc-kzw tests + Phase F re-benchmark)
+
+---
 
 ### Phase B Completion Summary - REVISED
 

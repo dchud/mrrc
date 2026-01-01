@@ -6,6 +6,20 @@ Phase 3 focuses on three key areas:
 2. Authority control helpers
 3. Format-specific query traits
 
+---
+
+### ⚠️ Current Status: GIL Release Investigation Ongoing
+
+**Important Note:** Active investigation into GIL release performance issues is underway. See **@docs/history/GIL_RELEASE_INVESTIGATION_ADDENDUM.md** for:
+- Root cause analysis (error handling in Phase 2)
+- Critical issues identified in implementation
+- Five new beads created to fix issues (mrrc-18s, mrrc-69r, mrrc-kzw, mrrc-5ph, mrrc-4rm)
+- Critical path for fixes
+
+Phase 3 planning may be affected by GIL release timeline. Consult the addendum for current status and dependencies.
+
+---
+
 ## 1. Linked Field Navigation (880 Fields)
 
 ### Background: MARC 880 Fields
