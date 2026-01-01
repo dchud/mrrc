@@ -138,48 +138,53 @@
 <a href=#138 id=138 data-nosnippet>138</a>        </span><span class="kw">let </span>record_bytes_owned: SmallVec&lt;[u8; <span class="number">4096</span>]&gt; = SmallVec::from_slice(<span class="kw-2">&amp;</span>record_bytes);
 <a href=#139 id=139 data-nosnippet>139</a>
 <a href=#140 id=140 data-nosnippet>140</a>        <span class="comment">// ===== PHASE 2: Parse bytes (GIL released) =====
-<a href=#141 id=141 data-nosnippet>141</a>        // Parse the record while GIL is released to allow other threads to execute
-<a href=#142 id=142 data-nosnippet>142</a>        // CRITICAL FIX: Use the unbound Python handle from Python::allow_threads() (deprecated but works)
-<a href=#143 id=143 data-nosnippet>143</a>        // or Python::detach() (0.26+ preferred name).
-<a href=#144 id=144 data-nosnippet>144</a>        // The bound py from PyRefMut may not properly release GIL when calling detach,
-<a href=#145 id=145 data-nosnippet>145</a>        // so we need to explicitly use allow_threads which is designed for this pattern.
-<a href=#146 id=146 data-nosnippet>146</a>        </span><span class="attr">#[allow(deprecated)]
-<a href=#147 id=147 data-nosnippet>147</a>        </span><span class="kw">let </span>parse_result: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;mrrc::Record&gt;, <span class="kw">crate</span>::parse_error::ParseError&gt; = py
-<a href=#148 id=148 data-nosnippet>148</a>            .allow_threads(|| {
-<a href=#149 id=149 data-nosnippet>149</a>                <span class="comment">// This closure runs WITHOUT the GIL held
-<a href=#150 id=150 data-nosnippet>150</a>                // All data here is owned (no Python references)
+<a href=#141 id=141 data-nosnippet>141</a>        // Parse the record while GIL is released to allow other threads to execute.
+<a href=#142 id=142 data-nosnippet>142</a>        // CRITICAL: The closure returns Result&lt;Option&lt;mrrc::Record&gt;, ParseError&gt; (NOT PyResult).
+<a href=#143 id=143 data-nosnippet>143</a>        // We defer conversion to PyErr until AFTER allow_threads() returns (GIL re-acquired).
+<a href=#144 id=144 data-nosnippet>144</a>        // This is required because PyErr construction needs the GIL.
+<a href=#145 id=145 data-nosnippet>145</a>        </span><span class="attr">#[allow(deprecated)]
+<a href=#146 id=146 data-nosnippet>146</a>        </span><span class="kw">let </span>parse_result: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;mrrc::Record&gt;, <span class="kw">crate</span>::parse_error::ParseError&gt; = py
+<a href=#147 id=147 data-nosnippet>147</a>            .allow_threads(|| {
+<a href=#148 id=148 data-nosnippet>148</a>                <span class="comment">// This closure runs WITHOUT the GIL held
+<a href=#149 id=149 data-nosnippet>149</a>                // All data here is owned (no Python references)
+<a href=#150 id=150 data-nosnippet>150</a>                // Return Rust errors only; defer PyErr conversion to Phase 3
 <a href=#151 id=151 data-nosnippet>151</a>                </span><span class="kw">let </span>cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
 <a href=#152 id=152 data-nosnippet>152</a>                <span class="kw">let </span><span class="kw-2">mut </span>parser = MarcReader::new(cursor);
 <a href=#153 id=153 data-nosnippet>153</a>
 <a href=#154 id=154 data-nosnippet>154</a>                <span class="comment">// Parse the single record from bytes
-<a href=#155 id=155 data-nosnippet>155</a>                </span>parser.read_record().map_err(|e| {
-<a href=#156 id=156 data-nosnippet>156</a>                    ParseError::InvalidRecord(<span class="macro">format!</span>(
-<a href=#157 id=157 data-nosnippet>157</a>                        <span class="string">"Failed to parse MARC record from {} bytes: {}"</span>,
-<a href=#158 id=158 data-nosnippet>158</a>                        record_bytes_owned.len(),
-<a href=#159 id=159 data-nosnippet>159</a>                        e
-<a href=#160 id=160 data-nosnippet>160</a>                    ))
-<a href=#161 id=161 data-nosnippet>161</a>                })
-<a href=#162 id=162 data-nosnippet>162</a>            });
-<a href=#163 id=163 data-nosnippet>163</a>
-<a href=#164 id=164 data-nosnippet>164</a>        <span class="comment">// ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
-<a href=#165 id=165 data-nosnippet>165</a>        // GIL is automatically re-acquired when exiting detach() block
-<a href=#166 id=166 data-nosnippet>166</a>        </span><span class="kw">match </span>parse_result {
-<a href=#167 id=167 data-nosnippet>167</a>            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(record)) =&gt; <span class="prelude-val">Ok</span>(PyRecord { inner: record }),
-<a href=#168 id=168 data-nosnippet>168</a>            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
-<a href=#169 id=169 data-nosnippet>169</a>                <span class="comment">// Parser returned None (shouldn't happen in middle of record)
-<a href=#170 id=170 data-nosnippet>170</a>                </span><span class="prelude-val">Err</span>(pyo3::exceptions::PyRuntimeError::new_err(
-<a href=#171 id=171 data-nosnippet>171</a>                    <span class="string">"Parser returned None for complete record"</span>,
-<a href=#172 id=172 data-nosnippet>172</a>                ))
-<a href=#173 id=173 data-nosnippet>173</a>            },
-<a href=#174 id=174 data-nosnippet>174</a>            <span class="prelude-val">Err</span>(parse_error) =&gt; <span class="prelude-val">Err</span>(parse_error.to_py_err()),
-<a href=#175 id=175 data-nosnippet>175</a>        }
-<a href=#176 id=176 data-nosnippet>176</a>    }
-<a href=#177 id=177 data-nosnippet>177</a>
-<a href=#178 id=178 data-nosnippet>178</a>    <span class="kw">fn </span>__repr__(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-<a href=#179 id=179 data-nosnippet>179</a>        <span class="kw">if </span><span class="self">self</span>.buffered_reader.is_some() {
-<a href=#180 id=180 data-nosnippet>180</a>            <span class="string">"&lt;MARCReader active&gt;"</span>.to_string()
-<a href=#181 id=181 data-nosnippet>181</a>        } <span class="kw">else </span>{
-<a href=#182 id=182 data-nosnippet>182</a>            <span class="string">"&lt;MARCReader consumed&gt;"</span>.to_string()
-<a href=#183 id=183 data-nosnippet>183</a>        }
-<a href=#184 id=184 data-nosnippet>184</a>    }
-<a href=#185 id=185 data-nosnippet>185</a>}</code></pre></div></section></main></body></html>
+<a href=#155 id=155 data-nosnippet>155</a>                // Return ParseError (Rust type), not PyErr
+<a href=#156 id=156 data-nosnippet>156</a>                </span>parser.read_record().map_err(|e| {
+<a href=#157 id=157 data-nosnippet>157</a>                    ParseError::InvalidRecord(<span class="macro">format!</span>(
+<a href=#158 id=158 data-nosnippet>158</a>                        <span class="string">"Failed to parse MARC record from {} bytes: {}"</span>,
+<a href=#159 id=159 data-nosnippet>159</a>                        record_bytes_owned.len(),
+<a href=#160 id=160 data-nosnippet>160</a>                        e
+<a href=#161 id=161 data-nosnippet>161</a>                    ))
+<a href=#162 id=162 data-nosnippet>162</a>                })
+<a href=#163 id=163 data-nosnippet>163</a>            });
+<a href=#164 id=164 data-nosnippet>164</a>
+<a href=#165 id=165 data-nosnippet>165</a>        <span class="comment">// ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
+<a href=#166 id=166 data-nosnippet>166</a>        // GIL is automatically re-acquired when exiting allow_threads() block.
+<a href=#167 id=167 data-nosnippet>167</a>        // NOW we can safely construct PyErr from ParseError.
+<a href=#168 id=168 data-nosnippet>168</a>        </span><span class="kw">match </span>parse_result {
+<a href=#169 id=169 data-nosnippet>169</a>            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(record)) =&gt; <span class="prelude-val">Ok</span>(PyRecord { inner: record }),
+<a href=#170 id=170 data-nosnippet>170</a>            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
+<a href=#171 id=171 data-nosnippet>171</a>                <span class="comment">// Parser returned None (shouldn't happen in middle of record)
+<a href=#172 id=172 data-nosnippet>172</a>                </span><span class="prelude-val">Err</span>(pyo3::exceptions::PyRuntimeError::new_err(
+<a href=#173 id=173 data-nosnippet>173</a>                    <span class="string">"Parser returned None for complete record"</span>,
+<a href=#174 id=174 data-nosnippet>174</a>                ))
+<a href=#175 id=175 data-nosnippet>175</a>            },
+<a href=#176 id=176 data-nosnippet>176</a>            <span class="prelude-val">Err</span>(parse_error) =&gt; {
+<a href=#177 id=177 data-nosnippet>177</a>                <span class="comment">// Convert ParseError to PyErr AFTER GIL is re-acquired
+<a href=#178 id=178 data-nosnippet>178</a>                </span><span class="prelude-val">Err</span>(parse_error.to_py_err())
+<a href=#179 id=179 data-nosnippet>179</a>            },
+<a href=#180 id=180 data-nosnippet>180</a>        }
+<a href=#181 id=181 data-nosnippet>181</a>    }
+<a href=#182 id=182 data-nosnippet>182</a>
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="kw">fn </span>__repr__(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#184 id=184 data-nosnippet>184</a>        <span class="kw">if </span><span class="self">self</span>.buffered_reader.is_some() {
+<a href=#185 id=185 data-nosnippet>185</a>            <span class="string">"&lt;MARCReader active&gt;"</span>.to_string()
+<a href=#186 id=186 data-nosnippet>186</a>        } <span class="kw">else </span>{
+<a href=#187 id=187 data-nosnippet>187</a>            <span class="string">"&lt;MARCReader consumed&gt;"</span>.to_string()
+<a href=#188 id=188 data-nosnippet>188</a>        }
+<a href=#189 id=189 data-nosnippet>189</a>    }
+<a href=#190 id=190 data-nosnippet>190</a>}</code></pre></div></section></main></body></html>

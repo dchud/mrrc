@@ -138,20 +138,21 @@ impl PyMARCReader {
         let record_bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&record_bytes);
 
         // ===== PHASE 2: Parse bytes (GIL released) =====
-        // Parse the record while GIL is released to allow other threads to execute
-        // CRITICAL FIX: Use the unbound Python handle from Python::allow_threads() (deprecated but works)
-        // or Python::detach() (0.26+ preferred name).
-        // The bound py from PyRefMut may not properly release GIL when calling detach,
-        // so we need to explicitly use allow_threads which is designed for this pattern.
+        // Parse the record while GIL is released to allow other threads to execute.
+        // CRITICAL: The closure returns Result<Option<mrrc::Record>, ParseError> (NOT PyResult).
+        // We defer conversion to PyErr until AFTER allow_threads() returns (GIL re-acquired).
+        // This is required because PyErr construction needs the GIL.
         #[allow(deprecated)]
         let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> = py
             .allow_threads(|| {
                 // This closure runs WITHOUT the GIL held
                 // All data here is owned (no Python references)
+                // Return Rust errors only; defer PyErr conversion to Phase 3
                 let cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
                 let mut parser = MarcReader::new(cursor);
 
                 // Parse the single record from bytes
+                // Return ParseError (Rust type), not PyErr
                 parser.read_record().map_err(|e| {
                     ParseError::InvalidRecord(format!(
                         "Failed to parse MARC record from {} bytes: {}",
@@ -162,7 +163,8 @@ impl PyMARCReader {
             });
 
         // ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
-        // GIL is automatically re-acquired when exiting detach() block
+        // GIL is automatically re-acquired when exiting allow_threads() block.
+        // NOW we can safely construct PyErr from ParseError.
         match parse_result {
             Ok(Some(record)) => Ok(PyRecord { inner: record }),
             Ok(None) => {
@@ -171,7 +173,10 @@ impl PyMARCReader {
                     "Parser returned None for complete record",
                 ))
             },
-            Err(parse_error) => Err(parse_error.to_py_err()),
+            Err(parse_error) => {
+                // Convert ParseError to PyErr AFTER GIL is re-acquired
+                Err(parse_error.to_py_err())
+            },
         }
     }
 
