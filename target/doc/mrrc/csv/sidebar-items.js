@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["escape_csv_value","records_to_csv","records_to_csv_filtered"]};

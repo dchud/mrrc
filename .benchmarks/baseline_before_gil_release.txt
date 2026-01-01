@@ -3,21 +3,21 @@ BASELINE BENCHMARK - GIL Release Phase B
 
 SINGLE-THREAD BASELINE (10K records)
 ----------------------------------------------------------------------
-Time:      0.053s
+Time:      0.082s
 Records:   10000
-Ops/sec:   190411
+Ops/sec:   121239
 
 TWO-THREAD BASELINE (2x 5K records)
 ----------------------------------------------------------------------
-Time:      0.054s
+Time:      0.099s
 Records:   9914
-Ops/sec:   184708
-Speedup:   0.98x
+Ops/sec:   100298
+Speedup:   0.83x
 
 PHASE C DEFERRAL GATE
 ----------------------------------------------------------------------
-Baseline speedup:      0.98x
+Baseline speedup:      0.83x
 Target (after Phase F): >= 2.0x
 Decision:
-  Current speedup (0.98x) < 2.0x goal
+  Current speedup (0.83x) < 2.0x goal
   Phase C optimization will be REQUIRED if Phase F < 2.0x

@@ -102,33 +102,40 @@ impl PyMARCReader {
     /// - Phase 2: Parse bytes to MARC record (GIL released)
     /// - Phase 3: Convert to PyRecord (GIL re-acquired)
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
-        Python::with_gil(|py| {
-            // Get mutable reference to buffered reader
-            let reader = slf
-                .buffered_reader
-                .as_mut()
-                .ok_or_else(|| pyo3::exceptions::PyStopIteration::new_err(()))?;
+        // ✅ CORRECT: Get Python handle from PyRefMut which guarantees GIL is held
+        // Use py() to get a bound Python handle without re-acquiring
+        let py = slf.py();
 
-            // ===== PHASE 1: Read record bytes (GIL held) =====
-            // Call read_next_record_bytes() while holding GIL
-            let record_bytes = match reader.read_next_record_bytes(py) {
-                Ok(Some(bytes)) => bytes,
-                Ok(None) => {
-                    // EOF reached - mark reader as consumed
-                    slf.buffered_reader = None;
-                    return Err(pyo3::exceptions::PyStopIteration::new_err(()));
-                },
-                Err(e) => return Err(e.to_py_err()),
-            };
+        // Get mutable reference to buffered reader
+        let reader = slf
+            .buffered_reader
+            .as_mut()
+            .ok_or_else(|| pyo3::exceptions::PyStopIteration::new_err(()))?;
 
-            // CRITICAL: Copy to owned SmallVec for Phase 2 closure
-            // The slice returned by read_next_record_bytes() is valid only during Phase 1.
-            // We create an owned copy that can be moved into the allow_threads() closure.
-            let record_bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&record_bytes);
+        // ===== PHASE 1: Read record bytes (GIL held) =====
+        // Call read_next_record_bytes() while holding GIL
+        let record_bytes = match reader.read_next_record_bytes(py) {
+            Ok(Some(bytes)) => bytes,
+            Ok(None) => {
+                // EOF reached - mark reader as consumed
+                slf.buffered_reader = None;
+                return Err(pyo3::exceptions::PyStopIteration::new_err(()));
+            },
+            Err(e) => return Err(e.to_py_err()),
+        };
 
-            // ===== PHASE 2: Parse bytes (GIL released) =====
-            // Parse the record while GIL is released to allow other threads to execute
-            let parse_result = py.allow_threads(|| {
+        // CRITICAL: Copy to owned SmallVec for Phase 2 closure
+        // The slice returned by read_next_record_bytes() is valid only during Phase 1.
+        // We create an owned copy that can be moved into the allow_threads() closure.
+        let record_bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&record_bytes);
+
+        // ===== PHASE 2: Parse bytes (GIL released) =====
+        // Parse the record while GIL is released to allow other threads to execute
+        // SAFETY: py.allow_threads() is deprecated but still works and actually releases GIL.
+        // We can't use py.detach() because it doesn't integrate correctly with the Python handle lifetime
+        #[allow(deprecated)]
+        let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> =
+            py.allow_threads(|| {
                 // This closure runs WITHOUT the GIL held
                 // All data here is owned (no Python references)
                 let cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
@@ -144,19 +151,18 @@ impl PyMARCReader {
                 })
             });
 
-            // ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
-            // GIL is automatically re-acquired when exiting allow_threads() block
-            match parse_result {
-                Ok(Some(record)) => Ok(PyRecord { inner: record }),
-                Ok(None) => {
-                    // Parser returned None (shouldn't happen in middle of record)
-                    Err(pyo3::exceptions::PyRuntimeError::new_err(
-                        "Parser returned None for complete record",
-                    ))
-                },
-                Err(parse_error) => Err(parse_error.to_py_err()),
-            }
-        })
+        // ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
+        // GIL is automatically re-acquired when exiting allow_threads() block
+        match parse_result {
+            Ok(Some(record)) => Ok(PyRecord { inner: record }),
+            Ok(None) => {
+                // Parser returned None (shouldn't happen in middle of record)
+                Err(pyo3::exceptions::PyRuntimeError::new_err(
+                    "Parser returned None for complete record",
+                ))
+            },
+            Err(parse_error) => Err(parse_error.to_py_err()),
+        }
     }
 
     fn __repr__(&self) -> String {

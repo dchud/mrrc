@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["HeadingType","KindOfRecord","LevelOfEstablishment"],"struct":["AuthorityRecord","AuthorityRecordBuilder"]};

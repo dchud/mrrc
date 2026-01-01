@@ -50,59 +50,62 @@ impl PyMARCWriter {
             ));
         }
 
-        // Use a single Python::with_gil block to manage the entire operation
-        Python::with_gil(|py| {
-            // ===== PHASE 1: Extract record data (GIL held) =====
-            // We receive a PyRecord (the Rust wrapper around a Record)
-            // Clone the inner Rust record for Phase 2
-            let record_copy = record.inner.clone();
+        // ✅ CORRECT: Get Python handle assuming GIL is already held
+        // PyO3 0.27: use assume_attached() which assumes GIL is attached to current thread
+        // Methods in #[pymethods] always have GIL held by the Python interpreter
+        let py = unsafe { Python::assume_attached() };
 
-            // ===== PHASE 2: Serialize to bytes (GIL released) =====
-            // Serialize the record to MARC bytes without holding the GIL
-            let record_bytes = py.allow_threads(|| {
-                // This closure runs WITHOUT the GIL held
-                let mut buffer = Vec::new();
-                let mut writer = MarcWriter::new(&mut buffer);
+        // ===== PHASE 1: Extract record data (GIL held) =====
+        // We receive a PyRecord (the Rust wrapper around a Record)
+        // Clone the inner Rust record for Phase 2
+        let record_copy = record.inner.clone();
 
-                // Serialize the record to bytes
-                writer.write_record(&record_copy).map_err(|e| {
-                    std::io::Error::other(format!("Failed to serialize MARC record: {}", e))
-                })?;
+        // ===== PHASE 2: Serialize to bytes (GIL released) =====
+        // Serialize the record to MARC bytes without holding the GIL
+        // SAFETY: py.allow_threads() is deprecated but still works and actually releases GIL
+        #[allow(deprecated)]
+        let record_bytes: Vec<u8> = py.allow_threads(|| {
+            // This closure runs WITHOUT the GIL held
+            let mut buffer = Vec::new();
+            let mut writer = MarcWriter::new(&mut buffer);
 
-                Ok::<Vec<u8>, std::io::Error>(buffer)
+            // Serialize the record to bytes
+            writer.write_record(&record_copy).map_err(|e| {
+                std::io::Error::other(format!("Failed to serialize MARC record: {}", e))
             })?;
 
-            // ===== PHASE 3: Write bytes to file (GIL re-acquired) =====
-            // GIL is automatically re-acquired when exiting allow_threads() block
-            let file_ref = self.file_obj.bind(py);
-            let write_method = file_ref.getattr("write").map_err(|e| {
-                pyo3::exceptions::PyRuntimeError::new_err(format!(
-                    "File object has no write method: {}",
-                    e
-                ))
-            })?;
+            Ok::<Vec<u8>, std::io::Error>(buffer)
+        })?;
 
-            write_method.call1((record_bytes,)).map_err(|e| {
-                pyo3::exceptions::PyRuntimeError::new_err(format!(
-                    "Failed to write record bytes: {}",
-                    e
-                ))
-            })?;
+        // ===== PHASE 3: Write bytes to file (GIL re-acquired) =====
+        // GIL is automatically re-acquired when exiting allow_threads() block
+        let file_ref = self.file_obj.bind(py);
+        let write_method = file_ref.getattr("write").map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "File object has no write method: {}",
+                e
+            ))
+        })?;
 
-            Ok(())
-        })
+        write_method.call1((record_bytes,)).map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "Failed to write record bytes: {}",
+                e
+            ))
+        })?;
+
+        Ok(())
     }
 
     /// Close the writer and flush the buffer
     pub fn close(&mut self) -> PyResult<()> {
         if !self.closed {
-            Python::with_gil(|py| {
-                let file_ref = self.file_obj.bind(py);
-                if let Ok(flush_method) = file_ref.getattr("flush") {
-                    let _ = flush_method.call0();
-                }
-                Ok::<(), PyErr>(())
-            })?;
+            // ✅ CORRECT: Get Python handle assuming GIL is already held
+            let py = unsafe { Python::assume_attached() };
+            let file_ref = self.file_obj.bind(py);
+            if let Ok(flush_method) = file_ref.getattr("flush") {
+                let _ = flush_method.call0();
+            }
             self.closed = true;
         }
         Ok(())

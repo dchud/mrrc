@@ -1,8 +1,8 @@
 # GIL Release Implementation Punchlist
 
-**Status:** Phase B Complete - Ready for Phase D  
+**Status:** Phase D Complete - Ready for Phase E  
 **Last Updated:** January 1, 2026  
-**Overall Progress:** 30% (Phases A & B complete, 5 remaining phases)  
+**Overall Progress:** 43% (Phases A, B & D complete, 4 remaining phases)  
 **Critical Path:** A → B ✅ → D → E → F → G (6 weeks)  
 **Optional Path:** C (deferred if speedup ≥ 2x after Phase B)
 
@@ -15,8 +15,8 @@
 | **A** | Core Buffering | Week 1 | ✅ COMPLETE | ✅ Ready |
 | **B** | GIL Integration | Week 1-2 | ✅ COMPLETE (100%) | ✅ Ready |
 | **C** | Optimizations | Week 2-3 | ⏸️ Optional (deferred) | Optional (deferred) |
-| **D** | Writer Implementation | Week 3-4 | 🔵 In Progress | ✅ Ready |
-| **E** | Validation | Week 4-5 | 🟠 Ready after D | Ready after D |
+| **D** | Writer Implementation | Week 3-4 | ✅ COMPLETE | ✅ Ready |
+| **E** | Validation | Week 4-5 | 🟢 Ready | ✅ Ready |
 | **F** | Benchmark Refresh | Week 5-6 | 🟠 Ready after E | Ready after E |
 | **G** | Documentation | Week 6-7 | 🟠 Ready after F | Ready after F |
 
@@ -191,7 +191,8 @@ These will be implemented in Phase B as GIL release integration tests with PyMar
 **Epic:** mrrc-9wi.2  
 **Duration:** Week 1-2 (25 hours)  
 **Priority:** P1 (Critical Path)  
-**Status:** ✅ COMPLETE  
+**Status:** ⚠️ COMPLETE BUT FAILING PERFORMANCE TESTS  
+**Critical Issue:** mrrc-hjx - GIL not actually being released (0.83x speedup vs 2.0x target)  
 **Plan Reference:** GIL_RELEASE_IMPLEMENTATION_PLAN.md Part 5 Phase B (lines 382-412)
 
 ### Overview
@@ -326,28 +327,41 @@ def test_gil_release_verification():
 
 #### B.5: Establish baseline benchmark - current single-thread and 2-thread performance
 **Task:** mrrc-9wi.2.5  
-**Status:** ✅ COMPLETE  
+**Status:** ⚠️ COMPLETE BUT SHOWING FAILURE  
 **Priority:** P1  
 **Dependencies:** Depends on mrrc-9wi.1  
 **Plan Reference:** Part 5 Phase B (398-401), Part 10 (1364-1373)
 
 **🔑 CRITICAL GATE: This baseline determines if Phase C is required**
 
-**Baseline Measurements (COMPLETED 2026-01-01):**
+**⚠️ CRITICAL FINDING: GIL RELEASE IS NOT WORKING**
+
+**Baseline Measurements (Latest: 2026-01-01):**
 - [x] Single-thread: Read fixture_10k (10,000 records)
-  - Time: 0.053 seconds
-  - Rate: 190,411 ops/sec
+  - Time: 0.082 seconds
+  - Rate: 121,239 ops/sec
   - Saved to: .benchmarks/baseline_before_gil_release.txt
   
 - [x] Two-thread: 2 threads reading 5K records each concurrently
-  - Time: 0.054 seconds
-  - Rate: 184,708 ops/sec
-  - Speedup vs single-thread: **0.98x** (NEGATIVE - GIL blocking!)
+  - Time: 0.099 seconds
+  - Rate: 100,298 ops/sec
+  - **Speedup vs single-thread: 0.83x** (NEGATIVE - WORSE THAN SINGLE-THREAD!)
   - Saved to: .benchmarks/baseline_before_gil_release.txt
 
-**Key Finding:** Current 2-thread performance is WORSE than single-thread (0.98x), confirming GIL holds the lock during I/O operations. This is exactly what the three-phase pattern should fix.
+**Key Finding:** Current 2-thread performance is WORSE than single-thread (0.83x), indicating threads are serializing instead of parallelizing. The GIL release pattern is NOT achieving its intended effect.
 
-**Phase C Deferral Criteria (After Phase F):**
+**Status:** Phase B is INCOMPLETE from performance perspective:
+- ✅ Code compiles, all tests pass
+- ❌ GIL release not working (0.83x speedup vs 2.0x target)
+- ❌ Python threading blocked/serialized despite allow_threads()
+
+**Investigation Tickets Created:**
+- mrrc-tcb: Verify GIL is actually released via allow_threads()
+- mrrc-u0e: Performance profiling to identify bottleneck
+- mrrc-53g: Debug Phase 2 closure behavior
+- mrrc-bwu: Explore alternative architectures
+
+**Phase C Deferral Criteria (After Phase F - currently blocked):**
 - If Phase F speedup ≥ 2.0x vs this baseline (190k ops/sec baseline) → Phase C OPTIONAL
 - If Phase F speedup < 2.0x vs this baseline → Phase C REQUIRED
 - Decision task: mrrc-pfw
@@ -363,36 +377,44 @@ def test_gil_release_verification():
 ### Phase B Success Criteria
 
 - ✅ Code compiles without warnings
-- ✅ GIL release verification test passes (speedup ≥1.7x for 2 threads)
+- ❌ GIL release verification test shows NEGATIVE speedup (0.83x, need ≥2.0x)
 - ✅ All existing pymarc tests pass
 - ✅ No data corruption in round-trip
-- ✅ Baseline benchmark established (DONE: 0.98x baseline, 190k ops/sec single-thread)
+- ⚠️ Baseline benchmark established BUT SHOWING FAILURE (0.83x instead of expected improvement)
 
-**Estimated Time:** 25 hours  
-**Blocker for:** Phase D  
-**Progress:** 100% (All Phase B tasks complete!)
+**Estimated Time:** 25 hours (code implementation)  
+**Additional Time Needed:** TBD (investigation & fixes)  
+**Blocker for:** Phase D (incomplete), Phase E (blocked), Phase F (blocked)  
+**Progress:** 70% (Code complete, performance tests failing)
 
-### Phase B Completion Summary
+### Phase B Completion Summary - REVISED
 
-**Completed Tasks:**
-- ✅ B.5: Baseline benchmark (0.98x current speedup - GIL blocking confirmed)
+**Code Completed Tasks:**
 - ✅ B.1: PyMarcReader refactored to use BufferedMarcReader
-- ✅ B.2: Three-phase pattern fully implemented in __next__()
+- ✅ B.2: Three-phase pattern implemented in __next__()
 - ✅ B.3: Borrow checker validation (all clippy/fmt checks pass)
-- ✅ B.4: GIL release test (will verify with speedup measurement in Phase F)
+- ✅ B.4: GIL release test infrastructure (tests pass, speedup measurement shows problem)
 
-**Verification:**
-- Code compiles without warnings (cargo clippy passes with -D warnings)
-- All 100 existing pymarc compatibility tests pass
-- 104 tests total pass (benchmark config missing)
-- Code formatted (cargo fmt --check passes)
-- Full CI check passes: `.cargo/check.sh` ✓
+**Code Verification:**
+- ✅ Code compiles without warnings
+- ✅ All 100+ existing pymarc compatibility tests pass
+- ✅ Code formatted and documented
+- ✅ Full CI check passes: `.cargo/check.sh` ✓
 
-**Key Achievement:**
-Three-phase GIL release pattern now active in PyMarcReader.__next__():
-- Phase 1: Read record bytes from Python file (GIL held)
-- Phase 2: Parse bytes to MARC record (GIL released - allows other threads!)
-- Phase 3: Convert to PyRecord object (GIL re-acquired)
+**Performance Verification - FAILED:**
+- ❌ B.5: Baseline benchmark shows 0.83x speedup (NEGATIVE)
+- ❌ GIL is NOT being released despite allow_threads()
+- ❌ Threads are serializing instead of parallelizing
+- ❌ Current performance WORSE than before GIL release attempt
+
+**Key Problem:**
+Three-phase GIL release pattern is implemented but NOT WORKING:
+- Phase 1: ✓ Read record bytes (GIL held)
+- Phase 2: ✗ Parse NOT running in parallel (GIL appears to still be held despite allow_threads())
+- Phase 3: ✓ Convert to PyRecord (GIL re-acquired)
+
+**Required Before Proceeding:**
+Investigation and fixes needed for Phase B to be truly complete. Phase D, E, F, G all blocked until GIL release is verified working.
 
 ---
 
@@ -401,7 +423,7 @@ Three-phase GIL release pattern now active in PyMarcReader.__next__():
 **Epic:** mrrc-9wi.3  
 **Duration:** Week 3-4 (20 hours)  
 **Priority:** P1 (Critical Path)  
-**Status:** 🔵 IN PROGRESS  
+**Status:** ✅ COMPLETE  
 **Plan Reference:** GIL_RELEASE_IMPLEMENTATION_PLAN.md Part 5 Phase D (lines 818-847)
 
 ### Overview
@@ -958,15 +980,16 @@ Update all documentation to reflect GIL release feature and performance improvem
 | Phase | Epic | Duration | Status | Blocker | Notes |
 |-------|------|----------|--------|---------|-------|
 | A | mrrc-9wi.1 | 1 wk | ✅ DONE | — | 4 tasks, core infrastructure |
-| B | mrrc-9wi.2 | 1-2 wk | ✅ DONE | — | 5 tasks, GIL release, baseline established (0.98x) |
-| C | mrrc-9wi.7 | 1 wk | ⏸️ Optional | Phase F | Only if speedup < 2x (activate or skip) |
-| D | mrrc-9wi.3 | 1 wk | ✅ DONE | — | 3 tasks, writer implementation (12 tests passing) |
-| E | mrrc-9wi.4 | 1 wk | 🟢 Ready | — | 2 tasks, validation and testing |
-| F | mrrc-9wi.5 | 1 wk | 🟠 After E | E | 2 tasks, **Phase C deferral gate** |
-| G | mrrc-9wi.6 | 1-2 wk | 🟠 After F | F gate | 4 tasks, documentation |
+| B | mrrc-9wi.2 | 1-2 wk | ⚠️ CODE DONE, PERF FAILING | mrrc-hjx | 5 tasks, GIL release NOT WORKING (0.83x vs 2.0x target) |
+| C | mrrc-9wi.7 | 1 wk | ⏸️ Optional | Phase F (blocked) | Only if speedup < 2x (activate or skip) |
+| D | mrrc-9wi.3 | 1 wk | ✅ CODE DONE | B investigation | Writer implementation (12 tests passing) - blocked by B perf issue |
+| E | mrrc-9wi.4 | 1 wk | 🔴 BLOCKED | B investigation | Validation tests - can't proceed until B is fixed |
+| F | mrrc-9wi.5 | 1 wk | 🔴 BLOCKED | B investigation | Benchmarks - can't measure if GIL release not working |
+| G | mrrc-9wi.6 | 1-2 wk | 🔴 BLOCKED | B investigation | Documentation - can't document threading benefits if not working |
 
-**Total Duration:** 5–7 weeks (with Phase C optional)  
-**Critical Path:** A → B → D → E → F → G (6 weeks minimum)
+**Total Duration:** 5–7 weeks (PAUSED - investigation needed)  
+**Critical Blocker:** Phase B GIL release not working (0.83x speedup)  
+**Investigation Tickets:** mrrc-hjx, mrrc-tcb, mrrc-u0e, mrrc-53g, mrrc-bwu
 
 ---
 
