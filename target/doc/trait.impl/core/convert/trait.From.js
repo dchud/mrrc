@@ -1,9 +1,9 @@
 (function() {
-    var implementors = Object.fromEntries([["mrrc",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.92.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.92.0/std/io/error/struct.Error.html\" title=\"struct std::io::error::Error\">Error</a>&gt; for <a class=\"enum\" href=\"mrrc/error/enum.MarcError.html\" title=\"enum mrrc::error::MarcError\">MarcError</a>"]]]]);
+    var implementors = Object.fromEntries([["_mrrc",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.92.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.92.0/std/io/error/struct.Error.html\" title=\"struct std::io::error::Error\">Error</a>&gt; for <a class=\"enum\" href=\"_mrrc/parse_error/enum.ParseError.html\" title=\"enum _mrrc::parse_error::ParseError\">ParseError</a>"]]],["mrrc",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.92.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.92.0/std/io/error/struct.Error.html\" title=\"struct std::io::error::Error\">Error</a>&gt; for <a class=\"enum\" href=\"mrrc/error/enum.MarcError.html\" title=\"enum mrrc::error::MarcError\">MarcError</a>"]]]]);
     if (window.register_implementors) {
         window.register_implementors(implementors);
     } else {
         window.pending_implementors = implementors;
     }
 })()
-//{"start":57,"fragment_lengths":[417]}
+//{"start":57,"fragment_lengths":[435,418]}
