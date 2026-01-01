@@ -140,11 +140,11 @@
 <a href=#140 id=140 data-nosnippet>140</a>        <span class="comment">// ===== PHASE 2: Parse bytes (GIL released) =====
 <a href=#141 id=141 data-nosnippet>141</a>        // Parse the record while GIL is released to allow other threads to execute.
 <a href=#142 id=142 data-nosnippet>142</a>        // CRITICAL: The closure returns Result&lt;Option&lt;mrrc::Record&gt;, ParseError&gt; (NOT PyResult).
-<a href=#143 id=143 data-nosnippet>143</a>        // We defer conversion to PyErr until AFTER allow_threads() returns (GIL re-acquired).
+<a href=#143 id=143 data-nosnippet>143</a>        // We defer conversion to PyErr until AFTER detach() returns (GIL re-acquired).
 <a href=#144 id=144 data-nosnippet>144</a>        // This is required because PyErr construction needs the GIL.
-<a href=#145 id=145 data-nosnippet>145</a>        </span><span class="attr">#[allow(deprecated)]
-<a href=#146 id=146 data-nosnippet>146</a>        </span><span class="kw">let </span>parse_result: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;mrrc::Record&gt;, <span class="kw">crate</span>::parse_error::ParseError&gt; = py
-<a href=#147 id=147 data-nosnippet>147</a>            .allow_threads(|| {
+<a href=#145 id=145 data-nosnippet>145</a>        // NOTE: Use detach() instead of allow_threads() - detach() properly releases GIL in PyO3 0.27
+<a href=#146 id=146 data-nosnippet>146</a>        </span><span class="kw">let </span>parse_result: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;mrrc::Record&gt;, <span class="kw">crate</span>::parse_error::ParseError&gt; =
+<a href=#147 id=147 data-nosnippet>147</a>            py.detach(|| {
 <a href=#148 id=148 data-nosnippet>148</a>                <span class="comment">// This closure runs WITHOUT the GIL held
 <a href=#149 id=149 data-nosnippet>149</a>                // All data here is owned (no Python references)
 <a href=#150 id=150 data-nosnippet>150</a>                // Return Rust errors only; defer PyErr conversion to Phase 3
@@ -163,7 +163,7 @@
 <a href=#163 id=163 data-nosnippet>163</a>            });
 <a href=#164 id=164 data-nosnippet>164</a>
 <a href=#165 id=165 data-nosnippet>165</a>        <span class="comment">// ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
-<a href=#166 id=166 data-nosnippet>166</a>        // GIL is automatically re-acquired when exiting allow_threads() block.
+<a href=#166 id=166 data-nosnippet>166</a>        // GIL is automatically re-acquired when exiting detach() block.
 <a href=#167 id=167 data-nosnippet>167</a>        // NOW we can safely construct PyErr from ParseError.
 <a href=#168 id=168 data-nosnippet>168</a>        </span><span class="kw">match </span>parse_result {
 <a href=#169 id=169 data-nosnippet>169</a>            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(record)) =&gt; <span class="prelude-val">Ok</span>(PyRecord { inner: record }),

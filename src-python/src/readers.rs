@@ -143,8 +143,8 @@ impl PyMARCReader {
         // We defer conversion to PyErr until AFTER detach() returns (GIL re-acquired).
         // This is required because PyErr construction needs the GIL.
         // NOTE: Use detach() instead of allow_threads() - detach() properly releases GIL in PyO3 0.27
-        let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> = py
-            .detach(|| {
+        let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> =
+            py.detach(|| {
                 // This closure runs WITHOUT the GIL held
                 // All data here is owned (no Python references)
                 // Return Rust errors only; defer PyErr conversion to Phase 3
