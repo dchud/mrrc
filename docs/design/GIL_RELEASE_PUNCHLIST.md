@@ -15,7 +15,7 @@
 | **A** | Core Buffering | Week 1 | ✅ COMPLETE | ✅ Ready |
 | **B** | GIL Integration | Week 1-2 | ✅ COMPLETE (100%) | ✅ Ready |
 | **C** | Optimizations | Week 2-3 | ⏸️ Optional (deferred) | Optional (deferred) |
-| **D** | Writer Implementation | Week 3-4 | 🟢 Ready to start | ✅ Ready |
+| **D** | Writer Implementation | Week 3-4 | 🔵 In Progress | ✅ Ready |
 | **E** | Validation | Week 4-5 | 🟠 Ready after D | Ready after D |
 | **F** | Benchmark Refresh | Week 5-6 | 🟠 Ready after E | Ready after E |
 | **G** | Documentation | Week 6-7 | 🟠 Ready after F | Ready after F |
@@ -393,6 +393,128 @@ Three-phase GIL release pattern now active in PyMarcReader.__next__():
 - Phase 1: Read record bytes from Python file (GIL held)
 - Phase 2: Parse bytes to MARC record (GIL released - allows other threads!)
 - Phase 3: Convert to PyRecord object (GIL re-acquired)
+
+---
+
+## Phase D: Writer Implementation
+
+**Epic:** mrrc-9wi.3  
+**Duration:** Week 3-4 (20 hours)  
+**Priority:** P1 (Critical Path)  
+**Status:** 🔵 IN PROGRESS  
+**Plan Reference:** GIL_RELEASE_IMPLEMENTATION_PLAN.md Part 5 Phase D (lines 818-847)
+
+### Overview
+Apply three-phase GIL release pattern to `PyMarcWriter` for write-side parallelism.
+
+**Key Deliverables:**
+- Implement PyMarcWriter with three-phase write pattern
+- Write-side GIL release verification test
+- Round-trip tests (read → write → read)
+
+### Detailed Tasks
+
+#### D.1: Implement PyMarcWriter with three-phase write pattern
+**Task:** mrrc-9wi.3.1  
+**Status:** ✅ COMPLETE  
+**Priority:** P1  
+**Dependencies:** Depends on mrrc-9wi.2 (Phase B)  
+**Plan Reference:** Part 1 (52-66), Part 5 Phase D (818-847)
+
+**Deliverables:**
+- [x] Refactor PyMarcWriter struct:
+   - Store file_obj directly (not wrapped MarcWriter)
+   - Track closed state
+- [x] Implement three-phase pattern in write_record():
+   - Phase 1: Copy PyRecord.inner (GIL held)
+   - Phase 2: Serialize to bytes with py.allow_threads() (GIL released)
+   - Phase 3: Write bytes to file object (GIL held)
+- [x] Update close() to use Python::with_gil()
+- [x] Verify all existing tests pass
+- [x] Fix Python wrapper __iter__ to return self (was bypassing __next__)
+
+**Success Criteria:**
+- ✅ Code compiles without warnings
+- ✅ All 100+ existing pymarc tests pass
+- ✅ No behavioral changes to public API
+- ✅ Rustfmt, Clippy, doc checks pass
+- ✅ Three-phase pattern clearly documented in code comments
+- ✅ No unused imports (cleaned up)
+
+**Implementation Notes:**
+- Removed unused PyFileWriteWrapper struct (simplified design)
+- Accepts &PyRecord directly from Python wrapper
+- Uses single Python::with_gil() block for all three phases
+- Phase 2 (serialization) runs without GIL via py.allow_threads()
+
+---
+
+#### D.2: Add write-side GIL release verification test
+**Task:** mrrc-9wi.3.2  
+**Status:** ✅ COMPLETE  
+**Priority:** P1  
+**Dependencies:** Depends on mrrc-9wi.3.1  
+**Plan Reference:** Part 6 (1193-1200), Part 5 Phase D (835-836)
+
+**Deliverables:**
+- [x] Create test_write_concurrent_speedup() in tests/python/test_write_concurrent.py
+- [x] Create test_concurrent_write_4x_1k() for 4-thread scenario
+- [x] Verify concurrent writes produce identical output to sequential
+- [x] Confirm no GIL deadlock or data corruption
+
+**Test Coverage:**
+- test_concurrent_write_2x_1k_speedup: 2 threads writing same records
+- test_concurrent_write_4x_1k: 4 threads writing same records
+- Both verify output is byte-for-byte identical to sequential baseline
+
+**Success Criteria:**
+- ✅ Concurrent 2-thread write test passes
+- ✅ Concurrent 4-thread write test passes
+- ✅ No data corruption
+- ✅ No GIL deadlock
+- Note: Speedup measurement deferred to Phase F (more controlled benchmarking)
+
+---
+
+#### D.3: Implement round-trip tests: read-write-read verification
+**Task:** mrrc-9wi.3.3  
+**Status:** ✅ COMPLETE  
+**Priority:** P1  
+**Dependencies:** Depends on mrrc-9wi.3.1  
+**Plan Reference:** Part 6 (1219-1241)
+
+**Deliverables:**
+- [x] Create test_round_trip_basic() - verify record count and equality
+- [x] Create test_round_trip_preserves_fields() - spot-check leader, title, author
+- [x] Create test_round_trip_large_file() - test with 10k records
+- [x] Edge case tests: empty file, context manager, close idempotence
+
+**Test Cases Implemented:**
+- [x] Single record round-trip (written and read back)
+- [x] Multiple records (1k fixture)
+- [x] Large records (10k fixture)
+- [x] Field preservation (leader, title, author)
+- [x] Edge cases (empty file, context manager, close idempotence)
+- [⏸️] Record modification (deferred: mutation API clarification needed)
+
+**Success Criteria:**
+- ✅ Round-trip tests pass for 1k fixture
+- ✅ Round-trip tests pass for 10k fixture
+- ✅ Record equality verified after round-trip
+- ✅ Field preservation verified (sampling)
+- ✅ No data corruption
+- ✅ 12 tests passing, 1 skipped (mutation test deferred)
+
+---
+
+### Phase D Success Criteria
+
+- ✅ D.1: PyMarcWriter three-phase implementation complete
+- ✅ D.2: Write-side concurrent execution verified (no deadlock, identical output)
+- ✅ D.3: Round-trip tests pass for all record types
+
+**Estimated Time:** 20 hours  
+**Progress:** 100% (All 3 tasks complete)
 
 ---
 
@@ -838,8 +960,8 @@ Update all documentation to reflect GIL release feature and performance improvem
 | A | mrrc-9wi.1 | 1 wk | ✅ DONE | — | 4 tasks, core infrastructure |
 | B | mrrc-9wi.2 | 1-2 wk | ✅ DONE | — | 5 tasks, GIL release, baseline established (0.98x) |
 | C | mrrc-9wi.7 | 1 wk | ⏸️ Optional | Phase F | Only if speedup < 2x (activate or skip) |
-| D | mrrc-9wi.3 | 1 wk | 🟢 Ready | — | 3 tasks, writer implementation |
-| E | mrrc-9wi.4 | 1 wk | 🟠 After D | D | 2 tasks, validation and testing |
+| D | mrrc-9wi.3 | 1 wk | ✅ DONE | — | 3 tasks, writer implementation (12 tests passing) |
+| E | mrrc-9wi.4 | 1 wk | 🟢 Ready | — | 2 tasks, validation and testing |
 | F | mrrc-9wi.5 | 1 wk | 🟠 After E | E | 2 tasks, **Phase C deferral gate** |
 | G | mrrc-9wi.6 | 1-2 wk | 🟠 After F | F gate | 4 tasks, documentation |
 

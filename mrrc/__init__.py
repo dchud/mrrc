@@ -491,7 +491,7 @@ class MARCReader:
     
     def __iter__(self):
         """Iterate over records."""
-        return iter(self._inner)
+        return self
     
     def __next__(self) -> Record:
         """Get next record."""

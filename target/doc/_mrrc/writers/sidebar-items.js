@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["PyFileWriteWrapper","PyMARCWriter"]};
+window.SIDEBAR_ITEMS = {"struct":["PyMARCWriter"]};
