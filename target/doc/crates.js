@@ -1,0 +1,2 @@
+window.ALL_CRATES = ["adler2","aho_corasick","anyhow","bytes","cfg_if","crc32fast","csv","csv_core","encoding_rs","flate2","itoa","lazy_static","memchr","minimal_lexical","miniz_oxide","mrrc","nom","proc_macro2","quick_xml","quote","regex","regex_automata","regex_syntax","ryu","serde","serde_core","serde_derive","serde_json","simd_adler32","syn","thiserror","thiserror_impl","tinyvec","tinyvec_macros","unicode_ident","unicode_normalization"];
+//{"start":21,"fragment_lengths":[8,15,9,8,9,12,6,11,14,9,7,14,9,18,14,7,6,14,12,8,8,17,15,6,8,13,15,13,15,6,12,17,10,17,16,24]}

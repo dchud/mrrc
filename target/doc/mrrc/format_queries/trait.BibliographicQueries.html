@@ -1,0 +1,112 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Query helpers specific to bibliographic records."><title>BibliographicQueries in mrrc::format_queries - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="mrrc" data-themes="" data-resource-suffix="" data-rustdoc-version="1.92.0 (ded5c06cf 2025-12-08) (Homebrew)" data-channel="1.92.0" data-search-js="search-d69d8955.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">BibliographicQueries</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../mrrc/index.html">mrrc</a><span class="version">0.2.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Bibliographic<wbr>Queries</a></h2><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.get_all_880_fields" title="get_all_880_fields">get_all_880_fields</a></li><li><a href="#tymethod.get_all_names" title="get_all_names">get_all_names</a></li><li><a href="#tymethod.get_all_subjects" title="get_all_subjects">get_all_subjects</a></li><li><a href="#tymethod.get_geographic_subjects" title="get_geographic_subjects">get_geographic_subjects</a></li><li><a href="#tymethod.get_linked_field_pairs" title="get_linked_field_pairs">get_linked_field_pairs</a></li><li><a href="#tymethod.get_titles" title="get_titles">get_titles</a></li><li><a href="#tymethod.get_topical_subjects" title="get_topical_subjects">get_topical_subjects</a></li></ul><h3><a href="#implementors">Implementors</a></h3></section><div id="rustdoc-modnav"><h2><a href="index.html">In mrrc::<wbr>format_<wbr>queries</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">mrrc</a>::<wbr><a href="index.html">format_queries</a></div><h1>Trait <span class="trait">Bibliographic<wbr>Queries</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/mrrc/format_queries.rs.html#15-187">Source</a> </span></div><pre class="rust item-decl"><code>pub trait BibliographicQueries {
+    // Required methods
+    fn <a href="#tymethod.get_titles" class="fn">get_titles</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.get_all_subjects" class="fn">get_all_subjects</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.get_topical_subjects" class="fn">get_topical_subjects</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.get_geographic_subjects" class="fn">get_geographic_subjects</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.get_all_names" class="fn">get_all_names</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.get_linked_field_pairs" class="fn">get_linked_field_pairs</a>(&amp;self, tag: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.92.0/std/primitive.str.html">str</a>) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;(&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>, <a class="enum" href="https://doc.rust-lang.org/1.92.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;)&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.get_all_880_fields" class="fn">get_all_880_fields</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;;
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Query helpers specific to bibliographic records.</p>
+<p>This trait provides methods for navigating and querying bibliographic-specific
+fields like titles, authors, subjects, and linked field information.</p>
+</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.get_titles" class="method"><a class="src rightside" href="../../src/mrrc/format_queries.rs.html#36">Source</a><h4 class="code-header">fn <a href="#tymethod.get_titles" class="fn">get_titles</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;</h4></section></summary><div class="docblock"><p>Get all main titles and their statement of responsibility (245 fields).</p>
+<p>In MARC, there is typically only one 245 field, but this method returns
+any additional title fields that may be present.</p>
+<h5 id="returns"><a class="doc-anchor" href="#returns">§</a>Returns</h5>
+<p>Vector of title fields (245) with their indicators and subfields.</p>
+<h5 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>record = Record::new(leader);
+<span class="kw">for </span>title_field <span class="kw">in </span>record.get_titles() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(title) = title_field.get_subfield(<span class="string">'a'</span>) {
+        <span class="macro">println!</span>(<span class="string">"Title: {}"</span>, title);
+    }
+}</code></pre></div></div></details><details class="toggle method-toggle" open><summary><section id="tymethod.get_all_subjects" class="method"><a class="src rightside" href="../../src/mrrc/format_queries.rs.html#65">Source</a><h4 class="code-header">fn <a href="#tymethod.get_all_subjects" class="fn">get_all_subjects</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;</h4></section></summary><div class="docblock"><p>Get all subject fields (6XX range).</p>
+<p>Returns all subject authority fields including:</p>
+<ul>
+<li>600: Personal name subject</li>
+<li>610: Corporate name subject</li>
+<li>611: Meeting name subject</li>
+<li>630: Uniform title subject</li>
+<li>648: Chronological term subject</li>
+<li>650: Topical term subject</li>
+<li>651: Geographic name subject</li>
+<li>655: Genre/form term</li>
+</ul>
+<h5 id="returns-1"><a class="doc-anchor" href="#returns-1">§</a>Returns</h5>
+<p>Vector of all subject fields in the record.</p>
+<h5 id="examples-1"><a class="doc-anchor" href="#examples-1">§</a>Examples</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>record = Record::new(leader);
+<span class="kw">for </span>subject <span class="kw">in </span>record.get_all_subjects() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = subject.get_subfield(<span class="string">'a'</span>) {
+        <span class="macro">println!</span>(<span class="string">"Subject: {}"</span>, label);
+    }
+}</code></pre></div></div></details><details class="toggle method-toggle" open><summary><section id="tymethod.get_topical_subjects" class="method"><a class="src rightside" href="../../src/mrrc/format_queries.rs.html#86">Source</a><h4 class="code-header">fn <a href="#tymethod.get_topical_subjects" class="fn">get_topical_subjects</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;</h4></section></summary><div class="docblock"><p>Get all topical subjects (650 fields).</p>
+<p>Topical subjects describe the main subject content of the work.</p>
+<h5 id="returns-2"><a class="doc-anchor" href="#returns-2">§</a>Returns</h5>
+<p>Vector of all 650 fields in the record.</p>
+<h5 id="examples-2"><a class="doc-anchor" href="#examples-2">§</a>Examples</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>record = Record::new(leader);
+<span class="kw">for </span>subject <span class="kw">in </span>record.get_topical_subjects() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(term) = subject.get_subfield(<span class="string">'a'</span>) {
+        <span class="macro">println!</span>(<span class="string">"Topic: {}"</span>, term);
+    }
+}</code></pre></div></div></details><details class="toggle method-toggle" open><summary><section id="tymethod.get_geographic_subjects" class="method"><a class="src rightside" href="../../src/mrrc/format_queries.rs.html#107">Source</a><h4 class="code-header">fn <a href="#tymethod.get_geographic_subjects" class="fn">get_geographic_subjects</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;</h4></section></summary><div class="docblock"><p>Get all geographic subjects (651 fields).</p>
+<p>Geographic subjects describe places discussed or depicted in the work.</p>
+<h5 id="returns-3"><a class="doc-anchor" href="#returns-3">§</a>Returns</h5>
+<p>Vector of all 651 fields in the record.</p>
+<h5 id="examples-3"><a class="doc-anchor" href="#examples-3">§</a>Examples</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>record = Record::new(leader);
+<span class="kw">for </span>subject <span class="kw">in </span>record.get_geographic_subjects() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(place) = subject.get_subfield(<span class="string">'a'</span>) {
+        <span class="macro">println!</span>(<span class="string">"Place: {}"</span>, place);
+    }
+}</code></pre></div></div></details><details class="toggle method-toggle" open><summary><section id="tymethod.get_all_names" class="method"><a class="src rightside" href="../../src/mrrc/format_queries.rs.html#135">Source</a><h4 class="code-header">fn <a href="#tymethod.get_all_names" class="fn">get_all_names</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;</h4></section></summary><div class="docblock"><p>Get all name fields (1XX, 6XX name fields, 7XX).</p>
+<p>Returns all name-based fields including:</p>
+<ul>
+<li>100: Main entry—personal name</li>
+<li>600: Subject added entry—personal name</li>
+<li>610: Subject added entry—corporate name</li>
+<li>611: Subject added entry—meeting name</li>
+<li>700: Added entry—personal name</li>
+<li>710: Added entry—corporate name</li>
+<li>711: Added entry—meeting name</li>
+</ul>
+<h5 id="returns-4"><a class="doc-anchor" href="#returns-4">§</a>Returns</h5>
+<p>Vector of all name fields in the record.</p>
+<h5 id="examples-4"><a class="doc-anchor" href="#examples-4">§</a>Examples</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>record = Record::new(leader);
+<span class="kw">for </span>name <span class="kw">in </span>record.get_all_names() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = name.get_subfield(<span class="string">'a'</span>) {
+        <span class="macro">println!</span>(<span class="string">"Name: {}"</span>, label);
+    }
+}</code></pre></div></div></details><details class="toggle method-toggle" open><summary><section id="tymethod.get_linked_field_pairs" class="method"><a class="src rightside" href="../../src/mrrc/format_queries.rs.html#166">Source</a><h4 class="code-header">fn <a href="#tymethod.get_linked_field_pairs" class="fn">get_linked_field_pairs</a>(&amp;self, tag: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.92.0/std/primitive.str.html">str</a>) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;(&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>, <a class="enum" href="https://doc.rust-lang.org/1.92.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;)&gt;</h4></section></summary><div class="docblock"><p>Get linked field pairs (original field with optional 880 counterpart).</p>
+<p>For a specified tag, returns tuples of the original field paired with its
+linked 880 (alternate graphical representation) if one exists.</p>
+<h5 id="arguments"><a class="doc-anchor" href="#arguments">§</a>Arguments</h5>
+<ul>
+<li><code>tag</code> - The original field tag (e.g., “100”, “245”, “650”)</li>
+</ul>
+<h5 id="returns-5"><a class="doc-anchor" href="#returns-5">§</a>Returns</h5>
+<p>Vector of (<code>original_field</code>, Option&lt;<code>880_field</code>&gt;) tuples.</p>
+<h5 id="examples-5"><a class="doc-anchor" href="#examples-5">§</a>Examples</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>record = Record::new(leader);
+<span class="kw">for </span>(original, linked_880) <span class="kw">in </span>record.get_linked_field_pairs(<span class="string">"100"</span>) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = original.get_subfield(<span class="string">'a'</span>) {
+        <span class="macro">println!</span>(<span class="string">"Name: {}"</span>, name);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(field_880) = linked_880 {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(alt) = field_880.get_subfield(<span class="string">'a'</span>) {
+                <span class="macro">println!</span>(<span class="string">"  Alternate: {}"</span>, alt);
+            }
+        }
+    }
+}</code></pre></div></div></details><details class="toggle method-toggle" open><summary><section id="tymethod.get_all_880_fields" class="method"><a class="src rightside" href="../../src/mrrc/format_queries.rs.html#186">Source</a><h4 class="code-header">fn <a href="#tymethod.get_all_880_fields" class="fn">get_all_880_fields</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="struct" href="../record/struct.Field.html" title="struct mrrc::record::Field">Field</a>&gt;</h4></section></summary><div class="docblock"><p>Get all 880 fields (alternate graphical representations).</p>
+<p>These fields provide alternate script forms (romanized, vernacular, etc.)
+linked to original fields via subfield 6 linkage.</p>
+<h5 id="returns-6"><a class="doc-anchor" href="#returns-6">§</a>Returns</h5>
+<p>Vector of all 880 fields in the record.</p>
+<h5 id="examples-6"><a class="doc-anchor" href="#examples-6">§</a>Examples</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>record = Record::new(leader);
+<span class="kw">for </span>field_880 <span class="kw">in </span>record.get_all_880_fields() {
+    <span class="macro">println!</span>(<span class="string">"Alternate graphical: {:?}"</span>, field_880);
+}</code></pre></div></div></details></div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"><section id="impl-BibliographicQueries-for-Record" class="impl"><a class="src rightside" href="../../src/mrrc/format_queries.rs.html#189-235">Source</a><a href="#impl-BibliographicQueries-for-Record" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="trait.BibliographicQueries.html" title="trait mrrc::format_queries::BibliographicQueries">BibliographicQueries</a> for <a class="struct" href="../record/struct.Record.html" title="struct mrrc::record::Record">Record</a></h3></section></div><script src="../../trait.impl/mrrc/format_queries/trait.BibliographicQueries.js" async></script></section></div></main></body></html>

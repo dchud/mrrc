@@ -61,11 +61,15 @@ impl PyMARCReader {
             match record_bytes {
                 None => Ok(None),
                 Some(bytes) => {
+                    // CRITICAL: Copy to owned SmallVec for Phase 2 closure
+                    let bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&bytes);
+
                     // Phase 2: Parse bytes (GIL released)
+                    // CRITICAL FIX: Use Python::detach() which properly releases the GIL.
                     let record = py
-                        .allow_threads(|| {
+                        .detach(|| {
                             // Create a cursor from owned bytes
-                            let cursor = std::io::Cursor::new(bytes);
+                            let cursor = std::io::Cursor::new(bytes_owned.to_vec());
                             let mut parser = MarcReader::new(cursor);
 
                             // Parse the single record
@@ -102,17 +106,16 @@ impl PyMARCReader {
     /// - Phase 2: Parse bytes to MARC record (GIL released)
     /// - Phase 3: Convert to PyRecord (GIL re-acquired)
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
-        // ✅ CORRECT: Get Python handle from PyRefMut which guarantees GIL is held
-        // Use py() to get a bound Python handle without re-acquiring
+        // ===== PHASE 1: Read record bytes (GIL held) =====
+        // Must get Python handle while GIL is held by PyRefMut
         let py = slf.py();
-
+        
         // Get mutable reference to buffered reader
         let reader = slf
             .buffered_reader
             .as_mut()
             .ok_or_else(|| pyo3::exceptions::PyStopIteration::new_err(()))?;
-
-        // ===== PHASE 1: Read record bytes (GIL held) =====
+        
         // Call read_next_record_bytes() while holding GIL
         let record_bytes = match reader.read_next_record_bytes(py) {
             Ok(Some(bytes)) => bytes,
@@ -126,13 +129,15 @@ impl PyMARCReader {
 
         // CRITICAL: Copy to owned SmallVec for Phase 2 closure
         // The slice returned by read_next_record_bytes() is valid only during Phase 1.
-        // We create an owned copy that can be moved into the allow_threads() closure.
+        // We create an owned copy that can be moved into the detach() closure.
         let record_bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&record_bytes);
 
         // ===== PHASE 2: Parse bytes (GIL released) =====
         // Parse the record while GIL is released to allow other threads to execute
-        // SAFETY: py.allow_threads() is deprecated but still works and actually releases GIL.
-        // We can't use py.detach() because it doesn't integrate correctly with the Python handle lifetime
+        // CRITICAL FIX: Use the unbound Python handle from Python::allow_threads() (deprecated but works)
+        // or Python::detach() (0.26+ preferred name).
+        // The bound py from PyRefMut may not properly release GIL when calling detach,
+        // so we need to explicitly use allow_threads which is designed for this pattern.
         #[allow(deprecated)]
         let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> =
             py.allow_threads(|| {
@@ -152,7 +157,7 @@ impl PyMARCReader {
             });
 
         // ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
-        // GIL is automatically re-acquired when exiting allow_threads() block
+        // GIL is automatically re-acquired when exiting detach() block
         match parse_result {
             Ok(Some(record)) => Ok(PyRecord { inner: record }),
             Ok(None) => {

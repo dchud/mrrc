@@ -62,9 +62,9 @@ impl PyMARCWriter {
 
         // ===== PHASE 2: Serialize to bytes (GIL released) =====
         // Serialize the record to MARC bytes without holding the GIL
-        // SAFETY: py.allow_threads() is deprecated but still works and actually releases GIL
-        #[allow(deprecated)]
-        let record_bytes: Vec<u8> = py.allow_threads(|| {
+        // CRITICAL FIX: Use Python::detach() which properly releases the GIL.
+        // Python::detach() takes a closure and releases GIL while executing it.
+        let record_bytes: Vec<u8> = py.detach(|| {
             // This closure runs WITHOUT the GIL held
             let mut buffer = Vec::new();
             let mut writer = MarcWriter::new(&mut buffer);
