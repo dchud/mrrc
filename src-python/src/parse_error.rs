@@ -42,7 +42,7 @@ impl From<std::io::Error> for ParseError {
 
 impl ParseError {
     /// Convert ParseError to PyErr (only call when GIL is held)
-    pub fn to_py_err(self) -> PyErr {
+    pub fn to_py_err(&self) -> PyErr {
         match self {
             ParseError::InvalidRecord(msg) => {
                 PyValueError::new_err(format!("Invalid record: {}", msg))
@@ -50,7 +50,7 @@ impl ParseError {
             ParseError::RecordBoundaryError(msg) => {
                 PyValueError::new_err(format!("Record boundary error: {}", msg))
             },
-            ParseError::IoError(msg) => PyIOError::new_err(msg),
+            ParseError::IoError(msg) => PyIOError::new_err(msg.clone()),
         }
     }
 }

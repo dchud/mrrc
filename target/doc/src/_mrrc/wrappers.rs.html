@@ -577,7 +577,7 @@
 <a href=#577 id=577 data-nosnippet>577</a>    <span class="doccomment">/// Get all fields
 <a href=#578 id=578 data-nosnippet>578</a>    </span><span class="kw">pub fn </span>fields(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;PyField&gt; {
 <a href=#579 id=579 data-nosnippet>579</a>        <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="macro">vec!</span>[];
-<a href=#580 id=580 data-nosnippet>580</a>        <span class="kw">for </span>(<span class="kw">_</span>, fields) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.inner.fields {
+<a href=#580 id=580 data-nosnippet>580</a>        <span class="kw">for </span>fields <span class="kw">in </span><span class="self">self</span>.inner.fields.values() {
 <a href=#581 id=581 data-nosnippet>581</a>            <span class="kw">for </span>field <span class="kw">in </span>fields {
 <a href=#582 id=582 data-nosnippet>582</a>                result.push(PyField {
 <a href=#583 id=583 data-nosnippet>583</a>                    inner: field.clone(),

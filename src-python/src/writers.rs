@@ -23,16 +23,16 @@ impl Write for PyFileWriteWrapper {
             let file_ref = self.file_obj.bind(py);
             let write_method = file_ref
                 .getattr("write")
-                .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "No write method"))?;
+                .map_err(|_| std::io::Error::other("No write method"))?;
 
             // Create Python bytes object from slice
             let result = write_method
                 .call1((buf,))
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
 
             let written = result
                 .extract::<usize>()
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
 
             Ok(written)
         })
@@ -44,7 +44,7 @@ impl Write for PyFileWriteWrapper {
             if let Ok(flush_method) = file_ref.getattr("flush") {
                 flush_method
                     .call0()
-                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                    .map_err(|e| std::io::Error::other(e.to_string()))?;
             }
             Ok(())
         })

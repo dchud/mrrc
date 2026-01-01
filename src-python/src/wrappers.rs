@@ -577,7 +577,7 @@ impl PyRecord {
     /// Get all fields
     pub fn fields(&self) -> Vec<PyField> {
         let mut result = vec![];
-        for (_, fields) in &self.inner.fields {
+        for fields in self.inner.fields.values() {
             for field in fields {
                 result.push(PyField {
                     inner: field.clone(),

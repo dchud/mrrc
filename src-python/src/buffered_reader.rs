@@ -220,6 +220,7 @@ mod tests {
     }
 
     // Helper: Concatenate multiple MARC records
+    #[allow(dead_code)]
     fn concat_records(records: &[Vec<u8>]) -> Vec<u8> {
         records.iter().flat_map(|r| r.iter().copied()).collect()
     }

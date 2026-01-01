@@ -42,7 +42,7 @@
 <a href=#42 id=42 data-nosnippet>42</a>
 <a href=#43 id=43 data-nosnippet>43</a><span class="kw">impl </span>ParseError {
 <a href=#44 id=44 data-nosnippet>44</a>    <span class="doccomment">/// Convert ParseError to PyErr (only call when GIL is held)
-<a href=#45 id=45 data-nosnippet>45</a>    </span><span class="kw">pub fn </span>to_py_err(<span class="self">self</span>) -&gt; PyErr {
+<a href=#45 id=45 data-nosnippet>45</a>    </span><span class="kw">pub fn </span>to_py_err(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PyErr {
 <a href=#46 id=46 data-nosnippet>46</a>        <span class="kw">match </span><span class="self">self </span>{
 <a href=#47 id=47 data-nosnippet>47</a>            ParseError::InvalidRecord(msg) =&gt; {
 <a href=#48 id=48 data-nosnippet>48</a>                PyValueError::new_err(<span class="macro">format!</span>(<span class="string">"Invalid record: {}"</span>, msg))
@@ -50,7 +50,7 @@
 <a href=#50 id=50 data-nosnippet>50</a>            ParseError::RecordBoundaryError(msg) =&gt; {
 <a href=#51 id=51 data-nosnippet>51</a>                PyValueError::new_err(<span class="macro">format!</span>(<span class="string">"Record boundary error: {}"</span>, msg))
 <a href=#52 id=52 data-nosnippet>52</a>            },
-<a href=#53 id=53 data-nosnippet>53</a>            ParseError::IoError(msg) =&gt; PyIOError::new_err(msg),
+<a href=#53 id=53 data-nosnippet>53</a>            ParseError::IoError(msg) =&gt; PyIOError::new_err(msg.clone()),
 <a href=#54 id=54 data-nosnippet>54</a>        }
 <a href=#55 id=55 data-nosnippet>55</a>    }
 <a href=#56 id=56 data-nosnippet>56</a>}</code></pre></div></section></main></body></html>

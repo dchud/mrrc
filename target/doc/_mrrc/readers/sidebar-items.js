@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["PyFileWrapper","PyMARCReader"]};
+window.SIDEBAR_ITEMS = {"struct":["PyMARCReader"]};
