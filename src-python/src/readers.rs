@@ -140,11 +140,11 @@ impl PyMARCReader {
         // ===== PHASE 2: Parse bytes (GIL released) =====
         // Parse the record while GIL is released to allow other threads to execute.
         // CRITICAL: The closure returns Result<Option<mrrc::Record>, ParseError> (NOT PyResult).
-        // We defer conversion to PyErr until AFTER allow_threads() returns (GIL re-acquired).
+        // We defer conversion to PyErr until AFTER detach() returns (GIL re-acquired).
         // This is required because PyErr construction needs the GIL.
-        #[allow(deprecated)]
+        // NOTE: Use detach() instead of allow_threads() - detach() properly releases GIL in PyO3 0.27
         let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> = py
-            .allow_threads(|| {
+            .detach(|| {
                 // This closure runs WITHOUT the GIL held
                 // All data here is owned (no Python references)
                 // Return Rust errors only; defer PyErr conversion to Phase 3
@@ -163,7 +163,7 @@ impl PyMARCReader {
             });
 
         // ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
-        // GIL is automatically re-acquired when exiting allow_threads() block.
+        // GIL is automatically re-acquired when exiting detach() block.
         // NOW we can safely construct PyErr from ParseError.
         match parse_result {
             Ok(Some(record)) => Ok(PyRecord { inner: record }),
