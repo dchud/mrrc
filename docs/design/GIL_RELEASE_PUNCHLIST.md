@@ -43,51 +43,51 @@ Implement `BufferedMarcReader` struct with ISO 2709 record boundary detection us
 
 #### A.1: Create src-python/src/parse_error.rs with ParseError enum
 **Task:** mrrc-9wi.1.1  
-**Status:** 🟡 In Progress  
+**Status:** ✅ COMPLETE  
 **Priority:** P1  
 **Dependencies:** None  
 **Plan Reference:** Part 2, Fix 3 (lines 244-260)
 
 **Deliverables:**
 - [x] ParseError enum with 3 variants:
-  - InvalidRecord(String)
-  - RecordBoundaryError(String)
-  - IoError(String)
+   - InvalidRecord(String)
+   - RecordBoundaryError(String)
+   - IoError(String)
 - [x] Display impl for ParseError
 - [x] to_py_err() method for PyErr conversion
 - [x] Module export in src-python/src/lib.rs
 - [x] From<std::io::Error> impl
 
 **Success Criteria:**
-- All variants properly map to Python exception types ✓
-- No Py<T> references in ParseError (safe for use in allow_threads()) ✓
-- Compiles without warnings (pending compile test)
+- ✅ All variants properly map to Python exception types
+- ✅ No Py<T> references in ParseError (safe for use in allow_threads())
+- ✅ Compiles without warnings
 
 ---
 
 #### A.2: Create src-python/src/buffered_reader.rs with BufferedMarcReader struct
 **Task:** mrrc-9wi.1.2  
-**Status:** 🟡 In Progress  
+**Status:** ✅ COMPLETE  
 **Priority:** P1  
 **Dependencies:** Depends on A.1  
 **Plan Reference:** Part 1 (68-85), Part 2 Fix 1 (90-145), Part 5 Phase A (315-379)
 
 **Deliverables:**
 - [x] BufferedMarcReader struct with:
-  - file_wrapper: PyFileWrapper
-  - buffer: SmallVec<[u8; 4096]>
-  - State tracking for EOF
+   - file_wrapper: PyFileWrapper
+   - buffer: SmallVec<[u8; 4096]>
+   - State tracking for EOF
 - [x] Method: read_next_record_bytes(&mut self, py: Python) → Result<Option<Vec<u8>>, ParseError>
-  - Reads complete ISO 2709 MARC record
-  - Returns Ok(Some(bytes)) for complete record
-  - Returns Ok(None) at EOF (idempotent)
-  - Returns Err(ParseError) for I/O or boundary errors
+   - Reads complete ISO 2709 MARC record
+   - Returns Ok(Some(bytes)) for complete record
+   - Returns Ok(None) at EOF (idempotent)
+   - Returns Err(ParseError) for I/O or boundary errors
 - [x] Method: read_exact(&self, py: Python, buf: &mut [u8]) → Result<(), ParseError>
-  - Reads exactly n_bytes from file
-  - Returns Err if fewer bytes at EOF
+   - Reads exactly n_bytes from file
+   - Returns Err if fewer bytes at EOF
 - [x] Method: parse_record_length(bytes: &[u8]) → Result<usize, ParseError>
-  - Parses 5-byte ASCII record length
-  - Validates digits, returns error on corruption
+   - Parses 5-byte ASCII record length
+   - Validates digits, returns error on corruption
 - [x] PyFileWrapper struct with read_into() method
 - [x] Basic unit tests for parse_record_length()
 
@@ -182,7 +182,7 @@ These will be implemented in Phase B as GIL release integration tests with PyMar
 - ✅ Error handling matches spec: ParseError variants for IoError, InvalidRecord, RecordBoundaryError
 
 **Estimated Time:** 20 hours  
-**Progress:** ~95% (A.1-A.4 complete, awaiting final clippy/fmt validation)
+**Progress:** ✅ 100% (All 4 tasks complete, all CI checks passing)
 
 ---
 
