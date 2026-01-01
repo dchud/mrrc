@@ -108,14 +108,19 @@ impl PyMARCReader {
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
         // ===== PHASE 1: Read record bytes (GIL held) =====
         // Must get Python handle while GIL is held by PyRefMut
-        let py = slf.py();
-        
+        // CRITICAL: Use assume_gil_acquired() to get an unbound Python handle that
+        // properly releases the GIL in Phase 2. A bound handle (slf.py()) does not.
+        // SAFETY: PyRefMut guarantees the GIL is held; this is the idiomatic way to get
+        // an unbound Python handle without re-acquiring (which would panic if already held).
+        // See GIL_RELEASE_IMPLEMENTATION_PLAN.md Part 2 Fix 2 (lines 149-235).
+        let py = unsafe { Python::assume_gil_acquired() };
+
         // Get mutable reference to buffered reader
         let reader = slf
             .buffered_reader
             .as_mut()
             .ok_or_else(|| pyo3::exceptions::PyStopIteration::new_err(()))?;
-        
+
         // Call read_next_record_bytes() while holding GIL
         let record_bytes = match reader.read_next_record_bytes(py) {
             Ok(Some(bytes)) => bytes,
@@ -139,8 +144,8 @@ impl PyMARCReader {
         // The bound py from PyRefMut may not properly release GIL when calling detach,
         // so we need to explicitly use allow_threads which is designed for this pattern.
         #[allow(deprecated)]
-        let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> =
-            py.allow_threads(|| {
+        let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> = py
+            .allow_threads(|| {
                 // This closure runs WITHOUT the GIL held
                 // All data here is owned (no Python references)
                 let cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
