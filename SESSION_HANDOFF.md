@@ -259,7 +259,69 @@ All changes committed to main and pushed to remote. Beads synchronized. Ready fo
 
 ---
 
-**Ready for H.4a:** Record Boundary Scanner (mrrc-7vu.8)
-- Implements 0x1E delimiter scanning for parallel record boundary detection
-- Input: RustFile-backed in-memory bytes  
-- Output: Record byte boundaries (positions only, not full bytes)
+---
+
+## Session: H.4a Record Boundary Scanner Implementation
+
+**Date:** January 5, 2026  
+**Status:** ✅ H.4a complete - 23 tests passing, ready for H.4b
+**Test count:** 127 Python tests passing (104 existing + 23 new H.4a tests)
+
+### What Was Done
+
+Implemented H.4a (Record Boundary Scanner) per specification in `GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md`.
+
+#### Core Implementation
+
+**src/boundary_scanner.rs: SIMD-accelerated delimiter scanning**
+- `RecordBoundaryScanner` using `memchr::memchr_iter` for SIMD 0x1E detection
+- `scan(buffer)` → returns Vec<(offset, length)> for each complete record
+- `scan_limited(buffer, limit)` → batch processing support
+- `count_records(buffer)` → diagnostic counter without full parsing
+- 9 Rust unit tests validating all functionality
+- Added memchr 2.7 dependency
+
+**src-python/src/boundary_scanner_wrapper.rs: PyO3 bindings**
+- `PyRecordBoundaryScanner` class exposing Rust scanner to Python
+- Full docstrings with examples
+- Proper error handling mapping to Python exceptions
+
+**mrrc/__init__.py: Python API export**
+- Added `RecordBoundaryScanner` to module exports and `__all__`
+
+#### Test Suite: src-python/tests/test_h4a_boundary_scanner.py (23 tests)
+
+**Test Categories:**
+1. **Basic functionality** (5 tests): Scanner creation, single/multiple records, error cases
+2. **Real MARC data** (3 tests): Scanning simple_book.mrc and multi_records.mrc
+3. **Limiting** (3 tests): `scan_limited()` batch processing
+4. **Counting** (4 tests): `count_records()` diagnostics
+5. **Performance** (3 tests): Large buffers, scanner reuse
+6. **Integration** (2 tests): Non-overlapping boundaries, sequential consistency
+7. **Acceptance criteria** (3 tests): Real MARC validation
+
+#### Acceptance Criteria - All Passing ✅
+
+- [x] Scanner accepts real MARC files (simple_book, multi_records)
+- [x] Produces valid boundaries (no overflow, proper terminators)
+- [x] Output suitable for parallel processing (non-overlapping, well-defined)
+
+#### CI Status
+
+- ✅ Rustfmt (all code formatted correctly)
+- ✅ Clippy (no warnings, all pedantic checks pass)
+- ✅ Documentation (no doc warnings, complete docstrings)
+- ✅ Security audit (no CVEs, safe Rust code)
+- ✅ Python extension build (maturin compiles cleanly)
+- ✅ Full test suite: **127 tests passing** (104 + 23 new)
+
+---
+
+**Status: ✅ Complete and Pushed**
+
+All changes committed to main and pushed to remote. Beads closed mrrc-7vu.8. Ready for H.4b.
+
+**Ready for H.4b:** Rayon Parser Pool (mrrc-7vu.9)
+- Implements parallel batch processing using Rayon
+- Input: Record boundaries from H.4a  
+- Output: Parsed MARC records via producer-consumer pattern
