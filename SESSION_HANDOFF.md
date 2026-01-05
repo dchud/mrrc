@@ -187,4 +187,70 @@ When wrapping up work:
 - ✅ No dead code warnings on critical path
 - ✅ H.3 now UNBLOCKED (Phase C complete, removed C.Gate dependency)
 
-**Next work:** H.3 - Sequential Baseline & Parity Tests (mrrc-7vu.7)
+**Next work:** H.3 - Sequential Baseline & Parity Tests (mrrc-7vu.7) ✅ **[Just completed]**
+
+---
+
+## Session: H.3 Sequential Baseline Implementation
+
+**Date:** January 5, 2026  
+**Status:** ✅ H.3 complete - All parity tests passing (13/13)  
+**Test count:** 104 Python tests passing (13 new H.3 tests + 91 existing)
+
+### What Was Done
+
+Implemented H.3 (Sequential Baseline & Parity Tests) per specification in `GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md`.
+
+#### Test Suite: `src-python/tests/test_h3_sequential_baseline.py`
+
+**Test Classes & Coverage:**
+
+1. **TestParityRustFileVsPythonFile (3 tests)**
+   - `test_parity_simple_book_file_path`: RustFile vs PythonFile on simple_book.mrc
+   - `test_parity_multi_records_file_path`: RustFile vs PythonFile on multi_records.mrc
+   - `test_parity_pathlib_path`: pathlib.Path variant testing
+
+2. **TestParityCursorBackendVsRustFile (3 tests)**
+   - `test_parity_bytes_vs_file_path`: bytes backend parity
+   - `test_parity_bytearray_vs_file_path`: bytearray backend parity
+   - `test_parity_bytesio_vs_file_path`: BytesIO (PythonFile) parity
+
+3. **TestGILReleaseVerification (2 tests)**
+   - `test_rustfile_and_cursor_backend_are_thread_safe`: Thread safety validation
+   - `test_concurrent_reads_same_file`: Multi-threaded concurrent read validation
+
+4. **TestMemoryStability (2 tests)**
+   - `test_memory_stable_iterating_large_file`: 10k records, growth <30 MB
+   - `test_memory_stable_cursor_backend`: 5k in-memory records, growth <10 MB
+
+5. **TestH3AcceptanceCriteria (3 tests) - Gate Validation**
+   - `test_gate_rustfile_equals_pythonfile`: Criterion 1 ✓
+   - `test_gate_cursorbackend_equals_rustfile`: Criterion 2 ✓
+   - `test_gate_no_exceptions_or_panics`: Criterion 3 ✓
+
+#### Gate H.3 Criteria - All Passing ✅
+
+- [x] RustFile output identical to PythonFile (record-by-record via marcjson)
+- [x] CursorBackend output identical to RustFile (record-by-record via marcjson)
+- [x] GIL release verified (concurrent threads complete safely, no timeouts)
+- [x] Memory usage stable (no unbounded growth; backpressure effective)
+
+#### Implementation Details
+
+- **Comparison method:** JSON serialization via `to_marcjson()` to ensure byte-perfect parity
+- **Test data:** Leverages existing fixtures (simple_book.mrc, multi_records.mrc, 5k/10k records)
+- **Thread safety:** Verified RustFile and CursorBackend backends with concurrent readers
+- **Memory profiling:** Used psutil to verify no leaks across iteration
+
+#### CI Status
+
+- ✅ Rustfmt (all code formatted)
+- ✅ Clippy (no warnings on critical path; dead code warnings are intentional from H.2 phase)
+- ✅ Documentation (no doc warnings)
+- ✅ Security audit (no CVEs)
+- ✅ Python extension build (maturin)
+- ✅ Full Python test suite: **104 tests passing**
+
+---
+
+**Ready for H.4a:** Record Boundary Scanner (mrrc-7vu.8)
