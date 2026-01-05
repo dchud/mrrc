@@ -71,6 +71,7 @@
 //! - [`record`] — Core MARC record structures (`Record`, `Field`, `Subfield`)
 //! - [`reader`] — Reading MARC records from binary data streams
 //! - [`writer`] — Writing MARC records to binary format
+//! - [`boundary_scanner`] — Record boundary detection for parallel processing
 //! - [`leader`] — MARC record leader (24-byte header)
 //! - [`json`] — JSON serialization/deserialization
 //! - [`marcjson`] — MARCJSON format (standard JSON-LD format for MARC)
@@ -98,6 +99,7 @@ pub mod authority_reader;
 pub mod authority_record;
 pub mod authority_writer;
 pub mod bibliographic_helpers;
+pub mod boundary_scanner;
 pub mod csv;
 pub mod dublin_core;
 pub mod encoding;

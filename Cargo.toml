@@ -22,6 +22,7 @@ categories = ["encoding", "parser-implementations"]
 bytes = "1.5"
 nom = "7.1"
 lazy_static = "1.4"
+memchr = "2.7"
 
 # Encoding support
 encoding_rs = "0.8"

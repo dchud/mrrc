@@ -432,6 +432,7 @@ dependencies = [
  "encoding_rs",
  "flate2",
  "lazy_static",
+ "memchr",
  "nom",
  "proptest",
  "quick-xml",

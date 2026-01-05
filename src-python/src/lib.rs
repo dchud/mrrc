@@ -4,6 +4,7 @@
 mod backend;
 mod batched_reader;
 mod batched_unified_reader;
+mod boundary_scanner_wrapper;
 mod buffered_reader;
 mod error;
 mod formats;
@@ -13,6 +14,7 @@ mod unified_reader;
 mod wrappers;
 mod writers;
 
+use boundary_scanner_wrapper::PyRecordBoundaryScanner;
 use pyo3::prelude::*;
 use readers::PyMARCReader;
 use wrappers::{PyField, PyLeader, PyRecord, PySubfield};
@@ -27,6 +29,7 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyRecord>()?;
     m.add_class::<PyMARCReader>()?;
     m.add_class::<PyMARCWriter>()?;
+    m.add_class::<PyRecordBoundaryScanner>()?;
 
     // Format conversion functions
     m.add_function(wrap_pyfunction!(formats::record_to_json, m)?)?;
