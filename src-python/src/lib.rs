@@ -3,11 +3,13 @@
 
 mod backend;
 mod batched_reader;
+mod batched_unified_reader;
 mod buffered_reader;
 mod error;
 mod formats;
 mod parse_error;
 mod readers;
+mod unified_reader;
 mod wrappers;
 mod writers;
 

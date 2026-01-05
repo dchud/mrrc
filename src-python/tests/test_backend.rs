@@ -4,8 +4,8 @@
 
 #[cfg(test)]
 mod backend_tests {
-    use std::io::Cursor;
     use std::fs::File;
+    use std::io::Cursor;
 
     #[test]
     fn test_cursor_backend_with_empty_data() {

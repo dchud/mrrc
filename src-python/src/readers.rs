@@ -8,16 +8,25 @@
 #![allow(deprecated)]
 
 use crate::batched_reader::BatchedMarcReader;
+use crate::batched_unified_reader::BatchedUnifiedReader;
 use crate::parse_error::ParseError;
 use crate::wrappers::PyRecord;
 use mrrc::MarcReader;
 use pyo3::prelude::*;
 use smallvec::SmallVec;
 
+/// Internal enum for different reader backends
+enum ReaderType {
+    /// Original Python file-based reader (Phase B/C)
+    Python(BatchedMarcReader),
+    /// Unified reader supporting Rust files, bytes, and Python objects (Phase H.2+)
+    Unified(BatchedUnifiedReader),
+}
+
 /// Python wrapper for MarcReader with three-phase GIL management
 ///
 /// The three-phase pattern enables GIL release during CPU-intensive parsing:
-/// - Phase 1: Read bytes from Python file (GIL held)
+/// - Phase 1: Read bytes from source (GIL held if Python file)
 /// - Phase 2: Parse bytes to MARC record (GIL released)
 /// - Phase 3: Convert to PyRecord (GIL re-acquired)
 ///
@@ -27,27 +36,49 @@ use smallvec::SmallVec;
 /// - Uses BatchedMarcReader for queue-based state machine
 /// - Reduces GIL acquire/release overhead from N to N/100 (for N records)
 /// - Reads 100 records per GIL acquisition, serves from queue
+///
+/// Phase H.2 Enhancement (H.2):
+/// - Uses BatchedUnifiedReader to support file paths and bytes
+/// - File paths → pure Rust I/O (zero GIL overhead)
+/// - bytes/bytearray → in-memory Cursor (zero GIL overhead)
+/// - Python file objects → existing GIL management
 #[pyclass(name = "MARCReader")]
 pub struct PyMARCReader {
-    /// Batched reader for efficient queue-based record delivery
-    /// Implements state machine: CHECK_QUEUE → CHECK_EOF → READ_BATCH
-    batched_reader: Option<BatchedMarcReader>,
+    /// Reader backend (either legacy Python-based or unified H.2 variant)
+    reader: Option<ReaderType>,
 }
 
 #[pymethods]
 impl PyMARCReader {
-    /// Create a new MARCReader from a Python file-like object
+    /// Create a new MARCReader from any supported source
+    ///
+    /// Accepts:
+    /// - str path (e.g., 'records.mrc') → RustFile backend (no GIL)
+    /// - pathlib.Path → RustFile backend (no GIL)
+    /// - bytes/bytearray → CursorBackend (no GIL)
+    /// - Python file object → BatchedMarcReader (GIL managed)
     ///
     /// # Arguments
-    /// * `file` - A Python file-like object (must support .read(n) method)
+    /// * `source` - File path (str), pathlib.Path, bytes/bytearray, or file-like object
     #[new]
-    pub fn new(file: Py<PyAny>) -> PyResult<Self> {
-        // Initialize BatchedMarcReader (Phase C: queue-based state machine)
-        let batched_reader = BatchedMarcReader::new(file);
-
-        Ok(PyMARCReader {
-            batched_reader: Some(batched_reader),
-        })
+    pub fn new(source: &Bound<'_, PyAny>) -> PyResult<Self> {
+        // Try unified reader first (handles file paths and bytes)
+        match BatchedUnifiedReader::new(source) {
+            Ok(unified_reader) => {
+                return Ok(PyMARCReader {
+                    reader: Some(ReaderType::Unified(unified_reader)),
+                });
+            },
+            Err(_) => {
+                // Fall back to legacy Python file wrapper
+                // This handles custom file-like objects that aren't supported by UnifiedReader
+                let file_obj = source.clone().unbind();
+                let batched_reader = BatchedMarcReader::new(file_obj);
+                Ok(PyMARCReader {
+                    reader: Some(ReaderType::Python(batched_reader)),
+                })
+            },
+        }
     }
 
     /// Read the next record from the file (legacy interface)
@@ -56,16 +87,20 @@ impl PyMARCReader {
     /// New code should use iteration (__next__) which supports GIL release.
     ///
     /// Note: With Phase C (C.2), this now uses BatchedMarcReader's queue state machine.
+    /// With Phase H.2, this also supports file paths and bytes via BatchedUnifiedReader.
     pub fn read_record(&mut self) -> PyResult<Option<PyRecord>> {
         Python::with_gil(|py| {
             // Phase 1: Read record bytes (GIL held)
             // Uses queue-based state machine: CHECK_QUEUE → CHECK_EOF → READ_BATCH
-            let record_bytes = self
-                .batched_reader
-                .as_mut()
-                .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("Reader consumed"))?
-                .read_next_record_bytes(py)
-                .map_err(|e| e.to_py_err())?;
+            let record_bytes = match self.reader.as_mut() {
+                Some(ReaderType::Python(reader)) => reader
+                    .read_next_record_bytes(py)
+                    .map_err(|e| e.to_py_err())?,
+                Some(ReaderType::Unified(reader)) => reader
+                    .read_next_record_bytes(py)
+                    .map_err(|e| e.to_py_err())?,
+                None => return Err(pyo3::exceptions::PyRuntimeError::new_err("Reader consumed")),
+            };
 
             match record_bytes {
                 None => Ok(None),
@@ -111,7 +146,7 @@ impl PyMARCReader {
     /// Get the next record during iteration
     ///
     /// This implements the three-phase GIL release pattern:
-    /// - Phase 1: Read record bytes from Python file (GIL held)
+    /// - Phase 1: Read record bytes from source (GIL held if Python file)
     ///   - Uses queue-based state machine (CHECK_QUEUE → CHECK_EOF → READ_BATCH)
     /// - Phase 2: Parse bytes to MARC record (GIL released)
     /// - Phase 3: Convert to PyRecord (GIL re-acquired)
@@ -121,8 +156,12 @@ impl PyMARCReader {
     /// - Records are buffered in an internal queue (VecDeque)
     /// - Subsequent calls return from queue without GIL overhead
     /// - Reduces GIL contention from N acquire/release to N/100
+    ///
+    /// Phase H.2 Enhancement (H.2):
+    /// - For file paths and bytes: NO GIL overhead during I/O
+    /// - For Python files: same batching and GIL management as Phase C
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
-        // ===== PHASE 1: Read record bytes (GIL held) =====
+        // ===== PHASE 1: Read record bytes (GIL held if needed) =====
         // Must get Python handle while GIL is held by PyRefMut
         // CRITICAL: Use assume_gil_acquired() to get an unbound Python handle that
         // properly releases the GIL in Phase 2. A bound handle (slf.py()) does not.
@@ -131,22 +170,33 @@ impl PyMARCReader {
         // See GIL_RELEASE_IMPLEMENTATION_PLAN.md Part 2 Fix 2 (lines 149-235).
         let py = unsafe { Python::assume_gil_acquired() };
 
-        // Get mutable reference to batched reader
+        // Get mutable reference to reader backend
         let reader = slf
-            .batched_reader
+            .reader
             .as_mut()
             .ok_or_else(|| pyo3::exceptions::PyStopIteration::new_err(()))?;
 
         // Call read_next_record_bytes() while holding GIL
         // State machine: if queue non-empty, pop; else if EOF, return None; else read_batch()
-        let record_bytes = match reader.read_next_record_bytes(py) {
-            Ok(Some(bytes)) => bytes,
-            Ok(None) => {
-                // EOF reached - mark reader as consumed
-                slf.batched_reader = None;
-                return Err(pyo3::exceptions::PyStopIteration::new_err(()));
+        let record_bytes = match reader {
+            ReaderType::Python(reader) => match reader.read_next_record_bytes(py) {
+                Ok(Some(bytes)) => bytes,
+                Ok(None) => {
+                    // EOF reached - mark reader as consumed
+                    slf.reader = None;
+                    return Err(pyo3::exceptions::PyStopIteration::new_err(()));
+                },
+                Err(e) => return Err(e.to_py_err()),
             },
-            Err(e) => return Err(e.to_py_err()),
+            ReaderType::Unified(reader) => match reader.read_next_record_bytes(py) {
+                Ok(Some(bytes)) => bytes,
+                Ok(None) => {
+                    // EOF reached - mark reader as consumed
+                    slf.reader = None;
+                    return Err(pyo3::exceptions::PyStopIteration::new_err(()));
+                },
+                Err(e) => return Err(e.to_py_err()),
+            },
         };
 
         // CRITICAL: Copy to owned SmallVec for Phase 2 closure
@@ -198,7 +248,7 @@ impl PyMARCReader {
     }
 
     fn __repr__(&self) -> String {
-        if self.batched_reader.is_some() {
+        if self.reader.is_some() {
             "<MARCReader active>".to_string()
         } else {
             "<MARCReader consumed>".to_string()

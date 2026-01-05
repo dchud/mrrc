@@ -11,8 +11,8 @@
 
 use crate::parse_error::ParseError;
 use pyo3::prelude::*;
-use std::io::{Cursor, Read};
 use std::fs::File;
+use std::io::{Cursor, Read};
 
 /// Unified backend interface for reading MARC records from different sources
 ///
@@ -72,12 +72,10 @@ impl ReaderBackend {
                         path_str
                     )))
                 },
-                Err(e) => {
-                    Err(pyo3::exceptions::PyIOError::new_err(format!(
-                        "Failed to open file '{}': {}",
-                        path_str, e
-                    )))
-                },
+                Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
+                    "Failed to open file '{}': {}",
+                    path_str, e
+                ))),
             };
         }
 
@@ -102,12 +100,10 @@ impl ReaderBackend {
                                         path_str
                                     )))
                                 },
-                                Err(e) => {
-                                    Err(pyo3::exceptions::PyIOError::new_err(format!(
-                                        "Failed to open file '{}': {}",
-                                        path_str, e
-                                    )))
-                                },
+                                Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
+                                    "Failed to open file '{}': {}",
+                                    path_str, e
+                                ))),
                             };
                         }
                     },
@@ -155,12 +151,8 @@ impl ReaderBackend {
     /// - `Err(ParseError)` - Read or parsing error
     pub fn read_next_bytes(&mut self, py: Python) -> Result<Option<Vec<u8>>, ParseError> {
         match self {
-            ReaderBackend::RustFile(file) => {
-                Self::read_record_bytes_from_reader(file)
-            },
-            ReaderBackend::CursorBackend(cursor) => {
-                Self::read_record_bytes_from_reader(cursor)
-            },
+            ReaderBackend::RustFile(file) => Self::read_record_bytes_from_reader(file),
+            ReaderBackend::CursorBackend(cursor) => Self::read_record_bytes_from_reader(cursor),
             ReaderBackend::PythonFile(py_obj) => {
                 // Need GIL to call Python .read() method
                 let obj = py_obj.bind(py);
@@ -170,7 +162,9 @@ impl ReaderBackend {
     }
 
     /// Internal helper: Read record bytes from any std::io::Read implementation
-    fn read_record_bytes_from_reader<R: Read>(reader: &mut R) -> Result<Option<Vec<u8>>, ParseError> {
+    fn read_record_bytes_from_reader<R: Read>(
+        reader: &mut R,
+    ) -> Result<Option<Vec<u8>>, ParseError> {
         // Read leader (24 bytes)
         let mut leader = [0u8; 24];
         match reader.read_exact(&mut leader) {
@@ -234,9 +228,9 @@ impl ReaderBackend {
         py_obj: &Bound<'_, PyAny>,
     ) -> Result<Option<Vec<u8>>, ParseError> {
         // Read leader (24 bytes)
-        let read_method = py_obj.getattr("read").map_err(|e| {
-            ParseError::IoError(format!("Object missing .read() method: {}", e))
-        })?;
+        let read_method = py_obj
+            .getattr("read")
+            .map_err(|e| ParseError::IoError(format!("Object missing .read() method: {}", e)))?;
 
         let leader_result = read_method.call1((24usize,)).map_err(|e| {
             ParseError::IoError(format!("Failed to read leader from Python file: {}", e))
@@ -244,9 +238,7 @@ impl ReaderBackend {
 
         let leader: Vec<u8> = leader_result
             .extract()
-            .map_err(|_| {
-                ParseError::InvalidRecord("Leader must be bytes".to_string())
-            })?;
+            .map_err(|_| ParseError::InvalidRecord("Leader must be bytes".to_string()))?;
 
         if leader.len() != 24 {
             // EOF or partial read
@@ -277,12 +269,15 @@ impl ReaderBackend {
 
         // Read remainder of record
         let record_data_bytes = read_method.call1((record_length - 24,)).map_err(|e| {
-            ParseError::IoError(format!("Failed to read record data from Python file: {}", e))
+            ParseError::IoError(format!(
+                "Failed to read record data from Python file: {}",
+                e
+            ))
         })?;
 
-        let record_data: Vec<u8> = record_data_bytes.extract().map_err(|_| {
-            ParseError::InvalidRecord("Record data must be bytes".to_string())
-        })?;
+        let record_data: Vec<u8> = record_data_bytes
+            .extract()
+            .map_err(|_| ParseError::InvalidRecord("Record data must be bytes".to_string()))?;
 
         if record_data.len() != record_length - 24 {
             return Err(ParseError::InvalidRecord(format!(

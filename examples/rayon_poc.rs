@@ -13,7 +13,7 @@
     clippy::explicit_iter_loop,
     clippy::iter_over_hash_type,
     clippy::needless_pass_by_value,
-    clippy::uninlined_format_args,
+    clippy::uninlined_format_args
 )]
 
 use crossbeam_channel::bounded;
