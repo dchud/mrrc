@@ -332,7 +332,13 @@ mod tests {
         let avg_record_size_bytes = 1500;
         let estimated_total = batch_size * avg_record_size_bytes;
 
-        assert!(estimated_total < 300_000, "100 records at 1.5KB should be < 300KB");
-        assert!(batch_size <= 200, "batch_size should be <= 200 records hard limit");
+        assert!(
+            estimated_total < 300_000,
+            "100 records at 1.5KB should be < 300KB"
+        );
+        assert!(
+            batch_size <= 200,
+            "batch_size should be <= 200 records hard limit"
+        );
     }
 }
