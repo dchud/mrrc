@@ -1,7 +1,7 @@
 """
-C.3: Iterator Semantics & Idempotence Verification
+Iterator Semantics & Idempotence Verification
 
-Tests verify that PyMARCReader correctly implements Python iterator protocol
+Tests verify that MARCReader correctly implements Python iterator protocol
 and maintains idempotence guarantees after EOF:
 
 State Machine Verification:
@@ -74,7 +74,7 @@ class TestIteratorProtocol:
 
 
 class TestEofIdempotence:
-    """Verify idempotent EOF behavior - central requirement of C.3"""
+    """Verify idempotent EOF behavior - central requirement"""
 
     def test_eof_idempotence_repeated_next_calls(self, fixture_small):
         """Repeated next() calls after EOF must all raise StopIteration"""

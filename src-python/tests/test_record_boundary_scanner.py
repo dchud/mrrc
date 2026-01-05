@@ -1,7 +1,7 @@
 """
-Tests for H.4a - Record Boundary Scanner
+Record Boundary Scanner Tests
 
-Tests the `RecordBoundaryScanner` Rust module for accurate MARC record
+Tests the RecordBoundaryScanner Rust module for accurate MARC record
 boundary detection using 0x1E delimiters. These tests verify:
 
 - Correct identification of record boundaries
@@ -282,7 +282,7 @@ class TestBoundaryScannerIntegration:
 
 
 class TestBoundaryScannerAcceptanceCriteria:
-    """Test H.4a acceptance criteria."""
+    """Test boundary scanner acceptance criteria."""
 
     def test_accepts_real_marc_data(self, simple_book_bytes, multi_records_bytes):
         """Criterion 1: Scanner accepts real MARC files."""

@@ -90,8 +90,8 @@ class TestWriteGILRelease:
         Tests that GIL is released during serialization phase,
         allowing two threads to write concurrently without blocking.
 
-        Note: Speedup measurement deferred to Phase F benchmarking suite,
-        which has more controlled conditions for accurate timing.
+        Note: Detailed performance benchmarking is in separate benchmarking suite,
+        which has more controlled conditions for accurate timing measurements.
         """
         # Read records once
         reader = MARCReader(io.BytesIO(fixture_1k))
@@ -133,7 +133,7 @@ class TestWriteGILRelease:
         Concurrent write test: 4 threads.
 
         Verifies that 4 threads can write concurrently without GIL deadlock.
-        Speedup measurement deferred to Phase F benchmarking suite.
+        Detailed performance measurements are in the benchmarking suite.
         """
         reader = MARCReader(io.BytesIO(fixture_1k))
         records = list(reader)

@@ -1,5 +1,5 @@
 """
-H.3: Sequential Baseline & Parity Tests (RustFile + CursorBackend)
+Backend Parity & Sequential Baseline Tests
 
 This test suite validates:
 1. RustFile output is identical to PythonFile (record-by-record)
@@ -7,8 +7,7 @@ This test suite validates:
 3. GIL release is verified (no GIL overhead in Rust sections)
 4. Memory usage is stable (no leaks)
 
-Specification: docs/design/GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md §H.3
-Gate H.3 Criteria:
+Acceptance Criteria:
 - RustFile output identical to PythonFile
 - CursorBackend output identical to RustFile
 - GIL release verified (no GIL overhead in Rust sections)
@@ -341,11 +340,11 @@ class TestMemoryStability:
             f"Cursor backend memory growth too large: {mem_growth:.2f} MB"
 
 
-class TestH3AcceptanceCriteria:
-    """Integration test validating all H.3 gate criteria"""
+class TestBackendParityAcceptanceCriteria:
+    """Integration test validating all backend parity acceptance criteria"""
 
     def test_gate_rustfile_equals_pythonfile(self):
-        """Gate H.3 Criterion 1: RustFile output identical to PythonFile"""
+        """Criterion 1: RustFile output identical to PythonFile"""
         test_file = "tests/data/multi_records.mrc"
         if not os.path.exists(test_file):
             pytest.skip(f"Test file not found: {test_file}")
@@ -362,7 +361,7 @@ class TestH3AcceptanceCriteria:
         assert records_rust == records_py, "RustFile and PythonFile outputs differ"
 
     def test_gate_cursorbackend_equals_rustfile(self):
-        """Gate H.3 Criterion 2: CursorBackend output identical to RustFile"""
+        """Criterion 2: CursorBackend output identical to RustFile"""
         test_file = "tests/data/multi_records.mrc"
         if not os.path.exists(test_file):
             pytest.skip(f"Test file not found: {test_file}")
@@ -381,7 +380,7 @@ class TestH3AcceptanceCriteria:
         assert records_cursor == records_rust, "CursorBackend and RustFile outputs differ"
 
     def test_gate_no_exceptions_or_panics(self):
-        """Gate H.3 Criterion 3: Clean reading with no exceptions or panics"""
+        """Criterion 3: Clean reading with no exceptions or panics"""
         test_files = [
             "tests/data/simple_book.mrc",
             "tests/data/multi_records.mrc",

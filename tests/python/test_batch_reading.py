@@ -1,7 +1,7 @@
 """
-C.1: Batch Reading Integration Tests
+Batch Reading Integration Tests
 
-Tests for Phase C batch reading functionality with GIL management.
+Tests for batch reading functionality with GIL management.
 Validates that read_batch() correctly returns batches of records
 with proper capacity limit enforcement.
 """
@@ -11,12 +11,12 @@ from mrrc import MARCReader
 import io
 
 
-class TestBatchReadingC1:
-    """Test batch reading functionality for C.1 task."""
+class TestBatchReadingBasics:
+    """Test batch reading functionality."""
     
     def test_read_batch_returns_100_records(self, fixture_1k):
         """
-        C.1 Acceptance Test: read_batch() returns up to 100 records in single GIL cycle.
+        Acceptance Test: read_batch() returns up to 100 records in single GIL cycle.
         
         This test verifies:
         - Reader can iterate through records efficiently
@@ -35,7 +35,7 @@ class TestBatchReadingC1:
     
     def test_iterator_idempotence_after_eof(self, fixture_1k):
         """
-        C.1: Verify StopIteration is idempotent after EOF.
+        Verify StopIteration is idempotent after EOF.
         
         After reaching EOF, subsequent iteration attempts should
         raise StopIteration without additional I/O.
@@ -53,7 +53,7 @@ class TestBatchReadingC1:
     
     def test_batch_size_100_nominal_case(self, fixture_10k):
         """
-        C.1: Nominal case - batch size of 100 should handle 10k records efficiently.
+        Nominal case - batch size of 100 should handle 10k records efficiently.
         
         With 10,000 records and batch_size=100, should read cleanly in 100 batches.
         """
@@ -72,7 +72,7 @@ class TestCapacityLimits:
     
     def test_capacity_limit_never_exceeded(self, fixture_100k):
         """
-        C.1: Verify hard limit on batch capacity (200 records OR 300KB).
+        Verify hard limit on batch capacity (200 records OR 300KB).
         
         Even if batch_size=100, the implementation has hard stops at:
         - 200 records per batch
@@ -96,9 +96,9 @@ class TestGilContract:
     
     def test_gil_not_held_during_batch_read(self, fixture_1k):
         """
-        C.1 GIL Contract: Verify batch reading completes without deadlock.
+        GIL Contract: Verify batch reading completes without deadlock.
         
-        This is a smoke test - actual threading tests are in C.Gate.
+        This is a smoke test - actual threading tests are in separate suite.
         If GIL is held throughout, this would hang in actual threaded scenarios.
         """
         reader = MARCReader(io.BytesIO(fixture_1k))

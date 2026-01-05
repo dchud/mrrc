@@ -1,13 +1,13 @@
 """
-Unit tests for H.1: ReaderBackend Type Detection (Rust side)
+Backend Type Detection Unit Tests (Rust)
 
 These tests verify the ReaderBackend enum and type detection algorithm
 work correctly at the Rust level. Integration tests that actually use
-the detected backends come in H.2 when the backends are integrated into
+the detected backends test the complete backends integration into
 MARCReader.
 
-Note: These tests are Rust-side only. Python integration tests will
-be added when H.2 integrates ReaderBackend into readers.rs
+Note: These tests validate Rust-side backend detection logic. Python
+integration tests validate complete backends integration into readers.
 """
 
 import pytest
@@ -50,8 +50,8 @@ class TestBackendTypeDetectionReadiness:
         assert len(documented_types) == 8
 
     def test_type_detection_order_specified(self):
-        """H.1 requirement: Type detection happens in documented order"""
-        # From specification (Phase H.1 algorithm):
+        """Requirement: Type detection happens in documented order"""
+        # From specification:
         # 1. str path (highest priority)
         # 2. pathlib.Path
         # 3. bytes/bytearray
@@ -68,7 +68,7 @@ class TestBackendTypeDetectionReadiness:
         assert len(detection_order) == 5
 
     def test_backend_error_handling_specified(self):
-        """H.1 requirement: Error handling for RustFile backend"""
+        """Requirement: Error handling for RustFile backend"""
         # From specification:
         # - FileNotFoundError for missing files
         # - PermissionError for permission denied
@@ -82,11 +82,11 @@ class TestBackendTypeDetectionReadiness:
         assert len(error_mappings) == 3
 
     def test_unknown_type_error_message_helpful(self):
-        """H.1 requirement: Unknown type errors are descriptive"""
-        # Plan specifies:
+        """Requirement: Unknown type errors are descriptive"""
+        # Specification:
         # "Raise `TypeError` with a descriptive message listing supported types"
         
-        # This will be validated in H.2 integration tests
+        # This will be validated in integration tests
         # when backends are integrated into MARCReader
         assert True
 
@@ -120,13 +120,13 @@ class TestBackendModuleStructure:
         assert True
 
 
-class TestH1AcceptanceCriteria:
-    """H.1 acceptance criteria from specification (Phase H.1 lines 488-501)"""
+class TestBackendTypeDetectionAcceptanceCriteria:
+    """Backend type detection acceptance criteria"""
 
     def test_all_8_supported_types_route_correctly(self):
         """Acceptance criterion: All 8 supported types route to correct backends"""
-        # This will be fully tested in H.2 integration
-        # For H.1, we verify structure exists
+        # This will be fully tested in integration tests
+        # Here we verify structure exists
         routing = {
             "str": "RustFile",
             "pathlib.Path": "RustFile",
@@ -140,15 +140,15 @@ class TestH1AcceptanceCriteria:
         assert len(routing) == 8
 
     def test_unknown_types_raise_typeerror(self):
-        """Acceptance criterion: Unknown types raise TypeError with descriptive message"""
-        # Integration tests in H.2 will verify actual TypeError raising
-        # H.1 verifies the error handling logic exists
-        assert True
+         """Acceptance criterion: Unknown types raise TypeError with descriptive message"""
+         # Integration tests verify actual TypeError raising
+         # This verifies the error handling logic exists
+         assert True
 
-    def test_type_detection_unit_tests_exist(self):
-        """Acceptance criterion: 8 type detection tests (one per type) + unknown type test"""
-        # Test file test_backend_type_detection.py has:
-        # - 8 tests for supported types
-        # - 6 tests for unknown/error types
-        # - Tests for file error conditions
-        assert True
+     def test_type_detection_unit_tests_exist(self):
+         """Acceptance criterion: Type detection tests for all supported types"""
+         # Test file test_backend_type_detection.py has:
+         # - 8 tests for supported types
+         # - 6 tests for unknown/error types
+         # - Tests for file error conditions
+         assert True

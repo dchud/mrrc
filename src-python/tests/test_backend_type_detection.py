@@ -1,5 +1,5 @@
 """
-Tests for H.1: ReaderBackend Enum & Type Detection Algorithm
+Backend Type Detection Tests
 
 This test suite validates:
 1. All 8 supported input types are correctly routed to backends
@@ -7,7 +7,7 @@ This test suite validates:
 3. File errors are properly converted to Python exceptions
 4. Type detection order and priority are correct
 
-Specification: docs/design/GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md §4.1
+Specification: docs/design/GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md
 """
 
 import io
@@ -219,7 +219,7 @@ class TestTypeDetectionFileErrors:
 
 
 class TestTypeDetectionOrder:
-    """Test type detection priority/order (Phase H.1 algorithm)"""
+    """Test type detection priority/order"""
 
     def test_str_takes_priority_over_object_with_read(self):
         """str path detection happens before file-like check"""
