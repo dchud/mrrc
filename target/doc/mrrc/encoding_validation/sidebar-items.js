@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["EncodingAnalysis"],"fn":["contains_escape_sequences","contains_valid_utf8_multibyte","count_utf8_indicators","is_valid_utf8_sequence","utf8_sequence_length"],"struct":["EncodingValidator"]};

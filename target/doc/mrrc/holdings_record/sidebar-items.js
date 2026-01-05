@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["AcquisitionStatus","Completeness","HoldingsType","MethodOfAcquisition"],"struct":["HoldingsRecord","HoldingsRecordBuilder"]};

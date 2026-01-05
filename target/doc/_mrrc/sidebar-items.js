@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["_mrrc"],"mod":["backend","batched_reader","batched_unified_reader","buffered_reader","error","formats","parse_error","readers","unified_reader","wrappers","writers"]};
