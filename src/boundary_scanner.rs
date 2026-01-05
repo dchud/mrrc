@@ -1,8 +1,8 @@
-//! Record boundary detection using 0x1E delimiters for parallel processing.
+//! Record boundary detection using 0x1D delimiters for parallel processing.
 //!
 //! This module provides optimized scanning of MARC record boundaries using the
-//! SIMD-accelerated `memchr` crate to locate 0x1E terminators. Boundaries are
-//! returned as (offset, length) tuples for use in parallel parsing pipelines.
+//! SIMD-accelerated `memchr` crate to locate 0x1D (record terminator) bytes.
+//! Boundaries are returned as (offset, length) tuples for use in parallel parsing pipelines.
 //!
 //! # Example
 //!
@@ -22,11 +22,12 @@
 use crate::error::{MarcError, Result};
 
 /// The byte value that terminates MARC records (ISO 2709).
-const RECORD_TERMINATOR: u8 = 0x1E;
+/// In ISO 2709 format, records end with 0x1D (not 0x1E, which is the field terminator).
+const RECORD_TERMINATOR: u8 = 0x1D;
 
 /// Record boundary scanner using SIMD-accelerated delimiter detection.
 ///
-/// This scanner locates MARC record boundaries by finding 0x1E terminators
+/// This scanner locates MARC record boundaries by finding 0x1D (record terminator) bytes
 /// in a buffer. It's designed for use in parallel processing pipelines
 /// where record boundaries must be known before parsing.
 #[derive(Debug, Default)]
@@ -56,7 +57,7 @@ impl RecordBoundaryScanner {
     ///
     /// Returns a vector of (offset, length) tuples for each record found.
     /// The offset is the byte position where the record starts, and length
-    /// includes the terminating 0x1E byte.
+    /// includes the terminating 0x1D byte (record terminator).
     ///
     /// # Arguments
     ///
@@ -68,20 +69,20 @@ impl RecordBoundaryScanner {
     ///
     /// # Errors
     ///
-    /// Returns an error if the buffer is empty or no complete records (no 0x1E terminators) are found.
+    /// Returns an error if the buffer is empty or no complete records (no 0x1D terminators) are found.
     ///
     /// # Examples
     ///
     /// ```
     /// use mrrc::boundary_scanner::RecordBoundaryScanner;
     ///
-    /// let data = vec![1, 2, 3, 0x1E, 4, 5, 0x1E];
+    /// let data = vec![1, 2, 3, 0x1D, 4, 5, 0x1D];  // 0x1D = record terminator
     /// let mut scanner = RecordBoundaryScanner::new();
     /// let boundaries = scanner.scan(&data)?;
     ///
     /// assert_eq!(boundaries.len(), 2);
-    /// assert_eq!(boundaries[0], (0, 4)); // offset 0, length 4
-    /// assert_eq!(boundaries[1], (4, 3)); // offset 4, length 3
+    /// assert_eq!(boundaries[0], (0, 4)); // offset 0, length 4 (includes 0x1D)
+    /// assert_eq!(boundaries[1], (4, 3)); // offset 4, length 3 (includes 0x1D)
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn scan(&mut self, buffer: &[u8]) -> Result<Vec<(usize, usize)>> {
@@ -101,7 +102,7 @@ impl RecordBoundaryScanner {
 
         if self.boundaries.is_empty() {
             return Err(MarcError::InvalidRecord(
-                "no complete MARC records found (no 0x1E terminators)".to_string(),
+                "no complete MARC records found (no 0x1D record terminators)".to_string(),
             ));
         }
 
@@ -130,7 +131,7 @@ impl RecordBoundaryScanner {
     /// ```
     /// use mrrc::boundary_scanner::RecordBoundaryScanner;
     ///
-    /// let data = vec![1, 0x1E, 2, 0x1E, 3, 0x1E];
+    /// let data = vec![1, 0x1D, 2, 0x1D, 3, 0x1D];  // 0x1D = record terminator
     /// let mut scanner = RecordBoundaryScanner::new();
     /// let boundaries = scanner.scan_limited(&data, 2)?;
     ///

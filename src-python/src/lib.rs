@@ -9,6 +9,7 @@ mod buffered_reader;
 mod error;
 mod formats;
 mod parse_error;
+mod rayon_parser_pool_wrapper;
 mod readers;
 mod unified_reader;
 mod wrappers;
@@ -16,6 +17,7 @@ mod writers;
 
 use boundary_scanner_wrapper::PyRecordBoundaryScanner;
 use pyo3::prelude::*;
+use rayon_parser_pool_wrapper::{parse_batch_parallel, parse_batch_parallel_limited};
 use readers::PyMARCReader;
 use wrappers::{PyField, PyLeader, PyRecord, PySubfield};
 use writers::PyMARCWriter;
@@ -41,6 +43,10 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(formats::record_to_dublin_core, m)?)?;
     m.add_function(wrap_pyfunction!(formats::record_to_mods, m)?)?;
     m.add_function(wrap_pyfunction!(formats::dublin_core_to_xml, m)?)?;
+
+    // Rayon parser pool (H.4b) functions
+    m.add_function(wrap_pyfunction!(parse_batch_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_batch_parallel_limited, m)?)?;
 
     m.add(
         "__doc__",

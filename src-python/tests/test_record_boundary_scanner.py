@@ -2,7 +2,7 @@
 Record Boundary Scanner Tests
 
 Tests the RecordBoundaryScanner Rust module for accurate MARC record
-boundary detection using 0x1E delimiters. These tests verify:
+boundary detection using 0x1D (record terminator) delimiters. These tests verify:
 
 - Correct identification of record boundaries
 - Proper length calculation (including terminator)
@@ -40,7 +40,7 @@ class TestBoundaryScannerBasics:
 
     def test_scan_single_record(self):
         """Scan a single record with terminator."""
-        data = bytes([1, 2, 3, 0x1E])
+        data = bytes([1, 2, 3, 0x1D])  # 0x1D = record terminator
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan(data)
 
@@ -49,7 +49,7 @@ class TestBoundaryScannerBasics:
 
     def test_scan_multiple_records(self):
         """Scan multiple records with distinct boundaries."""
-        data = bytes([1, 2, 0x1E, 3, 4, 0x1E, 5, 0x1E])
+        data = bytes([1, 2, 0x1D, 3, 4, 0x1D, 5, 0x1D])  # 0x1D = record terminator
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan(data)
 
@@ -65,8 +65,8 @@ class TestBoundaryScannerBasics:
             scanner.scan(b"")
 
     def test_scan_no_terminators(self):
-        """Buffer with no terminators should raise error."""
-        data = bytes([1, 2, 3, 4])
+        """Buffer with no record terminators should raise error."""
+        data = bytes([1, 2, 3, 4])  # No 0x1D terminators
         scanner = RecordBoundaryScanner()
         with pytest.raises(Exception):  # MarcError
             scanner.scan(data)
@@ -110,8 +110,8 @@ class TestBoundaryScannerRealData:
             record_bytes = simple_book_bytes[offset : offset + length]
             # Should have content
             assert len(record_bytes) > 0, "Record should have content"
-            # Should end with terminator (0x1E)
-            assert record_bytes[-1] == 0x1E, "Record should end with 0x1E terminator"
+            # Should end with record terminator (0x1D)
+            assert record_bytes[-1] == 0x1D, "Record should end with 0x1D record terminator"
             # Should not exceed file bounds
             assert offset + length <= len(simple_book_bytes), \
                 "Record should not exceed file boundaries"
@@ -122,7 +122,7 @@ class TestBoundaryScannerLimiting:
 
     def test_scan_limited(self):
         """Verify scan_limited returns up to limit records."""
-        data = bytes([1, 0x1E, 2, 0x1E, 3, 0x1E])
+        data = bytes([1, 0x1D, 2, 0x1D, 3, 0x1D])  # 0x1D = record terminator
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan_limited(data, 2)
 
@@ -132,7 +132,7 @@ class TestBoundaryScannerLimiting:
 
     def test_scan_limited_exceeds_available(self):
         """Verify scan_limited returns fewer records if not enough available."""
-        data = bytes([1, 0x1E, 2, 0x1E])
+        data = bytes([1, 0x1D, 2, 0x1D])  # 0x1D = record terminator
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan_limited(data, 10)
 
@@ -163,7 +163,7 @@ class TestBoundaryScannerCounting:
 
     def test_count_records(self):
         """Verify count_records returns correct terminator count."""
-        data = bytes([1, 0x1E, 2, 0x1E])
+        data = bytes([1, 0x1D, 2, 0x1D])  # 0x1D = record terminator
         scanner = RecordBoundaryScanner()
 
         count = scanner.count_records(data)
@@ -201,7 +201,7 @@ class TestBoundaryScannerPerformance:
         data = bytearray()
         for i in range(1000):
             data.append(0x01 if i % 2 == 0 else 0x02)
-            data.append(0x1E)
+            data.append(0x1D)  # 0x1D = record terminator
 
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan(bytes(data))
@@ -216,12 +216,12 @@ class TestBoundaryScannerPerformance:
         scanner = RecordBoundaryScanner()
 
         # First scan
-        data1 = bytes([1, 0x1E, 2, 0x1E])
+        data1 = bytes([1, 0x1D, 2, 0x1D])  # 0x1D = record terminator
         boundaries1 = scanner.scan(data1)
         assert len(boundaries1) == 2
 
         # Second scan (should clear internal state)
-        data2 = bytes([1, 0x1E])
+        data2 = bytes([1, 0x1D])
         boundaries2 = scanner.scan(data2)
         assert len(boundaries2) == 1
         # Verify no cross-contamination
@@ -305,8 +305,8 @@ class TestBoundaryScannerAcceptanceCriteria:
             assert 0 <= offset < len(multi_records_bytes)
             # Length should fit
             assert offset + length <= len(multi_records_bytes)
-            # Should end with terminator
-            assert multi_records_bytes[offset + length - 1] == 0x1E
+            # Should end with record terminator (0x1D)
+            assert multi_records_bytes[offset + length - 1] == 0x1D
 
     def test_enables_parallel_parsing_readiness(self, multi_records_bytes):
         """Criterion 3: Output suitable for parallel processing."""

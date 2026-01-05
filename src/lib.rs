@@ -120,6 +120,7 @@ pub mod marc8_tables;
 pub mod marc_record;
 pub mod marcjson;
 pub mod mods;
+pub mod rayon_parser_pool;
 pub mod reader;
 /// Core MARC record structures (`Record`, `Field`, `Subfield`)
 pub mod record;
