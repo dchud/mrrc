@@ -1,1 +1,0 @@
-std::iter::Map<std::vec::IntoIter<std::vec::Vec<u8>>, for<'a> fn(&'a [u8]) -> usize {parse_record}>

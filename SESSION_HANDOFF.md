@@ -153,6 +153,7 @@ When wrapping up work:
 ✅ **All 6 Phase C subtasks created with dependency chain**  
 ✅ **All 10 Phase H subtasks created with dependency chain**  
 ✅ **Critical path identified: C.Gate → H.3 → H.4x → H.Gate → Phase G**  
-✅ **Ready for implementation: Start C.0 or H.0 immediately**
+✅ **Ready for implementation: Start C.0 or H.0 immediately**  
+🔄 **H.1 (ReaderBackend Enum & Type Detection) now in_progress**
 
-**Next session:** Begin C.0 implementation (or H.0 PoC in parallel)
+**Current work:** H.1 - ReaderBackend Enum & Type Detection Algorithm (mrrc-7vu.4)

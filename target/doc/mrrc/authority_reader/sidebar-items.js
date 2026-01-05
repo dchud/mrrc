@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["FIELD_TERMINATOR","SUBFIELD_DELIMITER"],"struct":["AuthorityMarcReader"]};
