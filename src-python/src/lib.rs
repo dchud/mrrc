@@ -1,6 +1,7 @@
 // MRRC Python wrapper using PyO3
 // This module provides Python bindings to the Rust MARC library
 
+mod batched_reader;
 mod buffered_reader;
 mod error;
 mod formats;

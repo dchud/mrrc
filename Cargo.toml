@@ -45,11 +45,14 @@ regex = "1.10"
 # Examples and utilities
 csv = "1.3"
 flate2 = "1.0"
+smallvec = "1.11"
 
 [dev-dependencies]
 proptest = "1.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 rayon = "1.7"
+tempfile = "3.8"
+smallvec = "1.11"
 
 # Lint configuration following Rust API Guidelines
 [lints.rust]
