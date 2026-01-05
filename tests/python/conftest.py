@@ -43,6 +43,75 @@ def fixture_100k(fixture_dir):
         return f.read()
 
 
+@pytest.fixture(scope="session")
+def fixture_small(fixture_1k):
+    """Load small fixture (first 10 records from 1k fixture)."""
+    # Create a small subset for quick tests
+    from mrrc import MARCReader
+    reader = MARCReader(io.BytesIO(fixture_1k))
+    small_records = []
+    for i, record in enumerate(reader):
+        small_records.append(record)
+        if i >= 9:  # 10 records
+            break
+    
+    # Serialize back to bytes
+    from mrrc import MARCWriter
+    output = io.BytesIO()
+    writer = MARCWriter(output)
+    for record in small_records:
+        writer.write_record(record)
+    writer.close()
+    return output.getvalue()
+
+
+@pytest.fixture(scope="session")
+def fixture_217(fixture_1k):
+    """Create a fixture with exactly 217 records (tests partial batch at EOF)."""
+    from mrrc import MARCReader, MARCWriter
+    
+    reader = MARCReader(io.BytesIO(fixture_1k))
+    records = []
+    for i, record in enumerate(reader):
+        records.append(record)
+        if i >= 216:  # 217 records (0-216 inclusive)
+            break
+    
+    output = io.BytesIO()
+    writer = MARCWriter(output)
+    for record in records:
+        writer.write_record(record)
+    writer.close()
+    return output.getvalue()
+
+
+@pytest.fixture(scope="session")
+def fixture_500(fixture_1k):
+    """Create a fixture with exactly 500 records."""
+    from mrrc import MARCReader, MARCWriter
+    
+    reader = MARCReader(io.BytesIO(fixture_1k))
+    records = []
+    for i, record in enumerate(reader):
+        records.append(record)
+        if i >= 499:  # 500 records
+            break
+    
+    output = io.BytesIO()
+    writer = MARCWriter(output)
+    for record in records:
+        writer.write_record(record)
+    writer.close()
+    return output.getvalue()
+
+
+@pytest.fixture(scope="session")
+def fixture_with_error(fixture_small):
+    """Create a fixture that contains a malformed record for error testing."""
+    # Append an incomplete record header to trigger error
+    return fixture_small + b"00"  # Incomplete record length field
+
+
 @pytest.fixture
 def fixture_1k_io(fixture_1k):
     """Return 1k fixture as file-like object."""
