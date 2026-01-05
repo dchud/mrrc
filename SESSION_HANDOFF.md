@@ -153,14 +153,38 @@ When wrapping up work:
 ✅ **All 6 Phase C subtasks created with dependency chain**  
 ✅ **All 10 Phase H subtasks created with dependency chain**  
 ✅ **Critical path identified: C.Gate → H.3 → H.4x → H.Gate → Phase G**  
-✅ **H.1 (ReaderBackend Enum & Type Detection) COMPLETED**
+✅ **H.1, H.2, H.2b (Phase H reader backends) ALL COMPLETED**
 
-**Completed in this session:**
-- H.1: ReaderBackend Enum & Type Detection Algorithm (mrrc-7vu.4)
+**Completed across sessions:**
+- H.1: ReaderBackend Enum & Type Detection Algorithm (mrrc-7vu.4) ✅
   * Implemented ReaderBackend enum with 3 variants (RustFile, CursorBackend, PythonFile)
   * Type detection algorithm routing 8 input types to correct backends
   * Error handling: FileNotFoundError, PermissionError, IOError, TypeError for unknown types
   * 21 passing tests validating all acceptance criteria
-  * Ready for H.2 integration
 
-**Next work:** H.2 - RustFile Backend Implementation (mrrc-7vu.5)
+- H.2: RustFile Backend Implementation (mrrc-7vu.5) ✅ **[Just completed]**
+  * UnifiedReader enum supporting file paths and in-memory bytes
+  * Type detection routing to RustFile, CursorBackend, or PythonFile
+  * Pure Rust I/O with no GIL overhead for file-based sources
+  * 242 Python tests passing (full suite)
+  * All CI checks pass: rustfmt, clippy, doc, security audit, maturin build
+
+- H.2b: CursorBackend Implementation (mrrc-7vu.6) ✅ **[Just completed]**
+  * In-memory MARC reading via std::io::Cursor
+  * Parity with RustFile backend
+  * Supports bytes and bytearray inputs
+  * Integrated alongside RustFile in unified reader
+
+**Technical debt identified (low priority, documented in beads):**
+- mrrc-egg: Remove allow(dead_code) suppressions (Priority 3, defer to post-H.4)
+- mrrc-o16: Address unused diagnostic methods in BatchedMarcReader (Priority 3, can be used in H.3 tests)
+- mrrc-qwx: Leader mutation API for record modification (Priority 2, Phase D/E feature gap)
+- mrrc-jfl: Re-enable skipped pymarc compatibility tests (Priority 2, distributed across phases)
+
+**Status verified:**
+- ✅ No macOS linker issues found
+- ✅ All builds clean
+- ✅ No dead code warnings on critical path
+- ✅ H.3 now UNBLOCKED (Phase C complete, removed C.Gate dependency)
+
+**Next work:** H.3 - Sequential Baseline & Parity Tests (mrrc-7vu.7)
