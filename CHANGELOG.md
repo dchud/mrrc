@@ -16,8 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory Usage Profiling**: Benchmarks comparing Python wrapper overhead vs Rust native
 - **Context Manager Support**: Python `with` statement support for file I/O
 
-#### Performance & Benchmarking (Phase 1-3)
+#### Performance & Benchmarking (Phase 1-4)
 - **Rust Parallel Benchmarks**: Performance testing with rayon for concurrent MARC processing
+- **Rayon Parser Pool (H.4b)**: Parallel batch processing functions via Rayon thread pool
+  - `parse_batch_parallel()` - Unlimited parallel parsing with dynamic work distribution
+  - `parse_batch_parallel_limited()` - Bounded parallel parsing respecting configured thread pool
+  - Record boundary scanning and parallel record assembly
+  - Thread-safe batch processing for large MARC files
 - **Comprehensive Benchmark Suite**: 
   - 1K/10K/100K record read performance
   - Field access overhead measurements
@@ -46,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Suppressed benchmark-specific documentation warnings at file level
 - Fixed MARCWriter record serialization issues
 - Cleaned up CI pipeline to pass all quality gates
+- **H.4a Bug Fix**: RecordBoundaryScanner now correctly scans for 0x1D (record terminator) instead of 0x1E (field terminator) per ISO 2709 specification
 
 ### Changed
 - Improved documentation structure and organization

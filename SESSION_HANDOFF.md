@@ -325,3 +325,110 @@ All changes committed to main and pushed to remote. Beads closed mrrc-7vu.8. Rea
 - Implements parallel batch processing using Rayon
 - Input: Record boundaries from H.4a  
 - Output: Parsed MARC records via producer-consumer pattern
+
+---
+
+## Session: H.4b Rayon Parser Pool - Parallel Batch Processing
+
+**Date:** January 5, 2026  
+**Status:** ✅ H.4b complete - Parallel batch processing fully implemented and tested  
+**Test count:** 104 Python tests passing (all existing tests + H.4a fix validation)
+
+### What Was Done
+
+Implemented H.4b (Rayon Parser Pool) per specification in `GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md`.
+
+#### Core Implementation
+
+**src/rayon_parser_pool.rs: Parallel batch processing**
+- `parse_batch_parallel(boundaries, data)` - Unlimited parallel parsing with Rayon thread pool
+  - Uses `rayon::iter::ParallelIterator` for automatic work distribution
+  - Each boundary processed on available thread pool worker
+  - Respects `RAYON_NUM_THREADS` environment variable
+  - Returns `Vec<Result<Record>>` preserving parse errors per record
+- `parse_batch_parallel_limited(boundaries, data, max_workers)` - Bounded parallel parsing
+  - Thread pool limited to specified worker count
+  - Useful for resource-constrained environments
+  - Maintains error handling and recovery semantics
+- Zero-copy processing of shared data buffer
+- Efficient boundary-based record extraction and parsing
+
+**src/lib.rs: Module exposure**
+- Exported `rayon_parser_pool` module to public API
+
+**src-python/src/rayon_parser_pool_wrapper.rs: PyO3 bindings**
+- `parse_batch_parallel(boundaries, data)` Python function
+  - Accepts list of (offset, length) tuples from H.4a RecordBoundaryScanner
+  - Accepts bytes or bytearray MARC data
+  - Returns list of parsed Record objects (or None for error records)
+  - Full error handling with descriptive messages
+- `parse_batch_parallel_limited(boundaries, data, max_workers)` Python function
+  - Bounded variant with worker thread control
+  - Integrates seamlessly with H.4a scanner output
+
+**src-python/src/lib.rs: Python module exposure**
+- Added bindings to `mrrc` module, accessible as `mrrc.parse_batch_parallel()` and `mrrc.parse_batch_parallel_limited()`
+
+**Cargo.toml: Dependency management**
+- Moved `rayon` from `dev-dependencies` to `dependencies`
+- Now available for production parallel processing
+
+#### Bug Fix: H.4a RecordBoundaryScanner
+
+Fixed critical bug where RecordBoundaryScanner was scanning for:
+- ❌ Wrong: 0x1E (field terminator, US - Unit Separator)
+- ✅ Correct: 0x1D (record terminator, GS - Group Separator)
+
+Per ISO 2709 MARC specification, records end with 0x1D, not 0x1E. This fix ensures H.4b receives proper record boundaries for correct parsing.
+
+**src/boundary_scanner.rs: Updated scanner**
+- Now scans for `0x1D` byte (decimal 29)
+- Validates boundaries represent complete, parseable records
+- All tests updated to reflect correct behavior
+
+**src-python/tests/test_record_boundary_scanner.py: Updated tests (30 tests)**
+- Validates 0x1D detection across test data
+- Confirms boundaries produce complete records when parsed
+- Tests pass with corrected terminator byte
+
+#### Integration with H.4a & Batch Processing
+
+The H.4a RecordBoundaryScanner output (list of (offset, length) tuples) feeds directly into H.4b parallel processing:
+
+```python
+# H.4a: Identify record boundaries
+scanner = mrrc.RecordBoundaryScanner()
+boundaries = scanner.scan(marc_data)  # Returns [(0, 800), (800, 812), ...]
+
+# H.4b: Parse in parallel
+records = mrrc.parse_batch_parallel(boundaries, marc_data)
+# Or with worker limit:
+records = mrrc.parse_batch_parallel_limited(boundaries, marc_data, max_workers=4)
+```
+
+#### Acceptance Criteria - All Passing ✅
+
+- [x] `parse_batch_parallel()` processes boundaries in parallel via Rayon
+- [x] `parse_batch_parallel_limited()` respects max_workers parameter
+- [x] Boundary processing compatible with H.4a RecordBoundaryScanner output
+- [x] Zero-copy data sharing via buffer slice references
+- [x] Python bindings expose both unlimited and limited variants
+- [x] H.4a bug fix validated (0x1D record terminator scanning)
+- [x] All existing tests remain passing (no regression)
+
+#### CI Status
+
+- ✅ Rustfmt (all code formatted correctly)
+- ✅ Clippy (no warnings, all code meets Rust best practices)
+- ✅ Documentation (no doc warnings, complete docstrings)
+- ✅ Security audit (no CVEs, safe Rust + Rayon usage)
+- ✅ Python extension build (maturin builds cleanly with new module)
+- ✅ Full test suite: **104 tests passing** (all existing + H.4a fix validation)
+
+---
+
+**Status: ✅ Complete and Pushed**
+
+All changes committed to main and pushed to remote. Beads closed mrrc-7vu.9 and mrrc-d2j (H.4a bug). 
+
+**H.4 Complete:** Record Boundary Scanning (H.4a) + Parallel Batch Processing (H.4b) ready for integration and H.4c (Producer-Consumer Pattern)
