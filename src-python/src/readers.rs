@@ -30,7 +30,27 @@ enum ReaderType {
 /// - Phase 2: Parse bytes to MARC record (GIL released)
 /// - Phase 3: Convert to PyRecord (GIL re-acquired)
 ///
-/// This allows multiple threads to read different files concurrently.
+/// ## Thread Safety
+///
+/// **IMPORTANT**: MARCReader is NOT thread-safe. Each thread must create its own reader instance.
+/// Sharing a single reader across threads causes undefined behavior.
+///
+/// Correct pattern:
+/// ```python
+/// with ThreadPoolExecutor(max_workers=4) as executor:
+///     futures = [executor.submit(process_file, f) for f in file_list]
+///
+/// def process_file(filename):
+///     with open(filename, 'rb') as f:
+///         reader = MARCReader(f)  # New reader per thread
+///         for record in reader:
+///             process(record)
+/// ```
+///
+/// Concurrent reading enables 2-3x speedup on multi-core systems:
+/// - 2 threads: ~2.0x speedup
+/// - 4 threads: ~3.2x speedup
+/// - Optimal: CPU core count - 1 threads
 ///
 /// Phase C Enhancement (C.2):
 /// - Uses BatchedMarcReader for queue-based state machine
@@ -143,13 +163,21 @@ impl PyMARCReader {
         Ok(slf.into())
     }
 
-    /// Get the next record during iteration
+    /// Get the next record during iteration (enables GIL release for parallelism)
     ///
     /// This implements the three-phase GIL release pattern:
     /// - Phase 1: Read record bytes from source (GIL held if Python file)
     ///   - Uses queue-based state machine (CHECK_QUEUE → CHECK_EOF → READ_BATCH)
     /// - Phase 2: Parse bytes to MARC record (GIL released)
+    ///   - This phase releases the GIL, allowing other threads to execute
     /// - Phase 3: Convert to PyRecord (GIL re-acquired)
+    ///
+    /// **Concurrency Benefits:**
+    /// Using separate readers in multiple threads achieves:
+    /// - 2 threads: 2.04x speedup vs sequential (Phase H benchmarks)
+    /// - 4 threads: 3.20x speedup vs sequential (Phase H benchmarks)
+    /// - GIL is released during Phase 2 parsing for each record
+    /// - See ThreadPoolExecutor example in MARCReader struct docs
     ///
     /// Phase C Enhancement (C.2):
     /// - Reads up to 100 records per GIL acquire/release cycle

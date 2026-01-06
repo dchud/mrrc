@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["_mrrc",[["impl&lt;'py&gt; IntoPyObject&lt;'py&gt; for <a class=\"struct\" href=\"_mrrc/boundary_scanner_wrapper/struct.PyRecordBoundaryScanner.html\" title=\"struct _mrrc::boundary_scanner_wrapper::PyRecordBoundaryScanner\">PyRecordBoundaryScanner</a>"],["impl&lt;'py&gt; IntoPyObject&lt;'py&gt; for <a class=\"struct\" href=\"_mrrc/producer_consumer_pipeline_wrapper/struct.PyProducerConsumerPipeline.html\" title=\"struct _mrrc::producer_consumer_pipeline_wrapper::PyProducerConsumerPipeline\">PyProducerConsumerPipeline</a>"],["impl&lt;'py&gt; IntoPyObject&lt;'py&gt; for <a class=\"struct\" href=\"_mrrc/readers/struct.PyMARCReader.html\" title=\"struct _mrrc::readers::PyMARCReader\">PyMARCReader</a>"],["impl&lt;'py&gt; IntoPyObject&lt;'py&gt; for <a class=\"struct\" href=\"_mrrc/wrappers/struct.PyField.html\" title=\"struct _mrrc::wrappers::PyField\">PyField</a>"],["impl&lt;'py&gt; IntoPyObject&lt;'py&gt; for <a class=\"struct\" href=\"_mrrc/wrappers/struct.PyLeader.html\" title=\"struct _mrrc::wrappers::PyLeader\">PyLeader</a>"],["impl&lt;'py&gt; IntoPyObject&lt;'py&gt; for <a class=\"struct\" href=\"_mrrc/wrappers/struct.PyRecord.html\" title=\"struct _mrrc::wrappers::PyRecord\">PyRecord</a>"],["impl&lt;'py&gt; IntoPyObject&lt;'py&gt; for <a class=\"struct\" href=\"_mrrc/wrappers/struct.PySubfield.html\" title=\"struct _mrrc::wrappers::PySubfield\">PySubfield</a>"],["impl&lt;'py&gt; IntoPyObject&lt;'py&gt; for <a class=\"struct\" href=\"_mrrc/writers/struct.PyMARCWriter.html\" title=\"struct _mrrc::writers::PyMARCWriter\">PyMARCWriter</a>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1569]}

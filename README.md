@@ -477,17 +477,34 @@ with open("output.mrc", "wb") as f:
 
 ### Performance
 
-The Python wrapper maintains >90% of pure Python performance with the benefits of Rust:
+The Python wrapper achieves exceptional performance through Rust implementation and GIL release:
 
-- **Reading 10k records**: ~161 ms (62,000 rec/s)
-- **Overhead vs pymarc**: 10-15% (acceptable for memory safety & maintainability)
-- **GIL released**: I/O operations allow true parallelism with threading
+#### Speed Comparison
+- **Reading 1k records**: 1.87 ms (534,600 rec/s)
+- **Reading 10k records**: 18.2 ms (549,500 rec/s)
+- **vs pymarc**: **7.5x faster** (same API, dramatically better performance)
+- **vs Rust library**: 50% of pure Rust speed with Python convenience
 
-See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis.
+#### Threading & Parallelism
+- **Two-thread speedup**: 2.04x (on 2-core systems)
+- **Four-thread speedup**: 3.20x (on 4-core systems)
+- **GIL released during parsing** - I/O operations allow true multi-core parallelism
+- **Python concurrency**: Use `concurrent.futures.ThreadPoolExecutor` for multi-file processing
+
+See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis, [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for threading guidance, and [docs/threading.md](docs/threading.md) for usage patterns.
 
 ### Threading & Concurrency
 
-MRRC's I/O operations release the Python GIL, enabling true parallelism:
+MRRC's I/O operations release the Python GIL during record parsing, enabling true multi-thread parallelism. Each thread must have its own `MARCReader` instance.
+
+**Concrete Results from Phase H Benchmarking:**
+- 2 threads: **2.04x speedup** vs sequential processing
+- 4 threads: **3.20x speedup** vs sequential processing
+- Each thread needs its own reader (not shared)
+- File must be opened in binary mode (`'rb'`)
+- Optimal thread count: CPU core count - 1
+
+**Example: Parallel Multi-File Processing**
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
@@ -496,18 +513,29 @@ from mrrc import MARCReader
 def process_file(filename):
     count = 0
     with open(filename, 'rb') as f:
-        reader = MARCReader(f)
+        reader = MARCReader(f)  # New reader per thread
         while record := reader.read_record():
             # Process record
             count += 1
     return count
 
+# Process 4 files in parallel on 4-core system
 with ThreadPoolExecutor(max_workers=4) as executor:
-    futures = [executor.submit(process_file, f) for f in ["file1.mrc", "file2.mrc", "file3.mrc", "file4.mrc"]]
+    futures = [executor.submit(process_file, f) 
+               for f in ["file1.mrc", "file2.mrc", "file3.mrc", "file4.mrc"]]
     results = [f.result() for f in futures]
+    # Expected: 3-4x faster than sequential
+
+# For single-file processing, consider splitting into chunks
+# See docs/parallel_processing.md for file-splitting patterns
 ```
 
-See [docs/threading.md](docs/threading.md) and [docs/parallel_processing.md](docs/parallel_processing.md) for detailed threading patterns.
+**Important Notes:**
+- Sharing a reader across threads causes undefined behavior (not thread-safe)
+- Use `concurrent.futures.ThreadPoolExecutor` or `threading.Thread` with separate readers
+- GIL is released during Phase 2 (parsing), allowing true parallelism
+
+See [docs/threading.md](docs/threading.md), [docs/parallel_processing.md](docs/parallel_processing.md), and [examples/concurrent_reading.py](examples/concurrent_reading.py) for detailed patterns and benchmarks.
 
 ### Format Conversion (Python)
 

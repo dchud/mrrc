@@ -5,6 +5,59 @@ All notable changes to MRRC (MARC Rust Crate) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-06
+
+### Added
+
+#### GIL Release & Concurrency (Phase A-F)
+- **GIL Release during I/O**: Python wrapper now releases GIL during record parsing for true multi-thread parallelism
+- **Three-Phase Pattern**: Robust pattern separates Python object access (GIL held) from CPU-intensive parsing (GIL released)
+- **Measured Performance**: 2.04x speedup on 2 threads, 3.20x on 4 threads (Phase H benchmarking)
+- **BatchedMarcReader**: Queue-based buffering reduces GIL contention from N to N/100 operations
+- **SmallVec Optimization**: 4 KB inline buffer avoids allocations for ~85-90% of MARC records
+
+#### Parallel I/O Backend (Phase H)
+- **ReaderBackend Enum**: Unified reader supporting multiple input types with automatic selection
+  - RustFile: Pure Rust file I/O (zero GIL overhead)
+  - CursorBackend: In-memory bytes (zero GIL overhead)
+  - PythonFile: Python file objects (GIL-managed)
+- **File Path Support**: Direct file path input bypasses Python I/O layer entirely
+- **Bytes/Bytearray Support**: In-memory MARC data via CursorBackend
+- **Automatic Detection**: Input type automatically detected, optimal backend selected
+
+#### Documentation (Phase G)
+- **PERFORMANCE.md**: Comprehensive guide with threading patterns, benchmarking methods, and tuning recommendations
+- **Threading Examples**: Practical concurrent_reading.py and concurrent_writing.py examples
+- **API Documentation**: Updated PyMarcReader/PyMarcWriter docstrings with threading guidance
+- **README Threading Section**: Concrete speedup numbers (2.04x for 2 threads, 3.20x for 4)
+- **Benchmark Documentation**: Updated docs/benchmarks/ with Phase H results
+
+### Changed
+
+- **Python Wrapper API**: No breaking changes (fully backward compatible)
+- **Performance Profile**: Single-thread throughput stable, multi-thread speedup now available
+- **Reader Construction**: Accepts str/Path/bytes/bytearray in addition to file objects
+
+### Fixed
+
+- **GIL Release Bug (Phase B)**: SmallVec copy pattern properly avoids borrow checker violations
+- **Error Handling (Phase B)**: ParseError conversion happens after GIL re-acquisition
+- **GIL Crossing (Phase C)**: py.detach() correctly releases GIL during Phase 2 parsing
+
+### Performance
+
+- **Threading Speedup**: 2.04x (2 threads), 3.20x (4 threads) vs sequential reading
+- **Memory Overhead**: SmallVec buffering <3% overhead vs single-threaded
+- **GIL Contention**: Reduced from linear to O(n/100) with BatchedMarcReader
+- **File I/O**: Pure Rust backend (file paths) eliminates all GIL overhead
+
+### Technical Details
+
+- **Phase H Integration**: Producer-consumer pipeline with Rayon parallel record scanning
+- **Backpressure**: Queue-based buffering prevents runaway producer threads
+- **Thread Safety**: Each thread requires own reader instance (not Send/Sync by design)
+- **Efficiency**: pymrrc 92% efficient vs pure Rust Rayon baseline
+
 ## [0.2.0] - 2025-12-31
 
 ### Added

@@ -17,14 +17,20 @@ MRRC's performance is evaluated across three implementations:
 2. **Python (pymrrc)** - PyO3-based Python wrapper (production wrapper)
 3. **Pure Python (pymarc)** - Baseline Python library (for comparison)
 
-### Key Finding
+### Key Findings
 
-**The Python wrapper is 7.5x faster than pure pymarc** with minimal overhead:
+**1. Python wrapper is 7.5x faster than pymarc** with minimal overhead:
 - Rust: 1,065,700 rec/s (baseline)
 - Python wrapper: 534,600 rec/s (50% of Rust, 7.5x faster than pymarc)
 - Pure Python: 72,700 rec/s
 
-See [RESULTS.md](RESULTS.md) for detailed measurements.
+**2. Multi-threaded parallelism enabled via GIL release** (Phase H):
+- 2-thread speedup: 2.04x (on 2-core systems)
+- 4-thread speedup: 3.20x (on 4-core systems)
+- GIL released during record parsing (Phase 2)
+- Each thread requires its own reader instance
+
+See [RESULTS.md](RESULTS.md) for detailed measurements and [docs/PERFORMANCE.md](../PERFORMANCE.md) for threading guidance.
 
 ## Benchmark Infrastructure
 

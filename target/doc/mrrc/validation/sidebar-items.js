@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["IndicatorValidation"],"struct":["IndicatorMeaning","IndicatorRules","IndicatorValidator"],"type":["SemanticMap"]};
