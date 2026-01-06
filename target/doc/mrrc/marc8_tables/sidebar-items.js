@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CharacterSetId"],"fn":["find_in_charset","find_unicode_in_marc8","get_charset_table","get_eacc_character"],"struct":["ANSEL_EXTENDED_LATIN","BASIC_ARABIC","BASIC_CYRILLIC","BASIC_GREEK","BASIC_HEBREW","BASIC_LATIN","EACC_TABLE","EXTENDED_ARABIC","EXTENDED_CYRILLIC","GREEK_SYMBOLS","SUBSCRIPT","SUPERSCRIPT"],"type":["CharacterMapping"]};

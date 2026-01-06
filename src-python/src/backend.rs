@@ -83,31 +83,28 @@ impl ReaderBackend {
         let fspath_method = source.getattr("__fspath__");
         if let Ok(method) = fspath_method {
             if method.is_callable() {
-                match method.call0() {
-                    Ok(path_obj) => {
-                        if let Ok(path_str) = path_obj.extract::<String>() {
-                            return match File::open(&path_str) {
-                                Ok(file) => Ok(ReaderBackend::RustFile(file)),
-                                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                                    Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
-                                        "No such file or directory: '{}'",
-                                        path_str
-                                    )))
-                                },
-                                Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                                    Err(pyo3::exceptions::PyPermissionError::new_err(format!(
-                                        "Permission denied: '{}'",
-                                        path_str
-                                    )))
-                                },
-                                Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
-                                    "Failed to open file '{}': {}",
-                                    path_str, e
-                                ))),
-                            };
-                        }
-                    },
-                    Err(_) => {}, // Fall through to next check
+                if let Ok(path_obj) = method.call0() {
+                    if let Ok(path_str) = path_obj.extract::<String>() {
+                        return match File::open(&path_str) {
+                            Ok(file) => Ok(ReaderBackend::RustFile(file)),
+                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                                Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
+                                    "No such file or directory: '{}'",
+                                    path_str
+                                )))
+                            },
+                            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                                Err(pyo3::exceptions::PyPermissionError::new_err(format!(
+                                    "Permission denied: '{}'",
+                                    path_str
+                                )))
+                            },
+                            Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
+                                "Failed to open file '{}': {}",
+                                path_str, e
+                            ))),
+                        };
+                    }
                 }
             }
         }

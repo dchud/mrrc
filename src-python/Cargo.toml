@@ -11,6 +11,7 @@ serde_json = "1.0"
 # Typical MARC records (100B-5KB) fit in 4KB inline buffer without allocation.
 # Larger records automatically spill to heap. ~85-90% of real-world records avoid allocation.
 smallvec = "1.11"
+tempfile = "3.0"
 
 [lib]
 name = "_mrrc"

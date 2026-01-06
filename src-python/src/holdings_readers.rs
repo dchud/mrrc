@@ -6,8 +6,7 @@
 // Holdings records are specialized MARC records (Type x/y/v/u) used in library
 // systems for maintaining inventory and location information.
 
-use crate::parse_error::ParseError;
-use crate::wrappers::{PyHoldingsRecord, PyRecord};
+use crate::wrappers::PyHoldingsRecord;
 use mrrc::holdings_reader::HoldingsMarcReader;
 use mrrc::recovery::RecoveryMode;
 use pyo3::prelude::*;
@@ -84,7 +83,7 @@ impl PyHoldingsMARCReader {
         let rec_mode = match recovery_mode {
             "lenient" => RecoveryMode::Lenient,
             "permissive" => RecoveryMode::Permissive,
-            "strict" | _ => RecoveryMode::Strict,
+            _ => RecoveryMode::Strict,
         };
 
         // Try str path first
@@ -231,7 +230,8 @@ impl PyHoldingsMARCReader {
                 },
             },
             HoldingsReaderBackend::PythonFile(py_obj) => {
-                Python::with_gil(|py| {
+                let py = unsafe { Python::assume_attached() };
+                {
                     let obj = py_obj.bind(py);
                     let read_method = obj.getattr("read").map_err(|e| {
                         pyo3::exceptions::PyIOError::new_err(format!(
@@ -317,7 +317,7 @@ impl PyHoldingsMARCReader {
                             e
                         ))),
                     }
-                })
+                }
             },
         };
 

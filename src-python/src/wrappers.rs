@@ -935,7 +935,6 @@ impl PyAuthorityRecord {
     pub fn to_json(&self) -> PyResult<String> {
         // Authority records can be serialized like bibliographic records
         // by wrapping them in a Record structure
-        use mrrc::json;
         // For now, convert the heading field to JSON
         let heading_json = self
             .heading()

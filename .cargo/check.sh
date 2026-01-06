@@ -14,8 +14,12 @@ echo "=== Rustfmt check ==="
 cargo fmt --all -- --check
 
 echo ""
-echo "=== Clippy check ==="
+echo "=== Clippy check (mrrc core) ==="
 cargo clippy --package mrrc --all-targets -- -D warnings
+
+echo ""
+echo "=== Clippy check (mrrc-python) ==="
+cargo clippy --package mrrc-python --all-targets -- -D warnings
 
 echo ""
 echo "=== Documentation check ==="
@@ -28,6 +32,10 @@ cargo audit
 echo ""
 echo "=== Maturin Python extension build ==="
 maturin develop
+
+echo ""
+echo "=== Rust library tests ==="
+cargo test --lib --package mrrc --all-targets -q
 
 echo ""
 echo "=== Python tests ==="

@@ -5,8 +5,6 @@
 // - Phase 2 (GIL released): Parse bytes into MARC record structure
 // - Phase 3 (GIL held): Convert result to Python object and handle errors
 
-#![allow(deprecated)]
-
 use crate::batched_reader::BatchedMarcReader;
 use crate::batched_unified_reader::BatchedUnifiedReader;
 use crate::parse_error::ParseError;
@@ -16,6 +14,7 @@ use pyo3::prelude::*;
 use smallvec::SmallVec;
 
 /// Internal enum for different reader backends
+#[allow(clippy::large_enum_variant)]
 enum ReaderType {
     /// Original Python file-based reader (Phase B/C)
     Python(BatchedMarcReader),
@@ -84,11 +83,9 @@ impl PyMARCReader {
     pub fn new(source: &Bound<'_, PyAny>) -> PyResult<Self> {
         // Try unified reader first (handles file paths and bytes)
         match BatchedUnifiedReader::new(source) {
-            Ok(unified_reader) => {
-                return Ok(PyMARCReader {
-                    reader: Some(ReaderType::Unified(unified_reader)),
-                });
-            },
+            Ok(unified_reader) => Ok(PyMARCReader {
+                reader: Some(ReaderType::Unified(unified_reader)),
+            }),
             Err(_) => {
                 // Fall back to legacy Python file wrapper
                 // This handles custom file-like objects that aren't supported by UnifiedReader
@@ -108,6 +105,7 @@ impl PyMARCReader {
     ///
     /// Note: With Phase C (C.2), this now uses BatchedMarcReader's queue state machine.
     /// With Phase H.2, this also supports file paths and bytes via BatchedUnifiedReader.
+    #[allow(deprecated)]
     pub fn read_record(&mut self) -> PyResult<Option<PyRecord>> {
         Python::with_gil(|py| {
             // Phase 1: Read record bytes (GIL held)
@@ -196,6 +194,7 @@ impl PyMARCReader {
         // SAFETY: PyRefMut guarantees the GIL is held; this is the idiomatic way to get
         // an unbound Python handle without re-acquiring (which would panic if already held).
         // See GIL_RELEASE_IMPLEMENTATION_PLAN.md Part 2 Fix 2 (lines 149-235).
+        #[allow(deprecated)]
         let py = unsafe { Python::assume_gil_acquired() };
 
         // Get mutable reference to reader backend

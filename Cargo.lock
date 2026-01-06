@@ -454,6 +454,7 @@ dependencies = [
  "pyo3",
  "serde_json",
  "smallvec",
+ "tempfile",
 ]
 
 [[package]]

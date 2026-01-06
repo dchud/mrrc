@@ -9,7 +9,7 @@ mod backend_tests {
 
     #[test]
     fn test_cursor_backend_with_empty_data() {
-        let cursor = Cursor::new(vec![]);
+        let cursor: Cursor<Vec<u8>> = Cursor::new(vec![]);
         let _ = cursor; // Just verify it compiles
     }
 

@@ -1,0 +1,13 @@
+/Users/dchud/Documents/projects/mrrc/target/debug/deps/target_lexicon-28506bd93f195972.d: /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/lib.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/data_model.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/host.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/parse_error.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/targets.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/triple.rs /Users/dchud/Documents/projects/mrrc/target/debug/build/target-lexicon-5f2d8541e7da9f60/out/host.rs
+
+/Users/dchud/Documents/projects/mrrc/target/debug/deps/libtarget_lexicon-28506bd93f195972.rmeta: /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/lib.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/data_model.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/host.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/parse_error.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/targets.rs /Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/triple.rs /Users/dchud/Documents/projects/mrrc/target/debug/build/target-lexicon-5f2d8541e7da9f60/out/host.rs
+
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/lib.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/data_model.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/host.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/parse_error.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/targets.rs:
+/Users/dchud/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/target-lexicon-0.13.4/src/triple.rs:
+/Users/dchud/Documents/projects/mrrc/target/debug/build/target-lexicon-5f2d8541e7da9f60/out/host.rs:
+
+# env-dep:OUT_DIR=/Users/dchud/Documents/projects/mrrc/target/debug/build/target-lexicon-5f2d8541e7da9f60/out

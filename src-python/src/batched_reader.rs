@@ -167,16 +167,19 @@ impl BatchedMarcReader {
     /// Check if the reader has reached EOF
     ///
     /// Returns true after EOF is set (idempotent).
+    #[allow(dead_code)]
     pub fn is_eof(&self) -> bool {
         self.eof_reached
     }
 
     /// Get current queue size (for diagnostics/testing)
+    #[allow(dead_code)]
     pub fn queue_len(&self) -> usize {
         self.record_queue.len()
     }
 
     /// Get current queue capacity in bytes (for diagnostics/testing)
+    #[allow(dead_code)]
     pub fn queue_capacity_bytes(&self) -> usize {
         self.queue_capacity_bytes
     }
@@ -297,12 +300,8 @@ mod tests {
         assert!(eof_reached);
 
         // STATE 3: After EOF, should not attempt READ_BATCH
-        if eof_reached {
-            // Would return None without I/O
-            assert!(true);
-        } else {
-            panic!("Should not reach here");
-        }
+        // eof_reached is already asserted above; this is the expected state
+        assert!(eof_reached);
     }
 
     #[test]

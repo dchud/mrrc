@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["PyAuthorityRecord","PyField","PyHoldingsRecord","PyLeader","PyRecord","PySubfield"]};
