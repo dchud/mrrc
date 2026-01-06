@@ -8,11 +8,11 @@
 //!
 //! As of Phase I (Feature Compatibility Updates), `HoldingsMarcReader` supports the
 //! unified `ReaderBackend` enum interface enabling:
-//! - **RustFile**: Direct file I/O via `std::fs::File` (enables Rayon parallelism)
-//! - **CursorBackend**: In-memory reads from bytes via `std::io::Cursor`
-//! - **PythonFile**: Python file-like objects (requires GIL, used sequentially)
+//! - **`RustFile`**: Direct file I/O via `std::fs::File` (enables Rayon parallelism)
+//! - **`CursorBackend`**: In-memory reads from bytes via `std::io::Cursor`
+//! - **`PythonFile`**: Python file-like objects (requires GIL, used sequentially)
 //!
-//! Example with RustFile for parallel processing:
+//! Example with `RustFile` for parallel processing:
 //! ```no_run
 //! use mrrc::holdings_reader::HoldingsMarcReader;
 //! use std::fs::File;
