@@ -21,7 +21,9 @@
 //! let mut reader = AuthorityMarcReader::new(file);
 //!
 //! while let Some(record) = reader.read_record()? {
-//!     println!("Authority: {}", record.heading_text());
+//!     if let Some(heading) = record.heading() {
+//!         println!("Authority: {}", heading.value());
+//!     }
 //! }
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```

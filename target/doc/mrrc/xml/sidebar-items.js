@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["record_to_xml","xml_to_record"],"struct":["MarcXmlControlField","MarcXmlDataField","MarcXmlRecord","MarcXmlSubfield"]};
