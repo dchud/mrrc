@@ -1,5 +1,5 @@
 # Rust build artifacts and benchmarks
-target/               # Build output + Criterion.rs cache (regeneratable)
+target/
 Cargo.lock
 **/*.rs.bk
 *.pdb
