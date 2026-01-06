@@ -211,40 +211,60 @@ class Field:
 
 
 class Leader:
-    """Enhanced Leader wrapper with pymarc-compatible API."""
-    
-    def __init__(self):
-        """Create a new Leader."""
-        # Just use the Rust Leader directly, but add aliases
-        # The Rust leader has all the properties we need
-        pass
-    
-    def __new__(cls):
-        """Create instance - actually returns a Rust Leader with aliases."""
-        instance = object.__new__(cls)
-        instance._rust_leader = _Leader()
-        return instance
-    
-    def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access, handling aliases."""
-        # Aliases for pymarc compatibility
-        if name == 'descriptive_cataloging_form':
-            return self._rust_leader.cataloging_form
-        elif name == 'multipart_resource_record_level':
-            return self._rust_leader.multipart_level
-        # Delegate everything else
-        return getattr(self._rust_leader, name)
-    
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Delegate attribute setting, handling aliases."""
-        if name == '_rust_leader':
-            object.__setattr__(self, name, value)
-        elif name == 'descriptive_cataloging_form':
-            self._rust_leader.cataloging_form = value
-        elif name == 'multipart_resource_record_level':
-            self._rust_leader.multipart_level = value
-        else:
-            setattr(self._rust_leader, name, value)
+     """Enhanced Leader wrapper with pymarc-compatible API."""
+     
+     def __init__(self):
+         """Create a new Leader."""
+         # Just use the Rust Leader directly, but add aliases
+         # The Rust leader has all the properties we need
+         pass
+     
+     def __new__(cls):
+         """Create instance - actually returns a Rust Leader with aliases."""
+         instance = object.__new__(cls)
+         instance._rust_leader = _Leader()
+         instance._parent_record = None
+         return instance
+     
+     def __getattr__(self, name: str) -> Any:
+         """Delegate attribute access, handling aliases."""
+         # Aliases for pymarc compatibility
+         if name == 'descriptive_cataloging_form':
+             return self._rust_leader.cataloging_form
+         elif name == 'multipart_resource_record_level':
+             return self._rust_leader.multipart_level
+         # Delegate everything else
+         return getattr(self._rust_leader, name)
+     
+     def __setattr__(self, name: str, value: Any) -> None:
+         """Delegate attribute setting, handling aliases."""
+         if name in ('_rust_leader', '_parent_record'):
+             object.__setattr__(self, name, value)
+         elif name == 'descriptive_cataloging_form':
+             self._rust_leader.cataloging_form = value
+             # Mark parent record as having modified leader
+             if hasattr(self, '_parent_record') and self._parent_record is not None:
+                 self._parent_record._leader_modified = True
+         elif name == 'multipart_resource_record_level':
+             self._rust_leader.multipart_level = value
+             # Mark parent record as having modified leader
+             if hasattr(self, '_parent_record') and self._parent_record is not None:
+                 self._parent_record._leader_modified = True
+         else:
+             setattr(self._rust_leader, name, value)
+             # Mark parent record as having modified leader
+             if hasattr(self, '_parent_record') and self._parent_record is not None:
+                 self._parent_record._leader_modified = True
+     
+     def __eq__(self, other: Any) -> bool:
+         """Compare leaders by content."""
+         if not isinstance(other, Leader):
+             return False
+         return self._rust_leader == other._rust_leader
+     
+     def __hash__(self) -> int:
+         """Hash based on rust leader."""
+         return hash(id(self._rust_leader))
 
 
 class Record:
@@ -451,7 +471,51 @@ class Record:
     
     def leader(self) -> Leader:
         """Get the leader."""
+        # Ensure _leader is initialized and synced
+        if not hasattr(self, '_leader') or self._leader is None:
+            leader = Leader()
+            leader._rust_leader = self._inner.leader()
+            leader._parent_record = self
+            # Track that we haven't modified the leader
+            self._leader_modified = False
+            self._leader = leader
         return self._leader
+    
+    def _sync_leader(self) -> None:
+        """Sync the Python leader back to the Rust record if it was modified."""
+        # Only sync if the leader was actually accessed/modified
+        if not getattr(self, '_leader_modified', False):
+            return
+       
+        if hasattr(self, '_leader') and self._leader is not None:
+            # Just directly replace the inner leader with our modified one
+            try:
+                self._inner.set_leader(self._leader._rust_leader)
+            except RuntimeError as e:
+                # If we get a borrowing error, it means the leader is still borrowed
+                # In that case, we need to sync properties individually
+                if "Already borrowed" in str(e):
+                    # Get the inner leader and sync all properties
+                    inner_leader = self._inner.leader()
+                    rust_leader = self._leader._rust_leader
+                    
+                    # Sync all properties
+                    inner_leader.record_length = rust_leader.record_length
+                    inner_leader.record_status = rust_leader.record_status
+                    inner_leader.record_type = rust_leader.record_type
+                    inner_leader.bibliographic_level = rust_leader.bibliographic_level
+                    inner_leader.control_record_type = rust_leader.control_record_type
+                    inner_leader.character_coding = rust_leader.character_coding
+                    inner_leader.indicator_count = rust_leader.indicator_count
+                    inner_leader.subfield_code_count = rust_leader.subfield_code_count
+                    inner_leader.data_base_address = rust_leader.data_base_address
+                    inner_leader.encoding_level = rust_leader.encoding_level
+                    inner_leader.cataloging_form = rust_leader.cataloging_form
+                    inner_leader.multipart_level = rust_leader.multipart_level
+                    inner_leader.reserved = rust_leader.reserved
+                    # Note: set_leader will still be called implicitly
+                else:
+                    raise
     
     def __eq__(self, other: Any) -> bool:
         """Compare records by content."""
@@ -506,6 +570,12 @@ class MARCReader:
         record = next(self._inner)
         wrapper = Record(None)
         wrapper._inner = record
+        # Create a Leader wrapper from the Rust record's leader
+        leader = Leader()
+        leader._rust_leader = record.leader()
+        leader._parent_record = wrapper
+        wrapper._leader = leader
+        wrapper._leader_modified = False
         return wrapper
     
     def read_record(self) -> Optional[Record]:
@@ -525,6 +595,8 @@ class MARCWriter:
     
     def write(self, record: Record) -> None:
         """Write a record."""
+        # Sync any modifications to the leader before writing
+        record._sync_leader()
         self._inner.write_record(record._inner)
     
     def write_record(self, record: Record) -> None:

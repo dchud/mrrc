@@ -224,15 +224,60 @@ class TestRoundTrip:
             if orig_author:
                 assert rt_author == orig_author
 
-    @pytest.mark.skip(reason="Deferred: leader mutation API requires clarification")
     def test_round_trip_with_modification(self, fixture_1k):
         """Round-trip with record modification.
         
-        Deferred: Need to clarify the Python API for mutating leader properties.
-        For now, focus on read-only round-trip validation.
+        Tests that leader properties can be modified and persist through
+        a write/read cycle. This validates the leader mutation API.
         """
-        # This test will be implemented in a follow-up task
-        pass
+        # Read original records
+        reader = MARCReader(io.BytesIO(fixture_1k))
+        records_original = list(reader)
+        assert len(records_original) > 0
+        
+        # Modify leader properties on first few records
+        for i, record in enumerate(records_original[:3]):
+            leader = record.leader()
+            # Change record status to 'c' (corrected)
+            leader.record_status = 'c'
+            # Change encoding level to 'I' (full level)
+            leader.encoding_level = 'I'
+            # Change cataloging form to 'a' (AACR2)
+            leader.cataloging_form = 'a'
+        
+        # Write modified records
+        output = io.BytesIO()
+        writer = MARCWriter(output)
+        for record in records_original:
+            writer.write_record(record)
+        writer.close()
+        
+        # Read them back
+        output.seek(0)
+        reader2 = MARCReader(output)
+        records_roundtrip = list(reader2)
+        
+        # Verify count matches
+        assert len(records_roundtrip) == len(records_original)
+        
+        # Verify modifications persisted
+        for i, (orig, roundtrip) in enumerate(zip(records_original[:3], records_roundtrip[:3])):
+            orig_leader = orig.leader()
+            rt_leader = roundtrip.leader()
+            
+            # These should have been modified
+            assert rt_leader.record_status == 'c'
+            assert rt_leader.encoding_level == 'I'
+            assert rt_leader.cataloging_form == 'a'
+            
+            # Verify they match what we expect
+            assert rt_leader.record_status == orig_leader.record_status
+            assert rt_leader.encoding_level == orig_leader.encoding_level
+            assert rt_leader.cataloging_form == orig_leader.cataloging_form
+        
+        # Verify remaining records unchanged
+        for i, (orig, roundtrip) in enumerate(zip(records_original[3:], records_roundtrip[3:]), start=3):
+            assert orig.leader() == roundtrip.leader()
 
     def test_round_trip_large_file(self, fixture_10k):
         """Round-trip test with large file (10k records)."""

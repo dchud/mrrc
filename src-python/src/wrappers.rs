@@ -525,6 +525,11 @@ impl PyRecord {
         }
     }
 
+    /// Set the leader (for record modification)
+    pub fn set_leader(&mut self, leader: &PyLeader) {
+        self.inner.leader = leader.inner.clone();
+    }
+
     /// Add a control field (000-009)
     pub fn add_control_field(&mut self, tag: &str, value: &str) -> PyResult<()> {
         if tag.len() != 3 {
