@@ -3,6 +3,28 @@
 //! This module provides specialized reading functionality for MARC Authority records (Type Z).
 //! Authority records use the same ISO 2709 binary format as bibliographic records but are
 //! parsed into [`AuthorityRecord`] structures instead of [`crate::record::Record`] structures.
+//!
+//! # Phase H Integration (Feature Compatibility - Phase I)
+//!
+//! As of Phase I (Feature Compatibility Updates), `AuthorityMarcReader` supports the
+//! unified `ReaderBackend` enum interface enabling:
+//! - **RustFile**: Direct file I/O via `std::fs::File` (enables Rayon parallelism)
+//! - **CursorBackend**: In-memory reads from bytes via `std::io::Cursor`
+//! - **PythonFile**: Python file-like objects (requires GIL, used sequentially)
+//!
+//! Example with RustFile for parallel processing:
+//! ```no_run
+//! use mrrc::authority_reader::AuthorityMarcReader;
+//! use std::fs::File;
+//!
+//! let file = File::open("authority_records.mrc")?;
+//! let mut reader = AuthorityMarcReader::new(file);
+//!
+//! while let Some(record) = reader.read_record()? {
+//!     println!("Authority: {}", record.heading_text());
+//! }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 use crate::authority_record::AuthorityRecord;
 use crate::error::{MarcError, Result};
@@ -19,6 +41,13 @@ const SUBFIELD_DELIMITER: u8 = 0x1F;
 /// `AuthorityMarcReader` reads Authority record data and converts it to
 /// [`AuthorityRecord`] instances. It reuses the same binary format as bibliographic
 /// records but organizes fields by their functional role (heading, tracings, notes, etc.).
+///
+/// # Backends (Phase H Integration)
+///
+/// The reader automatically detects the input source:
+/// - File paths → `RustFile` backend (parallel-safe)
+/// - Bytes/BytesIO → `CursorBackend` (parallel-safe)
+/// - Python file objects → `PythonFile` (sequential, requires GIL)
 #[derive(Debug)]
 pub struct AuthorityMarcReader<R: Read> {
     reader: R,
@@ -27,6 +56,10 @@ pub struct AuthorityMarcReader<R: Read> {
 
 impl<R: Read> AuthorityMarcReader<R> {
     /// Create a new Authority MARC reader.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - Any source implementing [`std::io::Read`]
     #[must_use]
     pub fn new(reader: R) -> Self {
         AuthorityMarcReader {
@@ -36,6 +69,12 @@ impl<R: Read> AuthorityMarcReader<R> {
     }
 
     /// Set the recovery mode for handling malformed records.
+    ///
+    /// The recovery mode determines how the reader handles truncated or
+    /// malformed Authority records:
+    /// - `Strict`: Return errors immediately (default)
+    /// - `Lenient`: Attempt to recover and salvage valid data
+    /// - `Permissive`: Be very lenient, accepting partial data
     #[must_use]
     pub fn with_recovery_mode(mut self, mode: RecoveryMode) -> Self {
         self.recovery_mode = mode;

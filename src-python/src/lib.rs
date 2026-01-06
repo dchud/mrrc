@@ -1,6 +1,7 @@
 // MRRC Python wrapper using PyO3
 // This module provides Python bindings to the Rust MARC library
 
+mod authority_readers;
 mod backend;
 mod batched_reader;
 mod batched_unified_reader;
@@ -8,6 +9,7 @@ mod boundary_scanner_wrapper;
 mod buffered_reader;
 mod error;
 mod formats;
+mod holdings_readers;
 mod parse_error;
 mod producer_consumer_pipeline_wrapper;
 mod rayon_parser_pool_wrapper;
@@ -16,12 +18,14 @@ mod unified_reader;
 mod wrappers;
 mod writers;
 
+use authority_readers::PyAuthorityMARCReader;
 use boundary_scanner_wrapper::PyRecordBoundaryScanner;
+use holdings_readers::PyHoldingsMARCReader;
 use producer_consumer_pipeline_wrapper::PyProducerConsumerPipeline;
 use pyo3::prelude::*;
 use rayon_parser_pool_wrapper::{parse_batch_parallel, parse_batch_parallel_limited};
 use readers::PyMARCReader;
-use wrappers::{PyField, PyLeader, PyRecord, PySubfield};
+use wrappers::{PyAuthorityRecord, PyField, PyHoldingsRecord, PyLeader, PyRecord, PySubfield};
 use writers::PyMARCWriter;
 
 /// Initialize the Python module
@@ -31,7 +35,11 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySubfield>()?;
     m.add_class::<PyField>()?;
     m.add_class::<PyRecord>()?;
+    m.add_class::<PyAuthorityRecord>()?;
+    m.add_class::<PyHoldingsRecord>()?;
     m.add_class::<PyMARCReader>()?;
+    m.add_class::<PyAuthorityMARCReader>()?;
+    m.add_class::<PyHoldingsMARCReader>()?;
     m.add_class::<PyMARCWriter>()?;
     m.add_class::<PyRecordBoundaryScanner>()?;
     m.add_class::<PyProducerConsumerPipeline>()?;

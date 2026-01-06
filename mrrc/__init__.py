@@ -8,11 +8,15 @@ The Python wrapper aims for API compatibility with pymarc.
 """
 
 from ._mrrc import (
-    Field as _Field, 
-    Leader as _Leader, 
-    MARCReader as _MARCReader, 
-    MARCWriter as _MARCWriter, 
-    Record as _Record, 
+    AuthorityMARCReader,
+    AuthorityRecord as _AuthorityRecord,
+    Field as _Field,
+    HoldingsMARCReader,
+    HoldingsRecord as _HoldingsRecord,
+    Leader as _Leader,
+    MARCReader as _MARCReader,
+    MARCWriter as _MARCWriter,
+    Record as _Record,
     RecordBoundaryScanner,
     ProducerConsumerPipeline,
     Subfield,
@@ -541,7 +545,16 @@ class MARCWriter:
         return False
 
 
+# Aliases for Authority and Holdings records
+AuthorityRecord = _AuthorityRecord
+HoldingsRecord = _HoldingsRecord
+
+
 __all__ = [
+    "AuthorityMARCReader",
+    "AuthorityRecord",
+    "HoldingsMARCReader",
+    "HoldingsRecord",
     "Leader",
     "Subfield",
     "Field",

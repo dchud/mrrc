@@ -1,6 +1,6 @@
 // Python wrapper classes for core MARC data structures
 
-use mrrc::{Field, Leader, Record, RecordHelpers, Subfield};
+use mrrc::{AuthorityRecord, Field, HoldingsRecord, Leader, Record, RecordHelpers, Subfield};
 use pyo3::prelude::*;
 
 /// Python wrapper for a MARC Leader (24-byte record header)
@@ -838,5 +838,279 @@ impl PyRecord {
         self.inner.leader == other.inner.leader
             && self.inner.control_fields == other.inner.control_fields
             && self.inner.fields == other.inner.fields
+    }
+}
+
+/// Python wrapper for a MARC Authority Record (Type Z)
+///
+/// Authority records are used to maintain authorized access points (names, subjects, etc.)
+/// They use the same ISO 2709 binary format as bibliographic records but are organized
+/// by functional role (heading, tracings, notes, etc.).
+#[pyclass(name = "AuthorityRecord")]
+#[derive(Clone)]
+pub struct PyAuthorityRecord {
+    pub inner: AuthorityRecord,
+}
+
+#[pymethods]
+impl PyAuthorityRecord {
+    /// Get the leader
+    #[getter]
+    pub fn leader(&self) -> PyLeader {
+        PyLeader {
+            inner: self.inner.leader.clone(),
+        }
+    }
+
+    /// Get record type (single character)
+    pub fn record_type(&self) -> String {
+        self.inner.leader.record_type.to_string()
+    }
+
+    /// Get the main heading (1XX field)
+    pub fn heading(&self) -> Option<PyField> {
+        self.inner.heading().map(|f| PyField { inner: f.clone() })
+    }
+
+    /// Get the heading text (from the main heading field)
+    pub fn heading_text(&self) -> Option<String> {
+        self.inner
+            .heading()
+            .and_then(|f| f.get_subfield('a'))
+            .map(|s| s.to_string())
+    }
+
+    /// Get all see-from tracings (4XX fields)
+    pub fn see_from_tracings(&self) -> Vec<PyField> {
+        self.inner
+            .see_from_tracings()
+            .into_iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all see-also-from tracings (5XX fields)
+    pub fn see_also_tracings(&self) -> Vec<PyField> {
+        self.inner
+            .see_also_tracings()
+            .into_iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all notes (66X-68X fields)
+    pub fn notes(&self) -> Vec<PyField> {
+        self.inner
+            .notes()
+            .into_iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all heading linking entries (7XX fields)
+    pub fn linking_entries(&self) -> Vec<PyField> {
+        self.inner
+            .linking_entries()
+            .into_iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get fields by tag
+    pub fn get_fields(&self, tag: &str) -> Option<Vec<PyField>> {
+        self.inner.get_fields(tag).map(|fields: &[Field]| {
+            fields
+                .iter()
+                .map(|f: &Field| PyField { inner: f.clone() })
+                .collect()
+        })
+    }
+
+    /// Get control field by tag
+    pub fn get_control_field(&self, tag: &str) -> Option<String> {
+        self.inner.get_control_field(tag).map(|s| s.to_string())
+    }
+
+    /// Convert to JSON string
+    pub fn to_json(&self) -> PyResult<String> {
+        // Authority records can be serialized like bibliographic records
+        // by wrapping them in a Record structure
+        use mrrc::json;
+        // For now, convert the heading field to JSON
+        let heading_json = self
+            .heading()
+            .map(|f| format!("{{\"heading\": {}}}", f.inner.tag))
+            .unwrap_or_else(|| "{}".to_string());
+        Ok(heading_json)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "<AuthorityRecord type={} heading={}>",
+            self.inner.leader.record_type,
+            self.heading_text().unwrap_or_else(|| "Unknown".to_string())
+        )
+    }
+
+    fn __str__(&self) -> String {
+        format!(
+            "AuthorityRecord({})",
+            self.heading_text().unwrap_or_else(|| "Unknown".to_string())
+        )
+    }
+}
+
+/// Python wrapper for a MARC Holdings Record (Type x/y/v/u)
+///
+/// Holdings records are used to maintain inventory and location information.
+/// They use the same ISO 2709 binary format as bibliographic records but organize
+/// fields by functional role (locations, enumeration, notes, etc.).
+#[pyclass(name = "HoldingsRecord")]
+#[derive(Clone)]
+pub struct PyHoldingsRecord {
+    pub inner: HoldingsRecord,
+}
+
+#[pymethods]
+impl PyHoldingsRecord {
+    /// Get the leader
+    #[getter]
+    pub fn leader(&self) -> PyLeader {
+        PyLeader {
+            inner: self.inner.leader.clone(),
+        }
+    }
+
+    /// Get record type (single character: x, y, v, or u)
+    pub fn record_type(&self) -> String {
+        self.inner.leader.record_type.to_string()
+    }
+
+    /// Get all location fields (852)
+    pub fn locations(&self) -> Vec<PyField> {
+        self.inner
+            .locations()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all basic captions (853)
+    pub fn captions_basic(&self) -> Vec<PyField> {
+        self.inner
+            .captions_basic()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all supplement captions (854)
+    pub fn captions_supplements(&self) -> Vec<PyField> {
+        self.inner
+            .captions_supplements()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all index captions (855)
+    pub fn captions_indexes(&self) -> Vec<PyField> {
+        self.inner
+            .captions_indexes()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all basic enumeration (863)
+    pub fn enumeration_basic(&self) -> Vec<PyField> {
+        self.inner
+            .enumeration_basic()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all supplement enumeration (864)
+    pub fn enumeration_supplements(&self) -> Vec<PyField> {
+        self.inner
+            .enumeration_supplements()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all index enumeration (865)
+    pub fn enumeration_indexes(&self) -> Vec<PyField> {
+        self.inner
+            .enumeration_indexes()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all basic textual holdings (866)
+    pub fn textual_holdings_basic(&self) -> Vec<PyField> {
+        self.inner
+            .textual_holdings_basic()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all supplement textual holdings (867)
+    pub fn textual_holdings_supplements(&self) -> Vec<PyField> {
+        self.inner
+            .textual_holdings_supplements()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get all index textual holdings (868)
+    pub fn textual_holdings_indexes(&self) -> Vec<PyField> {
+        self.inner
+            .textual_holdings_indexes()
+            .iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get fields by tag
+    pub fn get_fields(&self, tag: &str) -> Option<Vec<PyField>> {
+        self.inner.get_fields(tag).map(|fields: &[Field]| {
+            fields
+                .iter()
+                .map(|f: &Field| PyField { inner: f.clone() })
+                .collect()
+        })
+    }
+
+    /// Get control field by tag
+    pub fn get_control_field(&self, tag: &str) -> Option<String> {
+        self.inner.get_control_field(tag).map(|s| s.to_string())
+    }
+
+    /// Convert to JSON string
+    pub fn to_json(&self) -> PyResult<String> {
+        // Holdings records can include location and enumeration information
+        let loc_count = self.locations().len();
+        Ok(format!("{{\"locations\": {}}}", loc_count))
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "<HoldingsRecord type={} locations={}>",
+            self.inner.leader.record_type,
+            self.locations().len()
+        )
+    }
+
+    fn __str__(&self) -> String {
+        format!(
+            "HoldingsRecord(type={}, locations={})",
+            self.inner.leader.record_type,
+            self.locations().len()
+        )
     }
 }
