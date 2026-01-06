@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["FIELD_TERMINATOR","SUBFIELD_DELIMITER"],"fn":["parse_4digits","parse_data_field","parse_digits"],"struct":["MarcReader"]};

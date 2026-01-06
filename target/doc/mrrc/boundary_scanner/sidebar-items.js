@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["RECORD_TERMINATOR"],"struct":["RecordBoundaryScanner"]};
