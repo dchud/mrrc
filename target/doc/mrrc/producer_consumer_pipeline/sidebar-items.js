@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["PipelineError"],"fn":["producer_task"],"struct":["PipelineConfig","ProducerConsumerPipeline"],"type":["PipelineResult"]};

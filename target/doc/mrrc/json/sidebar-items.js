@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["json_to_record","record_to_json"]};
