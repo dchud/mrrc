@@ -26,7 +26,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mrrc = "0.1"
+mrrc = "0.3"
 ```
 
 ## Quick Start
