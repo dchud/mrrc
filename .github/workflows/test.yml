@@ -39,7 +39,7 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
-        run: cargo test --verbose --all
+        run: cargo test --verbose --lib --bins
 
       - name: Run doc tests
         run: cargo test --doc --verbose

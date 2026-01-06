@@ -52,10 +52,7 @@ markers = [
     "benchmark: mark test as a benchmark",
     "slow: mark test as slow running",
 ]
-# Benchmark settings
-benchmark_min_rounds = 3
-benchmark_disable_gc = true
-benchmark_warmup = true
+addopts = "--benchmark-min-rounds=3 --benchmark-disable-gc --benchmark-warmup=true"
 
 [tool.mypy]
 python_version = "3.9"
