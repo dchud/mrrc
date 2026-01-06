@@ -93,7 +93,7 @@ impl RecordBoundaryScanner {
         self.boundaries.clear();
         let mut offset = 0;
 
-        // Use memchr for SIMD-accelerated scanning of 0x1E terminators
+        // Use memchr for SIMD-accelerated scanning of 0x1D terminators
         for terminator_pos in memchr::memchr_iter(RECORD_TERMINATOR, buffer) {
             let record_len = terminator_pos - offset + 1; // +1 to include terminator
             self.boundaries.push((offset, record_len));
@@ -153,14 +153,14 @@ impl RecordBoundaryScanner {
     ///
     /// # Returns
     ///
-    /// The number of 0x1E terminators (complete records) found.
+    /// The number of 0x1D terminators (complete records) found.
     ///
     /// # Examples
     ///
     /// ```
     /// use mrrc::boundary_scanner::RecordBoundaryScanner;
     ///
-    /// let data = vec![1, 0x1E, 2, 0x1E];
+    /// let data = vec![1, 0x1D, 2, 0x1D];
     /// let mut scanner = RecordBoundaryScanner::new();
     /// let count = scanner.count_records(&data);
     ///
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_scan_single_record() {
-        let data = vec![1, 2, 3, 0x1E];
+        let data = vec![1, 2, 3, 0x1D];
         let mut scanner = RecordBoundaryScanner::new();
         let boundaries = scanner.scan(&data).unwrap();
 
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_scan_multiple_records() {
-        let data = vec![1, 2, 0x1E, 3, 4, 0x1E, 5, 0x1E];
+        let data = vec![1, 2, 0x1D, 3, 4, 0x1D, 5, 0x1D];
         let mut scanner = RecordBoundaryScanner::new();
         let boundaries = scanner.scan(&data).unwrap();
 
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_scan_limited() {
-        let data = vec![1, 0x1E, 2, 0x1E, 3, 0x1E];
+        let data = vec![1, 0x1D, 2, 0x1D, 3, 0x1D];
         let mut scanner = RecordBoundaryScanner::new();
         let boundaries = scanner.scan_limited(&data, 2).unwrap();
 
@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn test_count_records() {
-        let data = vec![1, 0x1E, 2, 0x1E, 3, 4];
+        let data = vec![1, 0x1D, 2, 0x1D, 3, 4];
         let scanner = RecordBoundaryScanner::new();
 
         assert_eq!(scanner.count_records(&data), 2);
@@ -262,12 +262,12 @@ mod tests {
         let mut scanner = RecordBoundaryScanner::new();
 
         // First scan
-        let data1 = vec![1, 0x1E, 2, 0x1E];
+        let data1 = vec![1, 0x1D, 2, 0x1D];
         let boundaries1 = scanner.scan(&data1).unwrap();
         assert_eq!(boundaries1.len(), 2);
 
         // Second scan (should reuse internal buffer)
-        let data2 = vec![1, 0x1E];
+        let data2 = vec![1, 0x1D];
         let boundaries2 = scanner.scan(&data2).unwrap();
         assert_eq!(boundaries2.len(), 1);
 
@@ -277,13 +277,13 @@ mod tests {
 
     #[test]
     fn test_large_buffer_performance() {
-        // Create a buffer with 1000 records (avoid 0x1E bytes in data)
+        // Create a buffer with 1000 records (avoid 0x1D bytes in data)
         let mut data = Vec::new();
         for i in 0..1000 {
             // Each record: pattern of safe bytes + terminator
-            // Use bytes < 0x1E and > 0x1E to avoid collisions
+            // Use bytes < 0x1D and > 0x1D to avoid collisions
             data.push(if i % 2 == 0 { 0x01 } else { 0x02 });
-            data.push(0x1E);
+            data.push(0x1D);
         }
 
         let mut scanner = RecordBoundaryScanner::new();

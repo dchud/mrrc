@@ -140,15 +140,15 @@ class TestBackendTypeDetectionAcceptanceCriteria:
         assert len(routing) == 8
 
     def test_unknown_types_raise_typeerror(self):
-         """Acceptance criterion: Unknown types raise TypeError with descriptive message"""
-         # Integration tests verify actual TypeError raising
-         # This verifies the error handling logic exists
-         assert True
+        """Acceptance criterion: Unknown types raise TypeError with descriptive message"""
+        # Integration tests verify actual TypeError raising
+        # This verifies the error handling logic exists
+        assert True
 
-     def test_type_detection_unit_tests_exist(self):
-         """Acceptance criterion: Type detection tests for all supported types"""
-         # Test file test_backend_type_detection.py has:
-         # - 8 tests for supported types
-         # - 6 tests for unknown/error types
-         # - Tests for file error conditions
-         assert True
+    def test_type_detection_unit_tests_exist(self):
+        """Acceptance criterion: Type detection tests for all supported types"""
+        # Test file test_backend_type_detection.py has:
+        # - 8 tests for supported types
+        # - 6 tests for unknown/error types
+        # - Tests for file error conditions
+        assert True

@@ -9,6 +9,7 @@ mod buffered_reader;
 mod error;
 mod formats;
 mod parse_error;
+mod producer_consumer_pipeline_wrapper;
 mod rayon_parser_pool_wrapper;
 mod readers;
 mod unified_reader;
@@ -16,6 +17,7 @@ mod wrappers;
 mod writers;
 
 use boundary_scanner_wrapper::PyRecordBoundaryScanner;
+use producer_consumer_pipeline_wrapper::PyProducerConsumerPipeline;
 use pyo3::prelude::*;
 use rayon_parser_pool_wrapper::{parse_batch_parallel, parse_batch_parallel_limited};
 use readers::PyMARCReader;
@@ -32,6 +34,7 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMARCReader>()?;
     m.add_class::<PyMARCWriter>()?;
     m.add_class::<PyRecordBoundaryScanner>()?;
+    m.add_class::<PyProducerConsumerPipeline>()?;
 
     // Format conversion functions
     m.add_function(wrap_pyfunction!(formats::record_to_json, m)?)?;

@@ -93,7 +93,7 @@
 <a href=#93 id=93 data-nosnippet>93</a>        <span class="self">self</span>.boundaries.clear();
 <a href=#94 id=94 data-nosnippet>94</a>        <span class="kw">let </span><span class="kw-2">mut </span>offset = <span class="number">0</span>;
 <a href=#95 id=95 data-nosnippet>95</a>
-<a href=#96 id=96 data-nosnippet>96</a>        <span class="comment">// Use memchr for SIMD-accelerated scanning of 0x1E terminators
+<a href=#96 id=96 data-nosnippet>96</a>        <span class="comment">// Use memchr for SIMD-accelerated scanning of 0x1D terminators
 <a href=#97 id=97 data-nosnippet>97</a>        </span><span class="kw">for </span>terminator_pos <span class="kw">in </span>memchr::memchr_iter(RECORD_TERMINATOR, buffer) {
 <a href=#98 id=98 data-nosnippet>98</a>            <span class="kw">let </span>record_len = terminator_pos - offset + <span class="number">1</span>; <span class="comment">// +1 to include terminator
 <a href=#99 id=99 data-nosnippet>99</a>            </span><span class="self">self</span>.boundaries.push((offset, record_len));
@@ -153,14 +153,14 @@
 <a href=#153 id=153 data-nosnippet>153</a>    ///
 <a href=#154 id=154 data-nosnippet>154</a>    /// # Returns
 <a href=#155 id=155 data-nosnippet>155</a>    ///
-<a href=#156 id=156 data-nosnippet>156</a>    /// The number of 0x1E terminators (complete records) found.
+<a href=#156 id=156 data-nosnippet>156</a>    /// The number of 0x1D terminators (complete records) found.
 <a href=#157 id=157 data-nosnippet>157</a>    ///
 <a href=#158 id=158 data-nosnippet>158</a>    /// # Examples
 <a href=#159 id=159 data-nosnippet>159</a>    ///
 <a href=#160 id=160 data-nosnippet>160</a>    /// ```
 <a href=#161 id=161 data-nosnippet>161</a>    /// use mrrc::boundary_scanner::RecordBoundaryScanner;
 <a href=#162 id=162 data-nosnippet>162</a>    ///
-<a href=#163 id=163 data-nosnippet>163</a>    /// let data = vec![1, 0x1E, 2, 0x1E];
+<a href=#163 id=163 data-nosnippet>163</a>    /// let data = vec![1, 0x1D, 2, 0x1D];
 <a href=#164 id=164 data-nosnippet>164</a>    /// let mut scanner = RecordBoundaryScanner::new();
 <a href=#165 id=165 data-nosnippet>165</a>    /// let count = scanner.count_records(&amp;data);
 <a href=#166 id=166 data-nosnippet>166</a>    ///
@@ -192,7 +192,7 @@
 <a href=#192 id=192 data-nosnippet>192</a>
 <a href=#193 id=193 data-nosnippet>193</a>    <span class="attr">#[test]
 <a href=#194 id=194 data-nosnippet>194</a>    </span><span class="kw">fn </span>test_scan_single_record() {
-<a href=#195 id=195 data-nosnippet>195</a>        <span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">0x1E</span>];
+<a href=#195 id=195 data-nosnippet>195</a>        <span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">0x1D</span>];
 <a href=#196 id=196 data-nosnippet>196</a>        <span class="kw">let </span><span class="kw-2">mut </span>scanner = RecordBoundaryScanner::new();
 <a href=#197 id=197 data-nosnippet>197</a>        <span class="kw">let </span>boundaries = scanner.scan(<span class="kw-2">&amp;</span>data).unwrap();
 <a href=#198 id=198 data-nosnippet>198</a>
@@ -202,7 +202,7 @@
 <a href=#202 id=202 data-nosnippet>202</a>
 <a href=#203 id=203 data-nosnippet>203</a>    <span class="attr">#[test]
 <a href=#204 id=204 data-nosnippet>204</a>    </span><span class="kw">fn </span>test_scan_multiple_records() {
-<a href=#205 id=205 data-nosnippet>205</a>        <span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">0x1E</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">0x1E</span>, <span class="number">5</span>, <span class="number">0x1E</span>];
+<a href=#205 id=205 data-nosnippet>205</a>        <span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">0x1D</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">0x1D</span>, <span class="number">5</span>, <span class="number">0x1D</span>];
 <a href=#206 id=206 data-nosnippet>206</a>        <span class="kw">let </span><span class="kw-2">mut </span>scanner = RecordBoundaryScanner::new();
 <a href=#207 id=207 data-nosnippet>207</a>        <span class="kw">let </span>boundaries = scanner.scan(<span class="kw-2">&amp;</span>data).unwrap();
 <a href=#208 id=208 data-nosnippet>208</a>
@@ -232,7 +232,7 @@
 <a href=#232 id=232 data-nosnippet>232</a>
 <a href=#233 id=233 data-nosnippet>233</a>    <span class="attr">#[test]
 <a href=#234 id=234 data-nosnippet>234</a>    </span><span class="kw">fn </span>test_scan_limited() {
-<a href=#235 id=235 data-nosnippet>235</a>        <span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1E</span>, <span class="number">2</span>, <span class="number">0x1E</span>, <span class="number">3</span>, <span class="number">0x1E</span>];
+<a href=#235 id=235 data-nosnippet>235</a>        <span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1D</span>, <span class="number">2</span>, <span class="number">0x1D</span>, <span class="number">3</span>, <span class="number">0x1D</span>];
 <a href=#236 id=236 data-nosnippet>236</a>        <span class="kw">let </span><span class="kw-2">mut </span>scanner = RecordBoundaryScanner::new();
 <a href=#237 id=237 data-nosnippet>237</a>        <span class="kw">let </span>boundaries = scanner.scan_limited(<span class="kw-2">&amp;</span>data, <span class="number">2</span>).unwrap();
 <a href=#238 id=238 data-nosnippet>238</a>
@@ -243,7 +243,7 @@
 <a href=#243 id=243 data-nosnippet>243</a>
 <a href=#244 id=244 data-nosnippet>244</a>    <span class="attr">#[test]
 <a href=#245 id=245 data-nosnippet>245</a>    </span><span class="kw">fn </span>test_count_records() {
-<a href=#246 id=246 data-nosnippet>246</a>        <span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1E</span>, <span class="number">2</span>, <span class="number">0x1E</span>, <span class="number">3</span>, <span class="number">4</span>];
+<a href=#246 id=246 data-nosnippet>246</a>        <span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1D</span>, <span class="number">2</span>, <span class="number">0x1D</span>, <span class="number">3</span>, <span class="number">4</span>];
 <a href=#247 id=247 data-nosnippet>247</a>        <span class="kw">let </span>scanner = RecordBoundaryScanner::new();
 <a href=#248 id=248 data-nosnippet>248</a>
 <a href=#249 id=249 data-nosnippet>249</a>        <span class="macro">assert_eq!</span>(scanner.count_records(<span class="kw-2">&amp;</span>data), <span class="number">2</span>);
@@ -262,12 +262,12 @@
 <a href=#262 id=262 data-nosnippet>262</a>        <span class="kw">let </span><span class="kw-2">mut </span>scanner = RecordBoundaryScanner::new();
 <a href=#263 id=263 data-nosnippet>263</a>
 <a href=#264 id=264 data-nosnippet>264</a>        <span class="comment">// First scan
-<a href=#265 id=265 data-nosnippet>265</a>        </span><span class="kw">let </span>data1 = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1E</span>, <span class="number">2</span>, <span class="number">0x1E</span>];
+<a href=#265 id=265 data-nosnippet>265</a>        </span><span class="kw">let </span>data1 = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1D</span>, <span class="number">2</span>, <span class="number">0x1D</span>];
 <a href=#266 id=266 data-nosnippet>266</a>        <span class="kw">let </span>boundaries1 = scanner.scan(<span class="kw-2">&amp;</span>data1).unwrap();
 <a href=#267 id=267 data-nosnippet>267</a>        <span class="macro">assert_eq!</span>(boundaries1.len(), <span class="number">2</span>);
 <a href=#268 id=268 data-nosnippet>268</a>
 <a href=#269 id=269 data-nosnippet>269</a>        <span class="comment">// Second scan (should reuse internal buffer)
-<a href=#270 id=270 data-nosnippet>270</a>        </span><span class="kw">let </span>data2 = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1E</span>];
+<a href=#270 id=270 data-nosnippet>270</a>        </span><span class="kw">let </span>data2 = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1D</span>];
 <a href=#271 id=271 data-nosnippet>271</a>        <span class="kw">let </span>boundaries2 = scanner.scan(<span class="kw-2">&amp;</span>data2).unwrap();
 <a href=#272 id=272 data-nosnippet>272</a>        <span class="macro">assert_eq!</span>(boundaries2.len(), <span class="number">1</span>);
 <a href=#273 id=273 data-nosnippet>273</a>
@@ -277,13 +277,13 @@
 <a href=#277 id=277 data-nosnippet>277</a>
 <a href=#278 id=278 data-nosnippet>278</a>    <span class="attr">#[test]
 <a href=#279 id=279 data-nosnippet>279</a>    </span><span class="kw">fn </span>test_large_buffer_performance() {
-<a href=#280 id=280 data-nosnippet>280</a>        <span class="comment">// Create a buffer with 1000 records (avoid 0x1E bytes in data)
+<a href=#280 id=280 data-nosnippet>280</a>        <span class="comment">// Create a buffer with 1000 records (avoid 0x1D bytes in data)
 <a href=#281 id=281 data-nosnippet>281</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>data = Vec::new();
 <a href=#282 id=282 data-nosnippet>282</a>        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">1000 </span>{
 <a href=#283 id=283 data-nosnippet>283</a>            <span class="comment">// Each record: pattern of safe bytes + terminator
-<a href=#284 id=284 data-nosnippet>284</a>            // Use bytes &lt; 0x1E and &gt; 0x1E to avoid collisions
+<a href=#284 id=284 data-nosnippet>284</a>            // Use bytes &lt; 0x1D and &gt; 0x1D to avoid collisions
 <a href=#285 id=285 data-nosnippet>285</a>            </span>data.push(<span class="kw">if </span>i % <span class="number">2 </span>== <span class="number">0 </span>{ <span class="number">0x01 </span>} <span class="kw">else </span>{ <span class="number">0x02 </span>});
-<a href=#286 id=286 data-nosnippet>286</a>            data.push(<span class="number">0x1E</span>);
+<a href=#286 id=286 data-nosnippet>286</a>            data.push(<span class="number">0x1D</span>);
 <a href=#287 id=287 data-nosnippet>287</a>        }
 <a href=#288 id=288 data-nosnippet>288</a>
 <a href=#289 id=289 data-nosnippet>289</a>        <span class="kw">let </span><span class="kw-2">mut </span>scanner = RecordBoundaryScanner::new();

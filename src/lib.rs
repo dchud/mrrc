@@ -120,6 +120,7 @@ pub mod marc8_tables;
 pub mod marc_record;
 pub mod marcjson;
 pub mod mods;
+pub mod producer_consumer_pipeline;
 pub mod rayon_parser_pool;
 pub mod reader;
 /// Core MARC record structures (`Record`, `Field`, `Subfield`)
@@ -153,6 +154,7 @@ pub use holdings_record::{
 pub use holdings_writer::HoldingsMarcWriter;
 pub use leader::Leader;
 pub use marc_record::MarcRecord;
+pub use producer_consumer_pipeline::{PipelineConfig, PipelineError, ProducerConsumerPipeline};
 pub use reader::MarcReader;
 pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
 pub use record_builder_generic::GenericRecordBuilder;

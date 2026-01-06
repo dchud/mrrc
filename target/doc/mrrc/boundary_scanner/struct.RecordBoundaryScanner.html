@@ -59,11 +59,11 @@ includes the terminating 0x1D byte (record terminator).</p>
 <li><code>buffer</code> - The bytes to scan</li>
 </ul>
 <h5 id="returns-2"><a class="doc-anchor" href="#returns-2">§</a>Returns</h5>
-<p>The number of 0x1E terminators (complete records) found.</p>
+<p>The number of 0x1D terminators (complete records) found.</p>
 <h5 id="examples-3"><a class="doc-anchor" href="#examples-3">§</a>Examples</h5>
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>mrrc::boundary_scanner::RecordBoundaryScanner;
 
-<span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1E</span>, <span class="number">2</span>, <span class="number">0x1E</span>];
+<span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0x1D</span>, <span class="number">2</span>, <span class="number">0x1D</span>];
 <span class="kw">let </span><span class="kw-2">mut </span>scanner = RecordBoundaryScanner::new();
 <span class="kw">let </span>count = scanner.count_records(<span class="kw-2">&amp;</span>data);
 
