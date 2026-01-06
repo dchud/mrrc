@@ -8,10 +8,10 @@
 //!
 //! ```no_run
 //! use mrrc::rayon_parser_pool::parse_batch_parallel;
-//! use mrrc::RecordBoundaryScanner;
+//! use mrrc::boundary_scanner::RecordBoundaryScanner;
 //!
 //! let buffer = vec![/* MARC binary data */];
-//! let scanner = RecordBoundaryScanner::new();
+//! let mut scanner = RecordBoundaryScanner::new();
 //! let boundaries = scanner.scan(&buffer)?;
 //!
 //! // Parse all records in parallel
