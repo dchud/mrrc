@@ -58,91 +58,87 @@ Record Object
 
 The Python wrapper implements a three-phase pattern for GIL management:
 
-```
-Phase 1 (GIL held):
-  Read record bytes from source
-  - Python file object: via Python read() method
-  - File path: via Rust std::fs::File (no GIL!)
-  - Bytes: already in memory (no I/O)
+**Phase 1 (GIL held)**:
+- Acquire raw record bytes from source
+- Python file object: via Python `read()` method
+- File path: via Rust `std::fs::File` (no GIL!)
+- Bytes: already in memory (no I/O)
 
-Phase 2 (GIL released):
-  Parse record bytes to MARC structure
-  - cpu_isolate() macro releases GIL
-  - py.detach() in PyO3 terms
-  - SmallVec<[u8; 4096]> buffer avoids borrow violations
-  - ParseError created without GIL
+**Phase 2 (GIL released)**:
+- Parse record bytes to MARC structure
+- Uses `py.detach()` (PyO3 0.23+) to release GIL
+- Creates Rust `ParseError` (no Python objects needed)
+- SmallVec buffer handles most records inline
 
-Phase 3 (GIL re-acquired):
-  Convert result to Python object
-  - ParseError → PyErr (GIL required)
-  - MarcRecord → PyRecord (GIL required)
-  - Return to caller
-```
+**Phase 3 (GIL re-acquired)**:
+- Convert Rust `ParseError` to Python exception
+- Convert Rust `Record` to Python `PyRecord`
+- Return to caller
 
 ### Why GIL Release?
 
-The Python GIL (Global Interpreter Lock) serializes all Python bytecode execution. When multiple threads try to process MARC data:
+The Python GIL (Global Interpreter Lock) serializes all Python bytecode execution. When multiple threads process MARC data:
 
-**Without GIL Release (Old)**:
+**Without GIL Release**:
 ```
-Thread 1: Read bytes → Parse (blocked by GIL) → Convert
+Thread 1: Read bytes (hold GIL) → Parse (hold GIL) → Convert
 Thread 2: Waiting for GIL...
-Result: No parallelism, threads serialize around GIL
+Result: No parallelism
 ```
 
-**With GIL Release (New)**:
+**With GIL Release**:
 ```
 Thread 1: Read bytes (hold GIL) → Parse (release GIL) → Convert (re-acquire GIL)
 Thread 2: Read bytes (hold GIL) → Parse (release GIL) → Convert (re-acquire GIL)
-Result: Threads can parse in parallel, GIL only held briefly
+Result: Threads parse in parallel
 ```
 
-The parsing phase is CPU-intensive and doesn't need Python objects, so releasing the GIL here enables true parallelism.
+The parsing phase is CPU-intensive but doesn't need Python objects, so releasing the GIL here enables true parallelism.
 
-### ReaderBackend Enum (Phase H)
+### ReaderBackend Enum
 
 The unified reader supports multiple input types via a backend enum:
 
 ```rust
 enum ReaderBackend {
-    RustFile(std::fs::File),           // Pure Rust I/O, zero GIL
-    Cursor(io::Cursor<Vec<u8>>),       // In-memory, zero GIL
-    PythonFile(PyObject),               // Python file object, GIL managed
+    RustFile(std::fs::File),        // Pure Rust I/O, zero GIL
+    Cursor(io::Cursor<Vec<u8>>),    // In-memory, zero GIL
+    PythonFile(PyObject),            // Python file object, GIL managed
 }
 ```
 
 **Advantages**:
-- **Automatic Detection**: Input type determined at construction time
-- **Optimal Performance**: Each backend uses the fastest available method
+- **Automatic Detection**: Input type determined at construction
+- **Optimal Performance**: Each backend uses fastest available method
 - **Backward Compatible**: Python file objects still work via GIL management
 - **Zero-GIL Paths**: File paths and bytes bypass Python entirely
 
-### BufferedMarcReader (Phase C)
+**Performance Impact**:
+- File path: Pure Rust I/O, Phase 1 has minimal GIL hold
+- Bytes: Zero I/O, Phase 1 is trivial
+- File object: Requires GIL for `.read()`, but Phase 2 still releases it
 
-The batch reader reduces GIL contention:
+### Batched Reader (Optimization)
+
+For Python file objects, batching reduces GIL contention:
 
 ```
 Without batching (N records):
   FOR i = 1 to N:
     Acquire GIL → Read 1 record → Release GIL → Parse
-    Result: N GIL acquisitions
 
 With batching (N records, batch size = 100):
   FOR batch = 1 to N/100:
     Acquire GIL → Read 100 records → Release GIL
     FOR record in batch:
-      Parse record → Serve from queue
-  Result: N/100 GIL acquisitions
+      Parse record (GIL released)
 ```
 
-**Implementation**:
-- Queue-based state machine: CHECK_QUEUE → CHECK_EOF → READ_BATCH
-- VecDeque buffer holds up to 100 pre-read records
-- Reduces GIL overhead by ~99% for typical workloads
+Result: N/100 GIL acquisitions instead of N.
 
 ### SmallVec Optimization
 
-MARC records vary in size (typically 500 - 4000 bytes). The SmallVec buffer:
+MARC records vary in size (typically 500-4000 bytes). The SmallVec buffer:
 
 ```rust
 SmallVec<[u8; 4096]>
@@ -151,8 +147,8 @@ SmallVec<[u8; 4096]>
 **Benefits**:
 - Inline storage for ~85-90% of records (no allocation)
 - Dynamic heap allocation for oversized records
-- <3% memory overhead vs single-threaded
-- Eliminates borrow checker issues (owned data for Phase 2 closure)
+- <3% memory overhead
+- Eliminates borrow checker issues in Phase 2
 
 ## Error Handling
 
@@ -176,7 +172,7 @@ impl From<ParseError> for PyErr {
 **Why Custom Error Type?**
 - PyErr requires GIL to create
 - ParseError can be created during Phase 2 (GIL released)
-- Defers PyErr creation to Phase 3 (after GIL re-acquired)
+- Defers PyErr conversion to Phase 3 (after GIL re-acquired)
 
 ## Thread Safety
 
@@ -185,10 +181,10 @@ impl From<ParseError> for PyErr {
 The readers are intentionally **not** Send or Sync:
 
 ```rust
-// Readers hold Python::GIL reference (not Send/Sync)
+// Readers hold Python references (not Send/Sync)
 pub struct PyMARCReader {
     reader: Option<ReaderType>,
-    // ReaderType contains PythonFile(PyObject) which is !Send
+    // ReaderType may contain PythonFile(PyObject) which is !Send
 }
 ```
 
@@ -206,10 +202,9 @@ from concurrent.futures import ThreadPoolExecutor
 from mrrc import MARCReader
 
 def process_file(filename):
-    with open(filename, 'rb') as f:
-        reader = MARCReader(f)  # New reader per thread
-        for record in reader:
-            process(record)
+    reader = MARCReader(filename)  # New reader per thread
+    for record in reader:
+        process(record)
 
 files = ['file1.mrc', 'file2.mrc', 'file3.mrc', 'file4.mrc']
 with ThreadPoolExecutor(max_workers=4) as executor:
@@ -218,16 +213,9 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 ```
 
 **Performance**:
-- 2 threads: 2.04x speedup
-- 4 threads: 3.20x speedup
-- 8 threads: ~4.5x speedup (diminishing returns)
-
-### Why ThreadPoolExecutor?
-
-- **Correct**: Creates separate reader per thread
-- **Simple**: No manual thread management
-- **Efficient**: Thread reuse reduces startup overhead
-- **Production-Ready**: Handles exceptions and cleanup
+- 2 threads: 2.0x speedup
+- 4 threads: 3.74x speedup
+- Scales with CPU core count
 
 ## Performance Characteristics
 
@@ -235,9 +223,9 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 
 | Mode | Throughput | Notes |
 |------|-----------|-------|
-| Sequential (1 thread) | 113,100 rec/s | Baseline |
-| Parallel (2 threads) | ~230,000 rec/s | ~2.04x speedup |
-| Parallel (4 threads) | ~360,000 rec/s | ~3.20x speedup |
+| Sequential (1 thread) | 549,500 rec/s | Baseline |
+| Parallel (2 threads) | ~1.1M rec/s | ~2.0x speedup |
+| Parallel (4 threads) | ~2.0M rec/s | ~3.74x speedup |
 
 ### Memory Usage
 
@@ -245,7 +233,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 |----------|--------|-------|
 | Per reader | ~4 KB | SmallVec buffer |
 | Per record (memory) | ~4 KB | Typical MARC record |
-| Overhead (4 readers) | ~16 KB | Negligible impact |
+| Overhead (4 readers) | ~16 KB | Negligible |
 
 ### GIL Contention
 
@@ -254,11 +242,6 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 | Phase 1 | Held | Short | Read bytes only |
 | Phase 2 | Released | Long | Parsing (CPU-bound) |
 | Phase 3 | Held | Short | Convert to Python |
-
-**Batching Benefit**: With BatchedMarcReader, Phase 1 is amortized over 100 records:
-- 1 Phase 1 GIL acquisition → Read 100 records
-- 100 Phase 2 GIL releases (concurrent)
-- 100 Phase 3 GIL re-acquisitions (brief)
 
 ## Character Encoding
 
@@ -332,31 +315,15 @@ Located in `tests/data/fixtures/`:
 2. **Zero-Copy Where Possible**: Efficient memory usage for large workloads
 3. **Format Flexibility**: Multiple serialization formats out of box
 4. **Compatibility**: Maintains data fidelity with pymarc
-5. **Performance**: Concurrent I/O with intelligent batching
+5. **Performance**: Concurrent I/O with intelligent GIL management
 6. **Safety**: GIL release without unsafe code (except PyO3 glue)
-
-## Future Enhancements
-
-### Phase I: Authority/Holdings Reader Integration
-- Refactor Authority/Holdings readers to use ReaderBackend enum
-- Enable parallelism benefits for specialized record types
-- Timeline: ~1-2 days
-
-### Phase J: Advanced Optimizations
-- Adaptive buffer sizing based on record patterns
-- Zero-copy field access in Python
-- Memory-mapped file support for very large datasets
-
-### Phase K: Web Integration
-- REST API for MARC processing
-- WebAssembly bindings for browsers
-- Streaming JSON output for large result sets
 
 ## References
 
-- **GIL Release Plan**: `docs/design/GIL_RELEASE_IMPLEMENTATION_PLAN.md`
-- **Benchmarking Guide**: `docs/BENCHMARKING.md`
 - **Performance Guide**: `docs/PERFORMANCE.md`
+- **Parallel Processing Guide**: `docs/parallel_processing.md`
+- **Benchmarking Results**: `docs/benchmarks/RESULTS.md`
 - **Threading Guide**: `docs/threading.md`
 - **MARC Standard**: https://www.loc.gov/marc/
 - **ISO 2709**: https://en.wikipedia.org/wiki/MARC_standards
+- **PyO3 Documentation**: https://pyo3.rs/

@@ -6,68 +6,55 @@ Welcome to the MRRC (MARC Rust Crate) documentation. This directory contains com
 
 ### 📚 User Guides & Tutorials
 
-- **[Parallel Processing Guide](./parallel_processing.md)** - How to use concurrent processing with MRRC for batch MARC file processing
-- **[Benchmarking Guide](./BENCHMARKING.md)** - Performance measurement and testing methodology
-- **[Threading Documentation](./threading.md)** - Multi-threaded usage patterns and GIL behavior
+- **[Parallel Processing Guide](./parallel_processing.md)** - Concurrent processing with multi-threading for batch MARC file processing
+- **[Performance Guide](./PERFORMANCE.md)** - Detailed performance analysis, GIL release details, and optimization guidance
+- **[Threading Documentation](./threading.md)** - Thread safety, multi-threaded usage patterns, and best practices
+- **[Architecture](./ARCHITECTURE.md)** - System design, GIL management, record types, and implementation details
+
+### 📊 Benchmarking Results
+
+**Performance Data**: See [`benchmarks/`](./benchmarks/)
+- [Complete Results](./benchmarks/RESULTS.md) - Detailed performance metrics
+  - Single-threaded vs multi-threaded performance
+  - pymrrc vs pymarc vs pure Rust comparison
+  - Throughput analysis and memory usage profiles
+- [README](./benchmarks/README.md) - Benchmarking methodology and frameworks
 
 ### 🏗️ Design & Architecture
 
 **Current Design Documents**: See [`design/`](./design/)
 - Architectural decisions and proposals
-- Feature design documentation
+- Active feature design documentation
 - Implementation strategies
-- For active/proposed features
 
 **Key Design Areas**:
-- Python wrapper implementation strategy
-- Parallel benchmarking suite design
+- Python wrapper implementation
+- Parallel processing and benchmarking
 - API and module structure
 
 ### 📖 Project History
 
 **Historical Documents**: See [`history/`](./history/)
-- Code review audits and findings
+- Code review audits and findings (December 2025)
 - Completed design documents and proposals
-- Implementation notes and decision logs
-- Module-specific design rationales
-
-**Key Historical Content**:
-- Complete code review audit suite (December 2025)
-- API refactoring history and decisions
-- Original MARC port planning
-- Field query DSL design and implementation
-- Authority record support implementation
-
-### 📊 Benchmarking Results
-
-**Latest Performance Data**: See [`benchmarks/`](./benchmarks/)
-- [Complete Results](./benchmarks/RESULTS.md) - Detailed performance metrics
-  - Sequential vs parallel processing
-  - pymrrc vs pymarc vs pure Rust
-  - Throughput analysis
-  - Memory usage profiles
-- [README](./benchmarks/README.md) - Benchmarking methodology and frameworks
+- Implementation notes and decision rationale
+- Module-specific design documentation
 
 ## Document Organization
 
 ```
 docs/
-├── README.md                       # This file
-├── parallel_processing.md          # Parallel/concurrent processing guide
-├── threading.md                    # Threading patterns and GIL behavior
-├── BENCHMARKING.md                 # Benchmark methodology
+├── README.md                       # This file (documentation index)
+├── ARCHITECTURE.md                 # System architecture and design
+├── PERFORMANCE.md                  # Performance analysis and optimization
+├── parallel_processing.md          # Threading and concurrent processing guide
+├── threading.md                    # Thread safety and patterns
 │
 ├── design/                         # Active design documents
-│   ├── README.md                   # Design document index
-│   ├── PYTHON_WRAPPER_PROPOSAL.md  # PyO3 wrapper strategy
-│   └── [other active designs]
+│   └── ...
 │
 ├── history/                        # Archived design & project history
-│   ├── README.md                   # History index and code review summary
-│   ├── PYMARC_RUST_PORT_PLAN.md   # Original project plan
-│   ├── FIELD_QUERY_DSL.md         # Field query language design
-│   ├── AUTHORITY_RECORD_DESIGN.md # Authority records implementation
-│   └── [audits, reviews, completed proposals]
+│   └── README.md                   # History index and grouping
 │
 └── benchmarks/                     # Performance benchmarks
     ├── README.md                   # Benchmarking frameworks
@@ -79,7 +66,7 @@ docs/
 ### I want to...
 
 **...understand how the project is structured**
-→ Start with `history/README.md` for code review findings and project quality metrics
+→ Start with `ARCHITECTURE.md` for system design, then `history/README.md` for code review findings
 
 **...implement a new feature**
 → See `design/README.md` for design document templates and active work areas
@@ -87,44 +74,43 @@ docs/
 **...understand performance characteristics**
 → Check `benchmarks/RESULTS.md` for throughput, memory, and parallel speedup data
 
-**...contribute to the project**
-→ Read `CONTRIBUTING.md` (at root) which references `design/` and `history/` as needed
+**...set up parallel/concurrent processing**
+→ Read `parallel_processing.md` for patterns and expected performance
 
 **...understand why a decision was made**
 → Look in `history/` for the original design proposal and decision rationale
 
-**...optimize concurrent workloads**
-→ See `parallel_processing.md` for current state and expected improvements
+**...optimize my code**
+→ See `PERFORMANCE.md` for GIL release details, thread count tuning, and backend strategy
+
+**...understand threading and concurrency**
+→ Read `threading.md` for patterns, gotchas, and debugging guidance
 
 **...set up benchmarking**
 → See `benchmarks/README.md` for framework setup and running benchmarks
 
 ## Key Documentation Areas
 
-### Architecture & Design Decisions
+### Architecture & Performance
 
-| Document | Type | Status |
-|----------|------|--------|
-| [PYTHON_WRAPPER_PROPOSAL.md](./design/PYTHON_WRAPPER_PROPOSAL.md) | Design | 📝 In Progress |
-| [PYMARC_RUST_PORT_PLAN.md](./history/PYMARC_RUST_PORT_PLAN.md) | History | ✅ Completed |
-| [FIELD_QUERY_DSL.md](./history/FIELD_QUERY_DSL.md) | History | ✅ Completed |
+| Document | Type | Purpose |
+|----------|------|---------|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Reference | System design, components, GIL management |
+| [PERFORMANCE.md](./PERFORMANCE.md) | Guide | Performance analysis, tuning, backend strategy |
+| [parallel_processing.md](./parallel_processing.md) | Guide | Multi-threading patterns and performance |
+| [threading.md](./threading.md) | Guide | Thread safety, patterns, and debugging |
 
-### Code Quality & Review
+### Benchmarking & Results
 
-All completed December 28, 2025 (Epic mrrc-aw5):
+| Document | Type | Purpose |
+|----------|------|---------|
+| [benchmarks/RESULTS.md](./benchmarks/RESULTS.md) | Results | Performance metrics, 3-tier comparison |
+| [benchmarks/README.md](./benchmarks/README.md) | Guide | Benchmark framework and running tests |
 
-- [Code Review Summary](./history/CODE_REVIEW_SUMMARY.md) - 10 comprehensive audits, EXCELLENT rating
-- [Rust Idiomaticity](./history/RUST_IDIOMATICITY_AUDIT.md) - Style and patterns
-- [API Consistency](./history/API_CONSISTENCY_AUDIT.md) - Public API review
-- [Core Implementations](./history/CORE_DUPLICATION_AUDIT.md) - Record/Field analysis
-- [Format Conversion](./history/FORMAT_CONVERSION_AUDIT.md) - JSON/XML/MARCJSON/CSV
-- [I/O Modules](./history/IO_MODULES_AUDIT.md) - Reader/Writer robustness
+### Design Documents
 
-### Performance & Benchmarking
-
-- [Parallel Processing Guide](./parallel_processing.md) - Threading/multiprocessing usage
-- [Benchmark Results](./benchmarks/RESULTS.md) - Complete performance data
-- [Benchmark Framework](./benchmarks/README.md) - How benchmarks are structured
+- See [`design/README.md`](./design/README.md) for active design work
+- See [`history/README.md`](./history/README.md) for completed designs and decisions
 
 ## What's in Design vs History?
 
@@ -141,11 +127,64 @@ All completed December 28, 2025 (Epic mrrc-aw5):
 - Implementation notes and decisions made
 - Project historical context
 
-**Move documents from `design/` to `history/`** when:
-- Design is finalized and implementation begins
-- Feature is completed
-- Decision has been made and work is underway
-- Document becomes reference material rather than active planning
+## Key Features by Document
+
+### ARCHITECTURE.md
+
+Covers:
+- Core Rust library structure
+- Python wrapper GIL management (3-phase pattern)
+- Reader backend strategy (RustFile, PythonFile, Cursor)
+- Thread safety and concurrency model
+- Character encoding support
+- Format conversions
+- Testing infrastructure
+
+### PERFORMANCE.md
+
+Covers:
+- Single-thread baseline (549k rec/s)
+- Multi-thread speedup (2.0x with 2 threads, 3.74x with 4 threads)
+- How GIL release works (3-phase pattern)
+- Backend strategy (file paths vs file objects)
+- Usage patterns and optimization
+- Troubleshooting and profiling
+
+### parallel_processing.md
+
+Covers:
+- Multi-file threading (recommended)
+- Single-file chunking (advanced)
+- Multiprocessing for CPU-bound work
+- Rust usage for maximum performance
+- Performance comparison and real-world scenarios
+- Best practices and troubleshooting
+
+### threading.md
+
+Covers:
+- GIL behavior and MRRC's GIL release policy
+- Threading patterns (concurrent.futures, threading.Thread, multiprocessing)
+- Thread safety guarantees and gotchas
+- Memory usage with threading
+- Common patterns and debugging
+- Performance characteristics
+
+## Benchmarking Results Summary
+
+From `benchmarks/RESULTS.md`:
+
+**Single-Threaded Performance**:
+- Rust (mrrc): 1,065,700 rec/s
+- Python (pymrrc): 534,600 rec/s (7.5x faster than pymarc)
+- Pure Python (pymarc): 72,700 rec/s
+
+**Multi-Threaded Performance**:
+- 2 threads: 2.0x speedup
+- 4 threads: 3.74x speedup
+- Linear scaling with CPU core count
+
+**vs pymarc**: 7.5x faster across all operations
 
 ## Reference Documentation
 
@@ -161,6 +200,7 @@ All completed December 28, 2025 (Epic mrrc-aw5):
 - [ISO 2709](https://en.wikipedia.org/wiki/MARC_standards) - Binary format spec
 - [pymarc Documentation](https://pymarc.readthedocs.io/) - Reference implementation
 - [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/) - Idiomatic patterns
+- [PyO3 Documentation](https://pyo3.rs/) - Python wrapper framework
 
 ## Contributing Documentation
 
@@ -171,20 +211,7 @@ When adding new documentation:
 3. **For audits/reviews**: Add to `history/` with timestamp and findings
 4. **Update this index** when adding major documents
 
-## Latest Updates
-
-**December 31, 2025**:
-- Added `parallel_processing.md` - Phase 2 & 3 parallel benchmarking documentation
-- Updated `benchmarks/RESULTS.md` with parallel performance findings
-- Moved `design/` and `history/` into `docs/` for cleaner root structure
-- Created this comprehensive documentation index
-
-**December 28, 2025**:
-- Completed comprehensive code review audit suite (Epic mrrc-aw5)
-- 10 audit documents in `history/`
-- Overall assessment: EXCELLENT, 0 critical issues
-
 ---
 
-**Last Updated**: 2025-12-31  
+**Last Updated**: 2026-01-06  
 **Next Review**: When major features complete or architectural changes occur

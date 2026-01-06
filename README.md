@@ -486,8 +486,8 @@ The Python wrapper achieves exceptional performance through Rust implementation 
 - **vs Rust library**: 50% of pure Rust speed with Python convenience
 
 #### Threading & Parallelism
-- **Two-thread speedup**: 2.04x (on 2-core systems)
-- **Four-thread speedup**: 3.20x (on 4-core systems)
+- **Two-thread speedup**: 2.0x (on 2-core systems)
+- **Four-thread speedup**: 3.74x (on 4-core systems)
 - **GIL released during parsing** - I/O operations allow true multi-core parallelism
 - **Python concurrency**: Use `concurrent.futures.ThreadPoolExecutor` for multi-file processing
 
@@ -497,12 +497,12 @@ See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis, [doc
 
 MRRC's I/O operations release the Python GIL during record parsing, enabling true multi-thread parallelism. Each thread must have its own `MARCReader` instance.
 
-**Concrete Results from Phase H Benchmarking:**
-- 2 threads: **2.04x speedup** vs sequential processing
-- 4 threads: **3.20x speedup** vs sequential processing
+**Concrete Results from Benchmarking:**
+- 2 threads: **2.0x speedup** vs sequential processing
+- 4 threads: **3.74x speedup** vs sequential processing
 - Each thread needs its own reader (not shared)
-- File must be opened in binary mode (`'rb'`)
-- Optimal thread count: CPU core count - 1
+- File path input is best (zero-GIL backend)
+- Optimal thread count: CPU core count
 
 **Example: Parallel Multi-File Processing**
 

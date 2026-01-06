@@ -7,83 +7,111 @@ This document provides comprehensive performance analysis of the MRRC library an
 MRRC achieves exceptional performance through Rust implementation and GIL release during I/O operations:
 
 - **Single-thread reading**: 549,500 records/second (18.2 ms for 10k records)
-- **Multi-thread speedup**: 2.04x (2 threads), 3.20x (4 threads)
+- **Multi-thread speedup**: 2.0x (2 threads), 3.74x (4 threads)
 - **vs pymarc**: **7.5x faster** with same API
 - **GIL released during parsing** - enables true multi-core parallelism
 
-## Performance Results (Phase H Benchmarking)
-
-### Single-Thread Baseline
+## Single-Thread Performance Baseline
 
 | Metric | Value |
 |--------|-------|
-| Read 10k records | 88.4 ms |
-| Records/second | 113,100 rec/s |
+| Read 10k records | 18.2 ms |
+| Records/second | 549,500 rec/s |
 | Throughput | Consistent across all sizes |
+| vs pymarc | **7.6x faster** |
 
-### Multi-Thread Performance (Phase H Results)
+## Multi-Thread Performance
 
-#### Two-Thread Speedup
+The Python wrapper releases the GIL during parsing, enabling true multi-core parallelism. Performance scales with CPU cores when processing multiple files concurrently.
 
-| Metric | Value |
-|--------|-------|
-| Sequential (2 × 5k) | 176.8 ms |
-| Parallel execution | 169.6 ms |
-| **Speedup achieved** | **2.04x** |
-| **Target** | ≥ 2.0x |
-| **Status** | ✓ PASS |
+### Two-Thread Performance
 
-**Analysis**: True parallelism achieved. 2.04x speedup on 2 threads indicates effective GIL release during Phase 2 (parsing).
+**Setup**: 2 threads, each reading 5,000 records concurrently
 
-#### Four-Thread Speedup
+| Metric | Result |
+|--------|--------|
+| Sequential (2 × 5k records) | 18.70 ms |
+| **Parallel execution** | **9.24 ms** |
+| **Speedup achieved** | **2.02x** |
+| Efficiency | 101% (excellent thread locality) |
 
-| Metric | Value |
-|--------|-------|
-| Sequential (4 × 2.5k) | 353.6 ms |
-| Parallel execution | 401.6 ms / 4 = 100.4 ms per thread |
-| **Speedup achieved** | **3.20x** |
-| **Target** | ≥ 3.0x |
-| **Status** | ✓ PASS |
+**Analysis**: True parallelism confirmed. Each thread processes independently while the other runs in parallel.
 
-**Analysis**: Sub-linear scaling (80% efficiency) expected due to:
-- GIL contention across 4 threads
-- System scheduler overhead
-- Memory bandwidth saturation
+### Four-Thread Performance
 
-#### Eight-Thread Projection
+**Setup**: 4 threads, each reading 2,500 records concurrently
 
-Based on Phase H benchmarking patterns:
-- Expected speedup: ~4.2-4.5x (limited by GIL contention, scheduler overhead)
-- Recommendation: Optimal thread count = CPU core count - 1
+| Metric | Result |
+|--------|--------|
+| Sequential (4 × 2.5k records) | 37.60 ms |
+| **Parallel execution (per thread)** | **10.04 ms** |
+| **Total time** | **10.04 ms** |
+| **Speedup achieved** | **3.74x** |
+| Efficiency | 94% (excellent scaling) |
 
-## Threading Architecture
+**Analysis**: Sub-linear speedup relative to 4 cores is expected due to system scheduler overhead and memory bandwidth saturation, but 3.74x is still excellent multi-threaded performance.
 
-### Three-Phase GIL Release Pattern
+### Performance by Thread Count
 
-Each record read implements GIL management:
+| Thread Count | Expected Speedup | Recommendation |
+|---|---|---|
+| 1 | 1.0x | Baseline (sequential) |
+| 2 | 2.0x | Good parallelism |
+| 4 | 3.7x | Excellent parallelism |
+| 8+ | 4.5x+ | Diminishing returns |
 
+**Recommendation**: Use CPU core count as max_workers for optimal performance.
+
+---
+
+## How GIL Release Works
+
+### Three-Phase Record Parsing
+
+Each record parse uses a three-phase GIL management pattern:
+
+**Phase 1 (GIL Held)**
+- Acquire raw record bytes from the source (file or Python object)
+- Minimal work while GIL is held
+- Quick transition to Phase 2
+
+**Phase 2 (GIL Released)**
+- Parse MARC record bytes into Rust structure
+- This is where the actual parsing work happens
+- CPU-intensive but doesn't need GIL
+- Other threads can run Python code during this phase
+
+**Phase 3 (GIL Re-acquired)**
+- Convert Rust errors to Python exceptions
+- Convert parsed record to Python object
+- Quick return to caller
+
+The GIL is automatically re-acquired when Phase 2 completes, so no manual lock management is needed.
+
+### Backend Strategy: File Paths vs File Objects
+
+**File paths** (recommended for performance):
+```python
+reader = MARCReader('records.mrc')  # Pure Rust I/O, zero GIL overhead
 ```
-Phase 1 (GIL held):
-  - Read record bytes from source
-  - For Python files: controlled via BatchedMarcReader
-  - For file paths: pure Rust I/O (zero GIL)
+Uses a background Rust thread that never acquires the GIL. Optimal for multi-threaded workloads.
 
-Phase 2 (GIL released):
-  - Parse MARC record structure
-  - SmallVec<[u8; 4096]> buffer optimization
-  - ParseError enum for error handling
-
-Phase 3 (GIL re-acquired):
-  - Convert ParseError to Python exception
-  - Convert MarcRecord to PyRecord
+**File objects** (also supported):
+```python
+with open('records.mrc', 'rb') as f:
+    reader = MARCReader(f)  # GIL released during parsing only
 ```
+Acquires GIL to call `.read()` on the Python file object, but releases GIL during parsing.
 
-### Thread Safety Guarantees
+**Bytes** (pre-loaded data):
+```python
+with open('records.mrc', 'rb') as f:
+    data = f.read()
+reader = MARCReader(data)  # GIL released during parsing
+```
+Fast and simple for smaller files.
 
-- ✓ Each thread needs its own MARCReader instance
-- ✗ Sharing a reader across threads causes undefined behavior
-- ✓ No shared state between readers
-- ✓ GIL properly released during Phase 2 (CPU-intensive parsing)
+---
 
 ## Usage Patterns
 
@@ -98,11 +126,10 @@ from mrrc import MARCReader
 def process_file(filename):
     """Process a single MARC file (runs in thread)."""
     record_count = 0
-    with open(filename, 'rb') as f:
-        reader = MARCReader(f)  # New reader per thread
-        for record in reader:
-            # Process record
-            record_count += 1
+    reader = MARCReader(filename)  # File path for best performance
+    for record in reader:
+        # Process record
+        record_count += 1
     return record_count
 
 # Process 4 files in parallel on 4-core system
@@ -111,7 +138,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
     futures = [executor.submit(process_file, f) for f in files]
     results = [f.result() for f in futures]
     
-# Expected: 3-4x faster than sequential on 4-core system
+# Expected: 3.7x faster than sequential on 4-core system
 total = sum(results)
 print(f"Processed {total} records in parallel")
 ```
@@ -126,14 +153,13 @@ For processing a single large file with parallelism:
 def process_file_chunk(filename, start_record, end_record):
     """Process a chunk of records from a file."""
     count = 0
-    with open(filename, 'rb') as f:
-        reader = MARCReader(f)
-        for i, record in enumerate(reader):
-            if i >= end_record:
-                break
-            if i >= start_record:
-                # Process record
-                count += 1
+    reader = MARCReader(filename)
+    for i, record in enumerate(reader):
+        if i >= end_record:
+            break
+        if i >= start_record:
+            # Process record
+            count += 1
     return count
 
 # Split 100k records into 4 chunks of 25k each
@@ -153,83 +179,75 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 ```python
 from mrrc import MARCReader
 
-with open('records.mrc', 'rb') as f:
-    reader = MARCReader(f)
-    for record in reader:
-        # Process record sequentially
-        title = record.title()
+reader = MARCReader('records.mrc')
+for record in reader:
+    # Process record sequentially
+    title = record.title()
 ```
+
+---
 
 ## Performance Tuning
 
 ### Optimal Thread Count
 
-Based on Phase H benchmarking:
-
-| Thread Count | Expected Speedup | Recommendation |
-|---|---|---|
-| 1 | 1.0x | Baseline (sequential) |
-| 2 | 2.0x | Good parallelism |
-| 4 | 3.2x | Excellent parallelism |
-| 8+ | 4.5x+ | Diminishing returns |
-
-**Recommendation**: Use `CPU core count - 1` as max_workers:
+Based on benchmarking:
 
 ```python
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-optimal_workers = os.cpu_count() - 1  # e.g., 3 on 4-core, 7 on 8-core
+optimal_workers = os.cpu_count()  # Use all cores
 with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
     # Process files
     pass
 ```
 
-### Memory Overhead
-
-- **Per-reader**: ~4 KB (SmallVec buffer)
-- **Per-record in memory**: ~4 KB (typical)
-- **Memory regression vs single-threaded**: < 5%
-
-For processing 1 million records:
-- Sequential: ~4 GB peak memory
-- 4-threaded (4 readers): ~4 GB + (4 × 4 KB) = ~4 GB peak
-
 ### File I/O Considerations
 
 - **Binary mode required**: Always use `open(file, 'rb')` for MARC files
+- **File paths preferred**: Pass filename string to MARCReader for best performance
 - **Network filesystems**: Performance may degrade significantly
 - **Local SSD**: Recommended for optimal performance
 - **File splitting**: Consider splitting large files (>1 GB) for better parallelism
 
-## Memory Usage
+### Memory Overhead
 
-### SmallVec Buffer Optimization
+- **Per-reader**: ~4 KB (parsing buffer)
+- **Per-record in memory**: ~4 KB (typical)
+- **Memory regression vs single-threaded**: < 5%
 
-- **Size**: 4 KB inline buffer per record
-- **Hit rate**: ~85-90% of MARC records fit inline
-- **Overhead for large records**: Dynamic allocation (transparent)
-- **Benchmark impact**: < 3% memory overhead vs single-threaded
+For processing 1 million records with 4 threads:
+- Single-threaded: ~4 GB peak memory
+- 4 threads: ~4 GB + (4 × 4 KB) = ~4 GB peak
 
-## Comparison to Pure Rust
+No additional memory accumulation from threading.
 
-### Threading Efficiency (pymrrc vs rayon)
+---
 
-| Scenario | Rayon (Pure Rust) | pymrrc (Python) | pymrrc Efficiency |
+## Comparison to Other Approaches
+
+### Threading Efficiency: pymrrc vs Pure Python
+
+| Scenario | pymrrc | pymarc |
+|---|---|---|
+| 2-thread speedup | 2.0x | 1.0x (GIL blocks) |
+| 4-thread speedup | 3.74x | 1.0x (GIL blocks) |
+| Single-thread vs pymarc | 7.6x faster | baseline |
+
+pymrrc enables true parallelism through GIL release. pymarc cannot benefit from threading.
+
+### Rust vs Python Performance
+
+| Operation | Rust (mrrc) | Python (pymrrc) | Speedup |
 |---|---|---|---|
-| 2-thread speedup | ~1.8x | 2.04x | 100%+ |
-| 4-thread speedup | ~3.2x* | 3.20x | 100% |
-| Efficiency | High | High | Comparable |
+| Read 1k records | 0.94 ms | 1.87 ms | Rust 2.0x |
+| Read 10k records | 9.40 ms | 18.2 ms | Rust 2.0x |
+| Multi-threaded (4 cores) | 3.2x speedup | 3.74x speedup | Python matches Rust |
 
-*Note: Rayon achieves lower speedup on MARC reading due to serialization overhead; GIL release enables pymrrc to match or exceed pure Rust efficiency.
+Pure Rust is 2x faster single-threaded, but multi-threaded pymrrc achieves comparable throughput per core.
 
-### Performance vs pymarc
-
-| Operation | pymarc | pymrrc | Speedup |
-|---|---|---|---|
-| Read 1k records | 13.76 ms | 1.87 ms | 7.3x |
-| Read 10k records | 137.69 ms | 18.2 ms | 7.6x |
-| Read + process | ~7.5x faster | Baseline | 7.5x |
+---
 
 ## Troubleshooting
 
@@ -238,42 +256,53 @@ For processing 1 million records:
 **Symptom**: ThreadPoolExecutor with 4 workers shows only 1x speedup
 
 **Causes**:
-1. **Wrong pattern**: Sharing single reader across threads (unsupported)
+1. **Wrong pattern**: Sharing single reader across threads
    - Solution: Create separate reader per thread
-2. **GIL held externally**: Code holding GIL during I/O
-   - Solution: Ensure GIL is released between records
-3. **I/O bound**: Network filesystem or slow disk
+2. **I/O bottleneck**: Network filesystem or slow disk
    - Solution: Use local SSD, profile with `cProfile`
+3. **CPU-bound work**: Heavy processing per record
+   - Solution: Use `multiprocessing` instead of `threading`
 
 **Diagnosis**:
 ```python
 import time
-import threading
+from concurrent.futures import ThreadPoolExecutor
 
-def test_parallelism():
-    start = time.time()
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(process_file, f) for f in files]
-        results = [f.result() for f in futures]
-    elapsed = time.time() - start
-    
-    sequential_time = sum(time_for_file(f) for f in files)
-    actual_speedup = sequential_time / elapsed
-    
-    print(f"Expected speedup: ~4x")
-    print(f"Actual speedup: {actual_speedup:.1f}x")
+def process_file(filename):
+    count = 0
+    for record in MARCReader(filename):
+        count += 1
+    return count
+
+files = ['file1.mrc', 'file2.mrc', 'file3.mrc', 'file4.mrc']
+
+# Sequential baseline
+start = time.time()
+sequential = sum(process_file(f) for f in files)
+seq_time = time.time() - start
+
+# Parallel execution
+start = time.time()
+with ThreadPoolExecutor(max_workers=4) as executor:
+    parallel = sum(executor.map(process_file, files))
+par_time = time.time() - start
+
+speedup = seq_time / par_time
+print(f"Sequential: {seq_time:.2f}s")
+print(f"Parallel: {par_time:.2f}s")
+print(f"Speedup: {speedup:.2f}x (expected: ~3.7x)")
 ```
 
 ### Slow Single-Thread Performance
 
 **Causes**:
-1. Python file object overhead (use file paths for pure Rust I/O)
+1. Python file object overhead (use file paths)
 2. Large records (>4 KB) causing allocations
-3. System load or GC pressure
+3. System load or garbage collection pressure
 
 **Solutions**:
 ```python
-# Faster: File path (pure Rust I/O, zero GIL)
+# Faster: File path (zero GIL I/O backend)
 reader = MARCReader('records.mrc')
 
 # Also fast: Pre-loaded bytes
@@ -281,10 +310,12 @@ with open('records.mrc', 'rb') as f:
     data = f.read()
 reader = MARCReader(data)
 
-# Slower: Python file object
+# Slower: Python file object (GIL acquired for .read())
 with open('records.mrc', 'rb') as f:
     reader = MARCReader(f)
 ```
+
+---
 
 ## Benchmarking Your Application
 
@@ -296,10 +327,9 @@ from mrrc import MARCReader
 
 start = time.time()
 count = 0
-with open('records.mrc', 'rb') as f:
-    reader = MARCReader(f)
-    for record in reader:
-        count += 1
+reader = MARCReader('records.mrc')
+for record in reader:
+    count += 1
 elapsed = time.time() - start
 
 throughput = count / elapsed
@@ -316,9 +346,8 @@ from mrrc import MARCReader
 
 def process_file(filename):
     count = 0
-    with open(filename, 'rb') as f:
-        for record in MARCReader(f):
-            count += 1
+    for record in MARCReader(filename):
+        count += 1
     return count
 
 files = ['file1.mrc', 'file2.mrc', 'file3.mrc', 'file4.mrc']
@@ -331,8 +360,7 @@ seq_time = time.time() - start
 # Parallel execution
 start = time.time()
 with ThreadPoolExecutor(max_workers=4) as executor:
-    futures = [executor.submit(process_file, f) for f in files]
-    parallel = sum(f.result() for f in futures)
+    parallel = sum(executor.map(process_file, files))
 par_time = time.time() - start
 
 speedup = seq_time / par_time
@@ -341,17 +369,21 @@ print(f"Parallel (4 threads): {par_time:.2f}s")
 print(f"Speedup: {speedup:.2f}x")
 ```
 
+---
+
 ## Key Findings
 
-1. **GIL Release Works**: 2.04x speedup on 2 threads validates GIL release implementation
-2. **Scales to 4 cores**: 3.20x speedup on 4 threads shows continued benefit
-3. **Efficient design**: SmallVec buffering, BatchedMarcReader queueing reduce overhead
-4. **Multiple backends**: File paths use pure Rust I/O (zero GIL), enabling maximum parallelism
+1. **GIL Release Works**: 2.0x speedup on 2 threads validates GIL release implementation
+2. **Scales to 4 cores**: 3.74x speedup on 4 threads shows continued multi-core benefit
+3. **Backend matters**: File paths use zero-GIL I/O, file objects still acquire GIL for `.read()`
+4. **7.5x faster than pymarc**: Massive performance advantage even on single thread
+
+---
 
 ## References
 
-- **Phase F**: Benchmark Refresh and validation (mrrc-9wi.5)
-- **Phase H**: Pure Rust I/O & Rayon Parallelism (mrrc-7vu)
-- **GIL Release Plan**: `docs/design/GIL_RELEASE_IMPLEMENTATION_PLAN.md`
-- **Threading Guide**: `docs/threading.md`
-- **Parallel Processing**: `docs/parallel_processing.md`
+- **Benchmarking results**: `docs/benchmarks/RESULTS.md`
+- **Threading guide**: `docs/threading.md`
+- **Parallel processing**: `docs/parallel_processing.md`
+- **Rust benchmarks**: `benches/marc_benchmarks.rs`
+- **Python benchmarks**: `tests/python/test_benchmark_*.py`
