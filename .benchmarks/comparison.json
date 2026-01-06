@@ -1,151 +1,91 @@
 {
   "read_1k": {
     "python": {
-      "speedup": 7.49621451640875,
-      "improvement": 86.65993351963098,
-      "pymarc_mean_ms": 14.599500029968718,
-      "mrrc_mean_ms": 1.9475830097993214
+      "speedup": 1.6415360473577647,
+      "improvement": 39.08144742787638,
+      "pymarc_mean_ms": 13.88329166608552,
+      "mrrc_mean_ms": 8.457500332345566
     },
     "three_way": {
       "pymrrc_vs_pymarc": {
-        "speedup": 7.49621451640875,
-        "pymrrc_ms": 1.9475830097993214,
-        "pymarc_ms": 14.599500029968718
-      },
-      "pymrrc_vs_rust": {
-        "speedup": 0.0005006822771156396,
-        "rust_ms": 0.0009751202962180553,
-        "pymrrc_ms": 1.9475830097993214
-      },
-      "rust_vs_pymarc": {
-        "speedup": 14971.998928329142,
-        "rust_ms": 0.0009751202962180553,
-        "pymarc_ms": 14.599500029968718
+        "speedup": 1.6415360473577647,
+        "pymrrc_ms": 8.457500332345566,
+        "pymarc_ms": 13.88329166608552
       }
     }
   },
   "read_10k": {
     "python": {
-      "speedup": 7.56081697005213,
-      "improvement": 86.7739160468911,
-      "pymarc_mean_ms": 144.62834740212807,
-      "mrrc_mean_ms": 19.128666647399466
+      "speedup": 1.7178254113257556,
+      "improvement": 41.786866499533495,
+      "pymarc_mean_ms": 138.16581961388388,
+      "mrrc_mean_ms": 80.43065302384396
     },
     "three_way": {
       "pymrrc_vs_pymarc": {
-        "speedup": 7.56081697005213,
-        "pymrrc_ms": 19.128666647399466,
-        "pymarc_ms": 144.62834740212807
-      },
-      "pymrrc_vs_rust": {
-        "speedup": 0.0004872353524058654,
-        "rust_ms": 0.009320162635000002,
-        "pymrrc_ms": 19.128666647399466
-      },
-      "rust_vs_pymarc": {
-        "speedup": 15517.792238839837,
-        "rust_ms": 0.009320162635000002,
-        "pymarc_ms": 144.62834740212807
+        "speedup": 1.7178254113257556,
+        "pymrrc_ms": 80.43065302384396,
+        "pymarc_ms": 138.16581961388388
       }
     }
   },
   "extract_titles_1k": {
     "python": {
-      "speedup": 7.62173849311767,
-      "improvement": 86.879633814477,
-      "pymarc_mean_ms": 15.167152974754572,
-      "mrrc_mean_ms": 1.9899860102062426
+      "speedup": 1.7419301563291272,
+      "improvement": 42.59241701703131,
+      "pymarc_mean_ms": 14.859680319204926,
+      "mrrc_mean_ms": 8.530583310251435
     },
     "three_way": {
       "pymrrc_vs_pymarc": {
-        "speedup": 7.62173849311767,
-        "pymrrc_ms": 1.9899860102062426,
-        "pymarc_ms": 15.167152974754572
-      },
-      "pymrrc_vs_rust": {
-        "speedup": 0.00047295719757292485,
-        "rust_ms": 0.0009411782065964703,
-        "pymrrc_ms": 1.9899860102062426
-      },
-      "rust_vs_pymarc": {
-        "speedup": 16115.070311288542,
-        "rust_ms": 0.0009411782065964703,
-        "pymarc_ms": 15.167152974754572
+        "speedup": 1.7419301563291272,
+        "pymrrc_ms": 8.530583310251435,
+        "pymarc_ms": 14.859680319204926
       }
     }
   },
   "extract_titles_10k": {
     "python": {
-      "speedup": 7.659114644460787,
-      "improvement": 86.94366063937666,
-      "pymarc_mean_ms": 151.5455833481004,
-      "mrrc_mean_ms": 19.78630564796428
+      "speedup": 1.7476966679507786,
+      "improvement": 42.781832892516356,
+      "pymarc_mean_ms": 148.92698595455536,
+      "mrrc_mean_ms": 85.21329169161618
     },
     "three_way": {
       "pymrrc_vs_pymarc": {
-        "speedup": 7.659114644460787,
-        "pymrrc_ms": 19.78630564796428,
-        "pymarc_ms": 151.5455833481004
-      },
-      "pymrrc_vs_rust": {
-        "speedup": 0.00048353096540035495,
-        "rust_ms": 0.009567291471666664,
-        "pymrrc_ms": 19.78630564796428
-      },
-      "rust_vs_pymarc": {
-        "speedup": 15839.967225509905,
-        "rust_ms": 0.009567291471666664,
-        "pymarc_ms": 151.5455833481004
+        "speedup": 1.7476966679507786,
+        "pymrrc_ms": 85.21329169161618,
+        "pymarc_ms": 148.92698595455536
       }
     }
   },
   "roundtrip_1k": {
     "python": {
-      "speedup": 6.438548774899588,
-      "improvement": 84.46854974682402,
-      "pymarc_mean_ms": 24.19731963891536,
-      "mrrc_mean_ms": 3.758194662320117
+      "speedup": 1.7751058630805867,
+      "improvement": 43.665331696636855,
+      "pymarc_mean_ms": 23.524096934124827,
+      "mrrc_mean_ms": 13.25222197920084
     },
     "three_way": {
       "pymrrc_vs_pymarc": {
-        "speedup": 6.438548774899588,
-        "pymrrc_ms": 3.758194662320117,
-        "pymarc_ms": 24.19731963891536
-      },
-      "pymrrc_vs_rust": {
-        "speedup": 0.0005758596623173863,
-        "rust_ms": 0.0021641927091666665,
-        "pymrrc_ms": 3.758194662320117
-      },
-      "rust_vs_pymarc": {
-        "speedup": 11180.760168179599,
-        "rust_ms": 0.0021641927091666665,
-        "pymarc_ms": 24.19731963891536
+        "speedup": 1.7751058630805867,
+        "pymrrc_ms": 13.25222197920084,
+        "pymarc_ms": 23.524096934124827
       }
     }
   },
   "roundtrip_10k": {
     "python": {
-      "speedup": 6.331052315088748,
-      "improvement": 84.20483751782136,
-      "pymarc_mean_ms": 259.8142503217484,
-      "mrrc_mean_ms": 41.038082990174495
+      "speedup": 1.8799707582575154,
+      "improvement": 46.80768327870866,
+      "pymarc_mean_ms": 253.1368613320713,
+      "mrrc_mean_ms": 134.64936101809144
     },
     "three_way": {
       "pymrrc_vs_pymarc": {
-        "speedup": 6.331052315088748,
-        "pymrrc_ms": 41.038082990174495,
-        "pymarc_ms": 259.8142503217484
-      },
-      "pymrrc_vs_rust": {
-        "speedup": 0.0005667837643773206,
-        "rust_ms": 0.02325971915999999,
-        "pymrrc_ms": 41.038082990174495
-      },
-      "rust_vs_pymarc": {
-        "speedup": 11170.137031084792,
-        "rust_ms": 0.02325971915999999,
-        "pymarc_ms": 259.8142503217484
+        "speedup": 1.8799707582575154,
+        "pymrrc_ms": 134.64936101809144,
+        "pymarc_ms": 253.1368613320713
       }
     }
   },
@@ -156,31 +96,31 @@
     "mrrc_only": true
   },
   "parallel_2x_10k": {
-    "speedup": 0.9954733550636743,
+    "speedup": 0.9357037393439995,
     "limited_by_gil": true
   },
   "parallel_4x_10k": {
     "benchmark": {
-      "min": 0.075463708024472,
-      "max": 0.07649383402895182,
-      "mean": 0.07606165305090447,
-      "stddev": 0.0005346944791927082,
-      "median": 0.0762274170992896,
+      "min": 0.3974003749899566,
+      "max": 0.40080029098317027,
+      "mean": 0.39960888866335154,
+      "stddev": 0.0019146132297170825,
+      "median": 0.4006260000169277,
       "runs": 3
     }
   },
   "read_100k": {
     "python": {
-      "speedup": 7.528434370244237,
-      "improvement": 86.71702573442826,
-      "pymarc_mean_ms": 1464.128667023033,
-      "mrrc_mean_ms": 194.47983405552804
+      "speedup": 1.8079242648979537,
+      "improvement": 44.687948526624595,
+      "pymarc_mean_ms": 1476.0567910270765,
+      "mrrc_mean_ms": 816.4372920291498
     },
     "three_way": {
       "pymrrc_vs_pymarc": {
-        "speedup": 7.528434370244237,
-        "pymrrc_ms": 194.47983405552804,
-        "pymarc_ms": 1464.128667023033
+        "speedup": 1.8079242648979537,
+        "pymrrc_ms": 816.4372920291498,
+        "pymarc_ms": 1476.0567910270765
       }
     }
   }
