@@ -220,6 +220,61 @@ The GIL Release implementation plan has achieved major milestones:
 
 ---
 
+### Phase I: Feature Compatibility Updates 🔴 QUEUED
+
+**Objective:** Integrate existing specialized record readers (Authority, Holdings) with Phase H ReaderBackend architecture to enable parallelism benefits for all record types.
+
+**Beads Epic:** TBD (to be created)  
+**Estimated Subtasks:**
+- I.1: Refactor AuthorityMarcReader to support ReaderBackend enum
+- I.2: Refactor HoldingsMarcReader to support ReaderBackend enum
+- I.3: Update Python wrappers for Authority/Holdings readers
+- I.4: Test Authority/Holdings readers with RustFile and Rayon parallelism
+- I.5: Documentation updates for specialized readers
+
+**Context:**
+- Current State: AuthorityMarcReader and HoldingsMarcReader use custom `Read` trait implementations
+- Phase H introduced ReaderBackend enum (PythonFile, RustFile, Cursor, Bytes) but only for bibliographic records
+- Authority and Holdings readers will benefit from the same parallel I/O capabilities
+- These readers represent 10-15% of use cases (library systems with authority records, holdings data)
+
+**Deliverables:**
+1. **Authority Reader Integration:**
+   - AuthorityMarcReader updated to accept ReaderBackend enum
+   - Type detection for authority record sources
+   - Python wrapper updated with backend selection
+
+2. **Holdings Reader Integration:**
+   - HoldingsMarcReader updated to accept ReaderBackend enum
+   - Type detection for holdings record sources
+   - Python wrapper updated with backend selection
+
+3. **Testing:**
+   - Unit tests for each backend variant (RustFile, Cursor, Bytes)
+   - Parallel processing validation (Rayon integration)
+   - Round-trip integrity tests (read → parse → compare)
+
+4. **Documentation:**
+   - Usage examples for Authority/Holdings readers with different backends
+   - Performance characteristics (single-threaded vs parallel)
+   - Migration guide if API changes needed
+
+**Success Criteria:**
+- Authority/Holdings readers support all ReaderBackend variants
+- Parallel processing available for authority/holdings file-based reading
+- All existing tests pass (backward compatibility)
+- Performance benchmarks show improvement on large files
+- Python wrapper API stable and well-documented
+
+**Timeline:** ~12-15 hours  
+**Blocked By:** Phase G complete (documentation first, then compatibility work)  
+**Benefits:** 
+- Unlocks parallelism for 10-15% of library use cases
+- Consistent API across all reader types
+- Better performance for batch authority/holdings processing
+
+---
+
 ## Critical Path & Timeline
 
 ```
@@ -238,14 +293,18 @@ Phase E (Week 4) ← CURRENT
 Phase F (Week 5)
     ↓
 Phase G (Week 6)
+    ↓
+Phase I (Week 7) [Optional - Feature Compatibility]
 ```
 
 **Current Schedule (from Phase E start):**
 - Phase E: ~15 hours (est. 1-2 days)
 - Phase F: ~16 hours (est. 2 days)
 - Phase G: ~20 hours (est. 2-3 days)
+- Phase I: ~12-15 hours (est. 1-2 days) [Optional, post-release]
 
-**Total Remaining:** ~51 hours (~1 week)
+**Total Remaining (Core):** ~51 hours (~1 week)  
+**Total Remaining (with Phase I):** ~63-66 hours (~1.5 weeks)
 
 ---
 
@@ -309,14 +368,13 @@ Phase G (Week 6)
 ### Current Limitations
 1. **Python File Objects:** Cannot be parallelized due to GIL (mitigated by Phase C batching)
 2. **Phase D Writer:** Writer backend refactoring deferred (Phase D uses simple sequential approach)
-3. **Encoding:** MARC8 support not yet implemented (UTF-8 focus)
+3. **Authority/Holdings Readers:** Not integrated with Phase H ReaderBackend enum (work in progress in Phase I)
 
 ### Future Enhancements (Post-G)
-1. **Phase D+ (Deferred):** Writer backend refactoring for dual-backend support
-2. **Streaming:** Implement streaming parser for very large files (>1GB)
-3. **Encoding:** Add MARC8 and Latin-1 support
+1. **Phase I (In Scope - See Below):** Feature compatibility updates - Authority/Holdings readers integration with Phase H backends
+2. **Phase D+ (Deferred):** Writer backend refactoring for dual-backend support
+3. **Streaming:** Implement streaming parser for very large files (>1GB)
 4. **Validation:** Pluggable validation framework for field constraints
-5. **Format Export:** Enhanced JSON, XML, CSV export options
 
 ---
 
@@ -358,14 +416,31 @@ For context and detailed rationale, see:
 - [ ] Example code (concurrent_reading.py, concurrent_writing.py) functional
 - [ ] CHANGELOG.md documents all phases A-H
 
-**Overall Release Readiness:**
+**For Phase I (Feature Compatibility - Optional, Post-Release):**
+- [ ] AuthorityMarcReader supports ReaderBackend enum
+- [ ] HoldingsMarcReader supports ReaderBackend enum
+- [ ] Python wrappers updated for new backends
+- [ ] All existing tests pass (backward compatibility)
+- [ ] New parallel processing tests added
+- [ ] Documentation covers new capabilities
+
+**Overall Release Readiness (After Phase G):**
 - [ ] All tests passing (Rustfmt, Clippy, tests, audit)
 - [ ] Documentation complete and reviewed
 - [ ] Performance targets met (2.5x+ on 4-thread RustFile)
 - [ ] No known regressions
+- [ ] Format conversions (JSON, XML, MARCJSON, Dublin Core, MODS) verified
+- [ ] Character encoding (MARC-8, UTF-8) validated
+
+**Phase I Readiness (Post-Release Enhancement):**
+- [ ] Authority/Holdings readers tested with all backends
+- [ ] Performance improvements documented
+- [ ] API compatibility maintained
 
 ---
 
 **Document Status:** Active Plan - Updated January 6, 2026  
 **Supersedes:** All earlier planning documents (now in docs/history/)  
 **Next Review:** After Phase E completion
+
+**Note:** Phase I addresses feature compatibility (Authority/Holdings reader integration with Phase H backends) and is optional for initial release but recommended for complete feature parity across all record types.
