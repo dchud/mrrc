@@ -8,22 +8,18 @@
 use crate::wrappers::PyRecord;
 use mrrc::MarcWriter;
 use pyo3::prelude::*;
-use std::io::BufWriter;
 use std::fs::File;
+use std::io::BufWriter;
 
 /// Internal enum for different writer backends
 #[allow(clippy::large_enum_variant)]
 enum WriterBackend {
     /// Python file-like object (e.g., BytesIO, open file in 'wb' mode)
     /// Requires GIL for I/O operations
-    PythonFile {
-        file_obj: Py<PyAny>,
-    },
+    PythonFile { file_obj: Py<PyAny> },
     /// Pure Rust file I/O via std::fs::File (no GIL overhead)
     /// Used when writer initialized with file path string
-    RustFile {
-        writer: BufWriter<File>,
-    },
+    RustFile { writer: BufWriter<File> },
 }
 
 /// Python wrapper for MarcWriter with three-phase GIL release pattern
@@ -74,14 +70,14 @@ impl PyMARCWriter {
                     path_str, e
                 ))
             })?;
-            
+
             let writer = BufWriter::new(file);
             return Ok(PyMARCWriter {
                 backend: Some(WriterBackend::RustFile { writer }),
                 closed: false,
             });
         }
-        
+
         // Check for pathlib.Path objects by looking for __fspath__ or __str__ methods
         // and trying to create a file with the path
         if let Ok(path_method) = source.getattr("__fspath__") {
@@ -94,7 +90,7 @@ impl PyMARCWriter {
                                 path_str, e
                             ))
                         })?;
-                        
+
                         let writer = BufWriter::new(file);
                         return Ok(PyMARCWriter {
                             backend: Some(WriterBackend::RustFile { writer }),
@@ -104,7 +100,7 @@ impl PyMARCWriter {
                 }
             }
         }
-        
+
         // Fallback: treat as Python file-like object
         // Check if it has .write() method
         if let Ok(write_method) = source.getattr("write") {
@@ -116,7 +112,7 @@ impl PyMARCWriter {
                 });
             }
         }
-        
+
         // Not a supported type
         Err(pyo3::exceptions::PyTypeError::new_err(
             "MARCWriter() argument must be a file path (str/Path) or file-like object with .write() method"
@@ -199,7 +195,7 @@ impl PyMARCWriter {
                         e
                     ))
                 })?;
-            }
+            },
             Some(WriterBackend::RustFile { writer }) => {
                 // RustFile backend: no GIL needed (pure Rust I/O)
                 // GIL is held but not used - could be released further if needed
@@ -210,12 +206,12 @@ impl PyMARCWriter {
                         e
                     ))
                 })?;
-            }
+            },
             None => {
                 return Err(pyo3::exceptions::PyRuntimeError::new_err(
-                    "Writer backend not initialized"
+                    "Writer backend not initialized",
                 ));
-            }
+            },
         }
 
         Ok(())
@@ -244,15 +240,15 @@ impl PyMARCWriter {
                     if let Ok(flush_method) = file_ref.getattr("flush") {
                         let _ = flush_method.call0();
                     }
-                }
+                },
                 Some(WriterBackend::RustFile { writer }) => {
                     // RustFile backend: flush via Rust I/O (no GIL)
                     use std::io::Write;
                     let _ = writer.flush();
-                }
+                },
                 None => {
                     // Already closed, nothing to do
-                }
+                },
             }
             self.closed = true;
         }
