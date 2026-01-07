@@ -125,10 +125,22 @@ impl PyMARCWriter {
 
     /// Write a record to the file with three-phase GIL management
     ///
-    /// This implements the three-phase GIL release pattern:
-    /// - Phase 1: Extract record data from Python PyRecord (GIL held)
-    /// - Phase 2: Serialize record to bytes (GIL released)
-    /// - Phase 3: Write bytes to backend (varies by backend)
+    /// Implements the three-phase GIL release pattern for concurrent performance:
+    /// - **Phase 1 (GIL held):** Extract record data from Python PyRecord object
+    /// - **Phase 2 (GIL released):** Serialize record to MARC bytes (CPU-intensive)
+    /// - **Phase 3 (GIL held):** Write serialized bytes to backend
+    ///
+    /// This pattern allows multiple threads to write different files concurrently:
+    /// - Each thread releases the GIL during Phase 2 (serialization)
+    /// - Only acquires GIL for Phase 1 (data extraction) and Phase 3 (I/O)
+    /// - RustFile backend (Phase 3) doesn't need GIL, enabling near-native performance
+    /// - PythonFile backend (Phase 3) requires GIL for calling Python .write() method
+    ///
+    /// # Errors
+    /// - Returns error if writer has been closed
+    /// - Returns error if backend initialization failed
+    /// - Returns error if serialization fails (corrupted record data)
+    /// - Returns error if file I/O fails (disk full, permissions, etc.)
     pub fn write_record(&mut self, record: &PyRecord) -> PyResult<()> {
         if self.closed {
             return Err(pyo3::exceptions::PyRuntimeError::new_err(
@@ -144,14 +156,17 @@ impl PyMARCWriter {
         // ===== PHASE 1: Extract record data (GIL held) =====
         // We receive a PyRecord (the Rust wrapper around a Record)
         // Clone the inner Rust record for Phase 2
+        // This must happen with GIL held to safely extract Python object references
         let record_copy = record.inner.clone();
 
         // ===== PHASE 2: Serialize to bytes (GIL released) =====
         // Serialize the record to MARC bytes without holding the GIL
-        // CRITICAL FIX: Use Python::detach() which properly releases the GIL.
-        // Python::detach() takes a closure and releases GIL while executing it.
+        // This is CPU-intensive and benefits from parallel execution
+        // CRITICAL: Use Python::detach() which properly releases the GIL.
+        // Python::detach() takes a closure and runs it without the GIL.
         let record_bytes: Vec<u8> = py.detach(|| {
             // This closure runs WITHOUT the GIL held
+            // Safe: record_copy is pure Rust, doesn't reference Python objects
             let mut buffer = Vec::new();
             let mut writer = MarcWriter::new(&mut buffer);
 
@@ -163,11 +178,13 @@ impl PyMARCWriter {
             Ok::<Vec<u8>, std::io::Error>(buffer)
         })?;
 
-        // ===== PHASE 3: Write bytes to backend =====
+        // ===== PHASE 3: Write bytes to backend (GIL re-acquired) =====
         // GIL is automatically re-acquired when exiting detach() block
+        // Dispatch to the appropriate backend for I/O
         match &mut self.backend {
             Some(WriterBackend::PythonFile { file_obj }) => {
                 // PythonFile backend: requires GIL (calls Python .write() method)
+                // GIL is held here, safe to call Python methods
                 let file_ref = file_obj.bind(py);
                 let write_method = file_ref.getattr("write").map_err(|e| {
                     pyo3::exceptions::PyRuntimeError::new_err(format!(
@@ -185,6 +202,7 @@ impl PyMARCWriter {
             }
             Some(WriterBackend::RustFile { writer }) => {
                 // RustFile backend: no GIL needed (pure Rust I/O)
+                // GIL is held but not used - could be released further if needed
                 use std::io::Write;
                 writer.write_all(&record_bytes).map_err(|e| {
                     pyo3::exceptions::PyIOError::new_err(format!(
@@ -209,11 +227,18 @@ impl PyMARCWriter {
     }
 
     /// Close the writer and flush the buffer
+    ///
+    /// Flushes any buffered data to disk and closes the writer.
+    /// Safe to call multiple times (idempotent).
+    ///
+    /// ## GIL Management
+    /// - **PythonFile:** GIL is held while calling Python flush() method
+    /// - **RustFile:** No GIL needed (pure Rust I/O)
     pub fn close(&mut self) -> PyResult<()> {
         if !self.closed {
             match &mut self.backend {
                 Some(WriterBackend::PythonFile { file_obj }) => {
-                    // PythonFile backend: flush via Python method
+                    // PythonFile backend: flush via Python method (GIL required)
                     let py = unsafe { Python::assume_attached() };
                     let file_ref = file_obj.bind(py);
                     if let Ok(flush_method) = file_ref.getattr("flush") {
@@ -221,7 +246,7 @@ impl PyMARCWriter {
                     }
                 }
                 Some(WriterBackend::RustFile { writer }) => {
-                    // RustFile backend: flush via Rust I/O
+                    // RustFile backend: flush via Rust I/O (no GIL)
                     use std::io::Write;
                     let _ = writer.flush();
                 }
