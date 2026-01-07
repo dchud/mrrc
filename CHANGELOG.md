@@ -5,6 +5,28 @@ All notable changes to MRRC (MARC Rust Crate) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+#### Documentation Updates
+- **Performance Reference Table** (benchmarks/RESULTS.md): Updated to use pymarc as baseline (1.0x) for clearer speedup comparison
+- **Real-World Performance Scenarios**: Standardized table formats across all four scenarios for consistent speedup and time-saved metrics
+- **PERFORMANCE.md Executive Summary**: Updated to clarify recommended strategies (ProducerConsumerPipeline for single-file, ThreadPoolExecutor for multi-file)
+- **Documentation Audit**: Moved completed audit to docs/history/ for archival
+
+### Planned
+
+#### Upcoming Work (Created as issues)
+- **API Compatibility Review** (mrrc-5mn): Identify additional pymarc API parity opportunities
+- **Concurrency Documentation** (mrrc-9wc): Add comprehensive Rust concurrency guidance alongside Python patterns
+- **Example Code Review** (mrrc-s8h): Expand and improve examples for all recommended usage modes
+- **Performance Optimization Epic** (mrrc-u33): Comprehensive profiling and optimization across all implementations
+  - Profile pure Rust single-threaded (mrrc-u33.2)
+  - Profile pure Rust concurrent with rayon (mrrc-u33.3)
+  - Profile Python wrapper single-threaded (mrrc-u33.4)
+  - Profile Python wrapper ProducerConsumerPipeline concurrent (mrrc-u33.5)
+
 ## [0.3.0] - 2026-01-06
 
 ### Added

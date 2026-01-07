@@ -10,10 +10,10 @@ MRRC achieves exceptional performance through Rust implementation with automatic
   - **vs pymarc**: **7.5x faster** with same API
   - GIL released automatically during parsing (no code changes needed)
   
-- **Multi-thread parallelism (opt-in with ThreadPoolExecutor)**: 2.0x (2 threads), 3.74x (4 threads)
-  - Process multiple files concurrently with explicit `ThreadPoolExecutor`
+- **Multi-thread parallelism (opt-in)**: 2.0x (2 threads), 3.74x (4 threads)
+  - **ProducerConsumerPipeline**: Single-file high-throughput processing (recommended for large files)
+  - **ThreadPoolExecutor**: Multi-file concurrent processing (standard Python pattern)
   - GIL released during parsing in each thread simultaneously
-  - Requires: One reader per thread (not shared)
 
 ## Single-Thread Performance Baseline
 
