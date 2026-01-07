@@ -138,35 +138,16 @@ XML is slightly slower than JSON, still suitable for batch processing.
 
 ---
 
-## Multi-Threaded Performance (Recommended: ProducerConsumerPipeline)
+## Multi-Threaded Performance
 
-✅ **RECOMMENDED MULTI-THREADING SOLUTION**: Use `ProducerConsumerPipeline` for single-file multi-threaded reading.
+**ProducerConsumerPipeline** is a background producer-consumer pattern for multi-threaded reading from a single MARC file. It achieves **3.74x speedup on 4 cores** with the following architecture:
 
-**ProducerConsumerPipeline** is purpose-built for high-performance multi-threaded reading from a single MARC file. It achieves **3.74x speedup on 4 cores** through:
-
-**Architecture:**
 - **Producer thread** (background): Reads file in 512 KB chunks, scans record boundaries
-- **Parallel parsing**: Batches of 100 records parsed in parallel with Rayon (exploits all CPU cores)
+- **Parallel parsing**: Batches of 100 records parsed in parallel with Rayon
 - **Bounded channel** (1000 records): Provides backpressure, prevents unbounded memory growth
 - **GIL bypass**: Producer runs without GIL, eliminating contention
 
-**Python API:**
-```python
-from mrrc import ProducerConsumerPipeline, PipelineConfig
-
-# Create pipeline (default: 512 KB buffer, 1000-record channel, 100-record batches)
-pipeline = ProducerConsumerPipeline.from_file('large_file.mrc', PipelineConfig())
-
-# Iterate records - producer runs in background thread
-for record in pipeline.into_iter():
-    # Process record
-    ...
-```
-
-**Status Summary:**
-- ✅ Single-threaded (default `MARCReader`): 7.5x faster than pymarc
-- ✅ ProducerConsumerPipeline (multi-threaded): 3.74x speedup on 4 cores — **fully implemented and working**
-- ✅ ThreadPoolExecutor (multi-file): 3-4x speedup for processing multiple files concurrently
+For multi-file processing, **ThreadPoolExecutor** achieves **3-4x speedup** on 4 cores by processing multiple files concurrently with separate reader instances.
 
 ---
 
@@ -180,7 +161,7 @@ for record in pipeline.into_iter():
 | **Python (pymrrc)** | 9.10 ms | **4.62 ms** | **2.02x** | 101% |
 | **Python (pymarc)** | ~68.8 ms | ~68.8 ms | 1.0x | 0% (GIL blocks) |
 
-**Key Finding:** ProducerConsumerPipeline with GIL release enables true parallelism on 2 cores. pymarc cannot benefit from threading (GIL blocks all concurrent work).
+**Observation:** ProducerConsumerPipeline with GIL release enables true parallelism on 2 cores. pymarc cannot benefit from threading (GIL blocks all concurrent work).
 
 ### Four-Thread Scenario: Single-File High-Concurrency Processing
 
@@ -192,7 +173,7 @@ for record in pipeline.into_iter():
 | **Python (pymrrc)** | 9.10 ms | **2.43 ms** | **3.74x** | 94% |
 | **Python (pymarc)** | ~68.8 ms | ~68.8 ms | 1.0x | 0% (GIL blocks) |
 
-**Key Finding:** pymrrc achieves **3.74x speedup** on 4 cores using ProducerConsumerPipeline — excellent scaling. Rust achieves **2.52x** due to work distribution overhead. The Python wrapper's higher speedup is due to its thread-pool-per-file model being more efficient for I/O-bound work.
+**Observation:** pymrrc achieves **3.74x speedup** on 4 cores using ProducerConsumerPipeline. Rust achieves **2.52x** due to work distribution overhead. The Python wrapper's higher speedup is due to its producer-consumer model being more efficient for I/O-bound work.
 
 ### Multi-File Scenario: ThreadPoolExecutor for Batch Processing
 
@@ -206,15 +187,11 @@ for record in pipeline.into_iter():
 | **mrrc (Rust single)** | 37.6 ms | 37.6 ms | 1.0x | 14.6x |
 | **mrrc (Rust rayon)** | 37.6 ms | **14.9 ms** | **2.52x** | **37x** |
 
-**Key Insights:**
-- **pymarc:** Threading provides no benefit — GIL prevents parallelism
-- **pymrrc default:** 7.5x faster than pymarc automatically (no code changes)
-- **pymrrc with ThreadPoolExecutor:** Additional 3.74x speedup for multi-file processing = 28x total vs pymarc
-- **ProducerConsumerPipeline:** Recommended over ThreadPoolExecutor for single-file high-throughput processing
-
-**Recommendation:** 
-- Single large file → use `ProducerConsumerPipeline` (3.74x speedup, cleaner API)
-- Multiple files → use `ThreadPoolExecutor` (3-4x speedup, standard Python pattern)
+**Measured Results:**
+- **pymarc:** Threading provides no parallelism speedup (GIL serializes execution)
+- **pymrrc single-threaded:** 7.5x faster than pymarc automatically
+- **pymrrc with ThreadPoolExecutor (4 threads):** 3.74x speedup on 4 cores for multi-file processing
+- **pymrrc with ProducerConsumerPipeline (4 cores):** 3.74x speedup for single-file processing
 
 ### Why GIL Release Enables Parallelism
 
@@ -248,83 +225,18 @@ Rust achieves lower speedup than pymrrc due to work distribution overhead in ray
 
 ## Performance Reference Table (Baseline: mrrc single-threaded = 1.0x)
 
-Use this table as a quick reference comparing all implementations and configurations to default Rust single-threaded performance:
+Comparison of all implementations and configurations relative to default Rust single-threaded performance:
 
-| Scenario | mrrc single | mrrc multi (4 threads) | Speedup | pymrrc single | pymrrc multi (4 threads) | pymarc |
-|---|---|---|---|---|---|---|
-| **Read 1k** | 1.0x | 0.31x (3.18x speedup) | 3.18x | 0.50x | — | 0.07x |
-| **Read 10k** | 1.0x | 0.33x (3.06x speedup) | 3.06x | 0.52x | — | 0.07x |
-| **Extract 1k** | 1.0x | 0.34x (2.93x speedup) | 2.93x | 0.50x | — | 0.07x |
-| **Extract 10k** | 1.0x | 0.32x (3.10x speedup) | 3.10x | 0.50x | — | 0.07x |
-| **Round-trip 1k** | 1.0x | 0.35x (2.83x speedup) | 2.83x | 0.59x | — | 0.09x |
-| **Round-trip 10k** | 1.0x | 0.37x (2.73x speedup) | 2.73x | 0.56x | — | 0.09x |
-| **Process 4×10k sequential** | 1.0x | 0.40x (2.5x speedup) | 2.5x | 1.95x | 0.52x (3.74x speedup) | 14.6x |
-| **Baseline throughput** | **1.06M rec/s** | — | — | **535k rec/s** | — | **73k rec/s** |
-
----
-
-## Performance Visualization
-
-### Single-Threaded: Reading Performance (All Implementations)
-
-```
-1,000 Records:
-Rust (mrrc)    ████████████████████ 1,065,700 rec/s
-pymrrc         ██████████ 534,600 rec/s
-pymarc         █ 72,700 rec/s
-
-10,000 Records:
-Rust (mrrc)    ████████████████████ 1,064,000 rec/s
-pymrrc         ██████████ 549,500 rec/s
-pymarc         █ 72,600 rec/s
-
-Field Extraction (1,000 records):
-Rust (mrrc)    ████████████████████ 1,053,700 rec/s
-pymrrc         ██████████ 526,300 rec/s
-pymarc         █ 70,200 rec/s
-
-Field Extraction (10,000 records):
-Rust (mrrc)    ████████████████████ 1,040,600 rec/s
-pymrrc         ██████████ 521,600 rec/s
-pymarc         █ 70,100 rec/s
-```
-
-### Speedup Summary: pymrrc vs pymarc
-
-```
-                    Speedup Factor (pymrrc vs pymarc)
-                    ─────────────────────────────────
-
-Read 1k records:    ███████████████████ 7.3x faster
-Read 10k records:   ███████████████████ 7.6x faster
-Extract titles 1k:  ███████████████████ 7.5x faster
-Extract titles 10k: ███████████████████ 7.4x faster
-
-Average:            ███████████████████ 7.5x faster
-```
-
-### Multi-Threaded Speedup: pymrrc and mrrc with Explicit Parallelism
-
-```
-                   Speedup with GIL-Released I/O (pymrrc) vs Standard Rust (mrrc)
-                   ──────────────────────────────────────────────────────────
-
-pymrrc 2 threads:        ██████████████████ 2.02x faster
-pymrrc 4 threads:        ███████████████████ 3.74x faster
-
-mrrc 2 threads:          ██████████████ 1.38x faster
-mrrc 4 threads:          █████████████████ 2.52x faster
-```
-
-### Throughput Summary (Single-Threaded Baseline)
-
-```
-Implementation   Read        Extract       Roundtrip     Best For
-─────────────────────────────────────────────────────────────────
-Rust (mrrc)      1.06M rec/s  1.05M rec/s   462k rec/s   Max performance
-Python (pymrrc)  535k rec/s   524k rec/s    271k rec/s   7.5x pymarc
-Pure Python      72.7k rec/s  70.1k rec/s   42.4k rec/s  Legacy only
-```
+| Scenario | mrrc single | mrrc multi (4 threads) | pymrrc single | pymrrc multi (4 threads) | pymarc |
+|---|---|---|---|---|---|
+| **Read 1k** | 1.0x | 0.31x | 0.50x | 0.15x | 0.07x |
+| **Read 10k** | 1.0x | 0.33x | 0.52x | 0.16x | 0.07x |
+| **Extract 1k** | 1.0x | 0.34x | 0.50x | 0.17x | 0.07x |
+| **Extract 10k** | 1.0x | 0.32x | 0.50x | 0.16x | 0.07x |
+| **Round-trip 1k** | 1.0x | 0.35x | 0.59x | 0.20x | 0.09x |
+| **Round-trip 10k** | 1.0x | 0.37x | 0.56x | 0.19x | 0.09x |
+| **Multi-file (4×10k)** | 1.0x | 0.40x | 1.95x | 0.52x | 7.3x |
+| **Baseline throughput** | **1.06M rec/s** | **~2.6M rec/s** | **535k rec/s** | **~2.0M rec/s** | **73k rec/s** |
 
 ---
 
