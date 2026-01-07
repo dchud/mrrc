@@ -32,6 +32,12 @@ jobs:
       - name: Install maturin
         run: pip install maturin
       
+      - name: Debug Python detection
+        run: |
+          python --version
+          which python
+          python -c "import sys; print(f'Python executable: {sys.executable}')"
+      
       - uses: PyO3/maturin-action@v1
         with:
           manylinux: auto
