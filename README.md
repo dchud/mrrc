@@ -495,7 +495,7 @@ The Python wrapper achieves exceptional performance through Rust implementation 
 
 **Key Point:** Default single-threaded mode automatically benefits from GIL release (7.5x faster than pymarc). Add threading explicitly only when processing multiple files.
 
-See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis, [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for threading guidance, and [docs/threading.md](docs/threading.md) for usage patterns.
+See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis, [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for threading guidance, and [docs/THREADING.md](docs/THREADING.md) for usage patterns.
 
 ### Threading & Concurrency (Opt-In via `ThreadPoolExecutor`)
 
@@ -547,7 +547,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 - **Best practice**: One reader per thread; use `ThreadPoolExecutor` or `threading.Thread`
 - **GIL behavior**: Released during Phase 2 (parsing), allowing true parallelism
 
-See [docs/threading.md](docs/threading.md), [docs/parallel_processing.md](docs/parallel_processing.md), and [examples/concurrent_reading.py](examples/concurrent_reading.py) for detailed patterns and benchmarks.
+See [docs/THREADING.md](docs/THREADING.md) and [examples/concurrent_reading.py](examples/concurrent_reading.py) for detailed patterns and benchmarks.
 
 ### Format Conversion (Python)
 
@@ -651,8 +651,7 @@ Comprehensive documentation is available in the `docs/` directory:
 
 - **[Documentation Index](docs/README.md)** - Overview of all documentation
 - **[Benchmarking Results](docs/benchmarks/RESULTS.md)** - Performance metrics and analysis
-- **[Parallel Processing Guide](docs/parallel_processing.md)** - Concurrent workload patterns
-- **[Threading Documentation](docs/threading.md)** - Multi-threaded usage patterns
+- **[Threading Documentation](docs/THREADING.md)** - Multi-threaded usage patterns and best practices
 - **[Design Documents](docs/design/)** - Architecture and feature proposals
 - **[Project History](docs/history/)** - Code reviews, audits, and implementation notes
 

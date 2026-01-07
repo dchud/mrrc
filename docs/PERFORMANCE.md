@@ -137,7 +137,7 @@ Fast and simple for smaller files.
 
 ## Complete Usage Examples
 
-For detailed code examples of all patterns (sequential, ProducerConsumerPipeline, ThreadPoolExecutor, multiprocessing), see [threading.md](threading.md).
+For detailed code examples of all patterns (sequential, ProducerConsumerPipeline, ThreadPoolExecutor, multiprocessing), see [THREADING.md](THREADING.md).
 
 This page focuses on performance characteristics. For practical implementation guidance, refer to the threading documentation.
 
@@ -339,7 +339,6 @@ print(f"Speedup: {speedup:.2f}x")
 ## References
 
 - **Benchmarking results**: `docs/benchmarks/RESULTS.md`
-- **Threading guide**: `docs/threading.md`
-- **Parallel processing**: `docs/parallel_processing.md`
+- **Threading guide**: `docs/THREADING.md`
 - **Rust benchmarks**: `benches/marc_benchmarks.rs`
 - **Python benchmarks**: `tests/python/test_benchmark_*.py`

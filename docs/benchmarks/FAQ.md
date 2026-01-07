@@ -21,7 +21,7 @@ These are different things! The 7.5x is automatic (default behavior), the 2-3.74
 **A:** No. If you're upgrading from pymarc, just install pymrrc and your code is automatically 7.5x faster.
 
 ### Q: Do I need to change my code to get multi-threading benefits?
-**A:** Yes. For single-file multi-threaded processing, use `ProducerConsumerPipeline`. For multi-file processing, use `ThreadPoolExecutor`. See [../threading.md](../threading.md) for examples.
+**A:** Yes. For single-file multi-threaded processing, use `ProducerConsumerPipeline`. For multi-file processing, use `ThreadPoolExecutor`. See [../THREADING.md](../THREADING.md) for examples.
 
 ### Q: Is the GIL release automatic?
 **A:** Yes. Every call to `read_record()` automatically releases the GIL during parsing (Phase 2). You don't need to do anything special.
@@ -207,4 +207,4 @@ ThreadPoolExecutor().map(read_all, ["file1.mrc", "file2.mrc", "file3.mrc", "file
 - See [RESULTS.md](RESULTS.md) for complete benchmark data with four-way comparisons
 - See [../ARCHITECTURE.md](../ARCHITECTURE.md) for detailed technical explanation of GIL release
 - See [../PERFORMANCE.md](../PERFORMANCE.md) for usage patterns and performance tuning
-- See [../threading.md](../threading.md) for threading patterns and code examples
+- See [../THREADING.md](../THREADING.md) for threading patterns and code examples

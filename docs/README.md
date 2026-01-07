@@ -6,9 +6,8 @@ Welcome to the MRRC (MARC Rust Crate) documentation. This directory contains com
 
 ### 📚 User Guides & Tutorials
 
-- **[Parallel Processing Guide](./parallel_processing.md)** - Concurrent processing with multi-threading for batch MARC file processing
 - **[Performance Guide](./PERFORMANCE.md)** - Detailed performance analysis, GIL release details, and optimization guidance
-- **[Threading Documentation](./threading.md)** - Thread safety, multi-threaded usage patterns, and best practices
+- **[Threading Documentation](./THREADING.md)** - Thread safety, multi-threaded usage patterns, and best practices
 - **[Architecture](./ARCHITECTURE.md)** - System design, GIL management, record types, and implementation details
 
 ### 📊 Benchmarking Results
@@ -47,8 +46,7 @@ docs/
 ├── README.md                       # This file (documentation index)
 ├── ARCHITECTURE.md                 # System architecture and design
 ├── PERFORMANCE.md                  # Performance analysis and optimization
-├── parallel_processing.md          # Threading and concurrent processing guide
-├── threading.md                    # Thread safety and patterns
+├── THREADING.md                    # Thread safety and patterns
 │
 ├── design/                         # Active design documents
 │   └── ...
@@ -74,17 +72,14 @@ docs/
 **...understand performance characteristics**
 → Check `benchmarks/RESULTS.md` for throughput, memory, and parallel speedup data
 
-**...set up parallel/concurrent processing**
-→ Read `parallel_processing.md` for patterns and expected performance
+**...understand threading and concurrency**
+→ Read `THREADING.md` for patterns, gotchas, debugging, and best practices
 
 **...understand why a decision was made**
 → Look in `history/` for the original design proposal and decision rationale
 
 **...optimize my code**
 → See `PERFORMANCE.md` for GIL release details, thread count tuning, and backend strategy
-
-**...understand threading and concurrency**
-→ Read `threading.md` for patterns, gotchas, and debugging guidance
 
 **...set up benchmarking**
 → See `benchmarks/README.md` for framework setup and running benchmarks
@@ -97,8 +92,7 @@ docs/
 |----------|------|---------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Reference | System design, components, GIL management |
 | [PERFORMANCE.md](./PERFORMANCE.md) | Guide | Performance analysis, tuning, backend strategy |
-| [parallel_processing.md](./parallel_processing.md) | Guide | Multi-threading patterns and performance |
-| [threading.md](./threading.md) | Guide | Thread safety, patterns, and debugging |
+| [THREADING.md](./THREADING.md) | Guide | Thread safety, patterns, and debugging |
 
 ### Benchmarking & Results
 
@@ -150,21 +144,13 @@ Covers:
 - Usage patterns and optimization
 - Troubleshooting and profiling
 
-### parallel_processing.md
-
-Covers:
-- Multi-file threading (recommended)
-- Single-file chunking (advanced)
-- Multiprocessing for CPU-bound work
-- Rust usage for maximum performance
-- Performance comparison and real-world scenarios
-- Best practices and troubleshooting
-
-### threading.md
+### THREADING.md
 
 Covers:
 - GIL behavior and MRRC's GIL release policy
-- Threading patterns (concurrent.futures, threading.Thread, multiprocessing)
+- ProducerConsumerPipeline (single-file high-throughput multi-threading)
+- ThreadPoolExecutor (multi-file concurrent processing)
+- Multiprocessing (CPU-bound work)
 - Thread safety guarantees and gotchas
 - Memory usage with threading
 - Common patterns and debugging

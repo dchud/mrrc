@@ -363,8 +363,7 @@ Located in `tests/data/fixtures/`:
 - **Performance FAQ**: `docs/benchmarks/FAQ.md` - Quick Q&A about speedups
 
 **Guides:**
-- **Parallel Processing Guide**: `docs/parallel_processing.md`
-- **Threading Guide**: `docs/threading.md`
+- **Threading Guide**: `docs/THREADING.md`
 
 **External References:**
 - **MARC Standard**: https://www.loc.gov/marc/
