@@ -211,15 +211,33 @@ pub struct PyMARCReader {
 
 ## Concurrency Model
 
-### Recommended Pattern
+### Two APIs for Different Use Cases
+
+#### Standard MARCReader (Sequential - No Multi-Threading Benefit)
+
+```python
+from mrrc import MARCReader
+
+# Simple sequential reading
+reader = MARCReader("records.mrc")
+for record in reader:
+    process(record)
+```
+
+**Performance:**
+- ✅ Single-threaded: **7.5x faster than pymarc**
+- ❌ Multi-threaded: **0.85x slowdown** (GIL contention)
+- **Use when:** Sequential processing or single-file reads
+
+#### ProducerConsumerPipeline (Parallel - Multi-File Processing)
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
-from mrrc import MARCReader
+from mrrc import ProducerConsumerPipeline
 
 def process_file(filename):
-    reader = MARCReader(filename)  # New reader per thread
-    for record in reader:
+    pipeline = ProducerConsumerPipeline.from_file(filename)
+    for record in pipeline:
         process(record)
 
 files = ['file1.mrc', 'file2.mrc', 'file3.mrc', 'file4.mrc']
@@ -228,10 +246,14 @@ with ThreadPoolExecutor(max_workers=4) as executor:
     results = [f.result() for f in futures]
 ```
 
-**Performance**:
+**Expected Performance** (pending implementation fix - Issue mrrc-0p0):
 - 2 threads: 2.0x speedup
 - 4 threads: 3.74x speedup
 - Scales with CPU core count
+
+**Use when:** Processing multiple files concurrently, need true parallelism
+
+**⚠️ Current Status:** ProducerConsumerPipeline implementation incomplete (only reads partial records)
 
 ## Performance Characteristics
 

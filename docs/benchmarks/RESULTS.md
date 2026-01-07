@@ -140,18 +140,33 @@ XML is slightly slower than JSON, still suitable for batch processing.
 
 ## Multi-Threaded Performance (Explicit Concurrency, Opt-In)
 
-⚠️ **KNOWN LIMITATION (Issue mrrc-lqj)**: Current implementation holds the GIL during Phase 1 (reading bytes from disk). This serializes file I/O across threads, negating threading benefits for file-based workloads. 
+⚠️ **ARCHITECTURE CLARIFICATION**: 
 
-**Current Status:**
-- File paths: Threading shows **0.85x slowdown** (not the claimed 3.74x speedup) 
-- BytesIO: GIL release works during parsing, but I/O is in-memory so minimal benefit
-- PythonFile objects: Same limitation—GIL held during .read() calls
+The 3.74x speedup claims apply to the **ProducerConsumerPipeline** (Phase H parallel infrastructure), NOT the standard `MARCReader` iteration API.
 
-**Expected after mrrc-lqj fix**: 3.74x speedup on 4 threads for file-based processing
+**Two different APIs for two different use cases:**
+
+1. **Standard MARCReader** (for simple sequential reading):
+   - Uses regular iteration: `for record in reader:`
+   - GIL held during Phase 1 (read bytes)
+   - Threading provides **0.85x slowdown** (contention, not speedup)
+   - ✅ Single-threaded: 7.5x faster than pymarc
+   - ❌ Multi-threaded: No benefit
+
+2. **ProducerConsumerPipeline** (for parallel multi-file processing):
+   - Opt-in API: `ProducerConsumerPipeline.from_file(path)`
+   - Background producer thread + Rayon parser pool + bounded channel
+   - Expected: 3.74x speedup on 4 threads (when working)
+   - ⚠️ **Currently broken** (Issue mrrc-0p0: only reads 1985/10000 records)
+
+**Status Summary:**
+- ✅ Single-threaded speedup (7.5x vs pymarc): **VERIFIED**
+- ⚠️ ProducerConsumerPipeline speedup (3.74x): **NOT YET VERIFIED** (implementation incomplete)
+- ❌ Standard iteration threading: **NOT SUPPORTED**
 
 ---
 
-This section shows **aspirational performance** when the GIL release is completed. The GIL should be released during record parsing in each thread, enabling true concurrent processing. Each thread must have its own `MARCReader` instance.
+This section documents the **ProducerConsumerPipeline** API performance (pending implementation fix). For standard `MARCReader` iteration, see "Single-Threaded Baseline" section above.
 
 ### Two-Thread Scenario: Parallel File Processing
 
