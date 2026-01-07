@@ -3,38 +3,124 @@
 // This module implements three-phase GIL management for concurrent file I/O:
 // - Phase 1 (GIL held): Extract record data from Python PyRecord object
 // - Phase 2 (GIL released): Serialize record to MARC bytes (CPU-intensive)
-// - Phase 3 (GIL held): Write serialized bytes to Python file object
+// - Phase 3 (GIL held): Write serialized bytes to appropriate backend
 
 use crate::wrappers::PyRecord;
 use mrrc::MarcWriter;
 use pyo3::prelude::*;
+use std::io::BufWriter;
+use std::fs::File;
+
+/// Internal enum for different writer backends
+#[allow(clippy::large_enum_variant)]
+enum WriterBackend {
+    /// Python file-like object (e.g., BytesIO, open file in 'wb' mode)
+    /// Requires GIL for I/O operations
+    PythonFile {
+        file_obj: Py<PyAny>,
+    },
+    /// Pure Rust file I/O via std::fs::File (no GIL overhead)
+    /// Used when writer initialized with file path string
+    RustFile {
+        writer: BufWriter<File>,
+    },
+}
 
 /// Python wrapper for MarcWriter with three-phase GIL release pattern
 ///
 /// The three-phase pattern enables GIL release during CPU-intensive serialization:
 /// - Phase 1: Extract record data from Python PyRecord (GIL held)
 /// - Phase 2: Serialize record to bytes (GIL released)
-/// - Phase 3: Write bytes to Python file object (GIL re-acquired)
+/// - Phase 3: Write bytes to backend (GIL management varies by backend)
+///
+/// ## Backends
+///
+/// **PythonFile:** File-like Python objects (BytesIO, file handles from open())
+/// - Phase 3 uses GIL (calls Python .write() method)
+/// - Allows concurrent writes to different file objects
+/// - Limited concurrency due to GIL contention
+///
+/// **RustFile:** Rust file paths (str, pathlib.Path)
+/// - Phase 3 uses no GIL (pure Rust I/O)
+/// - Enables near-native concurrent performance
+/// - Ideal for write-heavy workloads
 ///
 /// This allows multiple threads to write different files concurrently.
 #[pyclass(name = "MARCWriter")]
 pub struct PyMARCWriter {
-    file_obj: Py<PyAny>,
+    backend: Option<WriterBackend>,
     closed: bool,
 }
 
 #[pymethods]
 impl PyMARCWriter {
-    /// Create a new MARCWriter for a Python file-like object
+    /// Create a new MARCWriter from any supported source
+    ///
+    /// Accepts:
+    /// - str path (e.g., 'output.mrc') → RustFile backend (no GIL)
+    /// - pathlib.Path → RustFile backend (no GIL)
+    /// - Python file object → PythonFile backend (GIL managed)
     ///
     /// # Arguments
-    /// * `file` - A Python file-like object (must support .write(bytes) method)
+    /// * `source` - File path (str), pathlib.Path, or file-like object
     #[new]
-    pub fn new(file: Py<PyAny>) -> PyResult<Self> {
-        Ok(PyMARCWriter {
-            file_obj: file,
-            closed: false,
-        })
+    pub fn new(source: &Bound<'_, PyAny>) -> PyResult<Self> {
+        // Try to detect if it's a string path first (fast path for RustFile)
+        if let Ok(path_str) = source.extract::<String>() {
+            // String path → open with Rust for zero-GIL I/O
+            let file = File::create(&path_str).map_err(|e| {
+                pyo3::exceptions::PyIOError::new_err(format!(
+                    "Failed to open file '{}' for writing: {}",
+                    path_str, e
+                ))
+            })?;
+            
+            let writer = BufWriter::new(file);
+            return Ok(PyMARCWriter {
+                backend: Some(WriterBackend::RustFile { writer }),
+                closed: false,
+            });
+        }
+        
+        // Check for pathlib.Path objects by looking for __fspath__ or __str__ methods
+        // and trying to create a file with the path
+        if let Ok(path_method) = source.getattr("__fspath__") {
+            if path_method.is_callable() {
+                if let Ok(path_obj) = path_method.call0() {
+                    if let Ok(path_str) = path_obj.extract::<String>() {
+                        let file = File::create(&path_str).map_err(|e| {
+                            pyo3::exceptions::PyIOError::new_err(format!(
+                                "Failed to open file '{}' for writing: {}",
+                                path_str, e
+                            ))
+                        })?;
+                        
+                        let writer = BufWriter::new(file);
+                        return Ok(PyMARCWriter {
+                            backend: Some(WriterBackend::RustFile { writer }),
+                            closed: false,
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Fallback: treat as Python file-like object
+        // Check if it has .write() method
+        if let Ok(write_method) = source.getattr("write") {
+            if write_method.is_callable() {
+                let file_obj = source.clone().unbind();
+                return Ok(PyMARCWriter {
+                    backend: Some(WriterBackend::PythonFile { file_obj }),
+                    closed: false,
+                });
+            }
+        }
+        
+        // Not a supported type
+        Err(pyo3::exceptions::PyTypeError::new_err(
+            "MARCWriter() argument must be a file path (str/Path) or file-like object with .write() method"
+        ))
     }
 
     /// Write a record to the file with three-phase GIL management
@@ -42,7 +128,7 @@ impl PyMARCWriter {
     /// This implements the three-phase GIL release pattern:
     /// - Phase 1: Extract record data from Python PyRecord (GIL held)
     /// - Phase 2: Serialize record to bytes (GIL released)
-    /// - Phase 3: Write bytes to Python file object (GIL re-acquired)
+    /// - Phase 3: Write bytes to backend (varies by backend)
     pub fn write_record(&mut self, record: &PyRecord) -> PyResult<()> {
         if self.closed {
             return Err(pyo3::exceptions::PyRuntimeError::new_err(
@@ -77,34 +163,71 @@ impl PyMARCWriter {
             Ok::<Vec<u8>, std::io::Error>(buffer)
         })?;
 
-        // ===== PHASE 3: Write bytes to file (GIL re-acquired) =====
-        // GIL is automatically re-acquired when exiting allow_threads() block
-        let file_ref = self.file_obj.bind(py);
-        let write_method = file_ref.getattr("write").map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!(
-                "File object has no write method: {}",
-                e
-            ))
-        })?;
+        // ===== PHASE 3: Write bytes to backend =====
+        // GIL is automatically re-acquired when exiting detach() block
+        match &mut self.backend {
+            Some(WriterBackend::PythonFile { file_obj }) => {
+                // PythonFile backend: requires GIL (calls Python .write() method)
+                let file_ref = file_obj.bind(py);
+                let write_method = file_ref.getattr("write").map_err(|e| {
+                    pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "File object has no write method: {}",
+                        e
+                    ))
+                })?;
 
-        write_method.call1((record_bytes,)).map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!(
-                "Failed to write record bytes: {}",
-                e
-            ))
-        })?;
+                write_method.call1((record_bytes,)).map_err(|e| {
+                    pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "Failed to write record bytes: {}",
+                        e
+                    ))
+                })?;
+            }
+            Some(WriterBackend::RustFile { writer }) => {
+                // RustFile backend: no GIL needed (pure Rust I/O)
+                use std::io::Write;
+                writer.write_all(&record_bytes).map_err(|e| {
+                    pyo3::exceptions::PyIOError::new_err(format!(
+                        "Failed to write record bytes: {}",
+                        e
+                    ))
+                })?;
+            }
+            None => {
+                return Err(pyo3::exceptions::PyRuntimeError::new_err(
+                    "Writer backend not initialized"
+                ));
+            }
+        }
 
         Ok(())
+    }
+
+    /// Alias for write_record (for pymarc compatibility)
+    pub fn write(&mut self, record: &PyRecord) -> PyResult<()> {
+        self.write_record(record)
     }
 
     /// Close the writer and flush the buffer
     pub fn close(&mut self) -> PyResult<()> {
         if !self.closed {
-            // ✅ CORRECT: Get Python handle assuming GIL is already held
-            let py = unsafe { Python::assume_attached() };
-            let file_ref = self.file_obj.bind(py);
-            if let Ok(flush_method) = file_ref.getattr("flush") {
-                let _ = flush_method.call0();
+            match &mut self.backend {
+                Some(WriterBackend::PythonFile { file_obj }) => {
+                    // PythonFile backend: flush via Python method
+                    let py = unsafe { Python::assume_attached() };
+                    let file_ref = file_obj.bind(py);
+                    if let Ok(flush_method) = file_ref.getattr("flush") {
+                        let _ = flush_method.call0();
+                    }
+                }
+                Some(WriterBackend::RustFile { writer }) => {
+                    // RustFile backend: flush via Rust I/O
+                    use std::io::Write;
+                    let _ = writer.flush();
+                }
+                None => {
+                    // Already closed, nothing to do
+                }
             }
             self.closed = true;
         }

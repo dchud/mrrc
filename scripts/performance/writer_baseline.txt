@@ -1,0 +1,78 @@
+================================================================================
+WRITER BASELINE MEASUREMENTS (Pre-Refactoring)
+================================================================================
+
+SYSTEM INFO
+--------------------------------------------------------------------------------
+timestamp           : 2026-01-07 11:21:36
+python_version      : 3.12.8
+platform            : macOS-15.7.2-arm64-arm-64bit
+processor           : arm
+rustc_version       : rustc 1.92.0 (ded5c06cf 2025-12-08) (Homebrew)
+cpu_count           : 10
+
+MEASUREMENTS
+--------------------------------------------------------------------------------
+
+BytesIO write (10K records)
+  time_seconds                  : 0.058
+  records_per_second            : 173867.2
+  peak_memory_mb                : 2.7
+  total_bytes                   : 2645353
+
+Temp file write (10K records)
+  time_seconds                  : 0.061
+  records_per_second            : 164727.3
+  peak_memory_mb                : 0.0
+  file_size_bytes               : 2645353
+
+Concurrent writes (2 threads × 5K records)
+  sequential_time_seconds       : 0.057
+  concurrent_time_seconds       : 0.129
+  speedup                       : 0.44
+  records_per_second            : 77360.1
+  peak_memory_mb                : 0.0
+
+================================================================================
+ACCEPTANCE CRITERIA (Phase D.6)
+================================================================================
+RustFile backend:     >= 1.2x faster than baseline
+PythonFile backend:   >= baseline (no regression)
+Concurrent speedup:   >= 1.8x for 2 threads
+
+RAW DATA (JSON)
+--------------------------------------------------------------------------------
+{
+  "system_info": {
+    "timestamp": "2026-01-07 11:21:36",
+    "python_version": "3.12.8",
+    "platform": "macOS-15.7.2-arm64-arm-64bit",
+    "processor": "arm",
+    "rustc_version": "rustc 1.92.0 (ded5c06cf 2025-12-08) (Homebrew)",
+    "cpu_count": 10
+  },
+  "measurements": [
+    {
+      "name": "BytesIO write (10K records)",
+      "time_seconds": 0.058,
+      "records_per_second": 173867.2,
+      "peak_memory_mb": 2.7,
+      "total_bytes": 2645353
+    },
+    {
+      "name": "Temp file write (10K records)",
+      "time_seconds": 0.061,
+      "records_per_second": 164727.3,
+      "peak_memory_mb": 0.0,
+      "file_size_bytes": 2645353
+    },
+    {
+      "name": "Concurrent writes (2 threads \u00d7 5K records)",
+      "sequential_time_seconds": 0.057,
+      "concurrent_time_seconds": 0.129,
+      "speedup": 0.44,
+      "records_per_second": 77360.1,
+      "peak_memory_mb": 0.0
+    }
+  ]
+}
