@@ -497,7 +497,7 @@ The Python wrapper achieves exceptional performance through Rust implementation 
 
 See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis, [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for threading guidance, and [docs/threading.md](docs/threading.md) for usage patterns.
 
-### Threading & Concurrency (Opt-In via ThreadPoolExecutor)
+### Threading & Concurrency (Opt-In via `ThreadPoolExecutor`)
 
 MRRC's I/O operations automatically release the Python GIL during record parsing. This means:
 
@@ -542,7 +542,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 
 **Important Notes:**
 - **Default behavior** (single-threaded): Automatically faster via GIL release, no changes needed
-- **Explicit multi-threading**: Add ThreadPoolExecutor only when processing multiple files
+- **Explicit multi-threading**: Add `ThreadPoolExecutor` only when processing multiple files
 - **Not thread-safe**: Sharing a reader across threads causes undefined behavior
 - **Best practice**: One reader per thread; use `ThreadPoolExecutor` or `threading.Thread`
 - **GIL behavior**: Released during Phase 2 (parsing), allowing true parallelism
