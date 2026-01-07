@@ -34,13 +34,13 @@ def multi_records_mrc():
 @pytest.fixture
 def large_5k_mrc():
     """Path to 5k records MARC file."""
-    return Path("tests/data/5k_records.mrc")
+    return Path("tests/data/fixtures/5k_records.mrc")
 
 
 @pytest.fixture
 def large_10k_mrc():
     """Path to 10k records MARC file."""
-    return Path("tests/data/10k_records.mrc")
+    return Path("tests/data/fixtures/10k_records.mrc")
 
 
 class TestProducerConsumerPipelineBasics:
@@ -159,7 +159,6 @@ class TestProducerConsumerPipelineIteration:
 class TestProducerConsumerPipelineBackpressure:
     """Test backpressure mechanism preventing OOM."""
 
-    @pytest.mark.skip(reason="Large test file not available")
     def test_backpressure_with_large_file(self, large_5k_mrc):
         """Test that pipeline handles backpressure with large files.
 
@@ -176,10 +175,10 @@ class TestProducerConsumerPipelineBackpressure:
                 break
             record_count += 1
 
-        # Should have processed all 5000 records despite backpressure
-        assert record_count >= 4900  # Allow some variance
+        # Should have processed all records
+        # (5k_records.mrc contains 4957 records)
+        assert record_count == 4957
 
-    @pytest.mark.skip(reason="Large test file not available")
     def test_channel_capacity_respected(self, large_5k_mrc):
         """Test that channel capacity is respected during iteration."""
         # With a small channel (100 records), producer should block frequently
@@ -196,13 +195,12 @@ class TestProducerConsumerPipelineBackpressure:
             record_count += 1
 
         # Should still process all records despite small channel
-        assert record_count >= 4900
+        assert record_count == 4957
 
 
 class TestProducerConsumerPipelineMemory:
     """Test memory stability and no unbounded growth."""
 
-    @pytest.mark.skip(reason="Large test file not available")
     def test_memory_stability_large_file(self, large_10k_mrc):
         """Test that memory doesn't grow unboundedly with large files."""
         import psutil
@@ -229,7 +227,7 @@ class TestProducerConsumerPipelineMemory:
         # Memory growth should be bounded (< 200 MB for 10k records)
         memory_growth = peak_memory - initial_memory
         assert memory_growth < 200 * 1024 * 1024  # 200 MB limit
-        assert record_count >= 9900  # Should process all records
+        assert record_count == 10000  # Should process all records
 
 
 class TestProducerConsumerPipelineErrorHandling:
@@ -324,7 +322,6 @@ class TestProducerConsumerPipelineConsistency:
 class TestProducerConsumerPipelineAcceptanceCriteria:
     """Test acceptance criteria for H.4c."""
 
-    @pytest.mark.skip(reason="Large test file not available")
     def test_gate_backpressure_works_as_designed(self, large_5k_mrc):
         """Acceptance Criterion 1: Backpressure works correctly.
 
@@ -343,7 +340,7 @@ class TestProducerConsumerPipelineAcceptanceCriteria:
             record_count += 1
 
         # All records should be processed despite small channel
-        assert record_count >= 4900
+        assert record_count == 4957
         print(f"✓ Processed {record_count} records with 100-record channel")
 
     def test_gate_no_deadlocks(self, multi_records_mrc):
@@ -375,7 +372,6 @@ class TestProducerConsumerPipelineAcceptanceCriteria:
         finally:
             signal.alarm(0)  # Cancel timeout
 
-    @pytest.mark.skip(reason="Large test file not available")
     def test_gate_oom_prevented(self, large_10k_mrc):
         """Acceptance Criterion 3: Out-of-memory is prevented.
 
@@ -408,6 +404,25 @@ class TestProducerConsumerPipelineAcceptanceCriteria:
 
         # Memory increase should be modest (< 300 MB for 10k records)
         assert max_memory_increase < 300 * 1024 * 1024
-        assert record_count >= 9900
+        assert record_count == 10000
 
         print(f"✓ OOM prevented: {max_memory_increase / 1024 / 1024:.1f} MB increase for {record_count} records")
+
+    def test_regression_records_spanning_chunk_boundaries(self, large_10k_mrc):
+        """Regression test for mrrc-0p0: Records spanning chunk boundaries.
+
+        Previously, ProducerConsumerPipeline would stop at ~1985 records when
+        processing a 10k record file because it didn't handle partial records
+        that spanned file I/O chunk boundaries (512 KB default).
+
+        The producer task now maintains a 'leftover' buffer to carry incomplete
+        records from one chunk to the next, ensuring all records are processed.
+        """
+        pipeline = ProducerConsumerPipeline.from_file(str(large_10k_mrc))
+        record_count = sum(1 for _ in pipeline)
+
+        # Before the fix, this would be ~1985. After the fix, it should be 10000.
+        assert record_count == 10000, (
+            f"Expected 10000 records but got {record_count}. "
+            "Check if records spanning chunk boundaries are being lost."
+        )
