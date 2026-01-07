@@ -5,7 +5,7 @@ All notable changes to MRRC (MARC Rust Crate) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.1] - 2026-01-07
 
 ### Changed
 
@@ -14,18 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Real-World Performance Scenarios**: Standardized table formats across all four scenarios for consistent speedup and time-saved metrics
 - **PERFORMANCE.md Executive Summary**: Updated to clarify recommended strategies (ProducerConsumerPipeline for single-file, ThreadPoolExecutor for multi-file)
 - **Documentation Audit**: Moved completed audit to docs/history/ for archival
-
-### Planned
-
-#### Upcoming Work (Created as issues)
-- **API Compatibility Review** (mrrc-5mn): Identify additional pymarc API parity opportunities
-- **Concurrency Documentation** (mrrc-9wc): Add comprehensive Rust concurrency guidance alongside Python patterns
-- **Example Code Review** (mrrc-s8h): Expand and improve examples for all recommended usage modes
-- **Performance Optimization Epic** (mrrc-u33): Comprehensive profiling and optimization across all implementations
-  - Profile pure Rust single-threaded (mrrc-u33.2)
-  - Profile pure Rust concurrent with rayon (mrrc-u33.3)
-  - Profile Python wrapper single-threaded (mrrc-u33.4)
-  - Profile Python wrapper ProducerConsumerPipeline concurrent (mrrc-u33.5)
 
 ## [0.3.0] - 2026-01-06
 
@@ -250,11 +238,17 @@ None known at this time. The following have been resolved:
 
 ## Future Roadmap
 
-### Planned for 0.3.0 (Priority 1-2)
-- **Parallel Processing Enhancements** (mrrc-086): Complete parallel benchmarking suite with rayon and threading optimizations
-- **GIL Release in Python I/O** (mrrc-gyk): Enable PyO3's allow_threads for concurrent Python operations without GIL blocking
+### Planned for 0.4.0 (Priority 2, Documentation & Optimization)
+- **API Compatibility Review** (mrrc-5mn): Identify additional pymarc API parity opportunities
+- **Concurrency Documentation** (mrrc-9wc): Add comprehensive Rust concurrency guidance alongside Python patterns
+- **Example Code Review** (mrrc-s8h): Expand and improve examples for all recommended usage modes
+- **Performance Optimization Epic** (mrrc-u33): Comprehensive profiling and optimization across all implementations
+  - Profile pure Rust single-threaded (mrrc-u33.2)
+  - Profile pure Rust concurrent with rayon (mrrc-u33.3)
+  - Profile Python wrapper single-threaded (mrrc-u33.4)
+  - Profile Python wrapper ProducerConsumerPipeline concurrent (mrrc-u33.5)
 
-### Planned for 0.4.0+ (Priority 3, Optional Enhancements)
+### Planned for 0.5.0+ (Priority 3, Optional Enhancements)
 - **API Standardization** (mrrc-jwb): Code review enhancements including:
   - Format conversion API naming standardization (mrrc-jwb.1)
   - Dublin Core XML convenience function (mrrc-jwb.2)
