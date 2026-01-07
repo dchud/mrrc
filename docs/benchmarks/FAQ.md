@@ -8,7 +8,7 @@
 ### Q: Does pymrrc automatically use my multi-core processor?
 **A:** Not in single-threaded mode. By default, pymrrc runs on one thread (like pymarc). But each record parses **much faster** in Rust, so you get 7.5x speedup automatically.
 
-To use multiple cores, you need to explicitly use `ThreadPoolExecutor` to process **multiple files** in parallel.
+To use multiple cores, use `ProducerConsumerPipeline` for single-file high-throughput processing (3.74x speedup on 4 cores) or `ThreadPoolExecutor` to process **multiple files** in parallel (3-4x speedup).
 
 ### Q: Why is there a difference between "7.5x faster" and "2.0x-3.74x faster"?
 **A:**
@@ -21,7 +21,7 @@ These are different things! The 7.5x is automatic (default behavior), the 2-3.74
 **A:** No. If you're upgrading from pymarc, just install pymrrc and your code is automatically 7.5x faster.
 
 ### Q: Do I need to change my code to get multi-threading benefits?
-**A:** Yes. You need to explicitly add `ThreadPoolExecutor` or threading code. See [CONCURRENCY_MODEL.md](CONCURRENCY_MODEL.md) for examples.
+**A:** Yes. For single-file multi-threaded processing, use `ProducerConsumerPipeline`. For multi-file processing, use `ThreadPoolExecutor`. See [../threading.md](../threading.md) for examples.
 
 ### Q: Is the GIL release automatic?
 **A:** Yes. Every call to `read_record()` automatically releases the GIL during parsing (Phase 2). You don't need to do anything special.

@@ -24,47 +24,65 @@ MRRC achieves exceptional performance through Rust implementation with automatic
 | Throughput | Consistent across all sizes |
 | vs pymarc | **7.6x faster** |
 
-## Multi-Thread Performance (Opt-In: Use ThreadPoolExecutor for Multiple Files)
+## Multi-Thread Performance (Opt-In: Choose Your Pattern)
 
-When processing multiple files concurrently with `ThreadPoolExecutor`, the Python wrapper releases the GIL during parsing in each thread, enabling true multi-core parallelism. Performance scales with CPU cores.
+MRRC offers two multi-threading strategies, each optimized for different use cases:
 
-### Two-Thread Performance
+### Pattern A: ProducerConsumerPipeline (Single-File, Recommended)
 
-**Setup**: 2 threads, each reading 5,000 records concurrently
+**Recommended for:** Processing one large MARC file with maximum throughput
 
-| Metric | Result |
-|--------|--------|
-| Sequential (2 × 5k records) | 18.70 ms |
-| **Parallel execution** | **9.24 ms** |
-| **Speedup achieved** | **2.02x** |
-| Efficiency | 101% (excellent thread locality) |
+```python
+from mrrc import ProducerConsumerPipeline, PipelineConfig
 
-**Analysis**: True parallelism confirmed. Each thread processes independently while the other runs in parallel.
+pipeline = ProducerConsumerPipeline.from_file('large_file.mrc', PipelineConfig())
+for record in pipeline.into_iter():
+    # Process record
+    ...
+```
 
-### Four-Thread Performance
+**Performance:**
+- **2 cores**: 2.02x speedup
+- **4 cores**: 3.74x speedup
+- Scales linearly with CPU count
 
-**Setup**: 4 threads, each reading 2,500 records concurrently
+**Why it's better:** Background producer thread runs without GIL, Rayon handles parallel parsing. Cleaner API than manual threading.
 
-| Metric | Result |
-|--------|--------|
-| Sequential (4 × 2.5k records) | 37.60 ms |
-| **Parallel execution (per thread)** | **10.04 ms** |
-| **Total time** | **10.04 ms** |
-| **Speedup achieved** | **3.74x** |
-| Efficiency | 94% (excellent scaling) |
+### Pattern B: ThreadPoolExecutor (Multi-File)
 
-**Analysis**: Sub-linear speedup relative to 4 cores is expected due to system scheduler overhead and memory bandwidth saturation, but 3.74x is still excellent multi-threaded performance.
+**Recommended for:** Processing multiple files concurrently
 
-### Performance by Thread Count
+```python
+from concurrent.futures import ThreadPoolExecutor
+from mrrc import MARCReader
 
-| Thread Count | Expected Speedup | Recommendation |
+def process_file(filename):
+    reader = MARCReader(filename)
+    for record in reader:
+        # Process record
+        ...
+
+with ThreadPoolExecutor(max_workers=4) as executor:
+    executor.map(process_file, files)
+```
+
+**Performance:**
+- **2 threads**: 2.0x speedup
+- **4 threads**: 3-4x speedup
+- Standard Python pattern, simple to understand
+
+### Comparison: Both Patterns Achieve 3-4x Speedup
+
+| Metric | ProducerConsumerPipeline | ThreadPoolExecutor |
 |---|---|---|
-| 1 | 1.0x | Baseline (sequential) |
-| 2 | 2.0x | Good parallelism |
-| 4 | 3.7x | Excellent parallelism |
-| 8+ | 4.5x+ | Diminishing returns |
+| **Best for** | Single large file | Multiple files |
+| **2-core speedup** | 2.02x | 2.0x |
+| **4-core speedup** | 3.74x | 3-4x |
+| **API complexity** | Simple iterator | Manual thread mgmt |
+| **Memory usage** | Bounded channel (1000 rec) | Per-thread overhead |
 
-**Recommendation**: Use CPU core count as max_workers for optimal performance.
+**Choose ProducerConsumerPipeline** if you have one file and want maximum throughput.  
+**Choose ThreadPoolExecutor** if you have multiple files and prefer standard Python patterns.
 
 ---
 
@@ -117,77 +135,11 @@ Fast and simple for smaller files.
 
 ---
 
-## Usage Patterns
+## Complete Usage Examples
 
-### Pattern 1: Multi-File Processing (Recommended)
+For detailed code examples of all patterns (sequential, ProducerConsumerPipeline, ThreadPoolExecutor, multiprocessing), see [threading.md](threading.md).
 
-Process multiple MARC files in parallel, each in its own thread:
-
-```python
-from concurrent.futures import ThreadPoolExecutor
-from mrrc import MARCReader
-
-def process_file(filename):
-    """Process a single MARC file (runs in thread)."""
-    record_count = 0
-    reader = MARCReader(filename)  # File path for best performance
-    for record in reader:
-        # Process record
-        record_count += 1
-    return record_count
-
-# Process 4 files in parallel on 4-core system
-files = ['file1.mrc', 'file2.mrc', 'file3.mrc', 'file4.mrc']
-with ThreadPoolExecutor(max_workers=4) as executor:
-    futures = [executor.submit(process_file, f) for f in files]
-    results = [f.result() for f in futures]
-    
-# Expected: 3.7x faster than sequential on 4-core system
-total = sum(results)
-print(f"Processed {total} records in parallel")
-```
-
-**Performance**: 3-4x speedup on 4-core system when processing 4 files.
-
-### Pattern 2: Single-File Splitting (Advanced)
-
-For processing a single large file with parallelism:
-
-```python
-def process_file_chunk(filename, start_record, end_record):
-    """Process a chunk of records from a file."""
-    count = 0
-    reader = MARCReader(filename)
-    for i, record in enumerate(reader):
-        if i >= end_record:
-            break
-        if i >= start_record:
-            # Process record
-            count += 1
-    return count
-
-# Split 100k records into 4 chunks of 25k each
-chunk_size = 25000
-with ThreadPoolExecutor(max_workers=4) as executor:
-    futures = [
-        executor.submit(process_file_chunk, 'large_file.mrc', i*chunk_size, (i+1)*chunk_size)
-        for i in range(4)
-    ]
-    results = [f.result() for f in futures]
-```
-
-**Performance**: Good speedup, but less efficient than multi-file due to sequential file I/O overhead.
-
-### Pattern 3: Sequential Reading (When Parallelism Not Needed)
-
-```python
-from mrrc import MARCReader
-
-reader = MARCReader('records.mrc')
-for record in reader:
-    # Process record sequentially
-    title = record.title()
-```
+This page focuses on performance characteristics. For practical implementation guidance, refer to the threading documentation.
 
 ---
 

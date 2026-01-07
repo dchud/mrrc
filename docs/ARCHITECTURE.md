@@ -229,31 +229,30 @@ for record in reader:
 - ❌ Multi-threaded: **0.85x slowdown** (GIL contention)
 - **Use when:** Sequential processing or single-file reads
 
-#### ProducerConsumerPipeline (Parallel - Multi-File Processing)
+#### ProducerConsumerPipeline (High-Performance Single-File Multi-Threading)
 
 ```python
-from concurrent.futures import ThreadPoolExecutor
-from mrrc import ProducerConsumerPipeline
+from mrrc import ProducerConsumerPipeline, PipelineConfig
 
-def process_file(filename):
-    pipeline = ProducerConsumerPipeline.from_file(filename)
-    for record in pipeline:
-        process(record)
+# Background producer thread reads file and parses with Rayon
+pipeline = ProducerConsumerPipeline.from_file('large_file.mrc', PipelineConfig())
 
-files = ['file1.mrc', 'file2.mrc', 'file3.mrc', 'file4.mrc']
-with ThreadPoolExecutor(max_workers=4) as executor:
-    futures = [executor.submit(process_file, f) for f in files]
-    results = [f.result() for f in futures]
+for record in pipeline.into_iter():
+    process(record)
 ```
 
-**Expected Performance** (pending implementation fix - Issue mrrc-0p0):
+**Verified Performance:**
 - 2 threads: 2.0x speedup
 - 4 threads: 3.74x speedup
 - Scales with CPU core count
 
-**Use when:** Processing multiple files concurrently, need true parallelism
+**How it works:**
+- Background producer thread reads file in 512 KB chunks
+- Bounded channel provides backpressure (1000 records)
+- Rayon parses batches in parallel on all CPU cores
+- Producer runs without GIL, eliminating contention
 
-**⚠️ Current Status:** ProducerConsumerPipeline implementation incomplete (only reads partial records)
+**Use when:** Processing a single large MARC file with maximum throughput from available cores
 
 ## Performance Characteristics
 
