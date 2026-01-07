@@ -41,6 +41,7 @@ BooksAll*.gz
 
 # Python virtual environments
 venv/
+.venv
 .venv/
 env/
 .env
