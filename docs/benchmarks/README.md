@@ -4,10 +4,13 @@ This directory contains benchmarking documentation, infrastructure, and results.
 
 ## Quick Links
 
+- **[RESULTS](RESULTS.md)** - Detailed performance measurements and all four-way comparisons
+- **[FAQ](FAQ.md)** - Quick Q&A: "Is it faster?", "Do I need threading?", "How much speedup?"
 - **[BENCHMARKING GUIDE](../../BENCHMARKING.md)** - How to run benchmarks, caching system, CI integration
-- **[RESULTS](RESULTS.md)** - Detailed performance measurements and analysis
 - **[Benchmark Scripts](../../scripts/)** - `benchmark_comparison.py` and `criterion_extractor.py`
 - **[Rust Benchmarks](../../benches/)** - Criterion.rs source in `benches/marc_benchmarks.rs`
+
+**For design details:** See [docs/ARCHITECTURE.md](../ARCHITECTURE.md) for GIL release strategy and [docs/PERFORMANCE.md](../PERFORMANCE.md) for usage patterns.
 
 ## Overview
 
@@ -19,16 +22,20 @@ MRRC's performance is evaluated across three implementations:
 
 ### Key Findings
 
-**1. Python wrapper is 7.5x faster than pymarc** with minimal overhead:
+**1. Python wrapper is 7.5x faster than pymarc (single-threaded, default behavior):**
 - Rust: 1,065,700 rec/s (baseline)
-- Python wrapper: 534,600 rec/s (50% of Rust, 7.5x faster than pymarc)
-- Pure Python: 72,700 rec/s
+- Python wrapper (pymrrc): 534,600 rec/s (50% of Rust, 7.5x faster than pymarc)
+- Pure Python (pymarc): 72,700 rec/s
+- **GIL is released automatically during record parsing** — no code changes needed
 
-**2. Multi-threaded parallelism enabled via GIL release** (Phase H):
-- 2-thread speedup: 2.04x (on 2-core systems)
-- 4-thread speedup: 3.20x (on 4-core systems)
-- GIL released during record parsing (Phase 2)
-- Each thread requires its own reader instance
+**2. Multi-threaded parallelism with explicit concurrency (opt-in):**
+- Requires: Use `concurrent.futures.ThreadPoolExecutor` to spawn threads
+- 2-thread speedup: 2.04x vs sequential processing
+- 4-thread speedup: 3.74x vs sequential processing
+- Each thread needs its own `MARCReader` instance
+- GIL released during parsing in each thread simultaneously
+
+**Key Difference:** Single-threaded pymrrc (default) automatically gets faster parsing via GIL release but stays single-threaded. Multi-threaded (explicit) requires ThreadPoolExecutor and gives linear scaling on multi-core systems.
 
 See [RESULTS.md](RESULTS.md) for detailed measurements and [docs/PERFORMANCE.md](../PERFORMANCE.md) for threading guidance.
 

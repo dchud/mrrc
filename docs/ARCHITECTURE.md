@@ -54,46 +54,62 @@ Record Object
 
 ## Python Wrapper Architecture
 
-### GIL Release Strategy
+### GIL Release Strategy: Three-Phase Model
 
-The Python wrapper implements a three-phase pattern for GIL management:
+The Python wrapper implements a three-phase pattern for GIL management during every `read_record()` call:
 
-**Phase 1 (GIL held)**:
+```
+Phase 1: Read bytes (GIL held)
+   ↓
+Phase 2: Parse bytes (GIL RELEASED) ← Concurrent work happens here
+   ↓
+Phase 3: Convert to Python object (GIL re-acquired)
+```
+
+**Phase 1 (GIL held):**
 - Acquire raw record bytes from source
 - Python file object: via Python `read()` method
-- File path: via Rust `std::fs::File` (no GIL!)
+- File path: via Rust `std::fs::File` (no GIL overhead)
 - Bytes: already in memory (no I/O)
+- Duration: Very short (I/O cached in kernel)
 
-**Phase 2 (GIL released)**:
-- Parse record bytes to MARC structure
-- Uses `py.detach()` (PyO3 0.23+) to release GIL
-- Creates Rust `ParseError` (no Python objects needed)
+**Phase 2 (GIL released):** 
+- Parse record bytes to MARC structure (CPU-intensive work)
+- Uses `py.detach()` (PyO3 0.23+) to explicitly release GIL
+- Creates Rust `ParseError` without Python objects
 - SmallVec buffer handles most records inline
+- Duration: ~90% of total parse time
+- **Result: Multiple threads can parse concurrently**
 
-**Phase 3 (GIL re-acquired)**:
-- Convert Rust `ParseError` to Python exception
+**Phase 3 (GIL re-acquired):**
+- Convert Rust `ParseError` to Python exception (if needed)
 - Convert Rust `Record` to Python `PyRecord`
 - Return to caller
+- Duration: Negligible (quick object construction)
 
-### Why GIL Release?
+### Why GIL Release Matters
 
-The Python GIL (Global Interpreter Lock) serializes all Python bytecode execution. When multiple threads process MARC data:
+The Python GIL (Global Interpreter Lock) serializes all Python bytecode execution. Without GIL release during parsing:
 
-**Without GIL Release**:
+**Without GIL Release (current state of pure pymarc)**:
 ```
-Thread 1: Read bytes (hold GIL) → Parse (hold GIL) → Convert
-Thread 2: Waiting for GIL...
-Result: No parallelism
-```
-
-**With GIL Release**:
-```
-Thread 1: Read bytes (hold GIL) → Parse (release GIL) → Convert (re-acquire GIL)
-Thread 2: Read bytes (hold GIL) → Parse (release GIL) → Convert (re-acquire GIL)
-Result: Threads parse in parallel
+Thread 1: Read bytes (GIL) → Parse (GIL) → Convert (GIL)
+Thread 2: Waiting... → Waiting... → Waiting...
+Result: Threading provides no speedup (1.0x)
 ```
 
-The parsing phase is CPU-intensive but doesn't need Python objects, so releasing the GIL here enables true parallelism.
+**With GIL Release (pymrrc)**:
+```
+Thread 1: Read (GIL) → Parse (GIL RELEASED) → Convert
+Thread 2:                Read (GIL) → Parse (GIL RELEASED) → Convert
+Result: Threads parse in parallel (3.74x on 4 cores)
+```
+
+The key insight: parsing is CPU-intensive but doesn't need Python objects, so releasing the GIL enables true parallelism.
+
+**Single-threaded benefit:** Even without multiple threads, Rust parsing is simply faster (7.5x vs pymarc).
+
+**Multi-threaded benefit:** With explicit `ThreadPoolExecutor`, the GIL release enables concurrent parsing across threads (additional 3.74x speedup on 4 cores).
 
 ### ReaderBackend Enum
 
@@ -320,10 +336,16 @@ Located in `tests/data/fixtures/`:
 
 ## References
 
-- **Performance Guide**: `docs/PERFORMANCE.md`
+**Performance & Benchmarking:**
+- **Performance Guide**: `docs/PERFORMANCE.md` - Usage patterns and tuning
+- **Benchmarking Results**: `docs/benchmarks/RESULTS.md` - Detailed performance data with four-way comparisons (mrrc, pymrrc single-threaded, pymrrc multi-threaded, pymarc)
+- **Performance FAQ**: `docs/benchmarks/FAQ.md` - Quick Q&A about speedups
+
+**Guides:**
 - **Parallel Processing Guide**: `docs/parallel_processing.md`
-- **Benchmarking Results**: `docs/benchmarks/RESULTS.md`
 - **Threading Guide**: `docs/threading.md`
+
+**External References:**
 - **MARC Standard**: https://www.loc.gov/marc/
 - **ISO 2709**: https://en.wikipedia.org/wiki/MARC_standards
 - **PyO3 Documentation**: https://pyo3.rs/

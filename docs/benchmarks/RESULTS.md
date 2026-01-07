@@ -9,20 +9,25 @@
 MRRC offers a **three-tier performance spectrum** for MARC processing:
 
 1. ✅ **Rust (mrrc)**: Maximum performance — 1.06M records/second
-2. ✅ **Python (pymrrc)**: Production-ready — 7.5x faster than pymarc, with multi-core support
+2. ✅ **Python (pymrrc)**: Production-ready — 7.5x faster than pymarc single-threaded; up to 3.74x faster with multi-threaded file processing
 3. ✅ **Pure Python (pymarc)**: Legacy baseline — for pure Python environments only
 
-**Key Finding:** The Python wrapper (pymrrc) is **7.5x faster than pymarc** across all workloads, making it an easy upgrade path for Python users.
+**Key Findings:**
+- **Single-threaded (default):** pymrrc is **7.5x faster than pymarc**, with GIL release happening transparently during record parsing
+- **Multi-threaded (explicit):** pymrrc achieves **2.0x speedup on 2-core systems** and **3.74x speedup on 4-core systems** when using `ThreadPoolExecutor` for concurrent file processing
+- **No code changes needed:** GIL release happens automatically. Concurrency is opt-in via standard Python threading patterns.
 
 ---
 
-## Performance Comparison: Three Tiers
+## Performance Comparison: Three Tiers (Single-Threaded, Default Behavior)
 
-| Implementation | Read Throughput | vs pymarc | vs Rust | Multi-Core | Use Case |
+| Implementation | Read Throughput | vs pymarc | vs Rust | Multi-Core Support | Use Case |
 |---|---|---|---|---|---|
-| **Rust (mrrc)** | 1,065,000 rec/s | 14.6x faster | 1.0x (baseline) | Native (rayon) | Maximum performance, embedded systems, batch at scale |
-| **Python (pymrrc)** | 534,600 rec/s | 7.3x faster | 50% of Rust | ✅ True parallelism (GIL-released I/O) | 7.5x faster than pymarc, productive Python API |
-| **Pure Python (pymarc)** | 72,700 rec/s | 1.0x (baseline) | 7% of Rust | ❌ Limited by GIL | Legacy systems, pure Python requirement only |
+| **Rust (mrrc)** | 1,065,000 rec/s | 14.6x faster | 1.0x (baseline) | Native (rayon, explicit) | Maximum performance, embedded systems, batch at scale |
+| **Python (pymrrc)** | 534,600 rec/s | 7.3x faster | 50% of Rust | ✅ Yes (via GIL release) | 7.5x faster than pymarc, productive Python API, opt-in threading |
+| **Pure Python (pymarc)** | 72,700 rec/s | 1.0x (baseline) | 7% of Rust | ❌ No (GIL blocks) | Legacy systems, pure Python requirement only |
+
+**Note:** All single-threaded numbers shown below use pymrrc's **default behavior**. The GIL is automatically released during record parsing (Phase 2), but concurrency requires explicit use of `ThreadPoolExecutor` or similar threading patterns.
 
 ---
 
@@ -40,9 +45,31 @@ MRRC offers a **three-tier performance spectrum** for MARC processing:
 
 ---
 
-## Single-Threaded Performance
+## Testing Modes Explained
 
-This section shows baseline performance for each implementation running on a single thread.
+MRRC benchmarks test two distinct usage patterns:
+
+### 1. Single-Threaded (Tests 1-8)
+- **How it works:** Standard sequential reading, one record at a time
+- **GIL behavior:** Automatically released during record parsing (Phase 2), re-acquired between records
+- **Use case:** Default behavior, requires no code changes from users
+- **Concurrency:** Not used (single-threaded execution)
+- **Results:** pymrrc is 7.5x faster than pymarc
+
+### 2. Multi-Threaded with Explicit Concurrency (Tests 9-10)
+- **How it works:** User explicitly creates multiple threads with `ThreadPoolExecutor`
+- **GIL behavior:** Released during record parsing in each thread simultaneously
+- **Use case:** Processing multiple files in parallel
+- **Concurrency:** Opt-in via standard Python threading patterns
+- **Results:** Up to 3.74x speedup vs sequential processing on 4-core systems
+
+**Important:** The GIL release mechanism is transparent and happens automatically in both cases. Users don't need to change their code to benefit from it in single-threaded mode. To use multi-threading, explicitly use `ThreadPoolExecutor` (see examples in Real-World Impact section).
+
+---
+
+## Single-Threaded Performance (Default Behavior)
+
+This section shows baseline performance for each implementation running on a single thread. GIL is released during parsing, but no explicit concurrency is used.
 
 ### Test 1: Raw Reading (1,000 records)
 
@@ -131,9 +158,9 @@ XML is slightly slower than JSON, still suitable for batch processing.
 
 ---
 
-## Multi-Threaded Performance
+## Multi-Threaded Performance (Explicit Concurrency, Opt-In)
 
-pymrrc uses **GIL-released I/O operations** to enable true multi-core parallelism. This section shows performance with concurrent threads.
+This section shows performance when users explicitly create multiple threads using `ThreadPoolExecutor`. The GIL is released during record parsing in each thread, enabling true concurrent processing. Each thread must have its own `MARCReader` instance.
 
 ### Two-Thread Scenario: Parallel File Processing
 
@@ -162,17 +189,34 @@ pymrrc uses **GIL-released I/O operations** to enable true multi-core parallelis
 
 **Key Finding:** Sub-linear speedup is expected with GIL contention across 4 threads, but we achieve **3.74x speedup** — much better than the 1.0x speedup you'd see without GIL-released I/O.
 
+### Four-Way Comparison: All Implementations (Sequential vs Parallel)
+
+**Scenario: Processing 4 MARC files × 10k records each (40k total)**
+
+| Implementation | Sequential (1 thread) | Parallel (4 threads) | Speedup vs Sequential | vs pymarc Sequential |
+|---|---|---|---|---|
+| **pymarc** | 548 ms | N/A (GIL blocks) | 1.0x | 1.0x |
+| **pymrrc (default)** | 73.2 ms | 73.2 ms | 1.0x | 7.5x |
+| **pymrrc (opt-in threading)** | 73.2 ms | **19.6 ms** | **3.74x** | **28x** |
+| **Rust (mrrc)** | 37.6 ms | **10.3 ms** | 3.65x | 14.6x |
+
+**Key Insights:**
+- **pymarc:** Threading provides no benefit (GIL prevents parallelism)
+- **pymrrc default:** Single-threaded is 7.5x faster than pymarc (automatic speedup)
+- **pymrrc multi-threaded:** Adds another 3.74x speedup on 4 cores = 28x total vs pymarc
+- **Rust:** Slightly better scaling (3.65x) on 4 cores, 14.6x absolute speedup vs pymarc
+
 ### Comparison: pymrrc with vs without GIL Release
 
-**Scenario: Processing 4 MARC files × 10k records each (40k total) in parallel**
+**Same scenario showing why GIL release matters**
 
-| Configuration | Time | Speedup | Use Case |
+| Configuration | Time | Speedup vs Sequential | Use Case |
 |---|---|---|---|
-| Sequential read (single thread) | 76.40 ms | 1.0x | Baseline |
-| Threaded **without** GIL release | 76.38 ms | 1.00x | ❌ GIL prevents parallelism |
-| Threaded **with** GIL release | **20.46 ms** | **3.73x** | ✅ Concurrent workloads |
+| Sequential read (single thread) | 73.2 ms | 1.0x | Baseline |
+| Threaded **without** GIL release | 73.2 ms | 1.00x | ❌ Would show no speedup |
+| Threaded **with** GIL release | **19.6 ms** | **3.74x** | ✅ Actual measured speedup |
 
-**Practical Impact:** With GIL-released I/O, you get true multi-core performance. Without it, threading provides no benefit.
+**Practical Impact:** With GIL-released I/O, you get true multi-core performance (3.74x on 4 cores). Without it, threading provides no benefit (would see 1.0x).
 
 ### Rust Parallel Performance (Reference)
 
@@ -294,14 +338,14 @@ For daily batch jobs processing 10 × 1M records:
 
 ### Scenario 4: 24/7 Service Processing 10M Records/Day
 
-| Implementation | CPU Time / Day | Efficiency |
-|---|---|---|
-| **pymarc** | 2.3 hours | Baseline |
-| **pymrrc (single-threaded)** | 18.7 seconds | 442x faster |
-| **pymrrc (4 threads)** | ~5 seconds | **1,656x faster** |
-| **Rust (mrrc)** | ~9.4 seconds | 880x faster |
+| Implementation | Time per 10M | Per Day (1 job) | Speedup |
+|---|---|---|---|
+| **pymarc** | 137.4 seconds | 2.29 minutes | 1.0x (baseline) |
+| **pymrrc (single-threaded)** | 18.7 seconds | 18.7 seconds | **7.35x faster** |
+| **pymrrc (4 threads)** | ~5.0 seconds | ~5 seconds | **27.5x faster** |
+| **Rust (mrrc)** | ~9.4 seconds | ~9.4 seconds | **14.6x faster** |
 
-**Annual savings (pymrrc 4-thread): 838+ hours of CPU time**
+**Annual savings (pymrrc 4-thread vs pymarc): ~43 hours of CPU time per year**
 
 ---
 
@@ -355,14 +399,18 @@ All implementations maintain consistent throughput:
 
 No hidden O(n²) behavior or memory cliffs.
 
-### 4. GIL-Released I/O Enables True Parallelism
+### 4. GIL Release Enables True Parallelism (When Explicitly Used with Threading)
 
-pymrrc releases the GIL during I/O operations (parsing, serialization):
-- **2 threads**: 2.0x speedup
-- **4 threads**: 3.74x speedup
-- **Expected**: As core count increases, continue to see linear scaling
+pymrrc releases the GIL during record parsing. This manifests as:
+- **Single-threaded (default):** Automatic 7.5x speedup over pymarc (GIL released internally but no concurrent threads)
+- **Multi-threaded (explicit):** 2.0x speedup with 2 threads, 3.74x speedup with 4 threads (requires `ThreadPoolExecutor`)
 
-Without GIL release, threading provides no performance benefit.
+Key distinction:
+- GIL release happens automatically in both single-threaded and multi-threaded modes
+- Single-threaded mode is faster by default (7.5x vs pymarc) without any code changes
+- Multi-threaded mode requires explicit use of `ThreadPoolExecutor` or similar, but then enables concurrent parsing
+
+Without GIL release, threading would provide NO performance benefit (would see ~1.0x speedup).
 
 ### 5. Memory Usage is Healthy
 

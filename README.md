@@ -477,63 +477,75 @@ with open("output.mrc", "wb") as f:
 
 ### Performance
 
-The Python wrapper achieves exceptional performance through Rust implementation and GIL release:
+The Python wrapper achieves exceptional performance through Rust implementation with automatic GIL release:
 
-#### Speed Comparison
+#### Speed Comparison (Single-Threaded, Default)
 - **Reading 1k records**: 1.87 ms (534,600 rec/s)
 - **Reading 10k records**: 18.2 ms (549,500 rec/s)
 - **vs pymarc**: **7.5x faster** (same API, dramatically better performance)
 - **vs Rust library**: 50% of pure Rust speed with Python convenience
+- **GIL release**: Automatic during record parsing, no code changes needed
 
-#### Threading & Parallelism
-- **Two-thread speedup**: 2.0x (on 2-core systems)
-- **Four-thread speedup**: 3.74x (on 4-core systems)
-- **GIL released during parsing** - I/O operations allow true multi-core parallelism
-- **Python concurrency**: Use `concurrent.futures.ThreadPoolExecutor` for multi-file processing
+#### Multi-Threaded Parallelism (Explicit, Opt-In)
+- **2-thread speedup**: 2.0x vs sequential processing (on 2-core systems)
+- **4-thread speedup**: 3.74x vs sequential processing (on 4-core systems)
+- **How**: Use `concurrent.futures.ThreadPoolExecutor` with separate reader per thread
+- **GIL behavior**: Released during parsing in each thread, enabling true parallelism
+- **Use case**: Processing multiple files concurrently
+
+**Key Point:** Default single-threaded mode automatically benefits from GIL release (7.5x faster than pymarc). Add threading explicitly only when processing multiple files.
 
 See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis, [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for threading guidance, and [docs/threading.md](docs/threading.md) for usage patterns.
 
-### Threading & Concurrency
+### Threading & Concurrency (Opt-In via ThreadPoolExecutor)
 
-MRRC's I/O operations release the Python GIL during record parsing, enabling true multi-thread parallelism. Each thread must have its own `MARCReader` instance.
+MRRC's I/O operations automatically release the Python GIL during record parsing. This means:
 
-**Concrete Results from Benchmarking:**
+- **Single-threaded (default):** Records parse faster by default, no code changes needed
+- **Multi-threaded (explicit):** Use `ThreadPoolExecutor` to process multiple files concurrently
+
+**Concrete Results from Benchmarking (Multi-File Processing):**
 - 2 threads: **2.0x speedup** vs sequential processing
 - 4 threads: **3.74x speedup** vs sequential processing
-- Each thread needs its own reader (not shared)
-- File path input is best (zero-GIL backend)
+- Each thread needs its own reader instance (not shared)
 - Optimal thread count: CPU core count
 
-**Example: Parallel Multi-File Processing**
+**Example: Parallel Multi-File Processing (Explicit Threading)**
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
 from mrrc import MARCReader
 
 def process_file(filename):
+    """Process a single file. Called in a thread pool."""
     count = 0
     with open(filename, 'rb') as f:
-        reader = MARCReader(f)  # New reader per thread
+        reader = MARCReader(f)  # Each thread must have its own reader
         while record := reader.read_record():
             # Process record
             count += 1
     return count
 
-# Process 4 files in parallel on 4-core system
+# Sequential processing (default, uses ~1 core)
+total = 0
+for filename in ["file1.mrc", "file2.mrc", "file3.mrc", "file4.mrc"]:
+    total += process_file(filename)
+
+# Parallel processing on 4-core system (opt-in, uses ~4 cores)
 with ThreadPoolExecutor(max_workers=4) as executor:
     futures = [executor.submit(process_file, f) 
                for f in ["file1.mrc", "file2.mrc", "file3.mrc", "file4.mrc"]]
     results = [f.result() for f in futures]
+    total = sum(results)
     # Expected: 3-4x faster than sequential
-
-# For single-file processing, consider splitting into chunks
-# See docs/parallel_processing.md for file-splitting patterns
 ```
 
 **Important Notes:**
-- Sharing a reader across threads causes undefined behavior (not thread-safe)
-- Use `concurrent.futures.ThreadPoolExecutor` or `threading.Thread` with separate readers
-- GIL is released during Phase 2 (parsing), allowing true parallelism
+- **Default behavior** (single-threaded): Automatically faster via GIL release, no changes needed
+- **Explicit multi-threading**: Add ThreadPoolExecutor only when processing multiple files
+- **Not thread-safe**: Sharing a reader across threads causes undefined behavior
+- **Best practice**: One reader per thread; use `ThreadPoolExecutor` or `threading.Thread`
+- **GIL behavior**: Released during Phase 2 (parsing), allowing true parallelism
 
 See [docs/threading.md](docs/threading.md), [docs/parallel_processing.md](docs/parallel_processing.md), and [examples/concurrent_reading.py](examples/concurrent_reading.py) for detailed patterns and benchmarks.
 

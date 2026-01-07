@@ -4,12 +4,16 @@ This document provides comprehensive performance analysis of the MRRC library an
 
 ## Executive Summary
 
-MRRC achieves exceptional performance through Rust implementation and GIL release during I/O operations:
+MRRC achieves exceptional performance through Rust implementation with automatic GIL release:
 
-- **Single-thread reading**: 549,500 records/second (18.2 ms for 10k records)
-- **Multi-thread speedup**: 2.0x (2 threads), 3.74x (4 threads)
-- **vs pymarc**: **7.5x faster** with same API
-- **GIL released during parsing** - enables true multi-core parallelism
+- **Single-thread reading (default)**: 549,500 records/second (18.2 ms for 10k records)
+  - **vs pymarc**: **7.5x faster** with same API
+  - GIL released automatically during parsing (no code changes needed)
+  
+- **Multi-thread parallelism (opt-in with ThreadPoolExecutor)**: 2.0x (2 threads), 3.74x (4 threads)
+  - Process multiple files concurrently with explicit `ThreadPoolExecutor`
+  - GIL released during parsing in each thread simultaneously
+  - Requires: One reader per thread (not shared)
 
 ## Single-Thread Performance Baseline
 
@@ -20,9 +24,9 @@ MRRC achieves exceptional performance through Rust implementation and GIL releas
 | Throughput | Consistent across all sizes |
 | vs pymarc | **7.6x faster** |
 
-## Multi-Thread Performance
+## Multi-Thread Performance (Opt-In: Use ThreadPoolExecutor for Multiple Files)
 
-The Python wrapper releases the GIL during parsing, enabling true multi-core parallelism. Performance scales with CPU cores when processing multiple files concurrently.
+When processing multiple files concurrently with `ThreadPoolExecutor`, the Python wrapper releases the GIL during parsing in each thread, enabling true multi-core parallelism. Performance scales with CPU cores.
 
 ### Two-Thread Performance
 
