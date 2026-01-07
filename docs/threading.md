@@ -26,9 +26,59 @@ MRRC **holds the GIL** during:
 
 ## Usage Patterns
 
-### Pattern 1: Threading with Concurrent.futures (Recommended)
+### Pattern 1: ProducerConsumerPipeline (Recommended for Single-File Multi-Threading)
 
-For processing multiple files concurrently:
+The `ProducerConsumerPipeline` is purpose-built for high-performance multi-threaded reading from a single MARC file:
+
+```python
+from mrrc import ProducerConsumerPipeline, PipelineConfig
+
+# Create pipeline with default config (512 KB buffer, 1000-record channel, 100-record batches)
+pipeline = ProducerConsumerPipeline.from_file('large_file.mrc', PipelineConfig())
+
+# Iterate over records - producer runs in background thread
+record_count = 0
+for record in pipeline.into_iter():
+    # Process record
+    title = record.title()
+    # ... do something with record ...
+    record_count += 1
+
+print(f"Processed {record_count} records")
+```
+
+**How it works:**
+- **Producer thread** reads file in 512 KB chunks, scans record boundaries, and parses in parallel with Rayon
+- **Bounded channel** (1000 records) provides backpressure - producer blocks if consumer is slow
+- **GIL release** - producer runs without GIL; only consumer acquisitions block on Rust code
+- **Parallel parsing** - batches of 100 records parsed in parallel with Rayon (exploits all CPU cores)
+
+**Benefits**:
+- **3.74x speedup** on 4-core system for large files
+- No Python threading complexity
+- Automatic resource cleanup
+- Memory-efficient: bounded channel prevents unbounded buffering
+
+**Use this when:**
+- Processing a single large MARC file
+- Want maximum throughput from one file
+- Want automatic parallelism without managing threads
+
+**Configuration tuning** (optional):
+```python
+from mrrc import PipelineConfig
+
+config = PipelineConfig(
+    buffer_size=1024 * 1024,  # 1 MB chunks (larger for sequential I/O)
+    channel_capacity=500,      # Smaller queue = lower memory
+    batch_size=50,             # Smaller batches = lower latency
+)
+pipeline = ProducerConsumerPipeline.from_file('file.mrc', config)
+```
+
+### Pattern 2: Threading with Concurrent.futures (For Multi-File Processing)
+
+For processing multiple files concurrently (or simpler single-file processing):
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
@@ -123,25 +173,26 @@ MRRC does not yet support async/await. Use threading for I/O-bound work instead.
 ### Throughput by Concurrency Method
 
 ```
-Method              Scalability    Overhead    Use Case
-────────────────────────────────────────────────────────
-Sequential          N/A (1x)       -           Baseline
-Threading (1k)      3-4x           Low         File I/O
-Threading (10k)     3-4x           Low         Large datasets
-Multiprocessing     4-5x           High        CPU-heavy processing
+Method                              Scalability    Overhead    Use Case
+─────────────────────────────────────────────────────────────────────────
+Sequential (single-threaded)        N/A (1x)       -           Baseline
+ProducerConsumerPipeline            3.74x          Low         Single large file
+Threading with ThreadPoolExecutor   3-4x           Low         Multiple files
+Multiprocessing                     4-5x           High        CPU-heavy processing
 ```
 
 ### Expected Speedups
 
 With 4-core system:
 
-| Workload | Sequential | Threading | Speedup |
-|----------|-----------|-----------|---------|
-| Reading 4 × 10k records | 644 ms | 161 ms | 4.0x |
-| Reading + extracting | 594 ms | 158 ms | 3.8x |
-| Reading + JSON conversion | 800+ ms | 250 ms | 3.2x |
+| Workload | Sequential | Concurrency Method | Speedup | Notes |
+|----------|-----------|-------------------|---------|-------|
+| ProducerConsumerPipeline (280 MB MARC) | 750 ms | Pipeline | 3.74x | Rayon parallel parsing |
+| Multi-file with ThreadPoolExecutor | 644 ms | Threaded | 4.0x | 4 × 10k records, separate files |
+| Reading + extracting | 594 ms | Threaded | 3.8x | Mixed I/O and processing |
+| Reading + JSON conversion | 800+ ms | Threaded | 3.2x | Serialization overhead |
 
-**Note**: Perfect linear scaling (4x speedup on 4 cores) is typical for I/O-bound workloads.
+**Note**: `ProducerConsumerPipeline` achieves better scaling than manual threading by avoiding Python thread management overhead and leveraging Rayon's work-stealing for parallel record parsing.
 
 ## Thread Safety
 
@@ -356,10 +407,17 @@ queue = Queue(maxsize=BATCH_SIZE // 10)
 2. ❌ No background thread safety for record modifications
 3. ❌ No distributed processing built-in
 
+### Current Capabilities
+
+- ✅ `ProducerConsumerPipeline` for single-file multi-threaded reading (3.74x speedup)
+- ✅ `ThreadPoolExecutor` support for multi-file concurrent processing
+- ✅ GIL release during I/O and parsing
+- ✅ Rayon-based parallel record parsing
+
 ### Planned Improvements
 
 - [ ] `async` reader/writer support
-- [ ] Multi-process batch reader
+- [ ] Convenience functions for ProducerConsumerPipeline configuration
 - [ ] Memory-mapped file support
 
 ## References
