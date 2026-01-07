@@ -81,6 +81,7 @@ fn producer_task(
     let mut file = file;
     let mut buffer = vec![0u8; config.buffer_size];
     let mut scanner = RecordBoundaryScanner::new();
+    let mut leftover = Vec::new(); // Buffer for partial records from previous chunk
 
     loop {
         // Read next chunk
@@ -89,26 +90,46 @@ fn producer_task(
             .map_err(|e| PipelineError::IoError(e.to_string()))?;
 
         if n == 0 {
-            // EOF reached
+            // EOF reached - if there's leftover data, it's an incomplete record
             break;
         }
 
-        let chunk = &buffer[..n];
+        // Concatenate leftover from previous chunk with current chunk
+        let mut current_buffer = leftover.clone();
+        current_buffer.extend_from_slice(&buffer[..n]);
 
-        // Scan record boundaries
-        let boundaries = scanner
-            .scan(chunk)
-            .map_err(|e| PipelineError::ScanError(e.to_string()))?;
+        // Scan record boundaries - this may fail if the entire buffer is a partial record
+        match scanner.scan(&current_buffer) {
+            Ok(boundaries) => {
+                // Check if the last boundary is complete (ends at buffer end with 0x1D)
+                let all_complete = if let Some(&(offset, len)) = boundaries.last() {
+                    offset + len == current_buffer.len()
+                } else {
+                    false
+                };
 
-        // Parse records in parallel
-        let records = parse_batch_parallel(&boundaries, chunk)
-            .map_err(|e| PipelineError::ParseError(e.to_string()))?;
+                // Parse records in parallel
+                let records = parse_batch_parallel(&boundaries, &current_buffer)
+                    .map_err(|e| PipelineError::ParseError(e.to_string()))?;
 
-        // Send records to channel (blocks if full = backpressure)
-        for record in records {
-            sender
-                .send(record)
-                .map_err(|_| PipelineError::ChannelSendError)?;
+                // Send records to channel (blocks if full = backpressure)
+                for record in records {
+                    sender
+                        .send(record)
+                        .map_err(|_| PipelineError::ChannelSendError)?;
+                }
+
+                // If the last boundary doesn't reach the end, save the tail as leftover
+                if all_complete {
+                    leftover.clear();
+                } else if let Some(&(offset, len)) = boundaries.last() {
+                    leftover = current_buffer[offset + len..].to_vec();
+                }
+            },
+            Err(_) => {
+                // No complete records found in this buffer - entire thing is leftover
+                leftover = current_buffer;
+            },
         }
     }
 
