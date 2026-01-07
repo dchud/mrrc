@@ -87,22 +87,43 @@ def fixture_217(fixture_1k):
 
 @pytest.fixture(scope="session")
 def fixture_500(fixture_1k):
-    """Create a fixture with exactly 500 records."""
-    from mrrc import MARCReader, MARCWriter
-    
-    reader = MARCReader(io.BytesIO(fixture_1k))
-    records = []
-    for i, record in enumerate(reader):
-        records.append(record)
-        if i >= 499:  # 500 records
-            break
-    
-    output = io.BytesIO()
-    writer = MARCWriter(output)
-    for record in records:
-        writer.write_record(record)
-    writer.close()
-    return output.getvalue()
+     """Create a fixture with exactly 500 records."""
+     from mrrc import MARCReader, MARCWriter
+     
+     reader = MARCReader(io.BytesIO(fixture_1k))
+     records = []
+     for i, record in enumerate(reader):
+         records.append(record)
+         if i >= 499:  # 500 records
+             break
+     
+     output = io.BytesIO()
+     writer = MARCWriter(output)
+     for record in records:
+         writer.write_record(record)
+     writer.close()
+     return output.getvalue()
+
+
+@pytest.fixture(scope="session")
+def fixture_5k(fixture_1k, fixture_10k):
+     """Create a fixture with 5k records (halfway between 1k and 10k)."""
+     # Use first 5 copies of 1k fixture
+     from mrrc import MARCReader, MARCWriter
+     
+     reader = MARCReader(io.BytesIO(fixture_10k))
+     records = []
+     for i, record in enumerate(reader):
+         records.append(record)
+         if i >= 4999:  # 5000 records
+             break
+     
+     output = io.BytesIO()
+     writer = MARCWriter(output)
+     for record in records:
+         writer.write_record(record)
+     writer.close()
+     return output.getvalue()
 
 
 @pytest.fixture(scope="session")
