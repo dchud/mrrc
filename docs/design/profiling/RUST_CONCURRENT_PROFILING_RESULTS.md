@@ -191,18 +191,46 @@ Although rayon is performance-competitive at 3.74x, we should verify that:
 
 Next step: mrrc-u33.4 profiles Python single-threaded performance.
 
-## Conclusion
+## Optimization Opportunities Identified
 
-**The pure Rust rayon implementation is NOT the bottleneck.** Both Rust rayon and Python ProducerConsumerPipeline achieve 3.74x speedup on real file I/O workloads. The earlier perception of underperformance was due to a benchmarking artifact (in-memory buffers masking I/O concurrency).
+While Rust rayon reaches 3.74x speedup on large file workloads, several optimization opportunities exist:
 
-The Python wrapper's competitive performance is due to:
-1. **Leveraging I/O blocking** through producer-consumer architecture
-2. **Rust parsing efficiency** (wrapped in Python, but still using Rust code)
-3. **Effective use of GIL** to parallelize I/O and parsing
+### 1. Small Workload Performance (Priority: High)
+- **4x 1k files:** Only 1.77x speedup (44% efficiency)
+- **Issue:** Task scheduling overhead dominates with small files
+- **Opportunity:** Adaptive scheduling, work batching, or hybrid sequential/concurrent approach
+- **Related task:** mrrc-u33.10 (inflection point analysis)
 
-Next profiling targets:
-- **mrrc-u33.4:** Python single-threaded performance
-- **mrrc-u33.5:** Python concurrent performance with detailed breakdown
+### 2. Task Scheduling Overhead (Priority: High)
+- **Dramatic chunk size sensitivity:** chunk_size=2 drops to 1.86x, chunk_size=4+ to 1.0x
+- **Issue:** Rayon's work-stealing may have high per-task overhead
+- **Opportunity:** Custom scheduler, coarser-grained work distribution, or rayon configuration tuning
+- **Related task:** mrrc-u33.8 (scheduling overhead investigation)
+
+### 3. Cache Efficiency Gap (Priority: Medium)
+- **Current:** 93% efficiency on 4x 10k files
+- **Remaining:** 7% potential improvement on theoretical max
+- **Opportunity:** Memory bandwidth optimization, cache-aware layout, SIMD for hot paths
+- **Related task:** mrrc-u33.9 (memory/cache profiling)
+
+### 4. Single-Threaded Performance (Priority: High)
+- **Baseline not yet quantified** for pure Rust sequential parsing
+- **Issue:** Don't know if we're leaving performance on the table in hot path
+- **Opportunity:** Optimize parsing phases, allocation patterns, encoding conversion
+- **Related task:** mrrc-u33.7 (single-threaded bottleneck analysis)
+
+## Refocused Profiling Plan
+
+Rather than validating baseline parity, the profiling epic now focuses on **finding optimization opportunities** across all scenarios:
+
+**Immediate next steps (high impact):**
+1. **mrrc-u33.7** - Identify hot paths in sequential parsing
+2. **mrrc-u33.8** - Quantify scheduling overhead and propose optimizations
+3. **mrrc-u33.10** - Find optimal workload/concurrency combinations
+4. **mrrc-u33.4** - Establish single-threaded Python baseline for comparison
+5. **mrrc-u33.5** - Profile Python concurrent path for deeper insights
+
+**Success metrics:** Improvements measured against 3.74x baseline, not just matching it.
 
 ## References
 
