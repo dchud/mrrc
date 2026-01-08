@@ -42,8 +42,6 @@ jobs:
         with:
           manylinux: auto
           args: --release --out dist
-        env:
-          PYO3_PYTHON: ${{ env.pythonLocation }}/bin/python
       
       - name: Upload wheels
         uses: actions/upload-artifact@v4
