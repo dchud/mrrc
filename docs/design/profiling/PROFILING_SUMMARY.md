@@ -11,9 +11,9 @@
 | Document | Purpose | Status |
 |----------|---------|--------|
 | [PROFILING_PLAN.md](./PROFILING_PLAN.md) | Methodology and tools | ✓ Complete |
-| [profiling/RUST_SINGLE_THREADED_PROFILING_RESULTS.md](./profiling/RUST_SINGLE_THREADED_PROFILING_RESULTS.md) | Phase 1 baseline results | ✓ Complete |
-| [profiling/PHASE_2_DETAILED_ANALYSIS.md](./profiling/PHASE_2_DETAILED_ANALYSIS.md) | Phase 2 detailed findings | ✓ Complete |
-| [OPTIMIZATION_PROPOSAL.md](./OPTIMIZATION_PROPOSAL.md) | Ready-to-implement plan | ✓ Ready |
+| [RUST_SINGLE_THREADED_PROFILING_RESULTS.md](./RUST_SINGLE_THREADED_PROFILING_RESULTS.md) | Phase 1 baseline results | ✓ Complete |
+| [PHASE_2_DETAILED_ANALYSIS.md](./PHASE_2_DETAILED_ANALYSIS.md) | Phase 2 detailed findings | ✓ Complete |
+| [../OPTIMIZATION_PROPOSAL.md](../OPTIMIZATION_PROPOSAL.md) | Ready-to-implement plan | ✓ Ready |
 
 ---
 
@@ -200,7 +200,7 @@ Total per record:         ~5.3 KB (before overhead)
 ## Files & Tools
 
 ### Documentation
-- `docs/design/PROFILING_PLAN.md` - Methodology
+- `docs/design/profiling/PROFILING_PLAN.md` - Methodology
 - `docs/design/profiling/RUST_SINGLE_THREADED_PROFILING_RESULTS.md` - Phase 1 results
 - `docs/design/profiling/PHASE_2_DETAILED_ANALYSIS.md` - Phase 2 analysis
 - `docs/design/OPTIMIZATION_PROPOSAL.md` - Implementation plan
@@ -279,6 +279,3 @@ A: Phase 1 immediately (quick wins), Phase 2 after mrrc-u33.3 (understand concur
 - Issue tracker: mrrc-u33.2 (closed), mrrc-u33.1 (in-progress)
 - Related: mrrc-u33 (epic), docs/benchmarks/RESULTS.md, docs/PERFORMANCE.md
 - Tools: Criterion.rs 0.5, Rust 1.71+
-
-EOF
-cat /Users/dchud/Documents/projects/mrrc/docs/design/PROFILING_SUMMARY.md

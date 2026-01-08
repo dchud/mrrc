@@ -294,7 +294,7 @@ pub fn read_parallel_producer_consumer<P: AsRef<Path>>(
 ### Profiling Reports
 - [Phase 1: Single-threaded baseline](./profiling/RUST_SINGLE_THREADED_PROFILING_RESULTS.md)
 - [Phase 2: Memory analysis](./profiling/PHASE_2_DETAILED_ANALYSIS.md)
-- [Profiling methodology](./PROFILING_PLAN.md)
+- [Profiling methodology](./profiling/PROFILING_PLAN.md)
 
 ### Benchmark Data
 - docs/benchmarks/RESULTS.md

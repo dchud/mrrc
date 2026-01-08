@@ -72,7 +72,7 @@ Python wrapper achieves 50% of Rust performance (67,500 rec/s), while Python's P
 
 ## Deliverables
 
-All outputs to be stored in `/docs/design/profiling/`:
+All outputs to be stored in `docs/design/profiling/`:
 
 1. **RUST_SINGLE_THREADED_PROFILING_RESULTS.md**
    - Flamegraph analysis (images + interpretation)
