@@ -1,7 +1,8 @@
 # pymarc API Parity Plan
 
-**Status**: In Progress  
+**Status**: High Priority Gaps Resolved ✓  
 **Date**: 2026-01-08  
+**Last Updated**: 2026-01-08 (Gaps 1, 2, 3 completed)  
 **Objective**: Identify and implement gaps between mrrc's Python wrapper API and pymarc's public API to achieve drop-in replacement compatibility.
 
 ## Executive Summary
@@ -30,19 +31,10 @@ field['a']           # Raises KeyError if missing
 
 **Impact**: Users migrating from pymarc expect `None` for missing subfields, not exceptions.
 
-**Current Implementation** (in `mrrc/__init__.py:52-64`):
-```python
-def __getitem__(self, code: str) -> str:
-    try:
-        values = self._inner.subfields_by_code(code)
-        if not values:
-            raise KeyError(code)  # ← WRONG: Should return None
-        return values[0]
-    except Exception as e:
-        raise KeyError(code) from e
-```
-
-**Fix**: Return `None` instead of raising `KeyError` when subfield not found.
+**Status**: ✅ **RESOLVED** (2026-01-08)
+- Modified Field.__getitem__ to return None for missing subfields
+- Added tests: test_field_getitem_returns_value, test_field_getitem_returns_none_for_missing, test_field_getitem_with_multiple_same_code
+- All tests pass (77+ compatibility tests in test_pymarc_compatibility.py)
 
 ### Gap 2: Dict-like Record Access Returns None (Not KeyError)
 
@@ -53,13 +45,10 @@ record['999']        # Returns None if tag doesn't exist
 record['245']['a']   # Returns str or None if subfield missing
 ```
 
-**Current mrrc behavior**:
-```python
-record['245']        # Implemented via Record.__getitem__ (should check implementation)
-record['999']        # Should return None
-```
-
-**Status**: Need to verify current implementation handles all cases properly.
+**Status**: ✅ **RESOLVED** (2026-01-08)
+- Verified Record.__getitem__ already returns None for missing tags
+- Added test: test_record_getitem_missing_tag
+- All tests pass (77+ compatibility tests in test_pymarc_compatibility.py)
 
 ### Gap 3: Leader Position-Based Access Missing
 
@@ -70,20 +59,13 @@ leader[5]            # Record status (single character)
 leader[18]           # Cataloging form (single character)
 ```
 
-**Current mrrc behavior**:
-```python
-leader.record_length              # Property (integer)
-leader.record_status              # Property (string)
-leader.cataloging_form            # Property (string)
-# No support for leader[0:5] or leader[5]
-```
-
-**Impact**: Advanced users relying on position-based access will break.
-
-**Fix**: Implement `__getitem__` and `__setitem__` on Leader to support both:
-- Single character access: `leader[5]` returns string
-- Slice access: `leader[0:5]` returns string
-- Maintain property-based access as primary API
+**Status**: ✅ **RESOLVED** (2026-01-08)
+- Implemented Leader.__getitem__ for single position and slice access
+- Implemented Leader.__setitem__ for single position assignment
+- Added helper methods: _get_leader_as_string(), _update_leader_from_string()
+- Position-based and property-based access stay in sync automatically
+- Added tests: test_leader_single_position_access, test_leader_slice_access, test_leader_setitem_by_position, test_leader_position_and_property_stay_in_sync
+- All tests pass (77+ compatibility tests in test_pymarc_compatibility.py)
 
 ### Gap 4: Leader Value Lookups (Dictionary Maps)
 
@@ -208,13 +190,13 @@ def test_leader_position_access():
 
 ## Success Criteria
 
-✓ Field['missing'] returns None (not KeyError)  
-✓ Record['missing'] returns None (not KeyError)  
-✓ Leader position-based access works: leader[5], leader[0:5]  
-✓ Control field access via record['001'].value works  
-✓ All existing tests pass  
-✓ New pymarc compatibility test suite passes  
-✓ Migration guide lists any remaining differences (should be minimal)  
+✅ Field['missing'] returns None (not KeyError) - COMPLETED  
+✅ Record['missing'] returns None (not KeyError) - COMPLETED  
+✅ Leader position-based access works: leader[5], leader[0:5] - COMPLETED  
+⬜ Control field access via record['001'].value works - TODO  
+✅ All existing tests pass (112 tests) - COMPLETED  
+✅ New pymarc compatibility test suite passes (77+ tests) - COMPLETED  
+✅ Migration guide updated with API parity documentation - COMPLETED  
 
 ## References
 
