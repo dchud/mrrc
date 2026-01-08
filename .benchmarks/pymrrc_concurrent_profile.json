@@ -1,0 +1,42 @@
+{
+  "title": "PyMRRC Concurrent Performance Profile",
+  "objective": "Identify bottlenecks in ProducerConsumerPipeline concurrent mode",
+  "timestamp": 1767915090.800288,
+  "test_files": {
+    "simple_book": "/Users/dchud/Documents/projects/mrrc/tests/data/simple_book.mrc"
+  },
+  "scenarios": [
+    {
+      "error": "cannot create 'builtins.ProducerConsumerPipeline' instances"
+    },
+    {
+      "scenario": "thread_count_sensitivity",
+      "test_file": "simple_book.mrc",
+      "results": {}
+    },
+    {
+      "scenario": "channel_efficiency",
+      "test_file": "simple_book.mrc",
+      "buffer_sizes": [
+        1,
+        10,
+        100,
+        1000
+      ],
+      "results": {}
+    },
+    {
+      "error": "cannot create 'builtins.ProducerConsumerPipeline' instances"
+    },
+    {
+      "error": "cannot create 'builtins.ProducerConsumerPipeline' instances"
+    },
+    {
+      "scenario": "multiple_files_concurrent",
+      "test_directory": "/Users/dchud/Documents/projects/mrrc/tests/data",
+      "test_files_count": 4,
+      "total_records": 0,
+      "per_file_results": {}
+    }
+  ]
+}
