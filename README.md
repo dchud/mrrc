@@ -7,6 +7,8 @@
 
 A Rust library for reading, writing, and manipulating MARC bibliographic records in the ISO 2709 binary format.
 
+> **⚠️ EXPERIMENTAL**: This library is a work in progress. While the pymarc API is now fully compatible, other APIs may change significantly. Use at your own risk in production.
+
 ## Overview
 
 MRRC is a high-performance Rust port of [pymarc](https://gitlab.com/pymarc/pymarc), designed for developers who work with library metadata and the MARC (Machine-Readable Cataloging) standard. MARC is the primary standard for encoding bibliographic and authority data in libraries worldwide.
