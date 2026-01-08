@@ -38,6 +38,53 @@ __version__ = "0.1.0"
 __author__ = "MRRC Contributors"
 
 
+class Indicators:
+    """Tuple-like wrapper for field indicators (pymarc compatibility)."""
+    
+    def __init__(self, ind1: str, ind2: str):
+        """Create indicators tuple."""
+        self.ind1 = ind1
+        self.ind2 = ind2
+    
+    def __getitem__(self, index: int) -> str:
+        """Get indicator by index (0 or 1)."""
+        if index == 0:
+            return self.ind1
+        elif index == 1:
+            return self.ind2
+        else:
+            raise IndexError("Indicator index must be 0 or 1")
+    
+    def __setitem__(self, index: int, value: str) -> None:
+        """Set indicator by index (0 or 1)."""
+        if index == 0:
+            self.ind1 = value
+        elif index == 1:
+            self.ind2 = value
+        else:
+            raise IndexError("Indicator index must be 0 or 1")
+    
+    def __eq__(self, other: Any) -> bool:
+        """Compare indicators."""
+        if isinstance(other, Indicators):
+            return self.ind1 == other.ind1 and self.ind2 == other.ind2
+        elif isinstance(other, (tuple, list)) and len(other) == 2:
+            return self.ind1 == other[0] and self.ind2 == other[1]
+        return False
+    
+    def __repr__(self) -> str:
+        """String representation."""
+        return f"Indicators('{self.ind1}', '{self.ind2}')"
+    
+    def __hash__(self) -> int:
+        """Hash based on both indicators."""
+        return hash((self.ind1, self.ind2))
+    
+    def __iter__(self):
+        """Allow unpacking like a tuple."""
+        return iter([self.ind1, self.ind2])
+
+
 class ControlField:
     """Wrapper for MARC control fields (001-009) with pymarc-compatible .value property."""
     
@@ -214,6 +261,29 @@ class Field:
     def indicator2(self, value: str) -> None:
         """Set second indicator."""
         self._inner.indicator2 = value
+    
+    @property
+    def indicators(self) -> 'Indicators':
+        """Get indicators as tuple-like Indicators object (pymarc compatibility).
+        
+        Example:
+            field.indicators[0]      # First indicator
+            field.indicators[1]      # Second indicator
+            ind1, ind2 = field.indicators  # Unpacking
+        """
+        return Indicators(self.indicator1, self.indicator2)
+    
+    @indicators.setter
+    def indicators(self, value: Union['Indicators', Tuple[str, str], List[str]]) -> None:
+        """Set indicators from Indicators object or tuple/list (pymarc compatibility)."""
+        if isinstance(value, Indicators):
+            self.indicator1 = value.ind1
+            self.indicator2 = value.ind2
+        elif isinstance(value, (tuple, list)) and len(value) == 2:
+            self.indicator1 = value[0]
+            self.indicator2 = value[1]
+        else:
+            raise ValueError("indicators must be Indicators object or [ind1, ind2] tuple/list")
     
     def is_subject_field(self) -> bool:
         """Check if this is a subject field (6xx)."""
@@ -756,6 +826,7 @@ __all__ = [
     "HoldingsMARCReader",
     "HoldingsRecord",
     "Leader",
+    "Indicators",
     "Subfield",
     "ControlField",
     "Field",

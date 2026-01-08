@@ -11,7 +11,7 @@ the mrrc wrapper is a drop-in replacement for pymarc. It includes:
 """
 
 import pytest
-from mrrc import Record, Field, Leader, MARCReader, MARCWriter, Subfield, ControlField
+from mrrc import Record, Field, Leader, MARCReader, MARCWriter, Subfield, ControlField, Indicators
 import io
 import json
 
@@ -207,6 +207,47 @@ class TestFieldSubfieldOperations:
         field.add_subfield('a', '24 cm')
         # Should return first 'a' value
         assert field['a'] == '256 pages'
+
+    def test_field_indicators_tuple_access(self):
+       """Test Field.indicators property returns Indicators tuple-like object (pymarc compatibility)."""
+       field = Field('245', '1', '0')
+       
+       # Access via indicators property
+       indicators = field.indicators
+       assert isinstance(indicators, Indicators)
+       assert indicators[0] == '1'
+       assert indicators[1] == '0'
+
+    def test_field_indicators_unpacking(self):
+       """Test Field.indicators can be unpacked like a tuple (pymarc compatibility)."""
+       field = Field('245', '1', '0')
+       
+       # Unpacking
+       ind1, ind2 = field.indicators
+       assert ind1 == '1'
+       assert ind2 == '0'
+
+    def test_field_indicators_backward_compat(self):
+       """Test that field.indicator1/indicator2 still work alongside indicators property."""
+       field = Field('245', '1', '0')
+       
+       # Both patterns should work
+       assert field.indicator1 == field.indicators[0]
+       assert field.indicator2 == field.indicators[1]
+
+    def test_field_indicators_setter(self):
+       """Test Field.indicators setter (pymarc compatibility)."""
+       field = Field('245', '0', '0')
+       
+       # Set via Indicators object
+       field.indicators = Indicators('1', '4')
+       assert field.indicator1 == '1'
+       assert field.indicator2 == '4'
+       
+       # Set via tuple
+       field.indicators = ('1', '0')
+       assert field.indicator1 == '1'
+       assert field.indicator2 == '0'
 
 
 class TestConvenienceMethods:
