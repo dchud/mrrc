@@ -85,5 +85,9 @@ harness = false
 name = "parallel_benchmarks"
 harness = false
 
+[[bench]]
+name = "profiling_harness"
+harness = false
+
 [profile.release]
 opt-level = 3

@@ -640,7 +640,8 @@ The `examples/` directory contains working code demonstrations for common tasks.
 | Create records | [`creating_records.rs`](examples/creating_records.rs) | [`creating_records.py`](examples/creating_records.py) |
 | Format conversion | [`format_conversion.rs`](examples/format_conversion.rs) | [`format_conversion.py`](examples/format_conversion.py) |
 | **Concurrency** |
-| Parallel reading | [`concurrent_reading.rs`](examples/concurrent_reading.rs) (Rayon) | [`concurrent_reading.py`](examples/concurrent_reading.py) (ThreadPoolExecutor) |
+| Parallel reading (multiple files) | [`concurrent_reading.rs`](examples/concurrent_reading.rs) (Rayon) | [`concurrent_reading.py`](examples/concurrent_reading.py) (ThreadPoolExecutor) |
+| Parallel reading (single large file) | N/A | [`concurrent_reading_producer_consumer.py`](examples/concurrent_reading_producer_consumer.py) (ProducerConsumerPipeline) |
 | Parallel writing | [`concurrent_writing.rs`](examples/concurrent_writing.rs) (Rayon) | [`concurrent_writing.py`](examples/concurrent_writing.py) (ThreadPoolExecutor) |
 | **Advanced** |
 | Authority records | [`authority_records.rs`](examples/authority_records.rs) | [`authority_records.py`](examples/authority_records.py) |
@@ -674,6 +675,16 @@ python examples/concurrent_writing.py
 - **format_conversion**: Converts records to JSON, MARCJSON, XML, and CSV formats
 - **concurrent_reading**: Parallel processing with Rayon (Rust) or `ThreadPoolExecutor` (Python)
 - **concurrent_writing**: Demonstrates safe concurrent writing with separate writer per thread (Python)
+
+### Python Concurrency Strategies
+
+MRRC provides two concurrency patterns optimized for different scenarios:
+
+- **ThreadPoolExecutor** ([`concurrent_reading.py`](examples/concurrent_reading.py)): Best for processing multiple separate files. Simple API, ~3-4x speedup. Use this unless you have a specific large-file requirement.
+
+- **ProducerConsumerPipeline** ([`concurrent_reading_producer_consumer.py`](examples/concurrent_reading_producer_consumer.py)): Specialized for maximum throughput from a single large file (100MB+). Sophisticated pipelining with producer thread, parallel batch parsing, and bounded channels. ~3.74x speedup on 4-core systems.
+
+See [docs/CONCURRENCY.md](docs/CONCURRENCY.md) for detailed performance comparisons and decision trees.
 
 ### Python/Rust API Parity
 
