@@ -5,6 +5,48 @@ All notable changes to MRRC (MARC Rust Crate) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-08
+
+### Added
+
+#### Full pymarc API Parity ✅
+- **Leader Value Validation Helpers**: Complete MARC 21 leader position reference implementation
+  - `Leader.get_valid_values(position)` - Returns dict of valid values for each leader position
+  - `Leader.is_valid_value(position, value)` - Validates values per MARC 21 specification
+  - `Leader.get_value_description(position, value)` - Gets human-readable descriptions
+  - Support for positions 5 (Record Status), 6 (Type of Record), 7 (Bibliographic Level), 17 (Encoding Level), 18 (Cataloging Form)
+- **Indicators as Tuple-Like Object**: Full support for pymarc-compatible indicator access
+  - `field.indicators[0]` and `field.indicators[1]` indexing
+  - `field.indicators` unpacking support
+  - Backward compatibility with `field.indicator1` and `field.indicator2` properties
+- **Control Field Access Pattern**: Support for pymarc's `record['001'].value` pattern
+  - ControlField wrapper with `.value` property for control fields (001-009)
+  - Both `record['001'].value` and `record.control_field('001')` patterns work identically
+  - Backward compatibility maintained
+
+#### Documentation
+- **pymarc API Parity Plan**: Moved completed work to docs/history/ for archival
+- **API Compatibility Summary**: Historical record of all 7 API gaps identified and resolved
+- **README Enhancement**: Updated to highlight full pymarc API compatibility as primary feature
+- **Migration Guide**: Comprehensive guide showing all compatible patterns with minimal migration path
+
+### Changed
+
+- **README**: Removed "nearly" qualifier - now describes "full" pymarc API compatibility
+- **Python Test Suite**: Expanded from 88+ to comprehensive coverage of all parity features
+- **Documentation Structure**: Organized completed parity work into history directory
+
+### Performance
+
+- No performance regressions - all existing benchmarks maintained
+- Leader validation methods are zero-copy (dictionary lookups only)
+
+### Technical Details
+
+- **MARC 21 Reference Data**: All leader position value mappings per MARC 21 specification
+- **API Stability**: Python wrapper API now guaranteed stable for pymarc compatibility
+- **Backward Compatibility**: All new features fully backward compatible with existing code
+
 ## [0.3.1] - 2026-01-07
 
 ### Added
