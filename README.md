@@ -627,6 +627,68 @@ with open("file.mrc", "rb") as f:
 
 See [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) for detailed migration instructions and performance notes.
 
+## Examples
+
+The `examples/` directory contains working code demonstrations for common tasks. Examples are provided in both Rust and Python (with pymarc-compatible API):
+
+### Quick Reference Table
+
+| Task | Rust | Python |
+|------|------|--------|
+| **Basic Operations** |
+| Read records | [`reading_and_querying.rs`](examples/reading_and_querying.rs) | [`reading_and_querying.py`](examples/reading_and_querying.py) |
+| Create records | [`creating_records.rs`](examples/creating_records.rs) | [`creating_records.py`](examples/creating_records.py) |
+| Format conversion | [`format_conversion.rs`](examples/format_conversion.rs) | [`format_conversion.py`](examples/format_conversion.py) |
+| **Concurrency** |
+| Parallel reading | [`concurrent_reading.rs`](examples/concurrent_reading.rs) (Rayon) | [`concurrent_reading.py`](examples/concurrent_reading.py) (ThreadPoolExecutor) |
+| Parallel writing | — | [`concurrent_writing.py`](examples/concurrent_writing.py) (ThreadPoolExecutor) |
+| **Advanced** |
+| Authority records | [`authority_records.rs`](examples/authority_records.rs) | — |
+| MARC-8 encoding | [`marc8_encoding.rs`](examples/marc8_encoding.rs) | — |
+| Multilingual data | [`multilingual_records.rs`](examples/multilingual_records.rs) | — |
+| CSV conversion | [`marc_to_csv.rs`](examples/marc_to_csv.rs) | — |
+
+### Running Examples
+
+**Rust examples:**
+```bash
+cargo run --example reading_and_querying
+cargo run --example creating_records
+cargo run --example format_conversion
+cargo run --example concurrent_reading
+```
+
+**Python examples:**
+```bash
+python examples/reading_and_querying.py
+python examples/creating_records.py
+python examples/format_conversion.py
+python examples/concurrent_reading.py
+python examples/concurrent_writing.py
+```
+
+### Example Highlights
+
+- **reading_and_querying**: Demonstrates field access, filtering by indicators, working with subfields, and advanced queries
+- **creating_records**: Shows how to build records from scratch using builder API (Rust) or field methods (Python)
+- **format_conversion**: Converts records to JSON, MARCJSON, XML, and CSV formats
+- **concurrent_reading**: Parallel processing with Rayon (Rust) or `ThreadPoolExecutor` (Python)
+- **concurrent_writing**: Demonstrates safe concurrent writing with separate writer per thread (Python)
+
+### Python/Rust API Parity
+
+Most examples work identically in both languages. The Python examples maintain **full pymarc API compatibility**, so you can migrate from pymarc by simply changing the import:
+
+```python
+# Before (pymarc)
+from pymarc import MARCReader
+
+# After (mrrc)
+from mrrc import MARCReader
+
+# Everything else stays the same!
+```
+
 ## Testing
 
 The library includes 239 comprehensive tests covering:
@@ -671,8 +733,12 @@ open tarpaulin-report.html
 Comprehensive documentation is available in the `docs/` directory:
 
 - **[Documentation Index](docs/README.md)** - Overview of all documentation
+- **[Concurrency Guide](docs/CONCURRENCY.md)** - Parallel processing in Rust and Python
+  - Rayon patterns for pure Rust library
+  - `ThreadPoolExecutor` and `ProducerConsumerPipeline` for Python wrapper
+  - Performance characteristics and decision trees
+- **[Threading Documentation](docs/THREADING.md)** - Python-specific GIL behavior and thread safety
 - **[Benchmarking Results](docs/benchmarks/RESULTS.md)** - Performance metrics and analysis
-- **[Threading Documentation](docs/THREADING.md)** - Multi-threaded usage patterns and best practices
 - **[Design Documents](docs/design/)** - Architecture and feature proposals
 - **[Project History](docs/history/)** - Code reviews, audits, and implementation notes
 
