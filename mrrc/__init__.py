@@ -38,6 +38,29 @@ __version__ = "0.1.0"
 __author__ = "MRRC Contributors"
 
 
+class ControlField:
+    """Wrapper for MARC control fields (001-009) with pymarc-compatible .value property."""
+    
+    def __init__(self, tag: str, value: str):
+        """Create a new ControlField."""
+        self.tag = tag
+        self.value = value
+    
+    def __eq__(self, other: Any) -> bool:
+        """Compare control fields by tag and value."""
+        if isinstance(other, ControlField):
+            return self.tag == other.tag and self.value == other.value
+        return False
+    
+    def __repr__(self) -> str:
+        """String representation."""
+        return f"ControlField(tag='{self.tag}', value='{self.value}')"
+    
+    def __hash__(self) -> int:
+        """Hash based on tag and value."""
+        return hash((self.tag, self.value))
+
+
 class Field:
     """Enhanced Field wrapper with pymarc-compatible API."""
     
@@ -379,14 +402,27 @@ class Record:
         """Check if a field with given tag exists in record."""
         return self.get_field(tag) is not None
     
-    def __getitem__(self, tag: str) -> Optional['Field']:
-        """Get first field with given tag (pymarc compatibility)."""
-        field = self._inner.get_field(tag)
-        if field:
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
-            wrapper._inner = field
-            return wrapper
-        return None
+    def __getitem__(self, tag: str) -> Union[Optional['Field'], 'ControlField']:
+         """Get first field with given tag (pymarc compatibility).
+         
+         For control fields (001-009), returns ControlField with .value property.
+         For data fields, returns Field wrapper.
+         Returns None if field doesn't exist.
+         """
+         # Check if this is a control field (001-009)
+         if tag in ('001', '002', '003', '004', '005', '006', '007', '008', '009'):
+             value = self._inner.control_field(tag)
+             if value is not None:
+                 return ControlField(tag, value)
+             return None
+         
+         # For data fields, return Field wrapper
+         field = self._inner.get_field(tag)
+         if field:
+             wrapper = Field(field.tag, field.indicator1, field.indicator2)
+             wrapper._inner = field
+             return wrapper
+         return None
     
     def get_fields(self, *tags: str) -> List['Field']:
         """Get all fields with given tags.
@@ -721,6 +757,7 @@ __all__ = [
     "HoldingsRecord",
     "Leader",
     "Subfield",
+    "ControlField",
     "Field",
     "Record",
     "MARCReader",

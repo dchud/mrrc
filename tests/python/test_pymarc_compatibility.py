@@ -11,7 +11,7 @@ the mrrc wrapper is a drop-in replacement for pymarc. It includes:
 """
 
 import pytest
-from mrrc import Record, Field, Leader, MARCReader, MARCWriter, Subfield
+from mrrc import Record, Field, Leader, MARCReader, MARCWriter, Subfield, ControlField
 import io
 import json
 
@@ -80,13 +80,48 @@ class TestRecordFieldOperations:
         assert len(fields) == 3
 
     def test_add_control_field(self):
-        """Test adding control fields."""
-        record = Record(Leader())
-        record.add_control_field('001', '12345')
-        record.add_control_field('003', 'ABC')
+         """Test adding control fields."""
+         record = Record(Leader())
+         record.add_control_field('001', '12345')
+         record.add_control_field('003', 'ABC')
+    
+         assert record.control_field('001') == '12345'
+         assert record.control_field('003') == 'ABC'
 
-        assert record.control_field('001') == '12345'
-        assert record.control_field('003') == 'ABC'
+    def test_control_field_dict_access(self):
+         """Test accessing control fields via dict-style access (pymarc compatibility)."""
+         record = Record(Leader())
+         record.add_control_field('001', '12345')
+         record.add_control_field('003', 'DLC')
+         
+         # Access via dict notation should return ControlField
+         field_001 = record['001']
+         assert isinstance(field_001, ControlField)
+         assert field_001.value == '12345'
+         assert field_001.tag == '001'
+
+    def test_control_field_value_property(self):
+         """Test ControlField.value property (pymarc compatibility)."""
+         record = Record(Leader())
+         record.add_control_field('005', '20210315120000.0')
+         
+         # Access via dict notation and .value property
+         assert record['005'].value == '20210315120000.0'
+
+    def test_control_field_backward_compat(self):
+         """Test that record.control_field() still works after adding dict access."""
+         record = Record(Leader())
+         record.add_control_field('001', 'test-id')
+         
+         # Both access patterns should work and return same value
+         assert record['001'].value == record.control_field('001')
+         assert record['001'].value == 'test-id'
+
+    def test_missing_control_field_returns_none(self):
+         """Test that missing control fields return None via dict access."""
+         record = Record(Leader())
+         assert record['001'] is None
+         assert record['008'] is None
 
     def test_get_nonexistent_field(self):
         """Test getting a field that doesn't exist."""
