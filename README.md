@@ -641,12 +641,12 @@ The `examples/` directory contains working code demonstrations for common tasks.
 | Format conversion | [`format_conversion.rs`](examples/format_conversion.rs) | [`format_conversion.py`](examples/format_conversion.py) |
 | **Concurrency** |
 | Parallel reading | [`concurrent_reading.rs`](examples/concurrent_reading.rs) (Rayon) | [`concurrent_reading.py`](examples/concurrent_reading.py) (ThreadPoolExecutor) |
-| Parallel writing | — | [`concurrent_writing.py`](examples/concurrent_writing.py) (ThreadPoolExecutor) |
+| Parallel writing | [`concurrent_writing.rs`](examples/concurrent_writing.rs) (Rayon) | [`concurrent_writing.py`](examples/concurrent_writing.py) (ThreadPoolExecutor) |
 | **Advanced** |
-| Authority records | [`authority_records.rs`](examples/authority_records.rs) | — |
-| MARC-8 encoding | [`marc8_encoding.rs`](examples/marc8_encoding.rs) | — |
-| Multilingual data | [`multilingual_records.rs`](examples/multilingual_records.rs) | — |
-| CSV conversion | [`marc_to_csv.rs`](examples/marc_to_csv.rs) | — |
+| Authority records | [`authority_records.rs`](examples/authority_records.rs) | [`authority_records.py`](examples/authority_records.py) |
+| MARC-8 encoding | [`marc8_encoding.rs`](examples/marc8_encoding.rs) | [`marc8_encoding.py`](examples/marc8_encoding.py) |
+| Multilingual data | [`multilingual_records.rs`](examples/multilingual_records.rs) | [`multilingual_records.py`](examples/multilingual_records.py) |
+| CSV conversion | [`marc_to_csv.rs`](examples/marc_to_csv.rs) | Included in [`format_conversion.py`](examples/format_conversion.py) |
 
 ### Running Examples
 
