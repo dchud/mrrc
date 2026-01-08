@@ -5,10 +5,10 @@ This guide helps existing pymarc users migrate to mrrc (MARC Rust Crate), a high
 ## Overview
 
 **mrrc** is a Rust-based MARC library with Python bindings, providing:
-- **10-100x faster** performance compared to pure Python implementations  
-- **pymarc-compatible API** - Nearly drop-in replacement for existing pymarc code
-- **Type-safe** Rust implementation with comprehensive error handling
-- **Python compatibility** through PyO3 bindings with native data structures
+- **High performance** Rust implementation with Python convenience
+- **Full pymarc API compatibility** - Drop-in replacement for existing pymarc code
+- **Type-safe** design with comprehensive error handling
+- **Native Python integration** through PyO3 bindings with familiar data structures
 - **All standard MARC operations** including reading, writing, and format conversions
 
 ## Installation
@@ -100,7 +100,7 @@ with open('output.mrc', 'wb') as f:
 | Get field | `record['650']` | `record['650']` ✓ Same! or `record.fields_by_tag('650')` |
 | Check if field exists | `'245' in record` | `'245' in record` ✓ Same! |
 | Get all fields | `for field in record:` | `for field in record:` ✓ Same! |
-| Control field | `record['001'].value` | `record.control_field('001')` |
+| Control field | `record['001'].value` | `record['001'].value` ✓ Same! or `record.control_field('001')` |
 
 ## API Compatibility
 
@@ -251,19 +251,10 @@ record.is_music()          # Check if music
 - [ ] Update record creation: `pymarc.Record()` → `mrrc.Record(mrrc.Leader())`
 - [ ] ✅ Everything else works the same! Dictionary access, method names, iteration all identical
 
-**Optional optimizations:**
+**Optional enhancements:**
 
-- [ ] Use new convenience methods like `record.issn()`, `record.sudoc()`, etc. for performance
+- [ ] Use additional convenience methods like `record.issn()`, `record.sudoc()`, etc. for specialized use cases
 - [ ] Update writers to use context managers: `with mrrc.MARCWriter(f) as w:` (better resource management)
-
-## Performance Notes
-
-mrrc typically provides **10-100x performance improvements** over pymarc:
-- **Reading**: 10-20x faster (Rust binary format parsing)
-- **Writing**: 20-50x faster (Rust serialization)
-- **Field queries**: 5-10x faster (indexing instead of linear search)
-
-For workloads with millions of records, this can reduce processing time from hours to minutes.
 
 ## Known Differences from pymarc
 
