@@ -93,6 +93,14 @@ harness = false
 name = "detailed_profiling"
 harness = false
 
+[[bench]]
+name = "rayon_profiling"
+harness = false
+
+[[bench]]
+name = "rayon_file_io_profiling"
+harness = false
+
 [profile.release]
 opt-level = 3
 
