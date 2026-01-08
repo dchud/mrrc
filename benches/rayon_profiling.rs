@@ -3,6 +3,8 @@
 //! This harness isolates the rayon parallel iteration performance
 //! to identify bottlenecks and compare with sequential baseline.
 
+#![allow(clippy::cast_precision_loss)]
+
 use mrrc::MarcReader;
 use rayon::prelude::*;
 use std::io::Cursor;
@@ -92,14 +94,17 @@ fn main() {
         ("2x 10k files", vec![fixture_10k.clone(); 2]),
     ];
 
-    println!("{:<20} {:<15} {:<15} {:<10}", "Config", "Sequential", "Rayon", "Speedup");
+    println!(
+        "{:<20} {:<15} {:<15} {:<10}",
+        "Config", "Sequential", "Rayon", "Speedup"
+    );
     println!("{}", "-".repeat(60));
 
     for (name, data) in configs {
         let (seq_time, seq_count) = profile_sequential(&data);
         let (par_time, par_count) = profile_rayon(&data);
 
-        let speedup = seq_time as f64 / par_time as f64;
+        let speedup = (seq_time as f64) / (par_time as f64);
 
         println!(
             "{:<20} {:<15.2} {:<15.2} {:<10.2}x",
@@ -111,21 +116,23 @@ fn main() {
 
         assert_eq!(
             seq_count, par_count,
-            "Record count mismatch for {}: seq={}, par={}",
-            name, seq_count, par_count
+            "Record count mismatch for {name}: seq={seq_count}, par={par_count}",
         );
     }
 
     println!("\n=== Rayon Chunk Size Analysis ===\n");
-    println!("{:<20} {:<15} {:<15} {:<10}", "Chunk Size", "Time (ms)", "Records", "Speedup");
+    println!(
+        "{:<20} {:<15} {:<15} {:<10}",
+        "Chunk Size", "Time (ms)", "Records", "Speedup"
+    );
     println!("{}", "-".repeat(60));
 
     let data = vec![fixture_10k.clone(); 4];
     let (seq_time, _) = profile_sequential(&data);
 
-    for chunk_size in [1, 2, 4, 8].iter() {
+    for chunk_size in &[1, 2, 4, 8] {
         let (par_time, count) = profile_rayon_chunked(&data, *chunk_size);
-        let speedup = seq_time as f64 / par_time as f64;
+        let speedup = (seq_time as f64) / (par_time as f64);
 
         println!(
             "{:<20} {:<15.2} {:<15} {:<10.2}x",

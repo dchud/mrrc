@@ -3,8 +3,10 @@
 //! This harness profiles rayon parallel iteration using actual file reads
 //! instead of in-memory buffers, which better reflects real-world performance.
 //!
-//! This is critical for accurate comparison with Python's ProducerConsumerPipeline,
+//! This is critical for accurate comparison with Python's `ProducerConsumerPipeline`,
 //! which reads from actual files and may benefit from I/O blocking between threads.
+
+#![allow(clippy::cast_precision_loss)]
 
 use mrrc::MarcReader;
 use rayon::prelude::*;
@@ -118,7 +120,10 @@ fn main() {
         ("2x 10k files", 2, "10k_records.mrc"),
     ];
 
-    println!("{:<20} {:<15} {:<15} {:<10}", "Config", "Sequential", "Rayon", "Speedup");
+    println!(
+        "{:<20} {:<15} {:<15} {:<10}",
+        "Config", "Sequential", "Rayon", "Speedup"
+    );
     println!("{}", "-".repeat(60));
 
     for (name, count, fixture) in &configs {
@@ -131,7 +136,7 @@ fn main() {
         // Profile rayon
         let (par_time, par_count) = profile_rayon_files(&file_paths);
 
-        let speedup = seq_time as f64 / par_time as f64;
+        let speedup = (seq_time as f64) / (par_time as f64);
 
         println!(
             "{:<20} {:<15.2} {:<15.2} {:<10.2}x",
@@ -143,8 +148,7 @@ fn main() {
 
         assert_eq!(
             seq_count, par_count,
-            "Record count mismatch for {}: seq={}, par={}",
-            name, seq_count, par_count
+            "Record count mismatch for {name}: seq={seq_count}, par={par_count}",
         );
 
         // Cleanup
@@ -154,15 +158,18 @@ fn main() {
     }
 
     println!("\n=== Rayon Chunk Size Analysis (4x 10k files) ===\n");
-    println!("{:<20} {:<15} {:<15} {:<10}", "Chunk Size", "Time (ms)", "Records", "Speedup");
+    println!(
+        "{:<20} {:<15} {:<15} {:<10}",
+        "Chunk Size", "Time (ms)", "Records", "Speedup"
+    );
     println!("{}", "-".repeat(60));
 
     let file_paths = create_test_files(4, "10k_records.mrc", temp_dir);
     let (seq_time, _) = profile_sequential_files(&file_paths);
 
-    for chunk_size in [1, 2, 4, 8].iter() {
+    for chunk_size in &[1, 2, 4, 8] {
         let (par_time, count) = profile_rayon_files_chunked(&file_paths, *chunk_size);
-        let speedup = seq_time as f64 / par_time as f64;
+        let speedup = (seq_time as f64) / (par_time as f64);
 
         println!(
             "{:<20} {:<15.2} {:<15} {:<10.2}x",
@@ -177,9 +184,7 @@ fn main() {
     let _ = fs::remove_dir_all(temp_dir);
 
     println!("\n=== File I/O Profiling Complete ===");
-    println!(
-        "\nNote: These results use actual file I/O, more realistic than in-memory buffers"
-    );
+    println!("\nNote: These results use actual file I/O, more realistic than in-memory buffers");
     println!("Expected speedup should be closer to Python baseline (3.74x) due to:");
     println!("  - I/O blocking between threads");
     println!("  - Better interleaving of reading and parsing");
