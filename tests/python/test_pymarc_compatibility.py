@@ -154,6 +154,25 @@ class TestFieldSubfieldOperations:
         assert 'b' in subfield_codes
         assert 'c' in subfield_codes
 
+    def test_field_getitem_returns_value(self):
+        """Test Field.__getitem__ returns subfield value (pymarc compatibility)."""
+        field = create_field('245', '1', '0', a='Title')
+        assert field['a'] == 'Title'
+
+    def test_field_getitem_returns_none_for_missing(self):
+        """Test Field.__getitem__ returns None for missing subfield (pymarc compatibility)."""
+        field = create_field('245', '1', '0', a='Title')
+        # Should return None, not raise KeyError
+        assert field['z'] is None
+
+    def test_field_getitem_with_multiple_same_code(self):
+        """Test Field.__getitem__ returns first value when multiple subfields have same code."""
+        field = Field('300', ' ', ' ')
+        field.add_subfield('a', '256 pages')
+        field.add_subfield('a', '24 cm')
+        # Should return first 'a' value
+        assert field['a'] == '256 pages'
+
 
 class TestConvenienceMethods:
     """Test all pymarc-style convenience methods."""
@@ -510,6 +529,13 @@ class TestRecordAdvanced:
         record.add_field(title)
         assert record['245'] == title
 
+    def test_record_getitem_missing_tag(self):
+        """Test Record.__getitem__ returns None for missing tag (pymarc compatibility)."""
+        record = Record(Leader())
+        # Should return None, not raise KeyError
+        assert record['999'] is None
+        assert record['245'] is None
+
     def test_record_membership(self):
         """Test checking if tag exists in record."""
         record = Record(Leader())
@@ -649,6 +675,40 @@ class TestLeader:
         leader = Leader()
         leader.multipart_resource_record_level = 'a'
         assert leader.multipart_resource_record_level == 'a'
+
+    def test_leader_single_position_access(self):
+        """Test Leader position-based access (pymarc compatibility)."""
+        leader = Leader()
+        leader.record_status = 'c'
+        # Access by position 5
+        assert leader[5] == 'c'
+
+    def test_leader_slice_access(self):
+        """Test Leader slice-based access (pymarc compatibility)."""
+        leader = Leader()
+        # leader[0:5] should return the record length as a string
+        record_len_str = leader[0:5]
+        assert isinstance(record_len_str, str)
+        assert len(record_len_str) == 5
+
+    def test_leader_setitem_by_position(self):
+        """Test Leader position-based setting (pymarc compatibility)."""
+        leader = Leader()
+        leader[5] = 'a'  # Set record status at position 5
+        assert leader[5] == 'a'
+        assert leader.record_status == 'a'
+
+    def test_leader_position_and_property_stay_in_sync(self):
+        """Test that position-based and property-based access stay synchronized."""
+        leader = Leader()
+        
+        # Set via property
+        leader.record_status = 'd'
+        assert leader[5] == 'd'
+        
+        # Set via position
+        leader[6] = 'a'
+        assert leader.record_type == 'a'
 
 
 class TestEncoding:

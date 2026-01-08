@@ -32,7 +32,7 @@ from ._mrrc import (
     record_to_mods,
     dublin_core_to_xml,
 )
-from typing import Optional, List, Union, Any
+from typing import Optional, List, Union, Any, Tuple
 
 __version__ = "0.1.0"
 __author__ = "MRRC Contributors"
@@ -49,19 +49,20 @@ class Field:
         """Delegate attribute access to the inner Rust Field."""
         return getattr(self._inner, name)
     
-    def __getitem__(self, code: str) -> str:
+    def __getitem__(self, code: str) -> Optional[str]:
         """Get first subfield value by code (pymarc compatibility).
+        
+        Returns None if the subfield code doesn't exist, matching pymarc behavior.
         
         Example:
             field['a']  # Get first 'a' subfield value
+            field['z']  # Returns None if 'z' subfield doesn't exist
         """
         try:
             values = self._inner.subfields_by_code(code)
-            if not values:
-                raise KeyError(code)
-            return values[0]
-        except Exception as e:
-            raise KeyError(code) from e
+            return values[0] if values else None
+        except Exception:
+            return None
     
     def __setitem__(self, code: str, value: str) -> None:
         """Set subfield value (replace first occurrence)."""
@@ -255,6 +256,97 @@ class Leader:
              # Mark parent record as having modified leader
              if hasattr(self, '_parent_record') and self._parent_record is not None:
                  self._parent_record._leader_modified = True
+     
+     def __getitem__(self, index: Union[int, slice]) -> Union[str, Optional[str]]:
+         """Get leader character(s) by position (pymarc compatibility).
+         
+         Examples:
+             leader[5]       # Get record status character
+             leader[0:5]     # Get first 5 characters (record length)
+             leader[18]      # Get cataloging form character
+         """
+         # Get the leader as a 24-character string
+         leader_str = self._get_leader_as_string()
+         
+         if isinstance(index, slice):
+             # Slice access: leader[0:5]
+             start = index.start or 0
+             stop = index.stop or len(leader_str)
+             if start < 0 or stop > len(leader_str):
+                 raise IndexError("Leader position out of range")
+             return leader_str[start:stop]
+         else:
+             # Single position access: leader[5]
+             if index < 0 or index >= len(leader_str):
+                 raise IndexError("Leader position out of range")
+             return leader_str[index]
+     
+     def __setitem__(self, index: int, value: str) -> None:
+         """Set leader character by position (pymarc compatibility).
+         
+         Example:
+             leader[5] = 'a'  # Set record status
+         """
+         if not isinstance(index, int):
+             raise TypeError("Leader position must be an integer")
+         if not isinstance(value, str) or len(value) != 1:
+             raise ValueError("Leader value must be a single character string")
+         
+         # Get current leader as string
+         leader_str = self._get_leader_as_string()
+         
+         if index < 0 or index >= len(leader_str):
+             raise IndexError("Leader position out of range")
+         
+         # Replace character at position
+         new_leader_str = leader_str[:index] + value + leader_str[index+1:]
+         
+         # Update the leader based on the position
+         self._update_leader_from_string(new_leader_str)
+     
+     def _get_leader_as_string(self) -> str:
+         """Get the leader as a 24-character MARC21 leader string."""
+         # Build leader string from properties
+         leader = []
+         leader.append(str(self._rust_leader.record_length).zfill(5))
+         leader.append(self._rust_leader.record_status)
+         leader.append(self._rust_leader.record_type)
+         leader.append(self._rust_leader.bibliographic_level)
+         leader.append(self._rust_leader.control_record_type)
+         leader.append(self._rust_leader.character_coding)
+         leader.append(str(self._rust_leader.indicator_count))
+         leader.append(str(self._rust_leader.subfield_code_count))
+         leader.append(str(self._rust_leader.data_base_address).zfill(5))
+         leader.append(self._rust_leader.encoding_level)
+         leader.append(self._rust_leader.cataloging_form)
+         leader.append(self._rust_leader.multipart_level)
+         leader.append(self._rust_leader.reserved)
+         
+         return ''.join(leader)
+     
+     def _update_leader_from_string(self, leader_str: str) -> None:
+         """Update leader properties from a 24-character string."""
+         if len(leader_str) != 24:
+             raise ValueError(f"Leader string must be exactly 24 characters, got {len(leader_str)}")
+         
+         # Parse MARC21 leader format (positions as per standard)
+         self._rust_leader.record_length = int(leader_str[0:5])
+         self._rust_leader.record_status = leader_str[5]
+         self._rust_leader.record_type = leader_str[6]
+         self._rust_leader.bibliographic_level = leader_str[7]
+         self._rust_leader.control_record_type = leader_str[8]
+         self._rust_leader.character_coding = leader_str[9]
+         self._rust_leader.indicator_count = int(leader_str[10])
+         self._rust_leader.subfield_code_count = int(leader_str[11])
+         self._rust_leader.data_base_address = int(leader_str[12:17])
+         self._rust_leader.encoding_level = leader_str[17]
+         self._rust_leader.cataloging_form = leader_str[18]
+         self._rust_leader.multipart_level = leader_str[19]
+         self._rust_leader.reserved = leader_str[20:24]
+         
+         # Mark parent record as having modified leader
+         if hasattr(self, '_parent_record') and self._parent_record is not None:
+             self._parent_record._leader_modified = True
      
      def __eq__(self, other: Any) -> bool:
          """Compare leaders by content."""
