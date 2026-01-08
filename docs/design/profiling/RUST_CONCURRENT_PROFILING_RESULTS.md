@@ -6,11 +6,13 @@
 
 ## Executive Summary
 
-This document presents profiling results for the pure Rust concurrent implementation using rayon for parallel iteration. Key findings:
+This document presents within-mode profiling results for the pure Rust concurrent implementation using rayon for parallel iteration. Analysis focuses on understanding performance characteristics within this implementation mode.
 
-- **Rayon achieves 2.68x-3.37x speedup** on 4-core system
-- **Chunk size of 1 (fine-grained parallelism)** performs best at 2.68x speedup
-- **Larger file sizes benefit more from parallelism** (3.37x vs 1.47x speedup)
+Key findings:
+- **Rayon achieves 1.77x-3.74x speedup** on 4-core system depending on workload
+- **File-based I/O enables better parallelism** (3.74x) than in-memory buffers (3.37x)
+- **Chunk size of 1 (fine-grained parallelism)** performs best at 3.04x speedup
+- **Larger file sizes benefit more from parallelism** (3.74x vs 1.77x speedup)
 - **Diminishing returns with chunk aggregation** (chunking by 2+ reduces speedup)
 
 ## Performance Metrics
@@ -33,7 +35,7 @@ This document presents profiling results for the pure Rust concurrent implementa
 | 8x 1k files | 7.55 | 2.65 | **2.85x** | 36% |
 | 2x 10k files | 19.14 | 9.96 | **1.92x** | 48% |
 
-**CRITICAL FINDING:** With file-based I/O, Rust rayon achieves **3.74x speedup on 4x 10k files**, which **EXACTLY MATCHES** Python's ProducerConsumerPipeline baseline!
+**Key Finding:** With file-based I/O, Rust rayon achieves **3.74x speedup on 4x 10k files** on this platform.
 
 ### Chunk Size Analysis (4x 10k files baseline)
 
@@ -97,28 +99,23 @@ During I/O waits:
 
 **In-memory buffers mask this advantage** because all data is already in RAM - no blocking = less concurrency opportunity.
 
-## Comparison to Python ProducerConsumerPipeline
+## How File I/O Enables Parallelism in Rayon
 
-Now we understand why both approaches achieve **3.74x**:
+The key to achieving strong speedup in this mode is how file I/O interacts with work distribution:
 
-**Python:** One producer thread reads files (I/O-bound), consumer threads parse (CPU-bound)
-- Producer blocks on I/O, releases GIL
-- Consumer threads use freed GIL time for parsing
-- Natural work distribution through bounded channel
+**Rayon with Multiple Files:** Each thread opens and reads its own file
+- Each thread's I/O blocks independently on its file
+- Other threads continue reading/parsing while one is blocked
+- Work-stealing scheduler balances load across threads
+- Fine-grained parallelism (chunk_size=1) works best because I/O blocking keeps cores busy
 
-**Rust Rayon:** Multiple threads each open and read their own file
-- Each thread's I/O blocks independently
-- Other threads continue reading/parsing
-- Work-stealing scheduler balances load
-- Fine-grained parallelism (chunk_size=1) works best
-
-**Both achieve same speedup** because both leverage I/O blocking for concurrency.
+**Why File I/O Matters:** When threads block on I/O, the CPU cores are freed for other threads to use. This overlapping I/O creates natural concurrency opportunities that rayon's work-stealing scheduler can exploit effectively.
 
 ## Key Insights
 
-### 1. Pure Rust Rayon Is Performance-Competitive
+### 1. Benchmarking Methodology Affects Results
 
-With correct benchmarking methodology (file-based I/O), pure Rust rayon achieves **3.74x speedup** on 4 cores - **exactly matching Python's ProducerConsumerPipeline**. This validates the Rust implementation.
+Profiling must use file-based I/O to accurately reflect real-world performance. In-memory buffer profiling masks I/O concurrency patterns and gives artificially lower speedup numbers (3.37x vs 3.74x). This matters for understanding what limits performance in this mode.
 
 ### 2. Fine-Grained Parallelism Works Best
 
@@ -191,9 +188,9 @@ Although rayon is performance-competitive at 3.74x, we should verify that:
 
 Next step: mrrc-u33.4 profiles Python single-threaded performance.
 
-## Optimization Opportunities Identified
+## Bottlenecks and Optimization Opportunities
 
-While Rust rayon reaches 3.74x speedup on large file workloads, several optimization opportunities exist:
+Within the pure Rust concurrent rayon mode, several bottlenecks limit performance:
 
 ### 1. Small Workload Performance (Priority: High)
 - **4x 1k files:** Only 1.77x speedup (44% efficiency)
@@ -219,22 +216,41 @@ While Rust rayon reaches 3.74x speedup on large file workloads, several optimiza
 - **Opportunity:** Optimize parsing phases, allocation patterns, encoding conversion
 - **Related task:** mrrc-u33.7 (single-threaded bottleneck analysis)
 
-## Refocused Profiling Plan
+## What Limits Performance in This Mode?
 
-Rather than validating baseline parity, the profiling epic now focuses on **finding optimization opportunities** across all scenarios:
+For pure Rust concurrent with rayon on file-based workloads:
 
-**Immediate next steps (high impact):**
-1. **mrrc-u33.7** - Identify hot paths in sequential parsing
-2. **mrrc-u33.8** - Quantify scheduling overhead and propose optimizations
-3. **mrrc-u33.10** - Find optimal workload/concurrency combinations
-4. **mrrc-u33.4** - Establish single-threaded Python baseline for comparison
-5. **mrrc-u33.5** - Profile Python concurrent path for deeper insights
+1. **Task scheduling overhead** (limiting small workload parallelism)
+   - Fine-grained parallelism creates high per-task costs
+   - Chunk size > 2 dramatically reduces efficiency
+   - 4x 1k files achieves only 1.77x (44% efficiency) vs 4x 10k files at 3.74x (93%)
 
-**Success metrics:** Improvements measured against 3.74x baseline, not just matching it.
+2. **Work distribution patterns**
+   - Rayon's work-stealing works well for I/O-bound workloads (3.74x speedup)
+   - Coarser-grained tasks (chunk_size=2+) reduce efficiency
+   - I/O blocking is necessary for good parallelism
+
+3. **Memory/cache efficiency**
+   - Current performance has 7% headroom to theoretical maximum (100% efficiency)
+   - Cache-aware layout and memory bandwidth may offer small improvements
+
+4. **Single-threaded hot path** (baseline performance)
+   - Sequential parsing creates the foundation for parallelism
+   - Improvements here would improve both single and multi-threaded modes
+
+## Next Profiling Steps
+
+To continue optimizing this mode:
+1. Profile single-threaded hot path to find baseline improvements
+2. Measure scheduling overhead with different chunk sizes
+3. Analyze cache behavior and memory bandwidth utilization
+4. Test hybrid approaches (sequential for small workloads, parallel for large)
 
 ## References
 
 - **Issue:** mrrc-u33.3 - Profile pure Rust mrrc concurrent performance
 - **Epic:** mrrc-u33 - Performance optimization review
 - **Related:** mrrc-u33.5 - Profile Python concurrent performance
-- **Comparison Baseline:** Python ProducerConsumerPipeline (3.74x on 4 cores)
+- **Related:** mrrc-u33.7 - Deep-dive analysis of single-threaded bottlenecks
+- **Related:** mrrc-u33.8 - Rayon task scheduling efficiency analysis
+- **Related:** mrrc-u33.10 - Workload-dependent performance characteristics
