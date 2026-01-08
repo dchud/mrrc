@@ -305,7 +305,74 @@ class Field:
 
 
 class Leader:
-     """Enhanced Leader wrapper with pymarc-compatible API."""
+     """Enhanced Leader wrapper with pymarc-compatible API.
+     
+     Provides both property-based access and MARC 21 reference information for leader positions.
+     """
+     
+     # MARC 21 Reference: Position 5 - Record Status
+     RECORD_STATUS_VALUES = {
+         'a': 'Increase in encoding level',
+         'c': 'Corrected or revised',
+         'd': 'Deleted',
+         'n': 'New',
+         'p': 'Increase in encoding level from prepublication',
+     }
+     
+     # MARC 21 Reference: Position 6 - Type of record
+     RECORD_TYPE_VALUES = {
+         'a': 'Language material',
+         'b': 'Notated music',
+         'c': 'Notated music',
+         'd': 'Manuscript notated music',
+         'e': 'Cartographic material',
+         'f': 'Manuscript cartographic material',
+         'g': 'Projected medium',
+         'h': 'Microform',
+         'i': 'Nonmusical sound recording',
+         'j': 'Musical sound recording',
+         'k': 'Two-dimensional nonprojectable graphic',
+         'm': 'Computer file',
+         'o': 'Kit',
+         'p': 'Mixed materials',
+         'r': 'Three-dimensional artifact or naturally occurring object',
+         't': 'Manuscript language material',
+     }
+     
+     # MARC 21 Reference: Position 7 - Bibliographic level
+     BIBLIOGRAPHIC_LEVEL_VALUES = {
+         'a': 'Monographic component part',
+         'b': 'Serial component part',
+         'c': 'Collection',
+         'd': 'Subunit',
+         'i': 'Integrating resource',
+         'm': 'Monograph',
+         's': 'Serial',
+     }
+     
+     # MARC 21 Reference: Position 17 - Encoding level
+     ENCODING_LEVEL_VALUES = {
+         ' ': 'Full level',
+         '1': 'Full level, material not examined',
+         '2': 'Less-than-full level, material not examined',
+         '3': 'Abbreviated level',
+         '4': 'Core level',
+         '5': 'Partial (preliminary) level',
+         '7': 'Minimal level',
+         '8': 'Prepublication level',
+         'u': 'Unknown',
+         'z': 'Not applicable',
+     }
+     
+     # MARC 21 Reference: Position 18 - Descriptive cataloging form (Cataloging form)
+     CATALOGING_FORM_VALUES = {
+         ' ': 'Non-ISBD',
+         'a': 'AACR 2',
+         'c': 'ISBD punctuation omitted',
+         'i': 'ISBD punctuation included',
+         'n': 'Non-ISBD punctuation omitted',
+         'u': 'Unknown',
+     }
      
      def __init__(self):
          """Create a new Leader."""
