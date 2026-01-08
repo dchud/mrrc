@@ -6,9 +6,9 @@
 //! 3. Records-per-second measurements
 //! 4. Cache-friendly output for analysis
 
-use std::time::Instant;
-use std::io::Cursor;
 use mrrc::MarcReader;
+use std::io::Cursor;
+use std::time::Instant;
 
 fn load_fixture(filename: &str) -> Vec<u8> {
     let path = format!("tests/data/fixtures/{filename}");
@@ -17,6 +17,7 @@ fn load_fixture(filename: &str) -> Vec<u8> {
 
 /// Detailed breakdown of a single read pass
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct ProfileResult {
     filename: String,
     total_time_ms: f64,
@@ -28,13 +29,16 @@ struct ProfileResult {
 
 impl ProfileResult {
     fn print_header() {
-        println!("{:<30} {:<15} {:<15} {:<15} {:<15}", 
-            "File", "Records", "Time (ms)", "Rec/sec", "µs/rec");
+        println!(
+            "{:<30} {:<15} {:<15} {:<15} {:<15}",
+            "File", "Records", "Time (ms)", "Rec/sec", "µs/rec"
+        );
         println!("{}", "-".repeat(90));
     }
 
     fn print(&self) {
-        println!("{:<30} {:<15} {:<15.2} {:<15.0} {:<15.2}",
+        println!(
+            "{:<30} {:<15} {:<15.2} {:<15.0} {:<15.2}",
             self.filename,
             self.record_count,
             self.total_time_ms,
@@ -55,21 +59,23 @@ fn profile_file(filename: &str, repetitions: usize) -> ProfileResult {
     for _ in 0..repetitions {
         let cursor = Cursor::new(fixture.clone());
         let mut reader = MarcReader::new(cursor);
-        
+
         let start = Instant::now();
         let mut count = 0;
         while let Ok(Some(_record)) = reader.read_record() {
             count += 1;
         }
         let duration = start.elapsed();
-        
+
         total_duration += duration;
         total_records += count;
     }
 
     let total_ms = total_duration.as_secs_f64() * 1000.0;
+    #[allow(clippy::cast_precision_loss)]
     let total_records_f64 = total_records as f64;
     let records_per_sec = (total_records_f64 / total_duration.as_secs_f64()).round();
+    #[allow(clippy::cast_precision_loss)]
     let avg_us = (total_duration.as_micros() as f64) / total_records_f64;
 
     ProfileResult {
@@ -111,11 +117,20 @@ fn main() {
     }
 
     println!("\n=== Summary ===");
-    println!("Total records processed: {}", results.iter().map(|r| r.record_count).sum::<usize>());
-    
+    println!(
+        "Total records processed: {}",
+        results.iter().map(|r| r.record_count).sum::<usize>()
+    );
+
+    #[allow(clippy::cast_precision_loss)]
     let avg_rps = results.iter().map(|r| r.records_per_sec).sum::<f64>() / results.len() as f64;
-    println!("Average throughput: {:.0} rec/sec", avg_rps);
-    
-    let avg_us = results.iter().map(|r| r.avg_time_per_record_us).sum::<f64>() / results.len() as f64;
-    println!("Average time per record: {:.2} µs", avg_us);
+    println!("Average throughput: {avg_rps:.0} rec/sec");
+
+    #[allow(clippy::cast_precision_loss)]
+    let avg_us = results
+        .iter()
+        .map(|r| r.avg_time_per_record_us)
+        .sum::<f64>()
+        / results.len() as f64;
+    println!("Average time per record: {avg_us:.2} µs");
 }

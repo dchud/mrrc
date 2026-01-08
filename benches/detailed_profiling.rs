@@ -6,11 +6,9 @@
 //! - Field extraction overhead
 //! - Memory allocation patterns
 
-use std::time::Instant;
-use std::io::{Cursor, Read};
 use mrrc::MarcReader;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::io::Cursor;
+use std::time::Instant;
 
 fn load_fixture(filename: &str) -> Vec<u8> {
     let path = format!("tests/data/fixtures/{filename}");
@@ -19,6 +17,7 @@ fn load_fixture(filename: &str) -> Vec<u8> {
 
 /// Detailed phase breakdown
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct PhaseMetrics {
     phase_name: String,
     count: usize,
@@ -30,7 +29,11 @@ struct PhaseMetrics {
 
 impl PhaseMetrics {
     fn new(phase_name: &str, count: usize, total_ns: u128) -> Self {
-        let avg_ns = if count > 0 { total_ns / count as u128 } else { 0 };
+        let avg_ns = if count > 0 {
+            total_ns / count as u128
+        } else {
+            0
+        };
         PhaseMetrics {
             phase_name: phase_name.to_string(),
             count,
@@ -42,18 +45,17 @@ impl PhaseMetrics {
     }
 
     fn print_header() {
-        println!("{:<30} {:<12} {:<12} {:<12} {:<12}", 
-            "Phase", "Count", "Total (ns)", "Min (ns)", "Avg (ns)");
+        println!(
+            "{:<30} {:<12} {:<12} {:<12} {:<12}",
+            "Phase", "Count", "Total (ns)", "Min (ns)", "Avg (ns)"
+        );
         println!("{}", "-".repeat(78));
     }
 
     fn print(&self) {
-        println!("{:<30} {:<12} {:<12} {:<12} {:<12}",
-            self.phase_name,
-            self.count,
-            self.total_ns,
-            self.min_ns,
-            self.avg_ns
+        println!(
+            "{:<30} {:<12} {:<12} {:<12} {:<12}",
+            self.phase_name, self.count, self.total_ns, self.min_ns, self.avg_ns
         );
     }
 }
@@ -64,7 +66,6 @@ fn profile_detailed_read(filename: &str, iterations: usize) -> Vec<PhaseMetrics>
     let mut metrics = Vec::new();
 
     let mut total_read_ns = 0u128;
-    let mut total_parse_ns = 0u128;
     let mut record_count = 0;
 
     for _ in 0..iterations {
@@ -77,20 +78,26 @@ fn profile_detailed_read(filename: &str, iterations: usize) -> Vec<PhaseMetrics>
                 Ok(Some(_record)) => {
                     let elapsed = start.elapsed().as_nanos();
                     total_read_ns += elapsed;
-                    total_parse_ns += elapsed; // In this simplified version, combined
                     record_count += 1;
-                }
-                Ok(None) => break,
-                Err(_) => break,
+                },
+                Ok(None) | Err(_) => break,
             }
         }
     }
 
-    metrics.push(PhaseMetrics::new("File I/O + Parsing", record_count, total_read_ns));
+    metrics.push(PhaseMetrics::new(
+        "File I/O + Parsing",
+        record_count,
+        total_read_ns,
+    ));
     metrics.push(PhaseMetrics::new(
         "Avg per record",
         1,
-        if record_count > 0 { total_read_ns / record_count as u128 } else { 0 },
+        if record_count > 0 {
+            total_read_ns / record_count as u128
+        } else {
+            0
+        },
     ));
 
     metrics
@@ -110,38 +117,42 @@ fn estimate_cpu_intensity() -> String {
     }
     let elapsed = start.elapsed();
 
-    let throughput_rec_per_ns = count as f64 / elapsed.as_nanos() as f64;
+    #[allow(clippy::cast_precision_loss, clippy::cast_lossless)]
+    let throughput_rec_per_ns = f64::from(count) / elapsed.as_nanos() as f64;
     let cycles_per_record = 3.0 / throughput_rec_per_ns; // Assuming 3 GHz CPU
 
     format!(
-        "Est. cycles/record: {:.0} | CPU intensity: {} IPC",
-        cycles_per_record,
-        if cycles_per_record < 10.0 { "Low (memory-bound)" } else { "High (compute)" }
+        "Est. cycles/record: {cycles_per_record:.0} | CPU intensity: {} IPC",
+        if cycles_per_record < 10.0 {
+            "Low (memory-bound)"
+        } else {
+            "High (compute)"
+        }
     )
 }
 
 /// Memory usage estimation
 fn estimate_memory_usage() {
     println!("\n=== Memory Usage Estimation ===\n");
-    
+
     let fixture = load_fixture("10k_records.mrc");
     println!("Input file size: {} KB", fixture.len() / 1024);
-    
+
     // Create a sample record to estimate per-record overhead
     let cursor = Cursor::new(fixture);
     let mut reader = MarcReader::new(cursor);
-    
+
     if let Ok(Some(record)) = reader.read_record() {
         let serialized = serde_json::to_string(&record).unwrap_or_default();
         println!("Sample record JSON size: {} bytes", serialized.len());
-        
+
         // Estimate Vec overhead
         let field_count = record.fields.len();
-        println!("Fields per record (avg): {}", field_count);
-        
+        println!("Fields per record (avg): {field_count}");
+
         // Rough estimation
         let estimated_heap_per_record = 100 + (field_count * 50);
-        println!("Est. heap per record: ~{} bytes", estimated_heap_per_record);
+        println!("Est. heap per record: ~{estimated_heap_per_record} bytes");
     }
 }
 
@@ -150,7 +161,7 @@ fn main() {
 
     println!("File: 10k_records.mrc");
     let metrics = profile_detailed_read("10k_records.mrc", 3);
-    
+
     PhaseMetrics::print_header();
     for metric in metrics {
         metric.print();

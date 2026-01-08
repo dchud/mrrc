@@ -641,7 +641,7 @@ The `examples/` directory contains working code demonstrations for common tasks.
 | Format conversion | [`format_conversion.rs`](examples/format_conversion.rs) | [`format_conversion.py`](examples/format_conversion.py) |
 | **Concurrency** |
 | Parallel reading (multiple files) | [`concurrent_reading.rs`](examples/concurrent_reading.rs) (Rayon) | [`concurrent_reading.py`](examples/concurrent_reading.py) (ThreadPoolExecutor) |
-| Parallel reading (single large file) | N/A | [`concurrent_reading_producer_consumer.py`](examples/concurrent_reading_producer_consumer.py) (ProducerConsumerPipeline) |
+| Parallel reading (single large file) | N/A | [`concurrent_reading_producer_consumer.py`](examples/concurrent_reading_producer_consumer.py) (`ProducerConsumerPipeline`) |
 | Parallel writing | [`concurrent_writing.rs`](examples/concurrent_writing.rs) (Rayon) | [`concurrent_writing.py`](examples/concurrent_writing.py) (ThreadPoolExecutor) |
 | **Advanced** |
 | Authority records | [`authority_records.rs`](examples/authority_records.rs) | [`authority_records.py`](examples/authority_records.py) |
