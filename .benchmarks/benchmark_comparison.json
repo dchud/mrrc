@@ -1,0 +1,70 @@
+{
+  "title": "Benchmark Comparison: Pure Rust vs Python Wrapper",
+  "timestamp": 1767914091.454057,
+  "test_files": {
+    "simple_book": "/Users/dchud/Documents/projects/mrrc/tests/data/simple_book.mrc"
+  },
+  "benchmarks": {
+    "python_sequential": {
+      "backend": "python_sequential",
+      "test_file": "simple_book.mrc",
+      "runs": 5,
+      "times": [
+        0.00021799979731440544,
+        3.687501884996891e-05,
+        2.8792070224881172e-05,
+        2.5999965146183968e-05,
+        3.741704858839512e-05
+      ],
+      "avg_time_seconds": 6.941678002476692e-05,
+      "min_time_seconds": 2.5999965146183968e-05,
+      "max_time_seconds": 0.00021799979731440544,
+      "avg_throughput_rec_per_sec": 26324.99016296892,
+      "record_count_per_run": 1
+    },
+    "python_concurrent": {
+      "backend": "python_concurrent",
+      "test_file": "simple_book.mrc",
+      "runs": 5,
+      "times": [
+        0.0004457079339772463,
+        0.00010574981570243835,
+        0.00010658404789865017,
+        7.850001566112041e-05,
+        5.966704338788986e-05
+      ],
+      "avg_time_seconds": 0.000159241771325469,
+      "min_time_seconds": 5.966704338788986e-05,
+      "max_time_seconds": 0.0004457079339772463,
+      "avg_throughput_rec_per_sec": 10116.13833950976,
+      "record_count_per_run": 1
+    },
+    "overhead_analysis": {
+      "iteration_only": {
+        "time_seconds": 5.9042125940322876e-05,
+        "throughput_rec_per_sec": 16937.05949902202
+      },
+      "with_field_access": {
+        "time_seconds": 6.362493149936199e-05,
+        "throughput_rec_per_sec": 15717.10925944223,
+        "overhead_percent": 7.7619250425894375
+      },
+      "with_full_materialization": {
+        "time_seconds": 0.00010649999603629112,
+        "throughput_rec_per_sec": 9389.671710966433,
+        "overhead_percent": 80.37967695122721
+      }
+    }
+  },
+  "analysis": {
+    "speedup": {
+      "implementations": {
+        "python_sequential": 26324.99016296892,
+        "python_concurrent": 10116.13833950976
+      },
+      "speedup_factors": {
+        "concurrent_vs_sequential": 0.3842789029315583
+      }
+    }
+  }
+}

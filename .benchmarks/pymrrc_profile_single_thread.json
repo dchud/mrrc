@@ -1,0 +1,131 @@
+{
+  "title": "PyMRRC Single-Threaded Performance Profiling",
+  "timestamp": 1767914059.847392,
+  "test_files": {
+    "simple_book": "/Users/dchud/Documents/projects/mrrc/tests/data/simple_book.mrc",
+    "multi_records": "/Users/dchud/Documents/projects/mrrc/tests/data/multi_records.mrc"
+  },
+  "scenarios": [
+    {
+      "scenario": "simple_sequential",
+      "test_file": "simple_book.mrc",
+      "record_count": 1,
+      "elapsed_seconds": 0.0002761248033493757,
+      "throughput_rec_per_sec": 3621.5507910555866,
+      "throughput_rec_per_ms": 3.6215507910555864,
+      "profile_output": "         28 function calls in 0.000 seconds\n\n   Ordered by: cumulative time\n   List reduced from 17 to 10 due to restriction <10>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        2    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:909(__next__)\n        2    0.000    0.000    0.000    0.000 {built-in method builtins.next}\n        1    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:901(__init__)\n        1    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:601(__init__)\n        1    0.000    0.000    0.000    0.000 {built-in method _io.open}\n        2    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:459(__new__)\n        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}\n        1    0.000    0.000    0.000    0.000 {method 'leader' of 'builtins.Record' objects}\n        6    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:476(__setattr__)\n        1    0.000    0.000    0.000    0.000 {method '__exit__' of '_io._IOBase' objects}\n\n\n",
+      "memory": {
+        "peak_memory_mb": 0.0,
+        "current_memory_mb": 0.0,
+        "snapshot_count": 1
+      },
+      "top_allocations": [
+        {
+          "file": "/Users/dchud/Documents/projects/mrrc/mrrc/__init__.py",
+          "line": 903,
+          "size_mb": 0.004151344299316406,
+          "count": 4
+        },
+        {
+          "file": "/Users/dchud/Documents/projects/mrrc/scripts/profile_pymrrc_single_thread.py",
+          "line": 167,
+          "size_mb": 0.0012454986572265625,
+          "count": 22
+        },
+        {
+          "file": "/Users/dchud/Documents/projects/mrrc/scripts/profile_pymrrc_single_thread.py",
+          "line": 170,
+          "size_mb": 0.0007228851318359375,
+          "count": 9
+        },
+        {
+          "file": "/Users/dchud/Documents/projects/mrrc/mrrc/__init__.py",
+          "line": 461,
+          "size_mb": 0.0005950927734375,
+          "count": 7
+        },
+        {
+          "file": "/Users/dchud/Documents/projects/mrrc/mrrc/__init__.py",
+          "line": 911,
+          "size_mb": 0.000514984130859375,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "scenario": "object_creation",
+      "test_file": "simple_book.mrc",
+      "record_count": 1,
+      "elapsed_seconds": 0.00017337501049041748,
+      "throughput_rec_per_sec": 5767.843919209282,
+      "profile_output": "         84 function calls in 0.000 seconds\n\n   Ordered by: cumulative time\n   List reduced from 31 to 10 due to restriction <10>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:712(fields)\n        2    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:909(__next__)\n        1    0.000    0.000    0.000    0.000 {method 'fields' of 'builtins.Record' objects}\n        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}\n        2    0.000    0.000    0.000    0.000 {built-in method builtins.next}\n        1    0.000    0.000    0.000    0.000 {built-in method _io.open}\n        7    0.000    0.000    0.000    0.000 {built-in method builtins.hasattr}\n        3    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:232(subfields)\n        6    0.000    0.000    0.000    0.000 /Users/dchud/Documents/projects/mrrc/mrrc/__init__.py:265(indicators)\n        3    0.000    0.000    0.000    0.000 {method 'subfields' of 'builtins.Field' objects}\n\n\n",
+      "memory": {
+        "peak_memory_mb": 0.0,
+        "current_memory_mb": 0.0,
+        "snapshot_count": 1
+      }
+    },
+    {
+      "scenario": "gc_impact",
+      "test_file": "simple_book.mrc",
+      "record_count": 1,
+      "gc_enabled": {
+        "elapsed_seconds": 4.4125132262706757e-05,
+        "throughput_rec_per_sec": 22662.82158762321,
+        "gc_collections": [
+          6,
+          0,
+          0
+        ]
+      },
+      "gc_disabled": {
+        "elapsed_seconds": 3.641704097390175e-05,
+        "throughput_rec_per_sec": 27459.67199028195
+      },
+      "gc_overhead": {
+        "absolute_seconds": 7.708091288805008e-06,
+        "percentage": 21.166165846173516
+      }
+    },
+    {
+      "scenario": "parsing_vs_iteration",
+      "test_file": "simple_book.mrc",
+      "record_count": 1,
+      "iteration_only": {
+        "elapsed_seconds": 3.166613169014454e-05,
+        "throughput_rec_per_sec": 31579.480872026765
+      },
+      "full_parsing": {
+        "elapsed_seconds": 3.724987618625164e-05,
+        "throughput_rec_per_sec": 26845.726815303744
+      },
+      "parsing_overhead": {
+        "absolute_seconds": 5.5837444961071014e-06,
+        "percentage": 17.633175250909893
+      }
+    },
+    {
+      "scenario": "variance_analysis",
+      "test_file": "simple_book.mrc",
+      "runs": 3,
+      "times": [
+        2.9999995604157448e-05,
+        3.2125040888786316e-05,
+        2.9125018045306206e-05
+      ],
+      "throughputs": [
+        33333.33821760355,
+        31128.365048994026,
+        34334.74267533236
+      ],
+      "statistics": {
+        "avg_time_seconds": 3.0416684846083324e-05,
+        "stdev_time_seconds": 1.5428080595470041e-06,
+        "cv_time": 5.072242643647825,
+        "avg_throughput_rec_per_sec": 32932.14864730998,
+        "stdev_throughput": 1640.4051859693134,
+        "cv_throughput": 4.981166590547708
+      }
+    }
+  ]
+}
