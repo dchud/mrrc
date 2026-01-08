@@ -109,8 +109,12 @@ with open('output.mrc', 'wb') as f:
 ### ✅ Record Field Access - Dictionary-Style (Identical to pymarc)
 ```python
 # Dictionary-style access works exactly like pymarc
-field = record['245']                      # Get first 245 field
+field = record['245']                      # Get first 245 field (or None if missing)
 all_fields = record.fields_by_tag('245')   # Get all 245 fields
+
+# Missing fields return None (matching pymarc behavior)
+field = record['999']                      # Returns None if field doesn't exist
+                                           # (does NOT raise KeyError)
 
 # Check if field exists (identical to pymarc)
 if '245' in record:
@@ -126,6 +130,10 @@ field = record.get_field('245')            # Get first field
 title = field['a']                          # Get first 'a' subfield
 if 'a' in field:
     value = field['a']
+
+# Missing subfields return None (matching pymarc behavior)
+value = field['z']                          # Returns None if subfield doesn't exist
+                                            # (does NOT raise KeyError)
 
 # Get all values for a code
 all_subfields = field.get_subfields('a')   # Get list of 'a' subfield values
@@ -163,6 +171,27 @@ record.subjects()                  # Get all subjects (650 $a)
 record.publisher()                 # Get publisher (260 $b)
 record.physical_description()      # Get extent (300 $a)
 record.series()                    # Get series (490 $a)
+```
+
+### ✅ Leader Access - Property-Based and Position-Based
+```python
+# Property-based access (recommended for clarity)
+leader = record.leader()
+leader.record_status = 'c'          # Set record status
+leader.record_type = 'a'            # Set record type
+leader.bibliographic_level = 'd'    # Set bibliographic level
+
+# Position-based access (also available for pymarc compatibility)
+leader[5] = 'c'                     # Set record status at position 5
+leader[6] = 'a'                     # Set record type at position 6
+
+# Slice access to get multiple positions
+record_length = int(leader[0:5])    # Get first 5 chars (record length)
+cataloging_form = leader[18]        # Get cataloging form char at position 18
+
+# Position and property access are automatically synchronized
+leader.record_status = 'd'
+assert leader[5] == 'd'             # Position-based access reflects property change
 ```
 
 ### ✅ Reader/Writer Interface (Identical to pymarc)
