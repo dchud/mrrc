@@ -1,8 +1,8 @@
 # pymarc API Parity Plan
 
-**Status**: High Priority Gaps Resolved ✓  
+**Status**: Critical Gaps Resolved ✓  
 **Date**: 2026-01-08  
-**Last Updated**: 2026-01-08 (Gaps 1, 2, 3 completed)  
+**Last Updated**: 2026-01-08 (Gaps 1, 2, 3, 7 completed - 4 of 7 critical API gaps resolved)  
 **Objective**: Identify and implement gaps between mrrc's Python wrapper API and pymarc's public API to achieve drop-in replacement compatibility.
 
 ## Executive Summary
@@ -127,16 +127,12 @@ field.indicator2                       # Property
 record['001'].value       # For control fields
 ```
 
-**Current mrrc behavior**:
-```python
-record.control_field('001')  # Returns string directly
-```
-
-**Impact**: Users expecting `record['001'].value` will get different interface.
-
-**Fix**: Support both patterns:
-- Keep `record.control_field('001')` -> string
-- Also support `record['001']` -> Field-like object with `.value` property
+**Status**: ✅ **RESOLVED** (2026-01-08)
+- Created ControlField wrapper class with .value property
+- Record.__getitem__ detects control fields (001-009) and returns ControlField
+- Both patterns work: record['001'].value and record.control_field('001')
+- Added tests: test_control_field_dict_access, test_control_field_value_property, test_control_field_backward_compat, test_missing_control_field_returns_none
+- All tests pass (116 tests in test_pymarc_compatibility.py)
 
 ## Implementation Plan
 
@@ -193,9 +189,9 @@ def test_leader_position_access():
 ✅ Field['missing'] returns None (not KeyError) - COMPLETED  
 ✅ Record['missing'] returns None (not KeyError) - COMPLETED  
 ✅ Leader position-based access works: leader[5], leader[0:5] - COMPLETED  
-⬜ Control field access via record['001'].value works - TODO  
-✅ All existing tests pass (112 tests) - COMPLETED  
-✅ New pymarc compatibility test suite passes (77+ tests) - COMPLETED  
+✅ Control field access via record['001'].value works - COMPLETED  
+✅ All existing tests pass (116 tests) - COMPLETED  
+✅ New pymarc compatibility test suite passes (81+ tests) - COMPLETED  
 ✅ Migration guide updated with API parity documentation - COMPLETED  
 
 ## References
