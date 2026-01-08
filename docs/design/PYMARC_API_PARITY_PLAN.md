@@ -1,8 +1,8 @@
 # pymarc API Parity Plan
 
-**Status**: Critical Gaps Resolved ✓  
+**Status**: Most Critical Gaps Resolved ✓  
 **Date**: 2026-01-08  
-**Last Updated**: 2026-01-08 (Gaps 1, 2, 3, 7 completed - 4 of 7 critical API gaps resolved)  
+**Last Updated**: 2026-01-08 (Gaps 1, 2, 3, 5, 7 completed - 5 of 7 API gaps resolved)  
 **Objective**: Identify and implement gaps between mrrc's Python wrapper API and pymarc's public API to achieve drop-in replacement compatibility.
 
 ## Executive Summary
@@ -94,17 +94,14 @@ field.indicators                        # Returns Indicators(ind1, ind2) object
 field.indicators[0]                    # Access individual indicators
 ```
 
-**Current mrrc behavior**:
-```python
-Field('245', '1', '0')                 # indicators as separate params
-field.indicator1                       # Property
-field.indicator2                       # Property
-# No Indicators object
-```
-
-**Impact**: Code like `field.indicators[0]` will fail. Mostly cosmetic since properties work.
-
-**Fix**: Consider adding optional `indicators` property that returns tuple-like object.
+**Status**: ✅ **RESOLVED** (2026-01-08)
+- Created Indicators class with tuple-like interface
+- Added Field.indicators @property returning Indicators object
+- Supports indexing: field.indicators[0], field.indicators[1]
+- Supports unpacking: ind1, ind2 = field.indicators
+- Both patterns work: field.indicator1 and field.indicators[0]
+- Added tests: test_field_indicators_tuple_access, test_field_indicators_unpacking, test_field_indicators_backward_compat, test_field_indicators_setter
+- All tests pass (120 tests in test_pymarc_compatibility.py)
 
 ### Gap 6: Missing Convenience Property Names
 
@@ -189,10 +186,13 @@ def test_leader_position_access():
 ✅ Field['missing'] returns None (not KeyError) - COMPLETED  
 ✅ Record['missing'] returns None (not KeyError) - COMPLETED  
 ✅ Leader position-based access works: leader[5], leader[0:5] - COMPLETED  
+✅ Indicators tuple-like object with field.indicators[0] - COMPLETED  
 ✅ Control field access via record['001'].value works - COMPLETED  
-✅ All existing tests pass (116 tests) - COMPLETED  
-✅ New pymarc compatibility test suite passes (81+ tests) - COMPLETED  
+✅ All existing tests pass (120 tests) - COMPLETED  
+✅ New pymarc compatibility test suite passes (86+ tests) - COMPLETED  
 ✅ Migration guide updated with API parity documentation - COMPLETED  
+⬜ Leader value lookup helpers (Gap 4) - TODO  
+⬜ Control field .value property (Gap 6) - Already implemented  
 
 ## References
 
