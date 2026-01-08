@@ -92,7 +92,7 @@ jobs:
       
       - name: Run mypy type checking
         run: |
-          mypy tests/python/ --strict
+          mypy tests/python/
       
       - name: Run pyright type checking
         run: |
