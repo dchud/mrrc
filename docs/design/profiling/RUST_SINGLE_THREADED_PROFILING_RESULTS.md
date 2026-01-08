@@ -14,7 +14,7 @@ Initial profiling of pure Rust (mrrc) single-threaded performance reveals:
 - **Serialization overhead:** 255-326% (parse + JSON/XML)
 - **Memory: Predictable allocation patterns** (pending detailed analysis)
 
-No obvious bottlenecks in baseline read operations. Further investigation needed to understand why Python ProducerConsumerPipeline achieves 3.74x speedup on 4 cores vs pure Rust's 2.52x—likely not a single-threaded issue but rather a concurrency/work-stealing optimization opportunity.
+No obvious algorithmic bottlenecks in baseline read operations. Performance is consistent and efficient. Further analysis of concurrent Rust implementation (rayon) to understand work distribution patterns and identify concurrency-specific optimizations.
 
 ---
 

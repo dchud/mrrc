@@ -6,11 +6,10 @@
 ## Background
 
 Current baseline performance (from criterion.rs):
-- **Read 1k records:** ~8.5ms (125,000 rec/s)
-- **Read 10k records:** ~80.4ms (124,000 rec/s)
-- **Read 100k records:** ~816.4ms (122,500 rec/s)
+- **Read 1k records:** ~0.94ms (1,062,995 rec/s)
+- **Read 10k records:** ~9.39ms (1,064,711 rec/s)
 
-Python wrapper achieves 50% of Rust performance (67,500 rec/s), while Python's ProducerConsumerPipeline gets 3.74x speedup on 4 cores. Pure Rust concurrent gets 2.52x speedup—suggesting optimization opportunities in single-threaded I/O and parsing.
+This profiling aims to identify bottlenecks within the pure Rust single-threaded implementation to understand where performance is limited and what optimization opportunities exist in this mode.
 
 ## Profiling Targets
 
@@ -105,10 +104,10 @@ All outputs to be stored in `docs/design/profiling/`:
 
 ## Next Steps (After Profiling)
 
-Results feed into **mrrc-u33.1**: Analysis of findings and proposal for optimizations.
+Results feed into bottleneck analysis and optimization proposals (see **docs/design/OPTIMIZATION_PROPOSAL.md**).
 
-Key questions to answer:
+Key questions this profiling answers:
 1. Is I/O the bottleneck or parsing?
 2. Can we reduce allocations?
 3. Are there cache-friendly optimizations?
-4. What does Python's ProducerConsumerPipeline do better?
+4. What limits performance in this single-threaded mode?

@@ -147,107 +147,15 @@ Total waste: ~2.4 MB (6% of heap)
 
 ---
 
-## Optimization Priorities
+## Optimization Opportunities Identified
 
-### Priority 1: Tag/Indicator Encoding (Effort: Medium, Impact: 24% heap reduction)
+**Note:** Specific optimization proposals and implementation plans have been separated from profiling analysis. See **docs/design/OPTIMIZATION_PROPOSAL.md** for:
+- Detailed optimization strategies
+- Implementation roadmap
+- Risk and effort estimates
+- Success criteria
 
-**Current:** Store as String (24B header + data)  
-**Proposal:** Use compact encoding
-
-```rust
-#[repr(transparent)]
-pub struct Tag(u16);  // 2 bytes vs 27
-
-impl Tag {
-    pub fn new(s: &str) -> Self {
-        Tag(s.parse::<u16>().unwrap())
-    }
-    pub fn as_str(&self) -> String {
-        format!("{:03}", self.0)  // Convert back when needed
-    }
-}
-
-// Indicators as [u8; 2]
-pub type Indicators = [u8; 2];  // 2 bytes vs 26
-```
-
-**Savings:** 9.6 MB for 10k records  
-**Code complexity:** Low (just conversions in parsing)  
-**Performance impact:** Positive (less allocation, better cache)
-
-### Priority 2: SmallVec for Field Array (Effort: Low, Impact: 8% heap reduction)
-
-**Current:** `Vec<Field>` always heap-allocated  
-**Proposal:** `SmallVec<[Field; 20]>` with stack storage
-
-```rust
-// Before
-pub fields: Vec<Field>,
-
-// After
-pub fields: SmallVec<[Field; 20]>,  // 640 bytes on stack for typical records
-```
-
-**Savings:** 3.2 MB for 10k records  
-**Code complexity:** Very low (drop-in replacement)  
-**Performance impact:** Very positive (stack faster than heap)
-
-### Priority 3: Arena Allocation for Subfield Data (Effort: High, Impact: 6% heap reduction)
-
-**Current:** Each subfield allocates separate String  
-**Proposal:** Arena-allocate all subfield strings per batch
-
-```rust
-// Batch process with arena
-let arena = Arena::new();
-for record in records {
-    for field in record.fields {
-        for subfield in field.subfields {
-            subfield.data = arena.alloc(data);  // Single allocation
-        }
-    }
-}
-```
-
-**Savings:** 2.4 MB for 10k records  
-**Code complexity:** High (requires lifetime management)  
-**Performance impact:** Positive for batch processing, neutral for single records
-
-### Priority 4: Interning Repeated Strings (Effort: Medium, Impact: 3% heap reduction)
-
-**Current:** Common tags/indicators allocated per record  
-**Proposal:** Intern frequently-used values
-
-```rust
-lazy_static::lazy_static! {
-    static ref TAG_POOL: StringPool = StringPool::with_defaults([
-        "020", "100", "245", "260", "300", ...
-    ]);
-}
-
-// Use interned strings
-let tag = TAG_POOL.intern(tag_str);  // Returns &'static str
-```
-
-**Savings:** 1 MB for 10k records  
-**Code complexity:** Medium  
-**Performance impact:** Positive (less allocation)
-
----
-
-## Recommended Implementation Plan
-
-### Phase 1 (Immediate): Easy Wins
-1. **SmallVec for field array** (Priority 2) - 15 min implementation, 8% savings
-2. **Tag/Indicator compact encoding** (Priority 1) - 1 hour implementation, 24% savings
-
-### Phase 2 (Short-term): Medium Effort
-3. **String capacity optimization** - Investigate Box<str> instead of String
-4. **Lazy evaluation for serialization** - Only allocate JSON/XML on demand
-
-### Phase 3 (Long-term): Major Refactor
-5. **Arena allocation for batches** (Priority 3) - 2-4 hours, 6% savings
-6. **String interning pool** (Priority 4) - 1-2 hours, 3% savings
+This profiling document focuses on **what limits performance in the current implementation**. Optimization decisions should be made based on these findings plus strategic considerations.
 
 ---
 
@@ -282,12 +190,11 @@ More significant for concurrent workloads:
 
 ---
 
-## Next Steps
+## Conclusions
 
-1. **Create mrrc-u33.1 analysis document** - Synthesize all findings (single + concurrent)
-2. **Profile concurrent Rust (mrrc-u33.3)** - Compare rayon to Python ProducerConsumerPipeline
-3. **Implement Phase 1 optimizations** - SmallVec and compact tag encoding
-4. **Measure improvements** - Run benchmarks before/after
+This within-mode profiling has identified the primary bottleneck for pure Rust single-threaded implementation: **memory allocation overhead** (73% of heap is metadata).
+
+For optimization recommendations based on these findings, see **docs/design/OPTIMIZATION_PROPOSAL.md**.
 
 ---
 

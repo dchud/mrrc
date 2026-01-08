@@ -1,350 +1,229 @@
-# Pure Rust Performance Optimization Proposal
+# Performance Optimization Proposal
 
-**Issue:** mrrc-u33.1  
-**Status:** Ready for Implementation  
-**Date:** 2026-01-08  
+**Status:** Proposed  
+**Based on:** Profiling results in docs/design/profiling/  
+**Related issues:** mrrc-u33 (epic), mrrc-u33.1, mrrc-u33.2, mrrc-u33.3
 
 ## Executive Summary
 
-Comprehensive profiling of pure Rust (mrrc) single-threaded and memory characteristics reveals:
+Based on comprehensive profiling across all implementation modes, several optimization opportunities have been identified:
 
-1. **Single-threaded performance is excellent** (~1M rec/s, no bottlenecks)
-2. **Memory allocation is the key optimization opportunity** (41% reduction possible)
-3. **Concurrency gap likely due to work distribution**, not baseline performance
-4. **Recommended:** Implement 2 quick wins (SmallVec, compact tags) → +6% performance, -32% memory
+1. **Rust Memory Efficiency (High ROI, Easy, 3 hours)**
+   - Current: 39.4 MB heap for 10k records with 73% metadata overhead
+   - Opportunity: -32% memory via SmallVec + compact tag encoding
+   - Performance gain: +6%
 
----
+2. **Rust Concurrency Work Distribution (High ROI, Medium effort, 4-6 hours)**
+   - Current: Rayon achieves 2.52x speedup on 4 cores (63% efficiency)
+   - Gap: Python ProducerConsumerPipeline achieves 3.74x (93.5% efficiency)
+   - Opportunity: Batch processing + producer-consumer pattern
+   - Performance gain: +10-15% on multi-core
 
-## Problem Statement
+3. **Python GIL and FFI Overhead (Medium ROI, Medium effort)**
+   - Current: GIL adds ~14% overhead, FFI boundary crossing ~30% cost
+   - Opportunity: Batch operations, reduce per-record FFI calls, lazy evaluation
+   - Performance gain: +5-15%
 
-The pure Rust concurrent implementation (rayon) achieves 2.52x speedup on 4 cores, while Python's ProducerConsumerPipeline achieves 3.74x—a 48% performance gap. Analysis suggests this is not a single-threaded bottleneck but rather a work-distribution/concurrency issue.
+## Context: Profiling Findings
 
-### Current Performance Metrics
+### Pure Rust Single-Threaded
+- **Throughput:** 1.06M rec/s (excellent)
+- **Latency:** 0.94 µs/record
+- **Bottleneck:** Memory allocation (73% overhead)
+- **CPU:** Compute-bound, 3,340 cycles/record
+- **No algorithmic bottlenecks found**
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| Single-threaded read throughput | ~1.06M rec/s | ✓ Excellent |
-| Per-record latency | ~0.94 µs | ✓ Excellent |
-| 4-core speedup (rayon) | 2.52x | ⚠️ Below potential |
-| 4-core speedup (Python) | 3.74x | ✓ Reference |
-| Memory per 10k records | 39.4 MB | ⚠️ Improvable |
+### Python Wrapper Single-Threaded
+- **Throughput:** ~32k rec/s (baseline iteration)
+- **Bottleneck:** FFI boundary crossing (~30%), field materialization (~22%)
+- **GC Impact:** ~14% throughput loss
+- **Opportunity:** Batch operations to amortize FFI cost
 
----
+### Concurrency Comparison
+- **Rust (rayon):** 2.52x speedup on 4 cores = 63% efficiency
+- **Python (ProducerConsumerPipeline):** 3.74x speedup on 4 cores = 93.5% efficiency
+- **Gap:** Better work distribution in Python, not faster parsing
 
-## Root Cause Analysis
+## Proposed Optimizations
 
-### Single-Threaded Bottlenecks (NONE FOUND)
+### Phase 1: Rust Memory Efficiency (Recommended)
 
-**Profiling Results:**
-- No cache thrashing detected (CPU-bound, not memory-bound)
-- Field access overhead minimal (2-5%)
-- Parsing overhead excellent (1 µs/record)
-- No obvious hot functions
+**Target:** Reduce memory allocation overhead in pure Rust
 
-**Conclusion:** Single-threaded implementation is optimal for algorithm and data structure.
+**Changes:**
+1. Replace `Vec<Field>` with `SmallVec<[Field; 20]>`
+   - Typical records have ~20 fields
+   - Eliminates heap allocation for common case
+   - Expected impact: +2-3% performance, -8% memory
 
-### Identified Optimization Opportunities
+2. Encode tags as `u16` instead of `String`
+   - Tags are always 3-digit numbers (000-999)
+   - Replace 27-byte String with 2-byte u16
+   - Expected impact: +1-2% performance, -24% memory
 
-#### 1. Memory Allocation Inefficiency (41% reduction possible)
+3. Encode indicators as `[u8; 2]` instead of `String`
+   - Indicators are always 2 ASCII characters
+   - Replace 26-byte String with 2-byte array
+   - Expected impact: Minimal performance, -3% memory
 
-**Root causes:**
-- String headers (24 bytes each) for fixed-size data (tags, indicators)
-- Vec capacity overhead (1.5x growth factor leaves 33% unused)
-- Per-String allocations for high-cardinality data
+**Metrics:**
+- Before: 1.06M rec/s, 39.4 MB heap (10k records)
+- After: 1.12M rec/s, 26.8 MB heap (10k records)
+- Overall: +6% performance, -32% memory
+- Backward compatibility: ✓ (internal only, no API changes)
 
-**Impact metrics:**
-- Allocation hotspots: 910K allocations for 10K records
-- Memory per record: 10 KB (subfield data only ~2.6 KB)
-- Overhead: 73% of heap is allocation metadata
-
-**Quick wins:**
-- SmallVec for field array: 8% reduction, very low effort
-- Compact tag/indicator encoding: 24% reduction, medium effort
-
-#### 2. Concurrency Work Distribution (Estimated 15-20% improvement possible)
-
-**Root cause:** Rayon's default task granularity may not be optimal for MARC parsing
-
-**Evidence:**
-- Python ProducerConsumerPipeline: 3.74x on 4 cores (93.5% efficiency)
-- Rayon implementation: 2.52x on 4 cores (63% efficiency)
-- Gap: 30.5% efficiency difference suggests work-stealing imbalance
-
-**Hypothesis:** 
-- Producer-consumer decouples I/O from parsing, allowing better buffering
-- Rayon's per-record task spawning may have overhead
-- Work distribution may be unbalanced (some threads idle)
-
-**Potential fixes:**
-- Batch processing: Process N records per task (not 1)
-- Custom channels: Pre-buffer records for workers
-- Rayon pool tuning: Adjust thread pool size and task granularity
+**Implementation time:** ~3 hours
 
 ---
 
-## Recommended Optimization Strategy
+### Phase 2: Rust Concurrency - Producer-Consumer Pattern
 
-### Phase 1: Quick Wins (Effort: 3 hours, Impact: +6% perf, -32% memory)
+**Target:** Improve work distribution and achieve Python's efficiency
 
-#### 1a. SmallVec for Field Array
+**Problem:** Current rayon implementation processes records individually, leading to work starvation and context switching overhead.
 
-**Change:** `Vec<Field>` → `SmallVec<[Field; 20]>`
+**Solution:** Batch processing + producer-consumer pattern
+1. Producer thread reads and buffers batches of records (e.g., 1000 at a time)
+2. Consumer threads (via rayon) process batches in parallel
+3. Bounded channel prevents unbounded buffering
 
-**Rationale:**
-- Typical records have ~20 fields (fits on stack)
-- Eliminates heap allocation for common case
-- Zero-cost abstraction (drop-in replacement)
+**Expected Improvements:**
+- Reduce task scheduling overhead (fewer smaller tasks)
+- Better CPU cache utilization (batch processing)
+- Prevent consumer starvation (predictable buffering)
+- Expected: 2.52x → 3.2x+ speedup on 4 cores
 
-**Expected improvement:**
-- Memory: -3.2 MB (8% for 10k records)
-- Performance: +2-3% (better cache locality)
+**Implementation time:** 4-6 hours
 
-**Implementation:**
-```rust
-// src/record.rs
-use smallvec::SmallVec;
-
-pub struct MarcRecord {
-    fields: SmallVec<[Field; 20]>,  // Stack-backed for typical records
-    // ...
-}
-```
-
-**Effort:** 15 minutes (cargo add smallvec, replace Vec)
-
-#### 1b. Compact Tag/Indicator Encoding
-
-**Change:** String tags/indicators → u16 tags + [u8; 2] indicators
-
-**Rationale:**
-- Tags are always 3-digit numbers (001-999)
-- Indicators are always 2 characters (ASCII)
-- Fix the encoding, eliminate String overhead
-
-**Expected improvement:**
-- Memory: -9.6 MB (24% for 10k records)
-- Performance: +1-2% (fewer allocations)
-
-**Implementation:**
-```rust
-// src/tag.rs
-#[repr(transparent)]
-pub struct Tag(u16);
-
-impl Tag {
-    pub fn new(s: &str) -> Result<Self, ParseError> {
-        let num = s.parse::<u16>()?;
-        if num > 999 { return Err(ParseError); }
-        Ok(Tag(num))
-    }
-    
-    pub fn as_str(&self) -> String {
-        format!("{:03}", self.0)
-    }
-}
-
-// In Field:
-pub tag: Tag,                    // 2 bytes vs 27
-pub indicators: [u8; 2],        // 2 bytes vs 26
-```
-
-**Effort:** 1 hour (parsing changes, API updates)
-
-### Phase 2: Concurrency Optimization (Effort: 4-6 hours, Impact: +10-15% perf)
-
-#### 2a. Batch Processing for Rayon
-
-**Change:** Process records in batches, not individual records
-
-**Rationale:**
-- Reduces task scheduling overhead
-- Better work distribution (larger chunks per worker)
-- Similar to Python's producer-consumer buffering
-
-**Implementation sketch:**
-```rust
-pub fn read_parallel_batched<P: AsRef<Path>>(path: P) -> Vec<MarcRecord> {
-    let reader = MarcReader::new(BufReader::new(File::open(path)?));
-    
-    reader
-        .by_batch(100)  // Process 100 records per task
-        .par_bridge()
-        .flat_map(|batch| batch)
-        .collect()
-}
-```
-
-**Effort:** 2-3 hours (batch iterator, par_bridge setup)
-
-#### 2b. ProducerConsumer Pattern for Parallel Reading
-
-**Change:** Implement bounded-channel producer-consumer pattern
-
-**Rationale:**
-- Producer thread reads ahead (I/O-bound)
-- Consumer threads parse (CPU-bound)
-- Decoupling allows better scheduling
-
-**Implementation sketch:**
-```rust
-pub fn read_parallel_producer_consumer<P: AsRef<Path>>(
-    path: P,
-    batch_size: usize,
-    num_workers: usize,
-) -> Vec<MarcRecord> {
-    let (tx, rx) = crossbeam_channel::bounded(batch_size * 2);
-    
-    let producer = std::thread::spawn(move || {
-        // Read and batch records into channel
-        for batch in reader.by_batch(batch_size) {
-            tx.send(batch).ok();
-        }
-    });
-    
-    let results: Vec<_> = rx
-        .into_iter()
-        .par_bridge()  // Rayon processes in parallel
-        .flat_map(|batch| batch)
-        .collect();
-    
-    producer.join().ok();
-    results
-}
-```
-
-**Effort:** 3-4 hours (channel setup, thread management, testing)
-
-### Phase 3: Advanced Optimizations (Effort: 6-8 hours, Impact: +2-5% perf)
-
-#### 3a. Arena Allocation for Subfield Data
-
-**Benefit:** Reduce string allocation overhead for subfield data  
-**Effort:** High (lifetime management)  
-**Impact:** +2-3% performance, -6% memory
-
-#### 3b. String Interning Pool
-
-**Benefit:** Deduplicate frequently-used tag/indicator strings  
-**Effort:** Medium (lazy_static setup)  
-**Impact:** +1% performance, -3% memory
+**Note:** Python's ProducerConsumerPipeline already implements this pattern. Rust can benefit from similar approach.
 
 ---
 
-## Implementation Timeline
+### Phase 3: Python Wrapper - FFI and GIL Optimization
 
-### Week 1: Quick Wins
-- [ ] Implement SmallVec (15 min)
-- [ ] Implement compact tags (1 hour)
-- [ ] Test and benchmark (+3-6% improvement)
-- [ ] Update documentation
+**Target:** Reduce FFI boundary crossing and GIL contention
 
-### Week 2: Concurrency
-- [ ] Implement batch processing for rayon (2-3 hours)
-- [ ] Benchmark against Python baseline
-- [ ] Profile with detailed instrumentation
-- [ ] Fine-tune batch size and worker count
+**Opportunities:**
+1. Batch operations
+   - Return multiple records per FFI call
+   - Reduce call frequency by 10-100x
+   - Expected impact: +20-30% speedup
 
-### Week 3: Optional Advanced
-- [ ] Arena allocation (if time permits)
-- [ ] Final performance report
+2. Lazy field evaluation
+   - Store raw field data in Record
+   - Parse fields on-demand
+   - Expected impact: +5-10% speedup
+
+3. Object pooling / arena allocation
+   - Pre-allocate Field objects
+   - Reuse across iterations
+   - Expected impact: +5-8% speedup (GC reduction)
+
+4. Cache field lookups
+   - GIL release during field access
+   - Cache results to reduce FFI calls
+   - Expected impact: +2-5% speedup
+
+**Implementation time:** 6-10 hours (depending on scope)
+
+---
+
+### Phase 4: Advanced Optimizations (Low Priority)
+
+**Rust Single-Threaded (Low ROI, already ~1.06M rec/s):**
+- Arena allocation for subfield data
+- String interning for repeated values
+- SIMD vectorization for record boundary detection
+
+**Python (Lower priority, focus on batching first):**
+- Native extension module for hot paths
+- Direct memory access for field parsing
+- GIL-free batching via custom locks
+
+---
+
+## Decision Matrix
+
+| Optimization | Effort | ROI | Risk | Priority |
+|--------------|--------|-----|------|----------|
+| SmallVec + Compact Tags | Low | High | Low | **1 - Implement immediately** |
+| Producer-Consumer (Rust) | Medium | High | Medium | **2 - Implement after profiling complete** |
+| FFI Batching (Python) | Medium | High | Medium | **3 - Implement after Rust phase 2** |
+| Lazy Field Eval (Python) | Medium | Medium | Low | 4 - Consider after #3 |
+| Object Pooling (Python) | Low | Medium | Low | 4 - Consider after #3 |
+| Advanced Optimizations | High | Low | High | 5 - Backlog |
+
+---
+
+## Implementation Roadmap
+
+### Week 1: Phase 1 (Rust Memory)
+- Implement SmallVec integration
+- Encode tags as u16
+- Encode indicators as [u8; 2]
+- Benchmark and verify +6% improvement
+- Estimated: 3 hours
+
+### Week 2: Complete Profiling
+- Finish profiling of remaining modes (mrrc-u33.1, u33.3)
+- Validate phase 1 improvement
+- Prepare for phase 2 (producer-consumer)
+
+### Week 3: Phase 2 (Rust Concurrency)
+- Implement batching in Rust concurrent path
+- Add bounded channel for producer-consumer
+- Benchmark and target 3.2x+ speedup
+- Estimated: 4-6 hours
+
+### Week 4+: Phase 3 (Python Optimization)
+- Implement FFI batching
+- Add lazy field evaluation if beneficial
+- Benchmark Python improvements
 
 ---
 
 ## Success Criteria
 
-### Performance Targets
-
-| Metric | Current | Target | Priority |
-|--------|---------|--------|----------|
-| Single-threaded throughput | 1.06M | 1.12M | High |
-| 4-core speedup | 2.52x | 3.2x+ | High |
-| Memory per 10k records | 39.4 MB | 23.2 MB | Medium |
-| GC pressure (allocations/sec) | 91k | 50k | Low |
-
-### Implementation Quality
-
-- [ ] All changes backward compatible
-- [ ] Benchmark suite shows improvements
-- [ ] Memory profiling confirms 30%+ reduction
-- [ ] Python wrapper still achieves parity
-- [ ] Documentation updated
+- [ ] Phase 1: +6% performance, -32% memory, zero API changes
+- [ ] Phase 2: 2.52x → 3.2x+ speedup on 4 cores, 93%+ efficiency
+- [ ] Phase 3: +20-30% speedup for batched Python operations
+- [ ] All optimizations verified via profiling
+- [ ] No performance regressions in other modes
+- [ ] Updated benchmarks in CI
 
 ---
 
-## Risk Assessment
+## Risks and Mitigation
 
-### Low Risk
-- SmallVec: Widely used, well-tested, zero-cost abstraction
-- Compact tags: Isolated change, easy to revert
-
-### Medium Risk
-- Batch processing: Requires careful synchronization testing
-- Producer-consumer: Thread safety requires careful review
-
-### Mitigation
-- Add comprehensive benchmarks before/after
-- Run full test suite after each change
-- Use CI for continuous verification
-- Keep changes modular and reversible
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|-----------|
+| SmallVec increases code complexity | Low | Low | Use well-tested crate, add unit tests |
+| Batching changes user-visible API | Low | High | Keep API unchanged, batch internally only |
+| Concurrency introduces race conditions | Medium | High | Careful synchronization testing, add thread tests |
+| Python batching reduces responsiveness | Low | Medium | Make batch size tunable, measure latency |
 
 ---
 
 ## References
 
-### Profiling Reports
-- [Phase 1: Single-threaded baseline](./profiling/RUST_SINGLE_THREADED_PROFILING_RESULTS.md)
-- [Phase 2: Memory analysis](./profiling/PHASE_2_DETAILED_ANALYSIS.md)
-- [Profiling methodology](./profiling/PROFILING_PLAN.md)
-
-### Benchmark Data
-- docs/benchmarks/RESULTS.md
-- docs/PERFORMANCE.md
-
-### Related Issues
-- **mrrc-u33.2**: Complete ✓ (single-threaded profiling)
-- **mrrc-u33.3**: Pending (concurrent Rust profiling)
-- **mrrc-u33.4-5**: Pending (Python wrapper profiling)
+- Profiling results: `docs/design/profiling/`
+- Rust profiling: `docs/design/profiling/pure_rust_*_profile.md`
+- Python profiling: `docs/design/profiling/pymrrc_*_profile.md`
+- Related issues: mrrc-u33, mrrc-u33.1, mrrc-u33.2, mrrc-u33.3, mrrc-u33.4, mrrc-u33.5
 
 ---
 
-## Next Steps
+## Questions & Discussion
 
-1. **Approval:** Review and approve optimization proposal
-2. **Implementation:** Create mrrc-u33.2.4 for Phase 1 implementation
-3. **Testing:** Run benchmarks and confirm improvements
-4. **Concurrent work:** Start mrrc-u33.3 (concurrent profiling) in parallel
-5. **Phase 2:** Implement concurrency optimizations based on mrrc-u33.3 findings
+**Q: Should we implement all phases?**  
+A: Start with Phase 1 (easy win), validate results, then proceed based on impact.
 
----
+**Q: Will Phase 1 break backward compatibility?**  
+A: No - SmallVec is a drop-in Vec replacement, tag/indicator encoding is internal.
 
-## Appendix: Detailed Findings
+**Q: How much total improvement is possible?**  
+A: Rust: +6% (P1) + 10-15% (P2) = +16-21% total  
+   Python: +20-30% (batching) + 5-10% (lazy eval) = +25-40% total
 
-### A. CPU Intensity
-
-- **Compute-bound workload:** High (3,340 cycles/record at 3 GHz)
-- **Cache efficiency:** Good (L1/L2 cache pressure within normal range)
-- **Instruction-level parallelism:** HIGH
-- **Implication:** Should scale well to multi-core with work distribution fixes
-
-### B. Memory Inefficiencies
-
-**Top 3 opportunities:**
-1. String headers (24B each) for fixed-size data: 24% reduction
-2. Vec capacity overhead (1.5x growth): 8% reduction
-3. String capacity buffering (125% allocated): 6% reduction
-
-### C. Concurrency Analysis
-
-**Python ProducerConsumerPipeline advantages:**
-1. I/O and parsing are decoupled
-2. Producer can prefetch while consumers work
-3. Buffering prevents consumer starvation
-4. Simpler synchronization (bounded channel)
-
-**Pure Rust rayon disadvantages:**
-1. Per-record task spawning (high overhead)
-2. No prefetching/buffering between I/O and parsing
-3. Work-stealing adds complexity
-4. May have load imbalance issues
-
-**Solution:** Adopt buffering + batching approach in pure Rust
+**Q: When should we start?**  
+A: Phase 1 immediately (3 hours, low risk). Phase 2 after completing all profiling (understand full picture first).

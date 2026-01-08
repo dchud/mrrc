@@ -4,6 +4,8 @@ This directory contains performance profiling analyses for MRRC implementations.
 
 **Key principle:** Profiles are within-mode analyses. We profile each implementation to understand where it spends time and what could be improved within that approach. Profiles are not comparative - we don't use profiling results to justify one mode over another.
 
+**Status:** Refactoring in progress (mrrc-dpk) to ensure all documents align with within-mode scope. See [REFACTORING_NOTES.md](./REFACTORING_NOTES.md) for details.
+
 ## Implementation Modes
 
 MRRC has several implementation modes, each with its own performance characteristics:
