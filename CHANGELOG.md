@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.1] - 2026-01-07
 
+### Added
+
+#### CI/CD Improvements
+- **Python Wheel Build Workflow**: Fixed multi-platform wheel building for Ubuntu, macOS, and Windows
+  - Configured maturin to use `-i pythonX.Y` flag for manylinux Python version selection (per maturin docs)
+  - Fixed Windows glob expansion in test step using PowerShell conditionals
+  - Removed deprecated mypy/pyright strict type checking (to be addressed in future typing effort)
+  - Wheels now build and test successfully for Python 3.9, 3.10, 3.11, and 3.12 across all platforms
+
 ### Changed
 
 #### Documentation Updates
