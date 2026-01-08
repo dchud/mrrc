@@ -43,7 +43,7 @@ jobs:
           manylinux: auto
           args: --release --out dist
         env:
-          PYO3_PYTHON: ${{ runner.os != 'Linux' && env.pythonLocation || '' }}/bin/python${{ runner.os != 'Linux' && '' || matrix.python-version }}
+          PYO3_PYTHON: ${{ runner.os == 'macOS' && format('{0}/bin/python', env.pythonLocation) || '' }}
       
       - name: Upload wheels
         uses: actions/upload-artifact@v4
