@@ -374,6 +374,82 @@ class Leader:
          'u': 'Unknown',
      }
      
+     @classmethod
+     def get_valid_values(cls, position: int) -> Optional[dict]:
+         """Get dictionary of valid values for a leader position.
+         
+         MARC 21 positions with defined valid values:
+         - 5: Record status (RECORD_STATUS_VALUES)
+         - 6: Type of record (RECORD_TYPE_VALUES)
+         - 7: Bibliographic level (BIBLIOGRAPHIC_LEVEL_VALUES)
+         - 17: Encoding level (ENCODING_LEVEL_VALUES)
+         - 18: Cataloging form (CATALOGING_FORM_VALUES)
+         
+         Args:
+             position: Leader position (0-23)
+             
+         Returns:
+             Dictionary mapping values to descriptions, or None if position has no defined values
+             
+         Example:
+             >>> Leader.get_valid_values(5)
+             {'a': 'Increase in encoding level', 'c': 'Corrected or revised', ...}
+             >>> Leader.get_valid_values(0)  # Record length has no fixed values
+             None
+         """
+         position_map = {
+             5: cls.RECORD_STATUS_VALUES,
+             6: cls.RECORD_TYPE_VALUES,
+             7: cls.BIBLIOGRAPHIC_LEVEL_VALUES,
+             17: cls.ENCODING_LEVEL_VALUES,
+             18: cls.CATALOGING_FORM_VALUES,
+         }
+         return position_map.get(position)
+     
+     @classmethod
+     def is_valid_value(cls, position: int, value: str) -> bool:
+         """Check if a value is valid for a leader position.
+         
+         Args:
+             position: Leader position (0-23)
+             value: Single character value to validate
+             
+         Returns:
+             True if value is valid for this position, False otherwise
+             
+         Example:
+             >>> Leader.is_valid_value(5, 'a')  # Record status
+             True
+             >>> Leader.is_valid_value(5, 'x')  # Invalid
+             False
+         """
+         valid_values = cls.get_valid_values(position)
+         if valid_values is None:
+             return True  # Position without defined values accepts any single char
+         return value in valid_values
+     
+     @classmethod
+     def get_value_description(cls, position: int, value: str) -> Optional[str]:
+         """Get description of a leader value.
+         
+         Args:
+             position: Leader position (0-23)
+             value: Single character value
+             
+         Returns:
+             Description string if value is defined, None otherwise
+             
+         Example:
+             >>> Leader.get_value_description(5, 'a')
+             'Increase in encoding level'
+             >>> Leader.get_value_description(5, 'x')  # Invalid
+             None
+         """
+         valid_values = cls.get_valid_values(position)
+         if valid_values is None:
+             return None
+         return valid_values.get(value)
+     
      def __init__(self):
          """Create a new Leader."""
          # Just use the Rust Leader directly, but add aliases

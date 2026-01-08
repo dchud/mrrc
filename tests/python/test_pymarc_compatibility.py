@@ -786,6 +786,84 @@ class TestLeader:
         leader[6] = 'a'
         assert leader.record_type == 'a'
 
+    def test_leader_get_valid_values(self):
+        """Test getting valid values for leader positions."""
+        # Position 5: Record status
+        values = Leader.get_valid_values(5)
+        assert values is not None
+        assert 'a' in values
+        assert 'c' in values
+        assert 'd' in values
+        assert 'n' in values
+        assert 'p' in values
+        
+        # Position 6: Type of record
+        values = Leader.get_valid_values(6)
+        assert values is not None
+        assert 'a' in values
+        assert 'm' in values
+        
+        # Position 7: Bibliographic level
+        values = Leader.get_valid_values(7)
+        assert values is not None
+        assert 'm' in values
+        assert 's' in values
+        
+        # Position 17: Encoding level
+        values = Leader.get_valid_values(17)
+        assert values is not None
+        assert ' ' in values
+        assert '1' in values
+        
+        # Position 18: Cataloging form
+        values = Leader.get_valid_values(18)
+        assert values is not None
+        assert 'a' in values
+        
+        # Position 0: No defined values
+        values = Leader.get_valid_values(0)
+        assert values is None
+
+    def test_leader_is_valid_value(self):
+        """Test validating values for leader positions."""
+        # Position 5: Record status
+        assert Leader.is_valid_value(5, 'a') is True
+        assert Leader.is_valid_value(5, 'c') is True
+        assert Leader.is_valid_value(5, 'x') is False
+        
+        # Position 6: Type of record
+        assert Leader.is_valid_value(6, 'a') is True
+        assert Leader.is_valid_value(6, 'm') is True
+        assert Leader.is_valid_value(6, 'z') is False
+        
+        # Position 0: No validation (any value accepted)
+        assert Leader.is_valid_value(0, '0') is True
+        assert Leader.is_valid_value(0, 'x') is True
+
+    def test_leader_get_value_description(self):
+        """Test getting descriptions of leader values."""
+        # Position 5: Record status
+        desc = Leader.get_value_description(5, 'a')
+        assert desc is not None
+        assert 'Increase in encoding level' in desc
+        
+        desc = Leader.get_value_description(5, 'c')
+        assert desc is not None
+        assert 'Corrected or revised' in desc
+        
+        # Invalid value
+        desc = Leader.get_value_description(5, 'x')
+        assert desc is None
+        
+        # Position 6: Type of record
+        desc = Leader.get_value_description(6, 'a')
+        assert desc is not None
+        assert 'Language material' in desc
+        
+        # Position 0: No descriptions
+        desc = Leader.get_value_description(0, '5')
+        assert desc is None
+
 
 class TestEncoding:
     """Test encoding handling (from pymarc test_utf8.py, test_marc8.py)."""
