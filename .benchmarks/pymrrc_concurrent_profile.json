@@ -1,18 +1,80 @@
 {
   "title": "PyMRRC Concurrent Performance Profile",
   "objective": "Identify bottlenecks in ProducerConsumerPipeline concurrent mode",
-  "timestamp": 1767915090.800288,
+  "timestamp": 1767915495.198306,
   "test_files": {
     "simple_book": "/Users/dchud/Documents/projects/mrrc/tests/data/simple_book.mrc"
   },
   "scenarios": [
     {
-      "error": "cannot create 'builtins.ProducerConsumerPipeline' instances"
+      "scenario": "basic_concurrent",
+      "test_file": "simple_book.mrc",
+      "num_consumer_threads": 4,
+      "record_count": 1,
+      "elapsed_seconds": 0.0005583751481026411,
+      "throughput_rec_per_sec": 1790.9106510166152,
+      "throughput_rec_per_ms": 1.7909106510166153,
+      "memory": {
+        "peak_memory_mb": 0.0,
+        "current_memory_mb": 0.0,
+        "snapshot_count": 1
+      },
+      "top_allocations": [
+        {
+          "file": "/Users/dchud/Documents/projects/mrrc/scripts/profile_pymrrc_concurrent.py",
+          "line": 172,
+          "size_mb": 0.0001373291015625,
+          "count": 1
+        },
+        {
+          "file": "/Users/dchud/Documents/projects/mrrc/scripts/profile_pymrrc_concurrent.py",
+          "line": 170,
+          "size_mb": 6.103515625e-05,
+          "count": 1
+        },
+        {
+          "file": "/Users/dchud/Documents/projects/mrrc/scripts/profile_pymrrc_concurrent.py",
+          "line": 59,
+          "size_mb": 3.0517578125e-05,
+          "count": 1
+        }
+      ],
+      "thread_activity": {
+        "sample_count": 2,
+        "avg_active_threads": 1,
+        "max_active_threads": 1,
+        "min_active_threads": 1
+      }
     },
     {
       "scenario": "thread_count_sensitivity",
       "test_file": "simple_book.mrc",
-      "results": {}
+      "results": {
+        "1": {
+          "elapsed_seconds": 0.000139209209010005,
+          "throughput_rec_per_sec": 7183.432813903351,
+          "record_count": 1,
+          "speedup_vs_1thread": 1.0
+        },
+        "2": {
+          "elapsed_seconds": 7.141707465052605e-05,
+          "throughput_rec_per_sec": 14002.253731245966,
+          "record_count": 1,
+          "speedup_vs_1thread": 1.949242666284142
+        },
+        "4": {
+          "elapsed_seconds": 5.9416983276605606e-05,
+          "throughput_rec_per_sec": 16830.204848076366,
+          "record_count": 1,
+          "speedup_vs_1thread": 2.342919504377062
+        },
+        "8": {
+          "elapsed_seconds": 5.866587162017822e-05,
+          "throughput_rec_per_sec": 17045.685547371093,
+          "record_count": 1,
+          "speedup_vs_1thread": 2.372916402082804
+        }
+      }
     },
     {
       "scenario": "channel_efficiency",
@@ -23,20 +85,92 @@
         100,
         1000
       ],
-      "results": {}
+      "results": {
+        "1": {
+          "elapsed_seconds": 0.00016287504695355892,
+          "throughput_rec_per_sec": 6139.675896978456,
+          "record_count": 1
+        },
+        "10": {
+          "elapsed_seconds": 6.945803761482239e-05,
+          "throughput_rec_per_sec": 14397.181871815501,
+          "record_count": 1
+        },
+        "100": {
+          "elapsed_seconds": 5.216686986386776e-05,
+          "throughput_rec_per_sec": 19169.25440628417,
+          "record_count": 1
+        },
+        "1000": {
+          "elapsed_seconds": 5.39170578122139e-05,
+          "throughput_rec_per_sec": 18547.00609745565,
+          "record_count": 1
+        }
+      }
     },
     {
-      "error": "cannot create 'builtins.ProducerConsumerPipeline' instances"
+      "scenario": "producer_efficiency",
+      "test_file": "simple_book.mrc",
+      "num_consumer_threads": 4,
+      "record_count": 1,
+      "total_elapsed_seconds": 5.7958997786045074e-05,
+      "time_to_first_record_seconds": 5.566701292991638e-05,
+      "throughput_rec_per_sec": 17253.576462648434,
+      "memory": {
+        "peak_memory_mb": 0.0,
+        "current_memory_mb": 0.0,
+        "snapshot_count": 1
+      }
     },
     {
-      "error": "cannot create 'builtins.ProducerConsumerPipeline' instances"
+      "scenario": "gc_impact_concurrent",
+      "test_file": "simple_book.mrc",
+      "num_consumer_threads": 4,
+      "gc_enabled": {
+        "elapsed_seconds": 5.483301356434822e-05,
+        "throughput_rec_per_sec": 18237.188419827944,
+        "gc_collections": [
+          0,
+          0,
+          0
+        ]
+      },
+      "gc_disabled": {
+        "elapsed_seconds": 6.229197606444359e-05,
+        "throughput_rec_per_sec": 16053.431969559919
+      },
+      "gc_overhead": {
+        "absolute_seconds": -7.4589625000953674e-06,
+        "percentage": -11.974194705877956
+      }
     },
     {
       "scenario": "multiple_files_concurrent",
       "test_directory": "/Users/dchud/Documents/projects/mrrc/tests/data",
       "test_files_count": 4,
-      "total_records": 0,
-      "per_file_results": {}
+      "total_records": 6,
+      "per_file_results": {
+        "multi_records.mrc": {
+          "elapsed_seconds": 0.00012545916251838207,
+          "record_count": 3,
+          "throughput_rec_per_sec": 23912.163446495546
+        },
+        "simple_book.mrc": {
+          "elapsed_seconds": 0.00013062497600913048,
+          "record_count": 1,
+          "throughput_rec_per_sec": 7655.5037983708535
+        },
+        "with_control_fields.mrc": {
+          "elapsed_seconds": 9.49162058532238e-05,
+          "record_count": 1,
+          "throughput_rec_per_sec": 10535.608656190669
+        },
+        "simple_authority.mrc": {
+          "elapsed_seconds": 7.66669400036335e-05,
+          "record_count": 1,
+          "throughput_rec_per_sec": 13043.431757581648
+        }
+      }
     }
   ]
 }

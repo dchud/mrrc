@@ -32,7 +32,7 @@ import statistics
 sys.path.insert(0, str(Path(__file__).parent.parent / "src-python" / "target" / "release"))
 
 import mrrc
-from mrrc import ProducerConsumerPipeline, PipelineConfig
+from mrrc import ProducerConsumerPipeline
 
 
 # ============================================================================
@@ -167,10 +167,9 @@ def profile_basic_concurrent(test_file: Path) -> Dict[str, Any]:
     start = time.perf_counter()
     
     try:
-        config = PipelineConfig()
-        pipeline = ProducerConsumerPipeline.from_file(str(test_file), config)
+        pipeline = ProducerConsumerPipeline.from_file(str(test_file))
         record_count = 0
-        for record in pipeline.into_iter():
+        for record in pipeline:
             record_count += 1
             thread_monitor.sample_threads()
     except Exception as e:
@@ -222,9 +221,8 @@ def profile_thread_count_sensitivity(test_file: Path) -> Dict[str, Any]:
         
         start = time.perf_counter()
         try:
-            config = PipelineConfig()
-            pipeline = ProducerConsumerPipeline.from_file(str(test_file), config)
-            count = sum(1 for _ in pipeline.into_iter())
+            pipeline = ProducerConsumerPipeline.from_file(str(test_file))
+            count = sum(1 for _ in pipeline)
         except Exception as e:
             print(f"ERROR: {e}")
             continue
@@ -270,9 +268,8 @@ def profile_channel_efficiency(test_file: Path) -> Dict[str, Any]:
         
         start = time.perf_counter()
         try:
-            config = PipelineConfig()
-            pipeline = ProducerConsumerPipeline.from_file(str(test_file), config)
-            count = sum(1 for _ in pipeline.into_iter())
+            pipeline = ProducerConsumerPipeline.from_file(str(test_file), buffer_size=buffer_size)
+            count = sum(1 for _ in pipeline)
         except Exception as e:
             print(f"ERROR: {e}")
             continue
@@ -308,14 +305,13 @@ def profile_producer_efficiency(test_file: Path) -> Dict[str, Any]:
     
     start = time.perf_counter()
     try:
-        config = PipelineConfig()
-        pipeline = ProducerConsumerPipeline.from_file(str(test_file), config)
+        pipeline = ProducerConsumerPipeline.from_file(str(test_file))
         
         # Measure time to first record (producer startup)
         first_record_time = None
         record_count = 0
         
-        for i, record in enumerate(pipeline.into_iter()):
+        for i, record in enumerate(pipeline):
             if i == 0:
                 first_record_time = time.perf_counter() - start
             record_count += 1
@@ -363,9 +359,8 @@ def profile_gc_impact(test_file: Path) -> Dict[str, Any]:
     
     start = time.perf_counter()
     try:
-        config = PipelineConfig()
-        pipeline = ProducerConsumerPipeline.from_file(str(test_file), config)
-        count_gc_on = sum(1 for _ in pipeline.into_iter())
+        pipeline = ProducerConsumerPipeline.from_file(str(test_file))
+        count_gc_on = sum(1 for _ in pipeline)
     except Exception as e:
         print(f"Error: {e}")
         import traceback
@@ -383,9 +378,8 @@ def profile_gc_impact(test_file: Path) -> Dict[str, Any]:
     gc.disable()
     start = time.perf_counter()
     try:
-        config = PipelineConfig()
-        pipeline = ProducerConsumerPipeline.from_file(str(test_file), config)
-        count_gc_off = sum(1 for _ in pipeline.into_iter())
+        pipeline = ProducerConsumerPipeline.from_file(str(test_file))
+        count_gc_off = sum(1 for _ in pipeline)
     except Exception as e:
         print(f"Error: {e}")
         import traceback
@@ -446,9 +440,8 @@ def profile_multiple_files_concurrent(test_dir: Path) -> Dict[str, Any]:
         
         start = time.perf_counter()
         try:
-            config = PipelineConfig()
-            pipeline = ProducerConsumerPipeline.from_file(str(test_file), config)
-            count = sum(1 for _ in pipeline.into_iter())
+            pipeline = ProducerConsumerPipeline.from_file(str(test_file))
+            count = sum(1 for _ in pipeline)
         except Exception as e:
             print(f"ERROR: {e}")
             continue
