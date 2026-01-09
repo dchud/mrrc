@@ -62,19 +62,19 @@ fn hebrew_record_example() {
     let record = Record::builder(create_leader())
         .control_field_str("008", "200101s2020    il||||||||||||||||heb||")
         .field(
-            Field::builder("245", '1', '0')
+            Field::builder("245".to_string(), '1', '0')
                 .subfield_str('a', title)
                 .subfield_str('c', "Hebrew author.")
                 .build(),
         )
         .field(
-            Field::builder("100", '1', ' ')
+            Field::builder("100".to_string(), '1', ' ')
                 .subfield_str('a', "Author, Hebrew,")
                 .subfield_str('d', "1970-")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Hebrew language")
                 .subfield_str('x', "Textbooks.")
                 .build(),
@@ -102,13 +102,13 @@ fn arabic_record_example() {
     let _ = Record::builder(create_leader())
         .control_field_str("008", "200101s2020    xx||||||||||||||||ara||")
         .field(
-            Field::builder("245", '1', '0')
+            Field::builder("245".to_string(), '1', '0')
                 .subfield_str('a', "Arabic title placeholder")
                 .subfield_str('c', "Arabic author.")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Islamic civilization")
                 .subfield_str('x', "Encyclopedias.")
                 .build(),
@@ -132,13 +132,13 @@ fn cyrillic_record_example() {
     let _ = Record::builder(create_leader())
         .control_field_str("008", "200101s2020    ru||||||||||||||||rus||")
         .field(
-            Field::builder("245", '1', '0')
+            Field::builder("245".to_string(), '1', '0')
                 .subfield_str('a', "Russian title placeholder")
                 .subfield_str('c', "Russian author.")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Russian literature")
                 .subfield_str('y', "20th century.")
                 .build(),
@@ -163,23 +163,23 @@ fn mixed_language_record_example() {
     let _ = Record::builder(create_leader())
         .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
         .field(
-            Field::builder("245", '1', '0')
+            Field::builder("245".to_string(), '1', '0')
                 .subfield_str('a', "Bilingual: English and Hebrew")
                 .subfield_str('c', "Multilingual author.")
                 .build(),
         )
         .field(
-            Field::builder("500", ' ', ' ')
+            Field::builder("500".to_string(), ' ', ' ')
                 .subfield_str('a', "Contains text in English, Hebrew, and Arabic.")
                 .build(),
         )
         .field(
-            Field::builder("546", ' ', ' ')
+            Field::builder("546".to_string(), ' ', ' ')
                 .subfield_str('a', "Text in English, Hebrew, and Arabic.")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Multilingual materials.")
                 .build(),
         )

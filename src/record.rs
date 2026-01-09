@@ -31,7 +31,7 @@
 //! let record = Record::builder(leader)
 //!     .control_field_str("001", "12345")
 //!     .field(
-//!         Field::builder("245", '1', '0')
+//!         Field::builder("245".to_string(), '1', '0')
 //!             .subfield_str('a', "Title")
 //!             .build()
 //!     )
@@ -52,7 +52,6 @@ use crate::bibliographic_helpers::PublicationInfo;
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
 use serde::{Deserialize, Serialize};
-use smallvec::SmallVec;
 use std::collections::BTreeMap;
 use std::ops::Index;
 
@@ -70,16 +69,14 @@ pub struct Record {
 /// A data field in a MARC record (fields 010 and higher)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Field {
-    /// Field tag as u16 (000-999)
-    /// Using u16 instead of String saves ~24 bytes per tag
-    #[serde(serialize_with = "serialize_tag", deserialize_with = "deserialize_tag")]
-    pub tag: u16,
-    /// Indicators packed as [u8; 2] for efficiency
-    /// First indicator is indicators[0], second is indicators[1]
-    /// Using [u8; 2] instead of two chars saves ~48 bytes per field
-    pub indicators: [u8; 2],
-    /// Subfields (up to 20 typical, so `SmallVec` avoids heap allocation for common case)
-    pub subfields: SmallVec<[Subfield; 16]>,
+    /// Field tag (3 digits)
+    pub tag: String,
+    /// First indicator
+    pub indicator1: char,
+    /// Second indicator
+    pub indicator2: char,
+    /// Subfields
+    pub subfields: Vec<Subfield>,
 }
 
 /// A subfield within a field
@@ -89,48 +86,6 @@ pub struct Subfield {
     pub code: char,
     /// Subfield value
     pub value: String,
-}
-
-// ============================================================================
-// Serde helpers for compact tag encoding
-// ============================================================================
-
-/// Serialize tag as string for JSON compatibility
-#[allow(clippy::trivially_copy_pass_by_ref)]
-fn serialize_tag<S>(tag: &u16, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serializer.serialize_str(&format!("{tag:03}"))
-}
-
-/// Deserialize tag from string format
-fn deserialize_tag<'de, D>(deserializer: D) -> Result<u16, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    s.parse::<u16>().map_err(serde::de::Error::custom)
-}
-
-// ============================================================================
-// Test Helper Macro (for constructing Fields with old-style struct syntax)
-// ============================================================================
-
-/// Helper macro for constructing Field structs in tests.
-/// Converts old struct literal syntax to new compact encoding.
-///
-/// Usage: `field! { tag: "245", indicator1: '1', indicator2: '0', subfields: vec![...] }`
-#[macro_export]
-macro_rules! field {
-    {
-        tag: $tag:expr,
-        indicator1: $ind1:expr,
-        indicator2: $ind2:expr,
-        subfields: $subfields:expr
-    } => {
-        $crate::Field::with_subfields($tag, $ind1, $ind2, $subfields)
-    };
 }
 
 impl Record {
@@ -169,7 +124,7 @@ impl Record {
     ///
     /// let record = Record::builder(leader)
     ///     .control_field_str("001", "12345")
-    ///     .field(Field::builder("245", '1', '0')
+    ///     .field(Field::builder("245".to_string(), '1', '0')
     ///         .subfield_str('a', "Title")
     ///         .build())
     ///     .build();
@@ -207,7 +162,10 @@ impl Record {
 
     /// Add a data field
     pub fn add_field(&mut self, field: Field) {
-        self.fields.entry(field.tag_str()).or_default().push(field);
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
     }
 
     /// Get all fields with a given tag
@@ -281,12 +239,12 @@ impl Record {
     ) -> impl Iterator<Item = &Field> {
         self.fields_by_tag(tag).filter(move |field| {
             if let Some(ind1) = indicator1 {
-                if field.indicator1() != ind1 {
+                if field.indicator1 != ind1 {
                     return false;
                 }
             }
             if let Some(ind2) = indicator2 {
-                if field.indicator2() != ind2 {
+                if field.indicator2 != ind2 {
                     return false;
                 }
             }
@@ -531,7 +489,7 @@ impl Record {
     #[must_use]
     pub fn get_original_field(&self, field_880: &Field) -> Option<&Field> {
         // 880 fields should link to original fields
-        if field_880.tag_str() != "880" {
+        if field_880.tag != "880" {
             return None;
         }
 
@@ -1173,7 +1131,7 @@ impl Index<&str> for Record {
 ///
 /// let record = Record::builder(Leader::default())
 ///     .control_field_str("001", "12345")
-///     .field(Field::builder("245", '1', '0')
+///     .field(Field::builder("245".to_string(), '1', '0')
 ///         .subfield_str('a', "The Great Gatsby")
 ///         .subfield_str('c', "F. Scott Fitzgerald")
 ///         .build())
@@ -1215,52 +1173,13 @@ impl RecordBuilder {
 
 impl Field {
     /// Create a new data field
-    ///
-    /// # Arguments
-    /// * `tag` - Field tag as string (e.g., "245"). Must be valid 3-digit MARC tag.
-    /// * `indicator1` - First indicator character
-    /// * `indicator2` - Second indicator character
     #[must_use]
-    pub fn new(tag: &str, indicator1: char, indicator2: char) -> Self {
-        let tag_num = tag.parse::<u16>().unwrap_or(0);
+    pub fn new(tag: String, indicator1: char, indicator2: char) -> Self {
         Field {
-            tag: tag_num,
-            indicators: [indicator1 as u8, indicator2 as u8],
-            subfields: SmallVec::new(),
-        }
-    }
-
-    /// Get the field tag as a 3-digit string
-    #[must_use]
-    pub fn tag_str(&self) -> String {
-        format!("{:03}", self.tag)
-    }
-
-    /// Get the first indicator character
-    #[must_use]
-    pub fn indicator1(&self) -> char {
-        self.indicators[0] as char
-    }
-
-    /// Get the second indicator character
-    #[must_use]
-    pub fn indicator2(&self) -> char {
-        self.indicators[1] as char
-    }
-
-    /// Create a field from individual components (useful for testing and direct construction)
-    #[must_use]
-    pub fn with_subfields(
-        tag: &str,
-        indicator1: char,
-        indicator2: char,
-        subfields: Vec<Subfield>,
-    ) -> Self {
-        let tag_num = tag.parse::<u16>().unwrap_or(0);
-        Field {
-            tag: tag_num,
-            indicators: [indicator1 as u8, indicator2 as u8],
-            subfields: SmallVec::from_vec(subfields),
+            tag,
+            indicator1,
+            indicator2,
+            subfields: Vec::new(),
         }
     }
 
@@ -1271,19 +1190,19 @@ impl Field {
     /// ```
     /// use mrrc::Field;
     ///
-    /// let field = Field::builder("245", '1', '0')
+    /// let field = Field::builder("245".to_string(), '1', '0')
     ///     .subfield('a', "The Great Gatsby".to_string())
     ///     .subfield('c', "F. Scott Fitzgerald".to_string())
     ///     .build();
     /// ```
     #[must_use]
-    pub fn builder(tag: &str, indicator1: char, indicator2: char) -> FieldBuilder {
-        let tag_num = tag.parse::<u16>().unwrap_or(0);
+    pub fn builder(tag: String, indicator1: char, indicator2: char) -> FieldBuilder {
         FieldBuilder {
             field: Field {
-                tag: tag_num,
-                indicators: [indicator1 as u8, indicator2 as u8],
-                subfields: SmallVec::new(),
+                tag,
+                indicator1,
+                indicator2,
+                subfields: Vec::new(),
             },
         }
     }
@@ -1429,7 +1348,7 @@ impl Field {
             return String::new();
         }
 
-        let is_subject = self.tag_str().starts_with('6');
+        let is_subject = self.tag.starts_with('6');
         let mut result = Vec::new();
 
         for subfield in &self.subfields {
@@ -1560,7 +1479,7 @@ impl Index<char> for Field {
 /// ```
 /// use mrrc::Field;
 ///
-/// let field = Field::builder("245", '1', '0')
+/// let field = Field::builder("245".to_string(), '1', '0')
 ///     .subfield('a', "Title".to_string())
 ///     .subfield('b', "Subtitle".to_string())
 ///     .build();
@@ -1635,7 +1554,7 @@ mod tests {
 
     #[test]
     fn test_field_subfields() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Title".to_string());
         field.add_subfield('c', "Author".to_string());
         field.add_subfield('a', "Title continued".to_string());
@@ -1650,7 +1569,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Test Title".to_string());
         record.add_field(field);
 
@@ -1665,7 +1584,7 @@ mod tests {
         let mut record = Record::new(leader);
 
         for i in 0..3 {
-            let mut field = Field::new("650", ' ', '0');
+            let mut field = Field::new("650".to_string(), ' ', '0');
             field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }
@@ -1683,7 +1602,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "The Great Gatsby".to_string());
         record.add_field(field);
 
@@ -1695,7 +1614,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "The Great Gatsby /".to_string());
         field.add_subfield('c', "F. Scott Fitzgerald.".to_string());
         record.add_field(field);
@@ -1710,7 +1629,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("100", '1', ' ');
+        let mut field = Field::new("100".to_string(), '1', ' ');
         field.add_subfield('a', "Fitzgerald, F. Scott".to_string());
         record.add_field(field);
 
@@ -1723,7 +1642,7 @@ mod tests {
         let mut record = Record::new(leader);
 
         for i in 0..2 {
-            let mut field = Field::new("700", '1', ' ');
+            let mut field = Field::new("700".to_string(), '1', ' ');
             field.add_subfield('a', format!("Author {i}"));
             record.add_field(field);
         }
@@ -1739,7 +1658,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("260", ' ', '1');
+        let mut field = Field::new("260".to_string(), ' ', '1');
         field.add_subfield('b', "Scribner".to_string());
         field.add_subfield('c', "1925".to_string());
         record.add_field(field);
@@ -1752,7 +1671,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("260", ' ', '1');
+        let mut field = Field::new("260".to_string(), ' ', '1');
         field.add_subfield('c', "1925".to_string());
         record.add_field(field);
 
@@ -1778,7 +1697,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("020", ' ', ' ');
+        let mut field = Field::new("020".to_string(), ' ', ' ');
         field.add_subfield('a', "978-0-7432-7356-5".to_string());
         record.add_field(field);
 
@@ -1791,7 +1710,7 @@ mod tests {
         let mut record = Record::new(leader);
 
         for i in 0..2 {
-            let mut field = Field::new("020", ' ', ' ');
+            let mut field = Field::new("020".to_string(), ' ', ' ');
             field.add_subfield('a', format!("ISBN-{i}"));
             record.add_field(field);
         }
@@ -1808,7 +1727,7 @@ mod tests {
         let mut record = Record::new(leader);
 
         for i in 0..3 {
-            let mut field = Field::new("650", ' ', '0');
+            let mut field = Field::new("650".to_string(), ' ', '0');
             field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }
@@ -1849,7 +1768,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("010", ' ', ' ');
+        let mut field = Field::new("010".to_string(), ' ', ' ');
         field.add_subfield('a', "2004310216".to_string());
         record.add_field(field);
 
@@ -1861,7 +1780,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("300", ' ', ' ');
+        let mut field = Field::new("300".to_string(), ' ', ' ');
         field.add_subfield('a', "256 pages".to_string());
         record.add_field(field);
 
@@ -1873,7 +1792,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("490", '1', ' ');
+        let mut field = Field::new("490".to_string(), '1', ' ');
         field.add_subfield('a', "Classic literature".to_string());
         record.add_field(field);
 
@@ -1885,7 +1804,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("110", '2', ' ');
+        let mut field = Field::new("110".to_string(), '2', ' ');
         field.add_subfield('a', "United States. Congress.".to_string());
         record.add_field(field);
 
@@ -1897,7 +1816,7 @@ mod tests {
         let leader = make_leader();
         let mut record = Record::new(leader);
 
-        let mut field = Field::new("022", ' ', ' ');
+        let mut field = Field::new("022".to_string(), ' ', ' ');
         field.add_subfield('a', "0028-0836".to_string());
         record.add_field(field);
 
@@ -1969,21 +1888,21 @@ mod tests {
 
     #[test]
     fn test_field_builder() {
-        let field = Field::builder("245", '1', '0')
+        let field = Field::builder("245".to_string(), '1', '0')
             .subfield('a', "The Great Gatsby".to_string())
             .subfield('c', "F. Scott Fitzgerald".to_string())
             .build();
 
-        assert_eq!(field.tag_str(), "245");
-        assert_eq!(field.indicator1(), '1');
-        assert_eq!(field.indicator2(), '0');
+        assert_eq!(field.tag, "245");
+        assert_eq!(field.indicator1, '1');
+        assert_eq!(field.indicator2, '0');
         assert_eq!(field.get_subfield('a'), Some("The Great Gatsby"));
         assert_eq!(field.get_subfield('c'), Some("F. Scott Fitzgerald"));
     }
 
     #[test]
     fn test_field_builder_with_str() {
-        let field = Field::builder("650", ' ', '0')
+        let field = Field::builder("650".to_string(), ' ', '0')
             .subfield_str('a', "Computer science")
             .subfield_str('x', "History")
             .build();
@@ -1997,7 +1916,7 @@ mod tests {
         let record = Record::builder(make_leader())
             .control_field_str("001", "12345")
             .field(
-                Field::builder("245", '1', '0')
+                Field::builder("245".to_string(), '1', '0')
                     .subfield_str('a', "Test Title")
                     .build(),
             )
@@ -2009,7 +1928,7 @@ mod tests {
 
     #[test]
     fn test_field_subfields_iterator() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('a', "Subject 1");
         field.add_subfield_str('x', "Subdivision");
 
@@ -2022,7 +1941,7 @@ mod tests {
 
     #[test]
     fn test_field_subfields_by_code_iterator() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('a', "Primary Subject");
         field.add_subfield_str('x', "Subdivision 1");
         field.add_subfield_str('x', "Subdivision 2");
@@ -2038,7 +1957,7 @@ mod tests {
         let mut record = Record::new(make_leader());
 
         for i in 0..3 {
-            let mut field = Field::new("650", ' ', '0');
+            let mut field = Field::new("650".to_string(), ' ', '0');
             field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }
@@ -2078,15 +1997,15 @@ mod tests {
         let mut record = Record::new(make_leader());
 
         // Add ISBNs with different patterns
-        let mut isbn1 = Field::new("020", ' ', ' ');
+        let mut isbn1 = Field::new("020".to_string(), ' ', ' ');
         isbn1.add_subfield_str('a', "978-0-12345-678-9");
         record.add_field(isbn1);
 
-        let mut isbn2 = Field::new("020", ' ', ' ');
+        let mut isbn2 = Field::new("020".to_string(), ' ', ' ');
         isbn2.add_subfield_str('a', "979-10-000000-00-0");
         record.add_field(isbn2);
 
-        let mut isbn3 = Field::new("020", ' ', ' ');
+        let mut isbn3 = Field::new("020".to_string(), ' ', ' ');
         isbn3.add_subfield_str('a', "978-1-111111-11-1");
         record.add_field(isbn3);
 
@@ -2102,15 +2021,15 @@ mod tests {
 
         let mut record = Record::new(make_leader());
 
-        let mut subject1 = Field::new("650", ' ', '0');
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
         subject1.add_subfield_str('a', "History");
         record.add_field(subject1);
 
-        let mut subject2 = Field::new("650", ' ', '0');
+        let mut subject2 = Field::new("650".to_string(), ' ', '0');
         subject2.add_subfield_str('a', "Science");
         record.add_field(subject2);
 
-        let mut subject3 = Field::new("650", ' ', '0');
+        let mut subject3 = Field::new("650".to_string(), ' ', '0');
         subject3.add_subfield_str('a', "History");
         record.add_field(subject3);
 
@@ -2125,15 +2044,15 @@ mod tests {
 
         let mut record = Record::new(make_leader());
 
-        let mut subject1 = Field::new("650", ' ', '0');
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
         subject1.add_subfield_str('a', "World History");
         record.add_field(subject1);
 
-        let mut subject2 = Field::new("650", ' ', '0');
+        let mut subject2 = Field::new("650".to_string(), ' ', '0');
         subject2.add_subfield_str('a', "Medieval History");
         record.add_field(subject2);
 
-        let mut subject3 = Field::new("650", ' ', '0');
+        let mut subject3 = Field::new("650".to_string(), ' ', '0');
         subject3.add_subfield_str('a', "Science");
         record.add_field(subject3);
 
@@ -2148,17 +2067,17 @@ mod tests {
 
         let mut record = Record::new(make_leader());
 
-        let mut subject1 = Field::new("650", ' ', '0');
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
         subject1.add_subfield_str('a', "World");
         subject1.add_subfield_str('x', "History");
         record.add_field(subject1);
 
-        let mut subject2 = Field::new("650", ' ', '0');
+        let mut subject2 = Field::new("650".to_string(), ' ', '0');
         subject2.add_subfield_str('a', "Philosophy");
         subject2.add_subfield_str('x', "History");
         record.add_field(subject2);
 
-        let mut subject3 = Field::new("650", ' ', '0');
+        let mut subject3 = Field::new("650".to_string(), ' ', '0');
         subject3.add_subfield_str('a', "Science");
         subject3.add_subfield_str('y', "Geography");
         record.add_field(subject3);
@@ -2174,15 +2093,15 @@ mod tests {
         let mut record = Record::new(make_leader());
 
         // Add multiple ISBNs
-        let mut isbn1 = Field::new("020", ' ', ' ');
+        let mut isbn1 = Field::new("020".to_string(), ' ', ' ');
         isbn1.add_subfield_str('a', "978-0-201-61622-4");
         record.add_field(isbn1);
 
-        let mut isbn2 = Field::new("020", ' ', ' ');
+        let mut isbn2 = Field::new("020".to_string(), ' ', ' ');
         isbn2.add_subfield_str('a', "979-10-90636-07-1");
         record.add_field(isbn2);
 
-        let mut isbn3 = Field::new("020", ' ', ' ');
+        let mut isbn3 = Field::new("020".to_string(), ' ', ' ');
         isbn3.add_subfield_str('a', "978-1-449-35582-1");
         record.add_field(isbn3);
 
@@ -2197,16 +2116,16 @@ mod tests {
         let mut record = Record::new(make_leader());
 
         // Add primary author
-        let mut field100 = Field::new("100", ' ', ' ');
+        let mut field100 = Field::new("100".to_string(), ' ', ' ');
         field100.add_subfield_str('a', "Smith, John");
         record.add_field(field100);
 
         // Add added entries
-        let mut field700 = Field::new("700", ' ', ' ');
+        let mut field700 = Field::new("700".to_string(), ' ', ' ');
         field700.add_subfield_str('a', "Doe, Jane");
         record.add_field(field700);
 
-        let mut field710 = Field::new("710", ' ', ' ');
+        let mut field710 = Field::new("710".to_string(), ' ', ' ');
         field710.add_subfield_str('a', "Publisher Inc.");
         record.add_field(field710);
 
@@ -2221,19 +2140,19 @@ mod tests {
         let mut record = Record::new(make_leader());
 
         // Add primary author with dates
-        let mut field100 = Field::new("100", ' ', ' ');
+        let mut field100 = Field::new("100".to_string(), ' ', ' ');
         field100.add_subfield_str('a', "Smith, John");
         field100.add_subfield_str('d', "1873-1944");
         record.add_field(field100);
 
         // Add added entry with dates
-        let mut field700a = Field::new("700", ' ', ' ');
+        let mut field700a = Field::new("700".to_string(), ' ', ' ');
         field700a.add_subfield_str('a', "Doe, Jane");
         field700a.add_subfield_str('d', "1902-1989");
         record.add_field(field700a);
 
         // Add added entry without dates
-        let mut field700b = Field::new("700", ' ', ' ');
+        let mut field700b = Field::new("700".to_string(), ' ', ' ');
         field700b.add_subfield_str('a', "Johnson, Robert");
         record.add_field(field700b);
 
@@ -2249,17 +2168,17 @@ mod tests {
 
         let mut record = Record::new(make_leader());
 
-        let mut subject1 = Field::new("650", ' ', '0');
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
         subject1.add_subfield_str('a', "World");
         subject1.add_subfield_str('x', "Medieval History");
         record.add_field(subject1);
 
-        let mut subject2 = Field::new("650", ' ', '0');
+        let mut subject2 = Field::new("650".to_string(), ' ', '0');
         subject2.add_subfield_str('a', "Philosophy");
         subject2.add_subfield_str('x', "Ancient History");
         record.add_field(subject2);
 
-        let mut subject3 = Field::new("650", ' ', '0');
+        let mut subject3 = Field::new("650".to_string(), ' ', '0');
         subject3.add_subfield_str('a', "Science");
         subject3.add_subfield_str('y', "Geography");
         record.add_field(subject3);
@@ -2271,14 +2190,14 @@ mod tests {
     #[test]
     fn test_record_index_field_by_tag() {
         let mut record = Record::new(make_leader());
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Test Title");
         record.add_field(field);
 
         let indexed_field = &record["245"];
-        assert_eq!(indexed_field.tag_str(), "245");
-        assert_eq!(indexed_field.indicator1(), '1');
-        assert_eq!(indexed_field.indicator2(), '0');
+        assert_eq!(indexed_field.tag, "245");
+        assert_eq!(indexed_field.indicator1, '1');
+        assert_eq!(indexed_field.indicator2, '0');
     }
 
     #[test]
@@ -2290,7 +2209,7 @@ mod tests {
 
     #[test]
     fn test_field_index_subfield_by_code() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Test Title");
         field.add_subfield_str('b', "Subtitle");
 
@@ -2301,13 +2220,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "subfield not found")]
     fn test_field_index_missing_subfield() {
-        let field = Field::new("245", '1', '0');
+        let field = Field::new("245".to_string(), '1', '0');
         let _ = &field['a'];
     }
 
     #[test]
     fn test_field_index_multiple_subfields_same_code() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('a', "First Subject");
         field.add_subfield_str('x', "Subdivision 1");
         field.add_subfield_str('x', "Subdivision 2");
@@ -2320,7 +2239,7 @@ mod tests {
     #[test]
     fn test_chained_index_access() {
         let mut record = Record::new(make_leader());
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Title");
         field.add_subfield_str('c', "Author");
         record.add_field(field);
@@ -2332,7 +2251,7 @@ mod tests {
 
     #[test]
     fn test_field_get_subfields_single_code() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Title");
         field.add_subfield_str('b', "Subtitle");
         field.add_subfield_str('c', "Author");
@@ -2343,7 +2262,7 @@ mod tests {
 
     #[test]
     fn test_field_get_subfields_multiple_codes() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Title");
         field.add_subfield_str('b', "Subtitle");
         field.add_subfield_str('c', "Author");
@@ -2354,7 +2273,7 @@ mod tests {
 
     #[test]
     fn test_field_get_subfields_preserves_order() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('a', "Subject");
         field.add_subfield_str('x', "Subdivision 1");
         field.add_subfield_str('y', "Subdivision 2");
@@ -2368,7 +2287,7 @@ mod tests {
 
     #[test]
     fn test_field_get_subfields_with_repeating_codes() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('a', "Subject 1");
         field.add_subfield_str('x', "Subdivision 1");
         field.add_subfield_str('x', "Subdivision 2");
@@ -2380,14 +2299,14 @@ mod tests {
 
     #[test]
     fn test_field_get_subfields_empty_result() {
-        let field = Field::new("245", '1', '0');
+        let field = Field::new("245".to_string(), '1', '0');
         let values = field.get_subfields(&['z']);
         assert!(values.is_empty());
     }
 
     #[test]
     fn test_field_subfields_as_dict_basic() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Title");
         field.add_subfield_str('b', "Subtitle");
         field.add_subfield_str('c', "Author");
@@ -2400,7 +2319,7 @@ mod tests {
 
     #[test]
     fn test_field_subfields_as_dict_repeating_codes() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('a', "Subject 1");
         field.add_subfield_str('x', "Subdivision 1");
         field.add_subfield_str('x', "Subdivision 2");
@@ -2427,14 +2346,14 @@ mod tests {
 
     #[test]
     fn test_field_subfields_as_dict_empty_field() {
-        let field = Field::new("245", '1', '0');
+        let field = Field::new("245".to_string(), '1', '0');
         let dict = field.subfields_as_dict();
         assert!(dict.is_empty());
     }
 
     #[test]
     fn test_field_subfields_as_dict_keys_sorted() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('z', "Geographic");
         field.add_subfield_str('a', "Subject");
         field.add_subfield_str('x', "Subdivision");
@@ -2450,7 +2369,7 @@ mod tests {
 
     #[test]
     fn test_field_value_simple() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Title");
         field.add_subfield_str('b', "Subtitle");
         field.add_subfield_str('c', "Author");
@@ -2460,13 +2379,13 @@ mod tests {
 
     #[test]
     fn test_field_value_empty_field() {
-        let field = Field::new("245", '1', '0');
+        let field = Field::new("245".to_string(), '1', '0');
         assert_eq!(field.value(), "");
     }
 
     #[test]
     fn test_field_value_single_subfield() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Title");
 
         assert_eq!(field.value(), "Title");
@@ -2474,7 +2393,7 @@ mod tests {
 
     #[test]
     fn test_field_value_preserves_spaces_in_values() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "The Title");
         field.add_subfield_str('b', "With Spaces");
 
@@ -2483,7 +2402,7 @@ mod tests {
 
     #[test]
     fn test_field_format_field_non_subject() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Title");
         field.add_subfield_str('b', "Subtitle");
         field.add_subfield_str('c', "Author");
@@ -2494,7 +2413,7 @@ mod tests {
 
     #[test]
     fn test_field_format_field_subject_with_subdivisions() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('a', "Subject");
         field.add_subfield_str('x', "Subdivision 1");
         field.add_subfield_str('y', "Geographic");
@@ -2509,7 +2428,7 @@ mod tests {
 
     #[test]
     fn test_field_format_field_subject_skips_linking() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('a', "Subject");
         field.add_subfield_str('6', "880-01");
         field.add_subfield_str('x', "Subdivision");
@@ -2520,13 +2439,13 @@ mod tests {
 
     #[test]
     fn test_field_format_field_empty() {
-        let field = Field::new("245", '1', '0');
+        let field = Field::new("245".to_string(), '1', '0');
         assert_eq!(field.format_field(), "");
     }
 
     #[test]
     fn test_field_format_field_only_linking() {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield_str('6', "880-01");
 
         // Only linking subfield should result in empty string
@@ -2535,7 +2454,7 @@ mod tests {
 
     #[test]
     fn test_field_format_field_non_subject_ignores_subdivision_markers() {
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield_str('a', "Title");
         field.add_subfield_str('x', "Something");
         field.add_subfield_str('y', "Something Else");
@@ -2547,7 +2466,7 @@ mod tests {
     #[test]
     fn test_field_format_field_other_subject_fields() {
         // Test that any 6xx field uses subdivision formatting
-        let mut field = Field::new("651", ' ', '0');
+        let mut field = Field::new("651".to_string(), ' ', '0');
         field.add_subfield_str('a', "Geographic Name");
         field.add_subfield_str('x', "Subdivision");
 

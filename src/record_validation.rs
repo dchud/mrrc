@@ -161,12 +161,12 @@ impl RecordStructureValidator {
 
             // Validate field indicators are single characters
             for field in fields {
-                if (field.indicator1() as u8).is_ascii_control() {
+                if field.indicator1.is_control() {
                     return Err(MarcError::InvalidField(format!(
                         "Invalid indicator1 in field {tag}: control character"
                     )));
                 }
-                if (field.indicator2() as u8).is_ascii_control() {
+                if field.indicator2.is_control() {
                     return Err(MarcError::InvalidField(format!(
                         "Invalid indicator2 in field {tag}: control character"
                     )));

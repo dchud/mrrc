@@ -190,7 +190,9 @@ impl<R: Read> HoldingsMarcReader<R> {
                     ));
                 }
 
-                let mut subfields = smallvec::SmallVec::new();
+                let indicator1 = field_data[0] as char;
+                let indicator2 = field_data[1] as char;
+                let mut subfields = Vec::new();
                 let mut j = 2;
 
                 while j < field_data.len() - 1 {
@@ -221,8 +223,9 @@ impl<R: Read> HoldingsMarcReader<R> {
                 }
 
                 let field = Field {
-                    tag: tag.parse::<u16>().unwrap_or(0),
-                    indicators: [field_data[0], field_data[1]],
+                    tag: tag.clone(),
+                    indicator1,
+                    indicator2,
                     subfields,
                 };
 
@@ -295,13 +298,13 @@ mod tests {
         record.add_control_field("001".to_string(), "ocm00098765".to_string());
 
         let location = Field {
-            tag: 852,
-            indicators: [32_u8, 49_u8],
+            tag: "852".to_string(),
+            indicator1: ' ',
+            indicator2: '1',
             subfields: vec![Subfield {
                 code: 'b',
                 value: "Main Library".to_string(),
-            }]
-            .into(),
+            }],
         };
         record.add_location(location);
 

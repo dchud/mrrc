@@ -108,7 +108,10 @@ impl AuthorityRecord {
 
     /// Set the heading (1XX field)
     pub fn set_heading(&mut self, field: Field) {
-        self.fields.entry(field.tag_str()).or_default().push(field);
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
     }
 
     /// Get the main heading (1XX field)
@@ -128,7 +131,7 @@ impl AuthorityRecord {
     /// Get the heading type from the 1XX field tag
     #[must_use]
     pub fn heading_type(&self) -> Option<HeadingType> {
-        self.heading().and_then(|f| match f.tag_str().as_str() {
+        self.heading().and_then(|f| match f.tag.as_str() {
             "100" => Some(HeadingType::PersonalName),
             "110" => Some(HeadingType::CorporateName),
             "111" => Some(HeadingType::MeetingName),
@@ -143,7 +146,10 @@ impl AuthorityRecord {
 
     /// Add a See From Tracing field (4XX)
     pub fn add_see_from_tracing(&mut self, field: Field) {
-        self.fields.entry(field.tag_str()).or_default().push(field);
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
     }
 
     /// Get all See From Tracing fields (4XX)
@@ -158,7 +164,10 @@ impl AuthorityRecord {
 
     /// Add a See Also From Tracing field (5XX)
     pub fn add_see_also_tracing(&mut self, field: Field) {
-        self.fields.entry(field.tag_str()).or_default().push(field);
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
     }
 
     /// Get all See Also From Tracing fields (5XX)
@@ -173,7 +182,10 @@ impl AuthorityRecord {
 
     /// Add a note field
     pub fn add_note(&mut self, field: Field) {
-        self.fields.entry(field.tag_str()).or_default().push(field);
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
     }
 
     /// Get all note fields
@@ -209,7 +221,10 @@ impl AuthorityRecord {
 
     /// Add a heading linking entry field (7XX)
     pub fn add_linking_entry(&mut self, field: Field) {
-        self.fields.entry(field.tag_str()).or_default().push(field);
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
     }
 
     /// Get all heading linking entry fields (7XX)
@@ -224,7 +239,10 @@ impl AuthorityRecord {
 
     /// Add a field to `fields`
     pub fn add_field(&mut self, field: Field) {
-        self.fields.entry(field.tag_str()).or_default().push(field);
+        self.fields
+            .entry(field.tag.clone())
+            .or_default()
+            .push(field);
     }
 
     /// Get fields by tag
@@ -449,18 +467,20 @@ mod tests {
 
         // Test personal name heading
         let field = Field {
-            tag: 100,
-            indicators: [49_u8, 32_u8],
-            subfields: vec![].into(),
+            tag: "100".to_string(),
+            indicator1: '1',
+            indicator2: ' ',
+            subfields: vec![],
         };
         let record = AuthorityRecord::builder(leader).heading(field).build();
         assert_eq!(record.heading_type(), Some(HeadingType::PersonalName));
 
         // Test topical term heading
         let field = Field {
-            tag: 150,
-            indicators: [32_u8, 48_u8],
-            subfields: vec![].into(),
+            tag: "150".to_string(),
+            indicator1: ' ',
+            indicator2: '0',
+            subfields: vec![],
         };
         let record = AuthorityRecord::builder(create_test_leader())
             .heading(field)
@@ -603,23 +623,23 @@ mod tests {
     fn test_add_tracings() {
         let leader = create_test_leader();
         let see_from = Field {
-            tag: 400,
-            indicators: [49_u8, 32_u8],
+            tag: "400".to_string(),
+            indicator1: '1',
+            indicator2: ' ',
             subfields: vec![Subfield {
                 code: 'a',
                 value: "Smith, John".to_string(),
-            }]
-            .into(),
+            }],
         };
 
         let see_also = Field {
-            tag: 500,
-            indicators: [49_u8, 32_u8],
+            tag: "500".to_string(),
+            indicator1: '1',
+            indicator2: ' ',
             subfields: vec![Subfield {
                 code: 'a',
                 value: "Smith, J. (John)".to_string(),
-            }]
-            .into(),
+            }],
         };
 
         let record = AuthorityRecord::builder(leader)
@@ -635,13 +655,13 @@ mod tests {
     fn test_add_notes() {
         let leader = create_test_leader();
         let source_note = Field {
-            tag: 670,
-            indicators: [32_u8, 32_u8],
+            tag: "670".to_string(),
+            indicator1: ' ',
+            indicator2: ' ',
             subfields: vec![Subfield {
                 code: 'a',
                 value: "DNB, 1985".to_string(),
-            }]
-            .into(),
+            }],
         };
 
         let record = AuthorityRecord::builder(leader)

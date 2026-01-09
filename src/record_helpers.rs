@@ -373,7 +373,7 @@ mod tests {
 
         record.add_control_field("001".to_string(), "12345".to_string());
 
-        let mut title_field = Field::new("245", '1', '0');
+        let mut title_field = Field::new("245".to_string(), '1', '0');
         title_field.subfields.push(Subfield {
             code: 'a',
             value: "Test Title".to_string(),
@@ -413,7 +413,7 @@ mod tests {
     #[test]
     fn test_trait_location() {
         let mut record = create_test_record();
-        let mut location_field = Field::new("852", ' ', ' ');
+        let mut location_field = Field::new("852".to_string(), ' ', ' ');
         location_field.subfields.push(Subfield {
             code: 'a',
             value: "Main Library".to_string(),
@@ -428,7 +428,7 @@ mod tests {
     #[test]
     fn test_trait_notes() {
         let mut record = create_test_record();
-        let mut notes_field = Field::new("500", ' ', ' ');
+        let mut notes_field = Field::new("500".to_string(), ' ', ' ');
         notes_field.subfields.push(Subfield {
             code: 'a',
             value: "General note".to_string(),
@@ -450,7 +450,7 @@ mod tests {
     #[test]
     fn test_trait_uniform_title() {
         let mut record = create_test_record();
-        let mut uniform_title_field = Field::new("130", ' ', ' ');
+        let mut uniform_title_field = Field::new("130".to_string(), ' ', ' ');
         uniform_title_field.subfields.push(Subfield {
             code: 'a',
             value: "Standardized Title".to_string(),
@@ -463,7 +463,7 @@ mod tests {
     #[test]
     fn test_trait_sudoc() {
         let mut record = create_test_record();
-        let mut sudoc_field = Field::new("086", ' ', ' ');
+        let mut sudoc_field = Field::new("086".to_string(), ' ', ' ');
         sudoc_field.subfields.push(Subfield {
             code: 'a',
             value: "I 19.2:En 3".to_string(),
@@ -476,7 +476,7 @@ mod tests {
     #[test]
     fn test_trait_issn_title() {
         let mut record = create_test_record();
-        let mut issn_title_field = Field::new("222", ' ', ' ');
+        let mut issn_title_field = Field::new("222".to_string(), ' ', ' ');
         issn_title_field.subfields.push(Subfield {
             code: 'a',
             value: "Key Title".to_string(),
@@ -489,7 +489,7 @@ mod tests {
     #[test]
     fn test_trait_issnl() {
         let mut record = create_test_record();
-        let mut issnl_field = Field::new("024", ' ', ' ');
+        let mut issnl_field = Field::new("024".to_string(), ' ', ' ');
         issnl_field.subfields.push(Subfield {
             code: 'a',
             value: "1234-5678".to_string(),

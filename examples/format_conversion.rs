@@ -75,60 +75,60 @@ fn create_sample_record() -> Record {
         .control_field_str("001", "ocm12345678")
         .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
         .field(
-            Field::builder("245", '1', '0')
+            Field::builder("245".to_string(), '1', '0')
                 .subfield_str('a', "Rust systems programming /")
                 .subfield_str('c', "Prepared by Jane Smith and Bob Jones.")
                 .build(),
         )
         .field(
-            Field::builder("100", '1', ' ')
+            Field::builder("100".to_string(), '1', ' ')
                 .subfield_str('a', "Smith, Jane,")
                 .subfield_str('d', "1975-")
                 .subfield_str('e', "author.")
                 .build(),
         )
         .field(
-            Field::builder("700", '1', ' ')
+            Field::builder("700".to_string(), '1', ' ')
                 .subfield_str('a', "Jones, Bob,")
                 .subfield_str('d', "1980-")
                 .subfield_str('e', "author.")
                 .build(),
         )
         .field(
-            Field::builder("260", ' ', ' ')
+            Field::builder("260".to_string(), ' ', ' ')
                 .subfield_str('a', "San Francisco :")
                 .subfield_str('b', "O'Reilly Media,")
                 .subfield_str('c', "2020.")
                 .build(),
         )
         .field(
-            Field::builder("300", ' ', ' ')
+            Field::builder("300".to_string(), ' ', ' ')
                 .subfield_str('a', "xv, 450 pages ;")
                 .subfield_str('c', "24 cm.")
                 .build(),
         )
         .field(
-            Field::builder("020", ' ', ' ')
+            Field::builder("020".to_string(), ' ', ' ')
                 .subfield_str('a', "9781491927285")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Rust (Computer program language)")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Systems programming (Computer science)")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "C (Computer program language)")
                 .build(),
         )
         .field(
-            Field::builder("655", ' ', '7')
+            Field::builder("655".to_string(), ' ', '7')
                 .subfield_str('a', "Handbooks and manuals.")
                 .subfield_str('2', "lcgft")
                 .build(),

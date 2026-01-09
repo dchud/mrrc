@@ -327,7 +327,7 @@ impl IndicatorValidator {
     ///
     /// Returns `Err` if indicators don't meet validation rules for this field tag.
     pub fn validate_field(&self, field: &Field) -> Result<()> {
-        self.validate_indicators(&field.tag_str(), field.indicator1(), field.indicator2())
+        self.validate_indicators(&field.tag, field.indicator1, field.indicator2)
     }
 
     /// Validate indicators for a specific tag

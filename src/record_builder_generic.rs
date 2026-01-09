@@ -78,7 +78,7 @@ impl<T: MarcRecord> GenericRecordBuilder<T> {
     /// ```ignore
     /// use mrrc::{GenericRecordBuilder, Record, Leader, Field};
     ///
-    /// let field = Field::new("245", '1', '0');
+    /// let field = Field::new("245".to_string(), '1', '0');
     /// let mut builder = GenericRecordBuilder::new(Record::new(Leader::default()))
     ///     .control_field("001", "12345");
     /// builder.record_mut().add_field(field);

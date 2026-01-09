@@ -302,7 +302,7 @@ mod tests {
         let mut record = AuthorityRecord::new(make_test_leader());
 
         // Add heading field (150 - Topical Term)
-        let mut heading_field = Field::new("150", ' ', ' ');
+        let mut heading_field = Field::new("150".to_string(), ' ', ' ');
         heading_field.subfields.push(Subfield {
             code: 'a',
             value: "Computer science".to_string(),
@@ -310,7 +310,7 @@ mod tests {
         record.set_heading(heading_field);
 
         // Add see-from tracing (450)
-        let mut see_from_field = Field::new("450", ' ', ' ');
+        let mut see_from_field = Field::new("450".to_string(), ' ', ' ');
         see_from_field.subfields.push(Subfield {
             code: 'a',
             value: "Computing".to_string(),
@@ -318,7 +318,7 @@ mod tests {
         record.add_see_from_tracing(see_from_field);
 
         // Add see-also tracing (550)
-        let mut see_also_field = Field::new("550", ' ', ' ');
+        let mut see_also_field = Field::new("550".to_string(), ' ', ' ');
         see_also_field.subfields.push(Subfield {
             code: 'a',
             value: "Information technology".to_string(),
@@ -326,7 +326,7 @@ mod tests {
         record.add_see_also_tracing(see_also_field);
 
         // Add relationship field (750)
-        let mut rel_field = Field::new("750", ' ', ' ');
+        let mut rel_field = Field::new("750".to_string(), ' ', ' ');
         rel_field.subfields.push(Subfield {
             code: 'a',
             value: "Algorithms".to_string(),
@@ -341,7 +341,7 @@ mod tests {
         let record = create_test_auth_record();
         let see_from = record.get_see_from_headings();
         assert_eq!(see_from.len(), 1);
-        assert_eq!(see_from[0].tag_str(), "450");
+        assert_eq!(see_from[0].tag, "450");
     }
 
     #[test]
@@ -349,7 +349,7 @@ mod tests {
         let record = create_test_auth_record();
         let see_also = record.get_see_also_headings();
         assert_eq!(see_also.len(), 1);
-        assert_eq!(see_also[0].tag_str(), "550");
+        assert_eq!(see_also[0].tag, "550");
     }
 
     #[test]
@@ -357,7 +357,7 @@ mod tests {
         let record = create_test_auth_record();
         let rel = record.get_relationship_fields();
         assert_eq!(rel.len(), 1);
-        assert_eq!(rel[0].tag_str(), "750");
+        assert_eq!(rel[0].tag, "750");
     }
 
     #[test]
@@ -373,13 +373,13 @@ mod tests {
         if let Some(heading) = record.heading() {
             let related = record.find_related_heading(heading);
             assert!(related.is_some());
-            assert_eq!(related.unwrap().tag_str(), "550");
+            assert_eq!(related.unwrap().tag, "550");
         }
     }
 
     #[test]
     fn test_extract_authority_label() {
-        let mut field = Field::new("150", ' ', ' ');
+        let mut field = Field::new("150".to_string(), ' ', ' ');
         field.subfields.push(Subfield {
             code: 'a',
             value: "Computer science".to_string(),
@@ -390,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_get_subdivisions() {
-        let mut field = Field::new("650", ' ', ' ');
+        let mut field = Field::new("650".to_string(), ' ', ' ');
         field.subfields.push(Subfield {
             code: 'a',
             value: "Computers".to_string(),

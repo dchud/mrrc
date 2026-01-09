@@ -45,21 +45,21 @@ fn working_with_authority_records() {
         )
         // Heading - main entry (1XX)
         .heading(
-            Field::builder("100", '1', ' ')
+            Field::builder("100".to_string(), '1', ' ')
                 .subfield_str('a', "Twain, Mark,")
                 .subfield_str('d', "1835-1910.")
                 .build(),
         )
         // See from tracings - variant names (4XX)
         .add_see_from(
-            Field::builder("400", '1', ' ')
+            Field::builder("400".to_string(), '1', ' ')
                 .subfield_str('a', "Clemens, Samuel Langhorne,")
                 .subfield_str('d', "1835-1910.")
                 .build(),
         )
         // See also from tracings - related headings (5XX)
         .add_see_also(
-            Field::builder("500", '1', ' ')
+            Field::builder("500".to_string(), '1', ' ')
                 .subfield_str('a', "Clemens, Olivia Langdon,")
                 .subfield_str('d', "1845-1904.")
                 .subfield_str('e', "Related name.")
@@ -67,18 +67,18 @@ fn working_with_authority_records() {
         )
         // Source data found note (670)
         .add_note(
-            Field::builder("670", ' ', ' ')
+            Field::builder("670".to_string(), ' ', ' ')
                 .subfield_str('a', "His Tom Sawyer abroad, 1894.")
                 .build(),
         )
         .add_note(
-            Field::builder("670", ' ', ' ')
+            Field::builder("670".to_string(), ' ', ' ')
                 .subfield_str('a', "His Following the equator, 1897.")
                 .build(),
         )
         // General note (680)
         .add_note(
-            Field::builder("680", ' ', ' ')
+            Field::builder("680".to_string(), ' ', ' ')
                 .subfield_str('a', "American writer and humorist.")
                 .build(),
         )
@@ -140,7 +140,7 @@ fn working_with_holdings_records() {
         )
         // Holding institution (852)
         .add_field(
-            Field::builder("852", ' ', ' ')
+            Field::builder("852".to_string(), ' ', ' ')
                 .subfield_str('a', "University Library")
                 .subfield_str('b', "General Stacks")
                 .subfield_str('c', "PS1302")
@@ -150,7 +150,7 @@ fn working_with_holdings_records() {
         )
         // Item information (876)
         .add_field(
-            Field::builder("876", ' ', ' ')
+            Field::builder("876".to_string(), ' ', ' ')
                 .subfield_str('a', "Item 1")
                 .subfield_str('p', "Copy 1")
                 .subfield_str('q', "1")
@@ -159,7 +159,7 @@ fn working_with_holdings_records() {
         )
         // Textual holdings (866)
         .add_field(
-            Field::builder("866", ' ', ' ')
+            Field::builder("866".to_string(), ' ', ' ')
                 .subfield_str('a', "General note about the holdings.")
                 .build(),
         )

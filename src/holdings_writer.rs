@@ -95,8 +95,8 @@ impl<W: Write> HoldingsMarcWriter<W> {
         for fields in record.fields.values() {
             for field in fields {
                 add_field(
-                    &field.tag_str(),
-                    Some((field.indicator1(), field.indicator2())),
+                    &field.tag,
+                    Some((field.indicator1, field.indicator2)),
                     None,
                     Some(&field.subfields),
                     &mut directory,
@@ -208,13 +208,13 @@ mod tests {
         let mut record = HoldingsRecord::new(leader);
 
         let location = Field {
-            tag: 852,
-            indicators: [32_u8, 49_u8],
+            tag: "852".to_string(),
+            indicator1: ' ',
+            indicator2: '1',
             subfields: vec![Subfield {
                 code: 'b',
                 value: "Main Library".to_string(),
-            }]
-            .into(),
+            }],
         };
 
         record.add_location(location);
@@ -234,24 +234,24 @@ mod tests {
         record.add_control_field("001".to_string(), "ocm00098765".to_string());
 
         let location = Field {
-            tag: 852,
-            indicators: [32_u8, 49_u8],
+            tag: "852".to_string(),
+            indicator1: ' ',
+            indicator2: '1',
             subfields: vec![Subfield {
                 code: 'b',
                 value: "Main Library".to_string(),
-            }]
-            .into(),
+            }],
         };
         record.add_location(location);
 
         let textual = Field {
-            tag: 866,
-            indicators: [52_u8, 49_u8],
+            tag: "866".to_string(),
+            indicator1: '4',
+            indicator2: '1',
             subfields: vec![Subfield {
                 code: 'a',
                 value: "v.1-5".to_string(),
-            }]
-            .into(),
+            }],
         };
         record.add_textual_holdings_basic(textual);
 

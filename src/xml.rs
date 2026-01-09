@@ -10,7 +10,7 @@
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut record = Record::new(Leader::default());
-//! let mut field = Field::new("245", '1', '0');
+//! let mut field = Field::new("245".to_string(), '1', '0');
 //! field.add_subfield('a', "Title".to_string());
 //! record.add_field(field);
 //!
@@ -94,7 +94,7 @@ pub struct MarcXmlSubfield {
 /// # use mrrc::{Record, Field, Leader, xml};
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let mut record = Record::new(Leader::default());
-/// let mut field = Field::new("245", '1', '0');
+/// let mut field = Field::new("245".to_string(), '1', '0');
 /// field.add_subfield('a', "Test Title".to_string());
 /// record.add_field(field);
 /// let xml = xml::record_to_xml(&record)?;
@@ -130,8 +130,8 @@ pub fn record_to_xml(record: &Record) -> Result<String> {
 
             datafields.push(MarcXmlDataField {
                 tag: tag.clone(),
-                ind1: field.indicator1().to_string(),
-                ind2: field.indicator2().to_string(),
+                ind1: field.indicator1.to_string(),
+                ind2: field.indicator2.to_string(),
                 subfield: subfields,
             });
         }
@@ -192,7 +192,7 @@ pub fn xml_to_record(xml: &str) -> Result<Record> {
         let ind1 = df.ind1.chars().next().unwrap_or(' ');
         let ind2 = df.ind2.chars().next().unwrap_or(' ');
 
-        let mut field = Field::new(&df.tag, ind1, ind2);
+        let mut field = Field::new(df.tag, ind1, ind2);
 
         for sf in df.subfield {
             let code = sf
@@ -236,7 +236,7 @@ mod tests {
         let mut record = Record::new(make_test_leader());
         record.add_control_field("001".to_string(), "12345".to_string());
 
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Test title".to_string());
         record.add_field(field);
 
@@ -254,7 +254,7 @@ mod tests {
         let mut record = Record::new(make_test_leader());
         record.add_control_field("001".to_string(), "12345".to_string());
 
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Test title".to_string());
         field.add_subfield('c', "Author".to_string());
         record.add_field(field);
@@ -272,7 +272,7 @@ mod tests {
     fn test_xml_with_multiple_subfields() {
         let mut record = Record::new(make_test_leader());
 
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield('a', "Subject".to_string());
         field.add_subfield('v', "Subdivision".to_string());
         field.add_subfield('x', "General subdivision".to_string());
@@ -292,7 +292,7 @@ mod tests {
         let mut record = Record::new(make_test_leader());
 
         for i in 1..=3 {
-            let mut field = Field::new("650", ' ', '0');
+            let mut field = Field::new("650".to_string(), ' ', '0');
             field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }

@@ -42,25 +42,25 @@ fn simple_record() {
         .control_field_str("001", "9780061120084")
         .control_field_str("008", "051029s2005    xxu||||||||||||||||eng||")
         .field(
-            Field::builder("245", '1', '0')
+            Field::builder("245".to_string(), '1', '0')
                 .subfield_str('a', "To Kill a Mockingbird /")
                 .subfield_str('c', "Harper Lee.")
                 .build(),
         )
         .field(
-            Field::builder("100", '1', ' ')
+            Field::builder("100".to_string(), '1', ' ')
                 .subfield_str('a', "Lee, Harper,")
                 .subfield_str('d', "1926-2016,")
                 .subfield_str('e', "author.")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Psychological fiction.")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Legal stories.")
                 .build(),
         )
@@ -92,25 +92,25 @@ fn record_with_subjects() {
     let record = Record::builder(default_leader())
         .control_field_str("001", "12345678")
         .field(
-            Field::builder("245", '1', '0')
+            Field::builder("245".to_string(), '1', '0')
                 .subfield_str('a', "Introduction to quantum mechanics")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Quantum mechanics")
                 .subfield_str('v', "Textbooks.")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Physics")
                 .subfield_str('x', "Study and teaching")
                 .subfield_str('z', "Higher.")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Quantum theory.")
                 .build(),
         )
@@ -143,7 +143,7 @@ fn complex_record() {
         .control_field_str("008", "051229s2005    xxu||||||||||||||||eng||")
         // Main entry - personal name
         .field(
-            Field::builder("100", '1', ' ')
+            Field::builder("100".to_string(), '1', ' ')
                 .subfield_str('a', "Doe, John,")
                 .subfield_str('d', "1950-")
                 .subfield_str('e', "author.")
@@ -151,14 +151,14 @@ fn complex_record() {
         )
         // Title statement
         .field(
-            Field::builder("245", '1', '4')
+            Field::builder("245".to_string(), '1', '4')
                 .subfield_str('a', "The guide to advanced Rust programming /")
                 .subfield_str('c', "John Doe.")
                 .build(),
         )
         // Publication, distribution
         .field(
-            Field::builder("260", ' ', ' ')
+            Field::builder("260".to_string(), ' ', ' ')
                 .subfield_str('a', "New York :") // Place of publication
                 .subfield_str('b', "O'Reilly Media,") // Publisher
                 .subfield_str('c', "2005.") // Date of publication
@@ -166,7 +166,7 @@ fn complex_record() {
         )
         // Physical description
         .field(
-            Field::builder("300", ' ', ' ')
+            Field::builder("300".to_string(), ' ', ' ')
                 .subfield_str('a', "xix, 400 pages :") // Extent
                 .subfield_str('b', "color illustrations ;") // Other physical details
                 .subfield_str('c', "24 cm") // Dimensions
@@ -174,25 +174,25 @@ fn complex_record() {
         )
         // ISBN
         .field(
-            Field::builder("020", ' ', ' ')
+            Field::builder("020".to_string(), ' ', ' ')
                 .subfield_str('a', "9780596004957")
                 .build(),
         )
         // Subject headings
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Rust (Computer program language)")
                 .build(),
         )
         .field(
-            Field::builder("650", ' ', '0')
+            Field::builder("650".to_string(), ' ', '0')
                 .subfield_str('a', "Programming languages")
                 .subfield_str('x', "Handbooks, manuals, etc.")
                 .build(),
         )
         // Added entry - personal name
         .field(
-            Field::builder("700", '1', ' ')
+            Field::builder("700".to_string(), '1', ' ')
                 .subfield_str('a', "Smith, Jane,")
                 .subfield_str('d', "1960-")
                 .subfield_str('e', "editor.")

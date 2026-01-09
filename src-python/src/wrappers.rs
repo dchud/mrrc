@@ -380,9 +380,10 @@ impl PyField {
 
         Ok(PyField {
             inner: Field {
-                tag: tag.parse::<u16>().unwrap_or(0),
-                indicators: [ind1 as u8, ind2 as u8],
-                subfields: sfs.into(),
+                tag: tag.to_string(),
+                indicator1: ind1,
+                indicator2: ind2,
+                subfields: sfs,
             },
         })
     }
@@ -390,32 +391,32 @@ impl PyField {
     /// Field tag (3 digits)
     #[getter]
     pub fn tag(&self) -> String {
-        self.inner.tag_str()
+        self.inner.tag.clone()
     }
 
     /// First indicator
     #[getter]
     pub fn indicator1(&self) -> String {
-        (self.inner.indicator1() as char).to_string()
+        self.inner.indicator1.to_string()
     }
 
     #[setter]
     pub fn set_indicator1(&mut self, value: &str) {
         if let Some(ch) = value.chars().next() {
-            self.inner.indicators[0] = ch as u8;
+            self.inner.indicator1 = ch;
         }
     }
 
     /// Second indicator
     #[getter]
     pub fn indicator2(&self) -> String {
-        (self.inner.indicator2() as char).to_string()
+        self.inner.indicator2.to_string()
     }
 
     #[setter]
     pub fn set_indicator2(&mut self, value: &str) {
         if let Some(ch) = value.chars().next() {
-            self.inner.indicators[1] = ch as u8;
+            self.inner.indicator2 = ch;
         }
     }
 
@@ -463,15 +464,15 @@ impl PyField {
     fn __repr__(&self) -> String {
         format!(
             "<Field tag={} ind1={} ind2={} subfields={}>",
-            self.inner.tag_str(),
-            self.inner.indicator1(),
-            self.inner.indicator2(),
+            self.inner.tag,
+            self.inner.indicator1,
+            self.inner.indicator2,
             self.inner.subfields.len()
         )
     }
 
     fn __str__(&self) -> String {
-        format!("Field({})", self.inner.tag_str())
+        format!("Field({})", self.inner.tag)
     }
 
     fn __eq__(&self, other: &PyField) -> bool {

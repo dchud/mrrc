@@ -75,7 +75,7 @@ mod tests {
     fn test_define_field_accessors_macro() {
         let mut record = TestRecord { fields: Vec::new() };
 
-        let field = Field::new("245", '1', '0');
+        let field = Field::new("245".to_string(), '1', '0');
         record.add_field_test(field);
 
         assert_eq!(record.fields_test().len(), 1);

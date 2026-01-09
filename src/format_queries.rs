@@ -508,7 +508,7 @@ mod tests {
     #[test]
     fn test_bibliographic_get_titles() {
         let mut record = Record::new(make_bib_leader());
-        let mut title_field = Field::new("245", '1', '0');
+        let mut title_field = Field::new("245".to_string(), '1', '0');
         title_field.subfields.push(Subfield {
             code: 'a',
             value: "Test title".to_string(),
@@ -517,20 +517,20 @@ mod tests {
 
         let titles = record.get_titles();
         assert_eq!(titles.len(), 1);
-        assert_eq!(titles[0].tag_str(), "245");
+        assert_eq!(titles[0].tag, "245");
     }
 
     #[test]
     fn test_bibliographic_get_all_subjects() {
         let mut record = Record::new(make_bib_leader());
-        let mut subject1 = Field::new("650", ' ', '0');
+        let mut subject1 = Field::new("650".to_string(), ' ', '0');
         subject1.subfields.push(Subfield {
             code: 'a',
             value: "Topic".to_string(),
         });
         record.add_field(subject1);
 
-        let mut subject2 = Field::new("651", ' ', '0');
+        let mut subject2 = Field::new("651".to_string(), ' ', '0');
         subject2.subfields.push(Subfield {
             code: 'a',
             value: "Place".to_string(),
@@ -544,14 +544,14 @@ mod tests {
     #[test]
     fn test_bibliographic_get_all_names() {
         let mut record = Record::new(make_bib_leader());
-        let mut name1 = Field::new("100", '1', ' ');
+        let mut name1 = Field::new("100".to_string(), '1', ' ');
         name1.subfields.push(Subfield {
             code: 'a',
             value: "Author".to_string(),
         });
         record.add_field(name1);
 
-        let mut name2 = Field::new("700", '1', ' ');
+        let mut name2 = Field::new("700".to_string(), '1', ' ');
         name2.subfields.push(Subfield {
             code: 'a',
             value: "Contributor".to_string(),
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn test_authority_get_preferred_heading() {
         let mut record = AuthorityRecord::new(make_auth_leader());
-        let mut heading = Field::new("150", ' ', ' ');
+        let mut heading = Field::new("150".to_string(), ' ', ' ');
         heading.subfields.push(Subfield {
             code: 'a',
             value: "Computer science".to_string(),
@@ -578,7 +578,7 @@ mod tests {
     #[test]
     fn test_authority_get_variant_headings() {
         let mut record = AuthorityRecord::new(make_auth_leader());
-        let mut variant = Field::new("450", ' ', ' ');
+        let mut variant = Field::new("450".to_string(), ' ', ' ');
         variant.subfields.push(Subfield {
             code: 'a',
             value: "Computing".to_string(),
@@ -592,7 +592,7 @@ mod tests {
     #[test]
     fn test_holdings_get_call_number() {
         let mut record = HoldingsRecord::new(make_hold_leader());
-        let mut call_field = Field::new("090", ' ', ' ');
+        let mut call_field = Field::new("090".to_string(), ' ', ' ');
         call_field.subfields.push(Subfield {
             code: 'a',
             value: "QA76.9.D3".to_string(),
@@ -605,7 +605,7 @@ mod tests {
     #[test]
     fn test_holdings_get_holding_location() {
         let mut record = HoldingsRecord::new(make_hold_leader());
-        let mut loc_field = Field::new("852", ' ', ' ');
+        let mut loc_field = Field::new("852".to_string(), ' ', ' ');
         loc_field.subfields.push(Subfield {
             code: 'b',
             value: "Main Library".to_string(),

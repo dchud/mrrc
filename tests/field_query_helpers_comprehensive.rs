@@ -37,86 +37,86 @@ fn create_realistic_record() -> Record {
     record.add_control_field_str("008", "970616s1997    enka   j      000 0 eng d");
 
     // Title
-    let mut field_245 = Field::new("245", '1', '0');
+    let mut field_245 = Field::new("245".to_string(), '1', '0');
     field_245.add_subfield_str('a', "The Great Gatsby");
     field_245.add_subfield_str('c', "F. Scott Fitzgerald");
     record.add_field(field_245);
 
     // ISBN fields
-    let mut isbn1 = Field::new("020", ' ', ' ');
+    let mut isbn1 = Field::new("020".to_string(), ' ', ' ');
     isbn1.add_subfield_str('a', "978-0-7432-7356-5");
     record.add_field(isbn1);
 
-    let mut isbn2 = Field::new("020", ' ', ' ');
+    let mut isbn2 = Field::new("020".to_string(), ' ', ' ');
     isbn2.add_subfield_str('a', "979-10-90636-07-1");
     record.add_field(isbn2);
 
-    let mut isbn3 = Field::new("020", ' ', ' ');
+    let mut isbn3 = Field::new("020".to_string(), ' ', ' ');
     isbn3.add_subfield_str('a', "978-1-111111-11-1");
     record.add_field(isbn3);
 
     // Author with dates
-    let mut field_100 = Field::new("100", '1', ' ');
+    let mut field_100 = Field::new("100".to_string(), '1', ' ');
     field_100.add_subfield_str('a', "Fitzgerald, F. Scott");
     field_100.add_subfield_str('d', "1896-1940");
     record.add_field(field_100);
 
     // Added authors
-    let mut field_700a = Field::new("700", '1', ' ');
+    let mut field_700a = Field::new("700".to_string(), '1', ' ');
     field_700a.add_subfield_str('a', "Smith, John");
     field_700a.add_subfield_str('d', "1873-1944");
     record.add_field(field_700a);
 
-    let mut field_700b = Field::new("700", '1', ' ');
+    let mut field_700b = Field::new("700".to_string(), '1', ' ');
     field_700b.add_subfield_str('a', "Doe, Jane");
     field_700b.add_subfield_str('d', "1902-1989");
     record.add_field(field_700b);
 
-    let mut field_700c = Field::new("700", '1', ' ');
+    let mut field_700c = Field::new("700".to_string(), '1', ' ');
     field_700c.add_subfield_str('a', "Johnson, Robert");
     record.add_field(field_700c);
 
     // Corporate author
-    let mut field_710 = Field::new("710", '2', ' ');
+    let mut field_710 = Field::new("710".to_string(), '2', ' ');
     field_710.add_subfield_str('a', "Scribner");
     record.add_field(field_710);
 
     // Subject headings with subdivisions
-    let mut subject1 = Field::new("650", ' ', '0');
+    let mut subject1 = Field::new("650".to_string(), ' ', '0');
     subject1.add_subfield_str('a', "Novels");
     subject1.add_subfield_str('x', "American");
     subject1.add_subfield_str('y', "20th century");
     record.add_field(subject1);
 
-    let mut subject2 = Field::new("650", ' ', '0');
+    let mut subject2 = Field::new("650".to_string(), ' ', '0');
     subject2.add_subfield_str('a', "Coming of age");
     subject2.add_subfield_str('x', "Fiction");
     record.add_field(subject2);
 
-    let mut subject3 = Field::new("650", ' ', '0');
+    let mut subject3 = Field::new("650".to_string(), ' ', '0');
     subject3.add_subfield_str('a', "World");
     subject3.add_subfield_str('x', "History");
     subject3.add_subfield_str('y', "20th century");
     record.add_field(subject3);
 
-    let mut subject4 = Field::new("650", ' ', '0');
+    let mut subject4 = Field::new("650".to_string(), ' ', '0');
     subject4.add_subfield_str('a', "Philosophy");
     subject4.add_subfield_str('x', "History");
     record.add_field(subject4);
 
-    let mut subject5 = Field::new("650", ' ', '0');
+    let mut subject5 = Field::new("650".to_string(), ' ', '0');
     subject5.add_subfield_str('a', "Science");
     subject5.add_subfield_str('y', "Geography");
     record.add_field(subject5);
 
     // Geographic subject
-    let mut geo_subject = Field::new("651", ' ', '0');
+    let mut geo_subject = Field::new("651".to_string(), ' ', '0');
     geo_subject.add_subfield_str('a', "United States");
     geo_subject.add_subfield_str('x', "Fiction");
     record.add_field(geo_subject);
 
     // Name subject
-    let mut name_subject = Field::new("600", '1', '0');
+    let mut name_subject = Field::new("600".to_string(), '1', '0');
     name_subject.add_subfield_str('a', "Gatsby, Jay");
     name_subject.add_subfield_str('c', "Fictional character");
     record.add_field(name_subject);
@@ -210,7 +210,7 @@ fn test_subjects_with_subdivision_x_history() {
     assert_eq!(results.len(), 2);
 
     for field in results {
-        assert_eq!(field.tag_str(), "650");
+        assert_eq!(field.tag, "650");
         if let Some(subfield) = field.get_subfield('x') {
             assert_eq!(subfield, "History");
         }
@@ -405,7 +405,7 @@ fn test_subjects_with_note_case_sensitive() {
 fn test_pattern_query_empty_subfield_value() {
     let mut record = Record::new(make_leader());
 
-    let mut field = Field::new("020", ' ', ' ');
+    let mut field = Field::new("020".to_string(), ' ', ' ');
     field.add_subfield_str('a', "");
     record.add_field(field);
 
@@ -417,7 +417,7 @@ fn test_pattern_query_empty_subfield_value() {
 fn test_pattern_query_special_regex_chars() {
     let mut record = Record::new(make_leader());
 
-    let mut field = Field::new("020", ' ', ' ');
+    let mut field = Field::new("020".to_string(), ' ', ' ');
     field.add_subfield_str('a', "ISBN-123.456");
     record.add_field(field);
 
@@ -434,7 +434,7 @@ fn test_pattern_query_special_regex_chars() {
 fn test_value_query_unicode_characters() {
     let mut record = Record::new(make_leader());
 
-    let mut subject = Field::new("650", ' ', '0');
+    let mut subject = Field::new("650".to_string(), ' ', '0');
     subject.add_subfield_str('a', "Café");
     subject.add_subfield_str('x', "Français");
     record.add_field(subject);
@@ -447,7 +447,7 @@ fn test_value_query_unicode_characters() {
 fn test_value_query_whitespace_sensitivity() {
     let mut record = Record::new(make_leader());
 
-    let mut subject = Field::new("650", ' ', '0');
+    let mut subject = Field::new("650".to_string(), ' ', '0');
     subject.add_subfield_str('a', "Modern history");
     subject.add_subfield_str('x', "20th century");
     record.add_field(subject);
@@ -516,7 +516,7 @@ fn test_large_record_isbn_matching_performance() {
 
     // Add 1000 ISBN fields
     for i in 0..1000 {
-        let mut field = Field::new("020", ' ', ' ');
+        let mut field = Field::new("020".to_string(), ' ', ' ');
         let isbn = if i % 3 == 0 {
             format!("978-0-{:06}-{:02}-5", i, i % 10)
         } else {
@@ -538,7 +538,7 @@ fn test_large_record_subject_matching_performance() {
     // Add 500 subject fields
     let subdivisions = ["History", "Geography", "Fiction", "Literature"];
     for i in 0..500 {
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         let subject = format!("Subject {i}");
         field.add_subfield_str('a', &subject);
         field.add_subfield_str('x', subdivisions[i % subdivisions.len()]);
@@ -592,12 +592,12 @@ fn test_empty_field_value_handling() {
     let mut record = Record::new(make_leader());
 
     // Add fields with empty subfield values
-    let mut field1 = Field::new("650", ' ', '0');
+    let mut field1 = Field::new("650".to_string(), ' ', '0');
     field1.add_subfield_str('a', "Subject");
     field1.add_subfield_str('x', "");
     record.add_field(field1);
 
-    let mut field2 = Field::new("650", ' ', '0');
+    let mut field2 = Field::new("650".to_string(), ' ', '0');
     field2.add_subfield_str('a', "Subject");
     field2.add_subfield_str('x', "History");
     record.add_field(field2);
@@ -611,7 +611,7 @@ fn test_multiple_subfields_same_code() {
     let mut record = Record::new(make_leader());
 
     // Field with multiple 'x' subfields
-    let mut field = Field::new("650", ' ', '0');
+    let mut field = Field::new("650".to_string(), ' ', '0');
     field.add_subfield_str('a', "Subject");
     field.add_subfield_str('x', "History");
     field.add_subfield_str('x', "Sources");

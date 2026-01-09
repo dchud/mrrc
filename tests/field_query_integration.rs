@@ -21,42 +21,42 @@ fn create_test_record() -> Record {
     let mut record = Record::new(leader);
 
     // Add some fields with various indicators and subfields
-    let mut field_245 = Field::new("245", '1', '0');
+    let mut field_245 = Field::new("245".to_string(), '1', '0');
     field_245.add_subfield_str('a', "The Great Gatsby");
     field_245.add_subfield_str('c', "F. Scott Fitzgerald");
     record.add_field(field_245);
 
     // Add multiple 650 fields (LCSH subjects)
-    let mut field_650_1 = Field::new("650", ' ', '0');
+    let mut field_650_1 = Field::new("650".to_string(), ' ', '0');
     field_650_1.add_subfield_str('a', "Novels");
     field_650_1.add_subfield_str('x', "American");
     record.add_field(field_650_1);
 
-    let mut field_650_2 = Field::new("650", ' ', '0');
+    let mut field_650_2 = Field::new("650".to_string(), ' ', '0');
     field_650_2.add_subfield_str('a', "Coming of age");
     field_650_2.add_subfield_str('x', "Fiction");
     record.add_field(field_650_2);
 
     // Add a 651 field (geographic subject)
-    let mut field_651 = Field::new("651", ' ', '0');
+    let mut field_651 = Field::new("651".to_string(), ' ', '0');
     field_651.add_subfield_str('a', "United States");
     field_651.add_subfield_str('x', "Fiction");
     record.add_field(field_651);
 
     // Add a 600 field (name subject)
-    let mut field_600 = Field::new("600", '1', '0');
+    let mut field_600 = Field::new("600".to_string(), '1', '0');
     field_600.add_subfield_str('a', "Gatsby, Jay");
     field_600.add_subfield_str('c', "Fictional character");
     record.add_field(field_600);
 
     // Add a 700 field (name added entry) with different indicators
-    let mut field_700 = Field::new("700", '1', ' ');
+    let mut field_700 = Field::new("700".to_string(), '1', ' ');
     field_700.add_subfield_str('a', "Fitzgerald, F. Scott");
     field_700.add_subfield_str('d', "1896-1940");
     record.add_field(field_700);
 
     // Add a 710 field (corporate body added entry)
-    let mut field_710 = Field::new("710", '2', ' ');
+    let mut field_710 = Field::new("710".to_string(), '2', ' ');
     field_710.add_subfield_str('a', "Scribner");
     record.add_field(field_710);
 
@@ -72,7 +72,7 @@ fn test_fields_by_indicator_lcsh() {
 
     assert_eq!(lcsh_fields.len(), 2);
     for field in lcsh_fields {
-        assert_eq!(field.tag_str(), "650");
+        assert_eq!(field.tag, "650");
         assert_eq!(field.indicator2, '0');
     }
 }
@@ -87,7 +87,7 @@ fn test_fields_by_indicator_specific() {
         .collect();
 
     assert_eq!(fields.len(), 1);
-    assert_eq!(fields[0].tag_str(), "245");
+    assert_eq!(fields[0].tag, "245");
     assert_eq!(fields[0].indicator1, '1');
     assert_eq!(fields[0].indicator2, '0');
 }
@@ -192,7 +192,7 @@ fn test_field_query_builder() {
 
     assert_eq!(matching.len(), 2);
     for field in matching {
-        assert_eq!(field.tag_str(), "650");
+        assert_eq!(field.tag, "650");
         assert_eq!(field.indicator2, '0');
         assert!(field.get_subfield('a').is_some());
     }

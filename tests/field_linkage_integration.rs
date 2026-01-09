@@ -26,7 +26,7 @@ fn create_linked_record() -> Record {
 
     // Original field 100 - Author with Arabic name
     // $6 880-01 means it links to 880 occurrence 01
-    let mut field_100 = Field::new("100", '1', ' ');
+    let mut field_100 = Field::new("100".to_string(), '1', ' ');
     field_100.add_subfield_str('6', "880-01");
     field_100.add_subfield_str('a', "سميث، جون"); // Arabic: "Smith, John"
     field_100.add_subfield_str('d', "1850-1925");
@@ -34,26 +34,26 @@ fn create_linked_record() -> Record {
 
     // 880 field - Romanized version of 100
     // $6 100-01 points back to the original 100 field occurrence 01
-    let mut field_880_100 = Field::new("880", '1', ' ');
+    let mut field_880_100 = Field::new("880".to_string(), '1', ' ');
     field_880_100.add_subfield_str('6', "100-01");
     field_880_100.add_subfield_str('a', "Smith, John");
     field_880_100.add_subfield_str('d', "1850-1925");
     record.add_field(field_880_100);
 
     // Original field 245 - Title in Arabic
-    let mut field_245 = Field::new("245", '1', '0');
+    let mut field_245 = Field::new("245".to_string(), '1', '0');
     field_245.add_subfield_str('6', "880-02");
     field_245.add_subfield_str('a', "كتاب عن الحياة");
     record.add_field(field_245);
 
     // 880 field - Romanized title
-    let mut field_880_245 = Field::new("880", '1', '0');
+    let mut field_880_245 = Field::new("880".to_string(), '1', '0');
     field_880_245.add_subfield_str('6', "245-02");
     field_880_245.add_subfield_str('a', "Kitab ʻan al-hayah");
     record.add_field(field_880_245);
 
     // Field 700 - Without linkage (no 880)
-    let mut field_700 = Field::new("700", '1', ' ');
+    let mut field_700 = Field::new("700".to_string(), '1', ' ');
     field_700.add_subfield_str('a', "Jones, Jane");
     record.add_field(field_700);
 
@@ -96,7 +96,7 @@ fn test_get_linked_field_basic() {
     let field_100 = record.get_field("100").unwrap();
     let field_880 = record.get_linked_field(field_100).unwrap();
 
-    assert_eq!(field_880.tag_str(), "880");
+    assert_eq!(field_880.tag, "880");
     assert_eq!(field_880.get_subfield('a'), Some("Smith, John"));
 }
 
@@ -107,7 +107,7 @@ fn test_get_linked_field_multiple_occurrences() {
     let field_245 = record.get_field("245").unwrap();
     let field_880 = record.get_linked_field(field_245).unwrap();
 
-    assert_eq!(field_880.tag_str(), "880");
+    assert_eq!(field_880.tag, "880");
     assert_eq!(field_880.get_subfield('6'), Some("245-02"));
 }
 
@@ -127,7 +127,7 @@ fn test_get_linked_field_no_880_match() {
     let mut record = Record::new(make_leader());
 
     // Create field with linkage but no matching 880
-    let mut field = Field::new("100", '1', ' ');
+    let mut field = Field::new("100".to_string(), '1', ' ');
     field.add_subfield_str('6', "880-99");
     field.add_subfield_str('a', "Author");
     record.add_field(field);
@@ -143,7 +143,7 @@ fn test_get_linked_field_malformed_linkage() {
     let mut record = Record::new(make_leader());
 
     // Create field with malformed subfield 6
-    let mut field = Field::new("100", '1', ' ');
+    let mut field = Field::new("100".to_string(), '1', ' ');
     field.add_subfield_str('6', "invalid-format");
     field.add_subfield_str('a', "Author");
     record.add_field(field);
@@ -169,7 +169,7 @@ fn test_get_original_field_from_880() {
     let field_880 = all_880[0];
     let original = record.get_original_field(field_880).unwrap();
 
-    assert_eq!(original.tag_str(), "100");
+    assert_eq!(original.tag, "100");
 }
 
 #[test]
@@ -184,14 +184,14 @@ fn test_get_original_field_multiple() {
             .is_some_and(|v| v.contains("100"))
         {
             let original = record.get_original_field(field_880).unwrap();
-            assert_eq!(original.tag_str(), "100");
+            assert_eq!(original.tag, "100");
         }
         if field_880
             .get_subfield('6')
             .is_some_and(|v| v.contains("245"))
         {
             let original = record.get_original_field(field_880).unwrap();
-            assert_eq!(original.tag_str(), "245");
+            assert_eq!(original.tag, "245");
         }
     }
 }
@@ -212,7 +212,7 @@ fn test_get_original_field_no_subfield_6() {
     let mut record = Record::new(make_leader());
 
     // Create 880 without subfield 6
-    let mut field_880 = Field::new("880", '1', ' ');
+    let mut field_880 = Field::new("880".to_string(), '1', ' ');
     field_880.add_subfield_str('a', "Some text");
     record.add_field(field_880);
 
@@ -240,7 +240,7 @@ fn test_get_all_880_fields_all_880() {
 
     let fields_880 = record.get_all_880_fields();
     for field in fields_880 {
-        assert_eq!(field.tag_str(), "880");
+        assert_eq!(field.tag, "880");
     }
 }
 
@@ -264,9 +264,9 @@ fn test_get_field_pairs_both_linked() {
     assert_eq!(pairs.len(), 1);
 
     let (orig, linked) = pairs[0];
-    assert_eq!(orig.tag_str(), "100");
+    assert_eq!(orig.tag, "100");
     assert!(linked.is_some());
-    assert_eq!(linked.unwrap().tag_str(), "880");
+    assert_eq!(linked.unwrap().tag, "880");
 }
 
 #[test]
@@ -277,7 +277,7 @@ fn test_get_field_pairs_no_880() {
     assert_eq!(pairs.len(), 1);
 
     let (orig, linked) = pairs[0];
-    assert_eq!(orig.tag_str(), "700");
+    assert_eq!(orig.tag, "700");
     assert!(linked.is_none());
 }
 
@@ -286,16 +286,16 @@ fn test_get_field_pairs_multiple() {
     let mut record = Record::new(make_leader());
 
     // Add multiple 100 fields (unusual but valid)
-    let mut field_100a = Field::new("100", '1', ' ');
+    let mut field_100a = Field::new("100".to_string(), '1', ' ');
     field_100a.add_subfield_str('6', "880-01");
     field_100a.add_subfield_str('a', "Author 1");
     record.add_field(field_100a);
 
-    let mut field_100b = Field::new("100", '1', ' ');
+    let mut field_100b = Field::new("100".to_string(), '1', ' ');
     field_100b.add_subfield_str('a', "Author 2");
     record.add_field(field_100b);
 
-    let mut field_880 = Field::new("880", '1', ' ');
+    let mut field_880 = Field::new("880".to_string(), '1', ' ');
     field_880.add_subfield_str('6', "100-01");
     field_880.add_subfield_str('a', "Author 1 romanized");
     record.add_field(field_880);
@@ -318,7 +318,7 @@ fn test_get_field_pairs_245() {
     assert_eq!(pairs.len(), 1);
 
     let (orig, linked) = pairs[0];
-    assert_eq!(orig.tag_str(), "245");
+    assert_eq!(orig.tag, "245");
     assert!(linked.is_some());
 }
 
@@ -407,7 +407,7 @@ fn test_record_only_880_fields() {
     let mut record = Record::new(make_leader());
 
     // Add only 880 fields without originals
-    let mut field_880 = Field::new("880", '1', ' ');
+    let mut field_880 = Field::new("880".to_string(), '1', ' ');
     field_880.add_subfield_str('6', "100-01");
     field_880.add_subfield_str('a', "Some author");
     record.add_field(field_880);
@@ -426,18 +426,18 @@ fn test_multiple_880_same_occurrence() {
     // This is unusual but test it anyway
     let mut record = Record::new(make_leader());
 
-    let mut field_100 = Field::new("100", '1', ' ');
+    let mut field_100 = Field::new("100".to_string(), '1', ' ');
     field_100.add_subfield_str('6', "880-01");
     field_100.add_subfield_str('a', "Author");
     record.add_field(field_100);
 
     // Add two 880 fields with same occurrence (malformed, but test it)
-    let mut field_880a = Field::new("880", '1', ' ');
+    let mut field_880a = Field::new("880".to_string(), '1', ' ');
     field_880a.add_subfield_str('6', "100-01");
     field_880a.add_subfield_str('a', "Romanized 1");
     record.add_field(field_880a);
 
-    let mut field_880b = Field::new("880", '1', ' ');
+    let mut field_880b = Field::new("880".to_string(), '1', ' ');
     field_880b.add_subfield_str('6', "100-01");
     field_880b.add_subfield_str('a', "Romanized 2");
     record.add_field(field_880b);
@@ -446,7 +446,7 @@ fn test_multiple_880_same_occurrence() {
     let linked = record.get_linked_field(field_100).unwrap();
 
     // Should return the first match
-    assert_eq!(linked.tag_str(), "880");
+    assert_eq!(linked.tag, "880");
 }
 
 #[test]
@@ -454,28 +454,28 @@ fn test_complex_multilingual_record() {
     let mut record = Record::new(make_leader());
 
     // English author
-    let mut field_100 = Field::new("100", '1', ' ');
+    let mut field_100 = Field::new("100".to_string(), '1', ' ');
     field_100.add_subfield_str('a', "Smith, John");
     record.add_field(field_100);
 
     // Arabic title with romanization
-    let mut field_245_ar = Field::new("245", '1', '0');
+    let mut field_245_ar = Field::new("245".to_string(), '1', '0');
     field_245_ar.add_subfield_str('6', "880-01");
     field_245_ar.add_subfield_str('a', "كتاب");
     record.add_field(field_245_ar);
 
-    let mut field_880_245 = Field::new("880", '1', '0');
+    let mut field_880_245 = Field::new("880".to_string(), '1', '0');
     field_880_245.add_subfield_str('6', "245-01");
     field_880_245.add_subfield_str('a', "Kitab");
     record.add_field(field_880_245);
 
     // Chinese subject with romanization
-    let mut field_650_zh = Field::new("650", ' ', '0');
+    let mut field_650_zh = Field::new("650".to_string(), ' ', '0');
     field_650_zh.add_subfield_str('6', "880-02");
     field_650_zh.add_subfield_str('a', "中国文化");
     record.add_field(field_650_zh);
 
-    let mut field_880_650 = Field::new("880", ' ', '0');
+    let mut field_880_650 = Field::new("880".to_string(), ' ', '0');
     field_880_650.add_subfield_str('6', "650-02");
     field_880_650.add_subfield_str('a', "Chinese culture");
     record.add_field(field_880_650);

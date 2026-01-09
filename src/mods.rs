@@ -20,7 +20,7 @@
 //! use mrrc::{Record, Field, Leader, mods};
 //!
 //! let mut record = Record::new(Leader::default());
-//! let mut field = Field::new("245", '1', '0');
+//! let mut field = Field::new("245".to_string(), '1', '0');
 //! field.add_subfield('a', "Title".to_string());
 //! record.add_field(field);
 //!
@@ -55,7 +55,7 @@ use crate::record::Record;
 /// use mrrc::{Record, Field, Leader, mods};
 ///
 /// let mut record = Record::new(Leader::default());
-/// let mut field = Field::new("245", '1', '0');
+/// let mut field = Field::new("245".to_string(), '1', '0');
 /// field.add_subfield('a', "My Book".to_string());
 /// record.add_field(field);
 ///
@@ -461,7 +461,7 @@ mod tests {
     #[test]
     fn test_title_extraction() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Test Title".to_string());
         record.add_field(field);
 
@@ -472,7 +472,7 @@ mod tests {
     #[test]
     fn test_title_with_subtitle() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Main Title".to_string());
         field.add_subfield('b', "Subtitle".to_string());
         record.add_field(field);
@@ -485,7 +485,7 @@ mod tests {
     #[test]
     fn test_personal_name() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("100", '1', ' ');
+        let mut field = Field::new("100".to_string(), '1', ' ');
         field.add_subfield('a', "Smith, John".to_string());
         field.add_subfield('d', "1920-2000".to_string());
         record.add_field(field);
@@ -499,7 +499,7 @@ mod tests {
     #[test]
     fn test_corporate_name() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("110", '2', ' ');
+        let mut field = Field::new("110".to_string(), '2', ' ');
         field.add_subfield('a', "Library of Congress".to_string());
         record.add_field(field);
 
@@ -511,7 +511,7 @@ mod tests {
     #[test]
     fn test_origin_info() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("260", ' ', ' ');
+        let mut field = Field::new("260".to_string(), ' ', ' ');
         field.add_subfield('a', "New York :".to_string());
         field.add_subfield('b', "Penguin Books,".to_string());
         field.add_subfield('c', "2020.".to_string());
@@ -527,7 +527,7 @@ mod tests {
     #[test]
     fn test_physical_description() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("300", ' ', ' ');
+        let mut field = Field::new("300".to_string(), ' ', ' ');
         field.add_subfield('a', "300 pages :".to_string());
         field.add_subfield('b', "illustrations ;".to_string());
         field.add_subfield('c', "24 cm".to_string());
@@ -542,7 +542,7 @@ mod tests {
     #[test]
     fn test_subject_topical() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield('a', "Science Fiction".to_string());
         record.add_field(field);
 
@@ -554,7 +554,7 @@ mod tests {
     #[test]
     fn test_subject_geographic() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("651", ' ', '0');
+        let mut field = Field::new("651".to_string(), ' ', '0');
         field.add_subfield('a', "United States".to_string());
         record.add_field(field);
 
@@ -566,7 +566,7 @@ mod tests {
     #[test]
     fn test_isbn() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("020", ' ', ' ');
+        let mut field = Field::new("020".to_string(), ' ', ' ');
         field.add_subfield('a', "9780142424346".to_string());
         record.add_field(field);
 
@@ -577,7 +577,7 @@ mod tests {
     #[test]
     fn test_xml_escaping() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Title with <brackets> & ampersand".to_string());
         record.add_field(field);
 

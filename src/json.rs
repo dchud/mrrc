@@ -10,7 +10,7 @@
 //! use mrrc::{Record, Field, Leader, json};
 //!
 //! let mut record = Record::new(Leader::default());
-//! let mut field = Field::new("245", '1', '0');
+//! let mut field = Field::new("245".to_string(), '1', '0');
 //! field.add_subfield('a', "Title".to_string());
 //! record.add_field(field);
 //!
@@ -38,7 +38,7 @@ use serde_json::{json, Value};
 /// use mrrc::{Record, Field, Leader, json};
 ///
 /// let mut record = Record::new(Leader::default());
-/// let mut field = Field::new("245", '1', '0');
+/// let mut field = Field::new("245".to_string(), '1', '0');
 /// field.add_subfield('a', "Test".to_string());
 /// record.add_field(field);
 ///
@@ -76,8 +76,8 @@ pub fn record_to_json(record: &Record) -> Result<Value> {
             }
 
             let field_obj = json!({
-                "ind1": field.indicator1().to_string(),
-                "ind2": field.indicator2().to_string(),
+                "ind1": field.indicator1.to_string(),
+                "ind2": field.indicator2.to_string(),
                 "subfields": subfield_map
             });
 
@@ -100,7 +100,7 @@ pub fn record_to_json(record: &Record) -> Result<Value> {
 /// use mrrc::{Record, Field, Leader, json};
 ///
 /// let mut record = Record::new(Leader::default());
-/// let mut field = Field::new("245", '1', '0');
+/// let mut field = Field::new("245".to_string(), '1', '0');
 /// field.add_subfield('a', "Test".to_string());
 /// record.add_field(field);
 ///
@@ -171,7 +171,7 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
                     .and_then(|s| s.chars().next())
                     .ok_or_else(|| MarcError::InvalidField("Missing ind2".to_string()))?;
 
-                let mut field = Field::new(tag, ind1, ind2);
+                let mut field = Field::new(tag.clone(), ind1, ind2);
 
                 if let Some(subfields_obj) = field_obj.get("subfields").and_then(|v| v.as_object())
                 {
@@ -220,7 +220,7 @@ mod tests {
         let mut record = Record::new(make_test_leader());
         record.add_control_field("001".to_string(), "12345".to_string());
 
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Test title".to_string());
         record.add_field(field);
 
@@ -236,7 +236,7 @@ mod tests {
         let mut record = Record::new(make_test_leader());
         record.add_control_field("001".to_string(), "12345".to_string());
 
-        let mut field = Field::new("245", '1', '0');
+        let mut field = Field::new("245".to_string(), '1', '0');
         field.add_subfield('a', "Test title".to_string());
         field.add_subfield('c', "Author".to_string());
         record.add_field(field);
@@ -254,7 +254,7 @@ mod tests {
     fn test_json_with_multiple_subfields() {
         let mut record = Record::new(make_test_leader());
 
-        let mut field = Field::new("650", ' ', '0');
+        let mut field = Field::new("650".to_string(), ' ', '0');
         field.add_subfield('a', "Subject".to_string());
         field.add_subfield('v', "Subdivision".to_string());
         field.add_subfield('x', "General subdivision".to_string());
@@ -274,7 +274,7 @@ mod tests {
         let mut record = Record::new(make_test_leader());
 
         for i in 1..=3 {
-            let mut field = Field::new("650", ' ', '0');
+            let mut field = Field::new("650".to_string(), ' ', '0');
             field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }
