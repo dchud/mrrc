@@ -4,10 +4,6 @@
 //! - `RustFile`: Direct file I/O via std::fs::File
 //! - `CursorBackend`: In-memory reads from bytes via std::io::Cursor
 //! - `PythonFile`: Python file-like objects (calls .read() method)
-//!
-//! See Phase H.1 specification: `docs/design/GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md`
-
-#![allow(dead_code)] // H.1 implementation, integration with readers happens in H.2
 
 use crate::parse_error::ParseError;
 use pyo3::prelude::*;
@@ -40,7 +36,7 @@ pub enum ReaderBackend {
 impl ReaderBackend {
     /// Create a ReaderBackend from a Python object
     ///
-    /// Type detection order (Phase H.1 algorithm):
+    /// Type detection order:
     /// 1. str → RustFile
     /// 2. pathlib.Path → RustFile
     /// 3. bytes/bytearray → CursorBackend

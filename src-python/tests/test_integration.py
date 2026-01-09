@@ -1,7 +1,7 @@
 """
-Test suite for H.5: Integration Tests & Error Propagation Validation
+Test suite for Integration Tests & Error Propagation Validation
 
-Tests the integration of all Phase H components (H.1-H.4c):
+Tests the integration of all parallel components:
 - Backend interchangeability across RustFile, CursorBackend, PythonFile
 - Type detection routing to correct backend
 - Concurrent Rayon safety (no panics in thread pool)
@@ -276,7 +276,7 @@ class TestErrorPropagation:
     """Test error propagation through producer-consumer pipeline."""
 
     def test_malformed_record_error_propagation(self):
-        """Test that parse errors propagate correctly to consumer."""
+        """Verify parse errors propagate correctly through pipeline."""
         # Create file with invalid MARC data
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mrc") as f:
             # Write invalid marker (should be 0x1D for record terminator)
@@ -389,7 +389,7 @@ class TestMemoryStability:
 # ============================================================================
 
 class TestH5AcceptanceCriteria:
-    """H.5 gate acceptance criteria tests."""
+    """Acceptance criteria tests."""
 
     def test_gate_backend_interchangeability(self, simple_book_mrc):
         """Acceptance Criterion 1: All backends produce identical output."""
@@ -449,7 +449,7 @@ class TestH5AcceptanceCriteria:
         assert all(r == results[0] for r in results)
 
     def test_gate_error_propagation(self):
-        """Acceptance Criterion 4: Parse errors propagate correctly."""
+        """Verify parse errors propagate correctly."""
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mrc") as f:
             f.write(b"invalid data")
             temp_path = f.name

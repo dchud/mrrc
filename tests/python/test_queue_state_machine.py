@@ -1,5 +1,5 @@
 """
-C.2: Queue-Based State Machine for __next__() Method
+Queue-Based State Machine for __next__() Method
 
 Tests verify that PyMARCReader.__next__() correctly uses the queue-based
 state machine from BatchedMarcReader:

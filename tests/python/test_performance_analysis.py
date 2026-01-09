@@ -2,7 +2,7 @@
 Performance analysis for writer backends.
 
 Compares sequential vs concurrent performance and measures actual speedup.
-Validates three-phase GIL release pattern effectiveness.
+Validates efficient GIL release pattern effectiveness.
 """
 
 import pytest
@@ -307,7 +307,7 @@ class TestThreePhasePatternOverhead:
              times.append(elapsed)
          
          avg_time = sum(times) / len(times)
-         print(f"\nThree-Phase Pattern Overhead (1k records):")
+         print(f"\nGIL Release Pattern Overhead (1k records):")
          print(f"  Average write time: {avg_time*1000:.2f}ms")
          print(f"  Time per record: {(avg_time/len(records))*1000000:.2f}µs")
          
@@ -326,7 +326,7 @@ class TestThreePhasePatternOverhead:
          Isolate I/O overhead from serialization.
          
          This helps identify if slowdown is from:
-         - Three-phase pattern overhead
+         - GIL release pattern overhead
          - Disk I/O vs memory I/O
          - Python object handling
          """

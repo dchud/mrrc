@@ -1,4 +1,4 @@
-//! PyO3 bindings for the Producer-Consumer Pipeline (H.4c)
+//! PyO3 bindings for the Producer-Consumer Pipeline
 //!
 //! Exposes [`ProducerConsumerPipeline`] as a Python class, enabling high-performance
 //! batch reading with backpressure management from Python code.
@@ -10,7 +10,7 @@ use pyo3::prelude::*;
 
 /// A producer-consumer pipeline for high-performance MARC reading with backpressure.
 ///
-/// This class implements H.4c of the Phase H specification:
+/// Design:
 /// - **Producer:** Background thread reading file chunks, scanning boundaries, parsing in parallel
 /// - **Consumer:** Main thread iterating over parsed records
 /// - **Backpressure:** Channel capacity limits buffer to 1000 records

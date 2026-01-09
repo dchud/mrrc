@@ -8,9 +8,9 @@ MARCReader instances per thread to achieve 2-3x speedup on multi-core systems.
 GIL Release: mrrc releases the Python GIL during record parsing, allowing
 multiple threads to process MARC records in parallel.
 
-Performance (Phase H benchmarking):
-- 2 threads: 2.04x speedup vs sequential
-- 4 threads: 3.20x speedup vs sequential
+Performance:
+- 2 threads: ~2.0x speedup vs sequential
+- 4 threads: ~3.2x speedup vs sequential
 - Optimal: CPU core count - 1 threads
 """
 

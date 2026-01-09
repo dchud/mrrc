@@ -1,4 +1,4 @@
-// Python wrapper for HoldingsMarcReader with Phase H backend support
+// Python wrapper for HoldingsMarcReader with multi-backend support
 //
 // This module implements the Python interface for Holdings record reading,
 // with automatic backend detection (RustFile, CursorBackend, PythonFile).

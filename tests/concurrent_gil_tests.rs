@@ -1,4 +1,4 @@
-// GIL Release Verification Tests for Phase C (Batch Reading)
+// GIL Release Verification Tests
 //
 // This test suite validates that:
 // 1. Batched reading with queue-based state machine works correctly
@@ -6,13 +6,11 @@
 // 3. Concurrent readers (with threading) can operate in parallel
 // 4. Iterator semantics are idempotent and correct
 // 5. EOF handling is robust
-//
-// These tests are run as part of Phase C (mrrc-ppp.1) implementation.
 
 #![allow(missing_docs)]
 
 #[cfg(test)]
-mod phase_c_tests {
+mod gil_release_tests {
     use std::io::Write;
     use tempfile::NamedTempFile;
 
@@ -305,7 +303,7 @@ mod phase_c_tests {
 /// 4. Error propagation from I/O to Python exceptions
 #[cfg(test)]
 mod python_integration_notes {
-    // The following Python tests should be added to validate C.0:
+    // The following Python tests validate the batch reading implementation:
     //
     // test_batched_reader_concurrent_speedup():
     //   - Create 2 threads, each reading a separate MARC file

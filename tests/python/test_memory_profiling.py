@@ -1,5 +1,5 @@
 """
-C.4: Memory Profiling & Bounds Validation
+Memory Profiling & Bounds Validation
 
 Tests verify memory safety and capacity limits of the batched reader:
 

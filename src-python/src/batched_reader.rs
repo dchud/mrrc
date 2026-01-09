@@ -1,9 +1,9 @@
 // Batched MARC reader with queue-based state machine for efficient GIL management
 //
-// This module implements Phase C (Batch Reading) of the GIL Release Hybrid Plan.
+// This module implements batch reading to reduce GIL acquire/release overhead.
 // It reads multiple MARC records in a single Python GIL acquisition, then serves
 // them to the caller from an internal queue. This dramatically reduces GIL
-// acquire/release overhead (from N per-record acquisitions to N/100 batch acquisitions).
+// overhead (from N per-record acquisitions to N/100 batch acquisitions).
 //
 // Key design:
 // - VecDeque<SmallVec> for O(1) front-pop during iteration

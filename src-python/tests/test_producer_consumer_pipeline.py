@@ -1,5 +1,5 @@
 """
-Test suite for H.4c: Producer-Consumer Pipeline with Backpressure
+Test suite for Producer-Consumer Pipeline with Backpressure
 
 Tests the ProducerConsumerPipeline class that implements high-performance
 batch reading from Rust file I/O backend with backpressure management.
@@ -320,7 +320,7 @@ class TestProducerConsumerPipelineConsistency:
 
 
 class TestProducerConsumerPipelineAcceptanceCriteria:
-    """Test acceptance criteria for H.4c."""
+    """Test acceptance criteria."""
 
     def test_gate_backpressure_works_as_designed(self, large_5k_mrc):
         """Acceptance Criterion 1: Backpressure works correctly.

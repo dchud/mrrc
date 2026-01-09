@@ -1,17 +1,15 @@
 //! Batched reader supporting both Rust file I/O and Python file-like objects
 //!
-//! This module extends Phase C (Batch Reading) to work with Phase H.2 (RustFile Backend).
-//! It maintains the same queue-based state machine but uses UnifiedReader instead of
-//! Python-only file wrapper.
+//! Maintains a queue-based state machine with support for multiple input types:
+//! - File paths: native Rust I/O (zero GIL overhead)
+//! - Bytes/BytesIO: in-memory cursor (zero GIL overhead)
+//! - Python file objects: GIL management for compatibility
 //!
 //! Design:
 //! - `VecDeque<SmallVec>` for O(1) front-pop during iteration
 //! - Hard limits: 200 records or 300KB per batch
 //! - EOF state machine ensures idempotent behavior
 //! - Single GIL acquire/release cycle per batch (for Python files only)
-//! - RustFile reads have NO GIL overhead at all
-
-#![allow(dead_code)] // H.2 implementation, integration with readers happens in this phase
 
 use crate::parse_error::ParseError;
 use crate::unified_reader::UnifiedReader;
@@ -175,16 +173,19 @@ impl BatchedUnifiedReader {
     /// Check if the reader has reached EOF
     ///
     /// Returns true after EOF is set (idempotent).
+    #[allow(dead_code)]
     pub fn is_eof(&self) -> bool {
         self.eof_reached
     }
 
     /// Get current queue size (for diagnostics/testing)
+    #[allow(dead_code)]
     pub fn queue_len(&self) -> usize {
         self.record_queue.len()
     }
 
     /// Get current queue capacity in bytes (for diagnostics/testing)
+    #[allow(dead_code)]
     pub fn queue_capacity_bytes(&self) -> usize {
         self.queue_capacity_bytes
     }

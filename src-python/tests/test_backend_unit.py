@@ -17,7 +17,7 @@ import io
 
 
 class TestBackendTypeDetectionReadiness:
-    """H.1 completion criteria - verify backend module exists and compiles"""
+    """Verify backend module exists and compiles"""
 
     def test_backend_module_compiles(self):
         """Verify backend.rs module compiles without errors"""
@@ -26,7 +26,7 @@ class TestBackendTypeDetectionReadiness:
         assert True
 
     def test_all_eight_input_types_documented(self):
-        """H.1 requirement: All 8 supported types are documented"""
+        """Verify all 8 supported input types are documented"""
         # From plan specification:
         # 1. str (path) → RustFile
         # 2. pathlib.Path → RustFile

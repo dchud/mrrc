@@ -1,4 +1,4 @@
-//! PyO3 bindings for the Rayon parser pool (H.4b).
+//! PyO3 bindings for the Rayon parser pool.
 //!
 //! Exposes [`parse_batch_parallel`] as a Python function, allowing
 //! parallel MARC record parsing from Python code.

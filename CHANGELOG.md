@@ -5,9 +5,24 @@ All notable changes to MRRC (MARC Rust Crate) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-01-08
+## [0.4.0] - 2026-01-09
 
 ### Added
+
+#### Code Quality & Cleanup
+- **Phase Reference Removal**: Cleaned up implementation-plan-internal references from all user-facing code
+  - Removed "Phase A-H" and gate nomenclature from source code comments
+  - Removed from Python wrapper module documentation
+  - Removed from test file names and test documentation
+  - Removed from example code
+  - Codebase now approachable to new users unfamiliar with development history
+- **Test File Reorganization**:
+  - `test_h_gate_benchmarking.py` → `test_parallel_benchmarking.py`
+  - `test_h5_integration.py` → `test_integration.py`
+  - `test_queue_state_machine_c2.py` → `test_queue_state_machine.py`
+  - `test_memory_profiling_c4.py` → `test_memory_profiling.py`
+
+### Previously Added (2026-01-08)
 
 #### Full pymarc API Parity ✅
 - **Leader Value Validation Helpers**: Complete MARC 21 leader position reference implementation

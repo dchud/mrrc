@@ -1,6 +1,6 @@
 //! Producer-Consumer Pipeline with Backpressure
 //!
-//! Implements H.4c: Bounded channel pipeline for high-performance batch reading
+//! Implements a bounded channel pipeline for high-performance batch reading
 //! from Rust file I/O backend (no GIL overhead).
 //!
 //! Design:

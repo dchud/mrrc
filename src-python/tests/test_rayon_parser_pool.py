@@ -289,7 +289,7 @@ class TestRayonParserPoolPerformance:
 
 
 class TestRayonParserPoolAcceptanceCriteria:
-    """Test H.4b acceptance criteria."""
+    """Test acceptance criteria."""
 
     def test_criterion_parallel_produces_identical_output(self, multi_records_bytes):
         """Criterion 1: Parallel parsing produces identical output to sequential."""

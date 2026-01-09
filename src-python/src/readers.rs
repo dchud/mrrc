@@ -1,9 +1,9 @@
 // Python wrapper for MARCReader with GIL release support
 //
-// This module implements three-phase GIL management for concurrent file I/O:
-// - Phase 1 (GIL held): Read record bytes from Python file object
-// - Phase 2 (GIL released): Parse bytes into MARC record structure
-// - Phase 3 (GIL held): Convert result to Python object and handle errors
+// This module implements efficient GIL management for concurrent file I/O:
+// 1. Read record bytes from source (GIL held if Python file)
+// 2. Parse bytes into MARC record structure (GIL released)
+// 3. Convert result to Python object and handle errors (GIL re-acquired)
 
 use crate::batched_reader::BatchedMarcReader;
 use crate::batched_unified_reader::BatchedUnifiedReader;
@@ -16,18 +16,18 @@ use smallvec::SmallVec;
 /// Internal enum for different reader backends
 #[allow(clippy::large_enum_variant)]
 enum ReaderType {
-    /// Original Python file-based reader (Phase B/C)
+    /// Python file-based reader with batch optimization
     Python(BatchedMarcReader),
-    /// Unified reader supporting Rust files, bytes, and Python objects (Phase H.2+)
+    /// Unified reader supporting Rust files, bytes, and Python objects
     Unified(BatchedUnifiedReader),
 }
 
-/// Python wrapper for MarcReader with three-phase GIL management
+/// Python wrapper for MarcReader with efficient GIL management
 ///
-/// The three-phase pattern enables GIL release during CPU-intensive parsing:
-/// - Phase 1: Read bytes from source (GIL held if Python file)
-/// - Phase 2: Parse bytes to MARC record (GIL released)
-/// - Phase 3: Convert to PyRecord (GIL re-acquired)
+/// Implements batch-based GIL optimization for CPU-intensive parsing:
+/// - Read bytes from source efficiently (GIL held only if Python file)
+/// - Parse bytes to MARC records (GIL released, allowing parallelism)
+/// - Convert to PyRecord (GIL re-acquired)
 ///
 /// ## Thread Safety
 ///
@@ -51,19 +51,13 @@ enum ReaderType {
 /// - 4 threads: ~3.2x speedup
 /// - Optimal: CPU core count - 1 threads
 ///
-/// Phase C Enhancement (C.2):
-/// - Uses BatchedMarcReader for queue-based state machine
-/// - Reduces GIL acquire/release overhead from N to N/100 (for N records)
-/// - Reads 100 records per GIL acquisition, serves from queue
+/// ## Optimization Strategies
 ///
-/// Phase H.2 Enhancement (H.2):
-/// - Uses BatchedUnifiedReader to support file paths and bytes
-/// - File paths → pure Rust I/O (zero GIL overhead)
-/// - bytes/bytearray → in-memory Cursor (zero GIL overhead)
-/// - Python file objects → existing GIL management
+/// - Batch reading: Reduces GIL acquire/release overhead from N to N/100 (for N records)
+/// - Multiple input types: File paths via pure Rust I/O (zero GIL overhead), bytes via in-memory cursor, Python file objects via GIL management
 #[pyclass(name = "MARCReader")]
 pub struct PyMARCReader {
-    /// Reader backend (either legacy Python-based or unified H.2 variant)
+    /// Reader backend (Python-based or unified multi-backend)
     reader: Option<ReaderType>,
 }
 
@@ -103,12 +97,12 @@ impl PyMARCReader {
     /// This method holds the GIL during both reading and parsing.
     /// New code should use iteration (__next__) which supports GIL release.
     ///
-    /// Note: With Phase C (C.2), this now uses BatchedMarcReader's queue state machine.
-    /// With Phase H.2, this also supports file paths and bytes via BatchedUnifiedReader.
+    /// Note: Uses BatchedMarcReader's queue state machine for efficient batching.
+    /// Also supports file paths and bytes via BatchedUnifiedReader.
     #[allow(deprecated)]
     pub fn read_record(&mut self) -> PyResult<Option<PyRecord>> {
         Python::with_gil(|py| {
-            // Phase 1: Read record bytes (GIL held)
+            // Step 1: Read record bytes (GIL held)
             // Uses queue-based state machine: CHECK_QUEUE → CHECK_EOF → READ_BATCH
             let record_bytes = match self.reader.as_mut() {
                 Some(ReaderType::Python(reader)) => reader
@@ -123,10 +117,10 @@ impl PyMARCReader {
             match record_bytes {
                 None => Ok(None),
                 Some(bytes) => {
-                    // CRITICAL: Copy to owned SmallVec for Phase 2 closure
+                    // CRITICAL: Copy to owned SmallVec for parsing closure
                     let bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&bytes);
 
-                    // Phase 2: Parse bytes (GIL released)
+                    // Step 2: Parse bytes (GIL released)
                     // CRITICAL FIX: Use Python::detach() which properly releases the GIL.
                     let record = py
                         .detach(|| {
@@ -144,7 +138,7 @@ impl PyMARCReader {
                         })
                         .map_err(|e| e.to_py_err())?;
 
-                    // Phase 3: Convert to PyRecord (GIL re-acquired)
+                    // Step 3: Convert to PyRecord (GIL re-acquired)
                     match record {
                         Some(r) => Ok(Some(PyRecord { inner: r })),
                         None => Ok(None),
@@ -163,31 +157,30 @@ impl PyMARCReader {
 
     /// Get the next record during iteration (enables GIL release for parallelism)
     ///
-    /// This implements the three-phase GIL release pattern:
-    /// - Phase 1: Read record bytes from source (GIL held if Python file)
+    /// This implements efficient GIL release pattern:
+    /// - Step 1: Read record bytes from source (GIL held if Python file)
     ///   - Uses queue-based state machine (CHECK_QUEUE → CHECK_EOF → READ_BATCH)
-    /// - Phase 2: Parse bytes to MARC record (GIL released)
-    ///   - This phase releases the GIL, allowing other threads to execute
-    /// - Phase 3: Convert to PyRecord (GIL re-acquired)
+    /// - Step 2: Parse bytes to MARC record (GIL released)
+    ///   - This step releases the GIL, allowing other threads to execute
+    /// - Step 3: Convert to PyRecord (GIL re-acquired)
     ///
     /// **Concurrency Benefits:**
     /// Using separate readers in multiple threads achieves:
-    /// - 2 threads: 2.04x speedup vs sequential (Phase H benchmarks)
-    /// - 4 threads: 3.20x speedup vs sequential (Phase H benchmarks)
-    /// - GIL is released during Phase 2 parsing for each record
+    /// - 2 threads: ~2.0x speedup vs sequential
+    /// - 4 threads: ~3.2x speedup vs sequential
+    /// - GIL is released during parsing for each record
     /// - See ThreadPoolExecutor example in MARCReader struct docs
     ///
-    /// Phase C Enhancement (C.2):
-    /// - Reads up to 100 records per GIL acquire/release cycle
+    /// **Optimization Strategies:**
+    /// - Batch reading: Reads up to 100 records per GIL acquire/release cycle
     /// - Records are buffered in an internal queue (VecDeque)
     /// - Subsequent calls return from queue without GIL overhead
     /// - Reduces GIL contention from N acquire/release to N/100
     ///
-    /// Phase H.2 Enhancement (H.2):
-    /// - For file paths and bytes: NO GIL overhead during I/O
-    /// - For Python files: same batching and GIL management as Phase C
+    /// - Multi-backend support: File paths and bytes use native I/O (zero GIL overhead)
+    /// - Python files use same batching and GIL management
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
-        // ===== PHASE 1: Read record bytes (GIL held if needed) =====
+        // ===== STEP 1: Read record bytes (GIL held if needed) =====
         // Must get Python handle while GIL is held by PyRefMut
         // CRITICAL: Use assume_gil_acquired() to get an unbound Python handle that
         // properly releases the GIL in Phase 2. A bound handle (slf.py()) does not.
@@ -226,17 +219,17 @@ impl PyMARCReader {
             },
         };
 
-        // CRITICAL: Copy to owned SmallVec for Phase 2 closure
-        // The slice returned by read_next_record_bytes() is valid only during Phase 1.
+        // CRITICAL: Copy to owned SmallVec for parsing closure
+        // The slice returned by read_next_record_bytes() is valid only during step 1.
         // We create an owned copy that can be moved into the detach() closure.
         let record_bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&record_bytes);
 
-        // ===== PHASE 2: Parse bytes (GIL released) =====
+        // ===== STEP 2: Parse bytes (GIL released) =====
         // Parse the record while GIL is released to allow other threads to execute.
         // CRITICAL: The closure returns Result<Option<mrrc::Record>, ParseError> (NOT PyResult).
         // We defer conversion to PyErr until AFTER detach() returns (GIL re-acquired).
         // This is required because PyErr construction needs the GIL.
-        // NOTE: Use detach() instead of allow_threads() - detach() properly releases GIL in PyO3 0.27
+        // NOTE: Use detach() which properly releases GIL
         let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> =
             py.detach(|| {
                 // This closure runs WITHOUT the GIL held
@@ -256,7 +249,7 @@ impl PyMARCReader {
                 })
             });
 
-        // ===== PHASE 3: Convert to PyRecord (GIL re-acquired) =====
+        // ===== STEP 3: Convert to PyRecord (GIL re-acquired) =====
         // GIL is automatically re-acquired when exiting detach() block.
         // NOW we can safely construct PyErr from ParseError.
         match parse_result {

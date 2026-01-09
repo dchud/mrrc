@@ -55,7 +55,7 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(formats::record_to_mods, m)?)?;
     m.add_function(wrap_pyfunction!(formats::dublin_core_to_xml, m)?)?;
 
-    // Rayon parser pool (H.4b) functions
+    // Rayon parser pool functions
     m.add_function(wrap_pyfunction!(parse_batch_parallel, m)?)?;
     m.add_function(wrap_pyfunction!(parse_batch_parallel_limited, m)?)?;
 

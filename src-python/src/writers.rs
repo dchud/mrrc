@@ -1,9 +1,9 @@
-// Python wrapper for MARCWriter with three-phase GIL release support
+// Python wrapper for MARCWriter with efficient GIL release support
 //
-// This module implements three-phase GIL management for concurrent file I/O:
-// - Phase 1 (GIL held): Extract record data from Python PyRecord object
-// - Phase 2 (GIL released): Serialize record to MARC bytes (CPU-intensive)
-// - Phase 3 (GIL held): Write serialized bytes to appropriate backend
+// This module implements efficient GIL management for concurrent file I/O:
+// 1. Extract record data from Python PyRecord object (GIL held)
+// 2. Serialize record to MARC bytes (GIL released, CPU-intensive)
+// 3. Write serialized bytes to appropriate backend (GIL re-acquired if needed)
 
 use crate::wrappers::PyRecord;
 use mrrc::MarcWriter;
@@ -22,12 +22,12 @@ enum WriterBackend {
     RustFile { writer: BufWriter<File> },
 }
 
-/// Python wrapper for MarcWriter with three-phase GIL release pattern
+/// Python wrapper for MarcWriter with efficient GIL release pattern
 ///
-/// The three-phase pattern enables GIL release during CPU-intensive serialization:
-/// - Phase 1: Extract record data from Python PyRecord (GIL held)
-/// - Phase 2: Serialize record to bytes (GIL released)
-/// - Phase 3: Write bytes to backend (GIL management varies by backend)
+/// Enables GIL release during CPU-intensive serialization:
+/// - Extract record data from Python PyRecord (GIL held)
+/// - Serialize record to bytes (GIL released)
+/// - Write bytes to backend (GIL management varies by backend)
 ///
 /// ## Backends
 ///
@@ -119,9 +119,9 @@ impl PyMARCWriter {
         ))
     }
 
-    /// Write a record to the file with three-phase GIL management
+    /// Write a record to the file with efficient GIL management
     ///
-    /// Implements the three-phase GIL release pattern for concurrent performance:
+    /// Implements efficient GIL release for concurrent performance:
     /// - **Phase 1 (GIL held):** Extract record data from Python PyRecord object
     /// - **Phase 2 (GIL released):** Serialize record to MARC bytes (CPU-intensive)
     /// - **Phase 3 (GIL held):** Write serialized bytes to backend

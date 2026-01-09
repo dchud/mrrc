@@ -1,16 +1,14 @@
 """
-Test suite for H.Gate: Parallel Benchmarking - ≥2.5x Speedup Validation
+Test suite for Parallel Benchmarking - ≥2.5x Speedup Validation
 
-Benchmarks Phase H parallel implementation (H.1-H.5) to validate the gate criterion:
-- **Gate Criterion:** Parallel speedup ≥2.5x on 4 threads vs single-thread baseline
+Benchmarks parallel implementation to validate performance criteria:
+- **Performance Target:** Parallel speedup ≥2.5x on 4 threads vs single-thread baseline
 
 Tests measure:
 - Throughput: Records processed per second
 - Memory: Peak memory usage under parallelism
 - Lock contention: Channel efficiency
 - Speedup factor: Parallelism scaling effectiveness
-
-All H.0-H.5 tasks must complete and pass before H.Gate evaluation.
 """
 
 import pytest
@@ -368,19 +366,19 @@ class TestSpeedupMetrics:
 
 
 # ============================================================================
-# TestHGateAcceptanceCriteria
+# TestParallelAcceptanceCriteria
 # ============================================================================
 
-class TestHGateAcceptanceCriteria:
-    """H.Gate acceptance criteria validation."""
+class TestParallelAcceptanceCriteria:
+    """Acceptance criteria validation."""
 
     def test_gate_all_phases_complete(self):
-        """Acceptance: All H.0-H.5 tasks complete."""
+        """Verify all parallel components are complete."""
         # Verify key classes are available
         assert hasattr(mrrc, 'RecordBoundaryScanner')
         assert hasattr(mrrc, 'parse_batch_parallel')
         assert hasattr(mrrc, 'ProducerConsumerPipeline')
-        print("\n✓ All Phase H components available (H.0-H.5 complete)")
+        print("\n✓ All parallel components available")
 
     def test_gate_backend_support(self):
         """Acceptance: All backends (RustFile, CursorBackend, PythonFile) work."""
@@ -391,13 +389,13 @@ class TestHGateAcceptanceCriteria:
 
     @pytest.mark.benchmark
     def test_gate_integration_works_simple(self, simple_book_mrc):
-        """Acceptance: Full H.1-H.5 pipeline works end-to-end."""
+        """Verify full parallel pipeline works end-to-end."""
         # This exercises the entire pipeline: type detection → backend selection →
         # I/O → boundary scanning → parallel parsing → producer-consumer → consumer
         pipeline = ProducerConsumerPipeline.from_file(str(simple_book_mrc))
         record = pipeline.next()
         assert record is not None
-        print("\n✓ Full H.1-H.5 pipeline integration working")
+        print("\n✓ Full parallel pipeline integration working")
 
     @pytest.mark.benchmark
     def test_gate_no_memory_issues(self, simple_book_mrc):

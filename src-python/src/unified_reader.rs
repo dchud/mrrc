@@ -1,14 +1,9 @@
 //! Unified reader supporting both Rust file I/O and Python file-like objects
 //!
-//! This module implements Phase H.2: RustFile Backend Integration
 //! Enables reading MARC records from:
 //! - File paths (str or pathlib.Path) via pure Rust I/O (no GIL)
 //! - In-memory bytes (bytes, bytearray) via std::io::Cursor
 //! - Python file objects (.read() method) with GIL management
-//!
-//! See Phase H.2 specification: `docs/design/GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md`
-
-#![allow(dead_code)] // H.2 implementation, integration with readers happens in this phase
 
 use crate::backend::ReaderBackend;
 use crate::parse_error::ParseError;
@@ -16,7 +11,7 @@ use pyo3::prelude::*;
 
 /// Unified interface for reading MARC record bytes from any supported source
 ///
-/// Abstracts over Python file objects (Phase B/C) and Rust file I/O (Phase H.2).
+/// Abstracts over Python file objects and Rust file I/O.
 /// Allows `PyMARCReader` to accept file paths without Python GIL overhead.
 #[derive(Debug)]
 pub enum UnifiedReader {
@@ -30,7 +25,7 @@ pub enum UnifiedReader {
 impl UnifiedReader {
     /// Create UnifiedReader from a Python object
     ///
-    /// Type detection (H.1 algorithm):
+    /// Type detection algorithm:
     /// 1. str → RustFile (no GIL needed)
     /// 2. pathlib.Path → RustFile (no GIL needed)
     /// 3. bytes/bytearray → CursorBackend (no GIL needed)

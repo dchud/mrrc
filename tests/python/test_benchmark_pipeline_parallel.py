@@ -1,9 +1,8 @@
 """
-Benchmarks for ProducerConsumerPipeline - Phase H parallel infrastructure.
+Benchmarks for ProducerConsumerPipeline - parallel infrastructure.
 
-These benchmarks test the new opt-in parallel API that was designed in Phase H
-to achieve multi-threaded performance gains without modifying the standard
-MARCReader iteration API.
+These benchmarks test the opt-in parallel API to achieve multi-threaded
+performance gains without modifying the standard MARCReader iteration API.
 
 The ProducerConsumerPipeline is the correct way to benchmark pymrrc multi-threaded
 performance. It uses:
@@ -86,7 +85,7 @@ class TestProducerConsumerPipelineBasic:
     def test_pipeline_parallel_4x_10k_threaded(self, benchmark):
         """Parallel: 4 threads, each with own ProducerConsumerPipeline.
 
-        This is the test that should show the 3.74x speedup claimed in Phase H.
+        This is the test that demonstrates parallel speedup with the pipeline.
         - 4 threads, each with independent pipeline
         - Each pipeline has its own background producer + rayon parser pool
         - Expected: 3.74x speedup vs sequential (from RESULTS.md)
@@ -181,7 +180,7 @@ class TestProducerConsumerPipelineMultiFile:
     def test_process_4_files_parallel_4_threads(self, benchmark):
         """Process 4 files in parallel with 4 threads (optimal threading).
 
-        This demonstrates the Phase H infrastructure:
+        This demonstrates the parallel pipeline infrastructure:
         - 4 threads, 4 files
         - Each thread: ProducerConsumerPipeline.from_file(filepath)
         - Each pipeline spawns its own background producer + parser pool

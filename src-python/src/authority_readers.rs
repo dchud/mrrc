@@ -1,4 +1,4 @@
-// Python wrapper for AuthorityMarcReader with Phase H backend support
+// Python wrapper for AuthorityMarcReader with multi-backend support
 //
 // This module implements the Python interface for Authority record reading,
 // with automatic backend detection (RustFile, CursorBackend, PythonFile).

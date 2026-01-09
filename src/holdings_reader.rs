@@ -4,9 +4,9 @@
 //! Holdings records use the same ISO 2709 binary format as bibliographic and authority records
 //! but are parsed into [`HoldingsRecord`] structures.
 //!
-//! # Phase H Integration (Feature Compatibility - Phase I)
+//! # Holdings MARC Reader
 //!
-//! As of Phase I (Feature Compatibility Updates), `HoldingsMarcReader` supports the
+//! `HoldingsMarcReader` supports the
 //! unified `ReaderBackend` enum interface enabling:
 //! - **`RustFile`**: Direct file I/O via `std::fs::File` (enables Rayon parallelism)
 //! - **`CursorBackend`**: In-memory reads from bytes via `std::io::Cursor`
@@ -42,7 +42,7 @@ const SUBFIELD_DELIMITER: u8 = 0x1F;
 /// [`HoldingsRecord`] instances. It reuses the same binary format as bibliographic
 /// records but organizes fields by their functional role (locations, captions, enumeration, etc.).
 ///
-/// # Backends (Phase H Integration)
+/// # Backends
 ///
 /// The reader automatically detects the input source:
 /// - File paths → `RustFile` backend (parallel-safe)

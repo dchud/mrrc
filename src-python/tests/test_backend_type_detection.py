@@ -18,7 +18,7 @@ import mrrc
 
 
 class TestTypeDetectionSupportedTypes:
-    """Test all 8 supported input types (H.1 acceptance criteria)"""
+    """Test all 8 supported input types"""
 
     def test_type_str_path_creates_reader(self):
         """Type 1/8: str path → RustFile backend"""
@@ -118,7 +118,7 @@ class TestTypeDetectionSupportedTypes:
 
 
 class TestTypeDetectionUnknownTypes:
-    """Test unknown/unsupported types (H.1 acceptance criteria)"""
+    """Test unknown/unsupported types"""
 
     def test_unknown_type_int_raises_typeerror(self):
         """Unknown type: int → TypeError"""
