@@ -131,16 +131,36 @@ To check results:
 
 ## For Library Maintainers
 
-See `docs/design/MEMORY_SAFETY_CI.md` for comprehensive infrastructure details:
-- How ASAN is configured
-- CI strategy (nightly, non-blocking)
-- Troubleshooting false positives
-- Upgrading sanitizer versions
+### Suppression Management
 
-For suppression management, see `docs/design/MEMORY_SAFETY_RUNBOOK.md`:
-- When to add/update suppressions
-- Quarterly review procedure
-- Escalation guidelines
+Suppressions for known safe patterns are documented in `.cargo/asan_suppressions.txt`.
+
+**When to add a suppression:**
+1. ASAN detects a real issue (not a bug in mrrc code)
+2. Issue is in Python, PyO3, libc, or a dependency
+3. Issue is confirmed safe and documented with technical rationale
+
+**Never suppress:**
+- "definitely lost" leaks in mrrc code
+- Unknown or unexplained patterns
+- Patterns that grow with test iterations (indicate real leaks)
+
+**Quarterly review:** Check that all suppressions are still relevant. See historical documentation for the detailed maintenance runbook.
+
+### CI Configuration
+
+The nightly ASAN job is in `.github/workflows/memory-safety.yml`:
+- Runs daily at 2 AM UTC
+- Non-blocking: reports issues without stopping merges
+- Can be manually triggered via GitHub Actions
+- Uses suppressions from `.cargo/asan_suppressions.txt`
+
+### Dependency Updates
+
+After running `cargo update`:
+1. Test locally: `.cargo/check.sh --memory-checks`
+2. Check nightly CI for regressions
+3. Update suppressions if new patterns emerge
 
 ## References
 
