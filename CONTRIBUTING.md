@@ -107,6 +107,35 @@ bd close <issue-id> --reason "Description of what was completed" --json
    - `cargo clippy --all --all-targets -- -D warnings` (Clippy)
    - `RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items` (Doc checks)
 
+### Memory Safety Checks
+
+Memory safety validation uses ASAN (Address Sanitizer) to detect potential memory issues:
+
+**Optional memory safety testing** (requires nightly Rust):
+```bash
+.cargo/check.sh --memory-checks
+```
+
+This runs ASAN on library tests, detecting issues like:
+- Use-after-free
+- Memory leaks
+- Heap buffer overflows
+- Data races
+
+**When to run memory checks:**
+- After major changes to memory-critical code
+- When updating dependencies
+- Before submitting PRs with complex pointer/allocation changes
+- As part of pre-release validation
+
+**Interpreting ASAN output:**
+- Memory issues will appear in test output with line numbers
+- Suppressions for expected issues are documented in `.cargo/asan_suppressions.txt`
+- See [ASAN documentation](https://github.com/google/sanitizers/wiki/AddressSanitizer) for detailed output interpretation
+
+**For library maintainers:**
+See `docs/design/MEMORY_SAFETY_CI.md` for comprehensive memory safety infrastructure details.
+
 ### Before Pushing
 
 Always run the quality gates locally:
@@ -115,6 +144,11 @@ Always run the quality gates locally:
 .cargo/check.sh
 cargo test
 cargo test --doc
+```
+
+For complex memory-related changes, also run:
+```bash
+.cargo/check.sh --memory-checks
 ```
 
 Only push when all checks pass.

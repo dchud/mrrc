@@ -1,0 +1,22 @@
+# ASAN Suppressions for MRRC
+#
+# This file contains Address Sanitizer (ASAN) suppressions for known issues that are
+# not actionable bugs in our code. Each suppression must document:
+# - What is being suppressed and why
+# - When it was discovered
+# - Related issues or upstream references
+# - Whether it's a temporary workaround or expected behavior
+
+# Suppressions are empty initially, as the codebase has `unsafe_code = "forbid"` in
+# Cargo.toml, preventing low-level memory bugs. This file exists as a placeholder for
+# future findings in:
+# - PyO3 bindings (src-python/)
+# - Dependency-related issues
+# - Platform-specific edge cases
+
+# Format: One suppression per line following ASAN syntax
+# Examples:
+# leak:some_function_name
+# race:data_race_pattern
+#
+# See: https://github.com/google/sanitizers/wiki/AddressSanitizerFlags
