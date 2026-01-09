@@ -69,6 +69,7 @@ impl Leader {
     /// # Example
     ///
     /// ```
+    /// use mrrc::Leader;
     /// let valid_values = Leader::valid_values_at_position(5);
     /// // Returns: [("a", "increase in encoding level"), ("c", "corrected"), ...]
     /// ```
@@ -154,6 +155,7 @@ impl Leader {
     /// # Example
     ///
     /// ```
+    /// use mrrc::Leader;
     /// let desc = Leader::describe_value(5, "a");
     /// // Returns: Some("increase in encoding level")
     /// ```
