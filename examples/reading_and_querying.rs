@@ -181,7 +181,9 @@ fn advanced_queries(record: &Record) {
     let mut tag_counts: std::collections::BTreeMap<String, usize> =
         std::collections::BTreeMap::new();
     for field in record.fields() {
-        *tag_counts.entry(field.tag_str()).or_insert(0) += 1;
+        *tag_counts
+            .entry(field.tag_str())
+            .or_insert(0) += 1;
     }
 
     for (tag, count) in tag_counts.iter().take(10) {

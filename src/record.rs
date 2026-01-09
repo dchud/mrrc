@@ -74,9 +74,9 @@ pub struct Field {
     /// Using u16 instead of String saves ~24 bytes per tag
     #[serde(serialize_with = "serialize_tag", deserialize_with = "deserialize_tag")]
     pub tag: u16,
-    /// Indicators packed as `[u8; 2]` for efficiency
-    /// First indicator is `indicators[0]`, second is `indicators[1]`
-    /// Using `[u8; 2]` instead of two chars saves ~48 bytes per field
+    /// Indicators packed as [u8; 2] for efficiency
+    /// First indicator is indicators[0], second is indicators[1]
+    /// Using [u8; 2] instead of two chars saves ~48 bytes per field
     pub indicators: [u8; 2],
     /// Subfields (up to 20 typical, so `SmallVec` avoids heap allocation for common case)
     pub subfields: SmallVec<[Subfield; 16]>,
