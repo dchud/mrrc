@@ -396,7 +396,7 @@ impl PyField {
     /// First indicator
     #[getter]
     pub fn indicator1(&self) -> String {
-        (self.inner.indicator1() as char).to_string()
+        self.inner.indicator1().to_string()
     }
 
     #[setter]
@@ -409,7 +409,7 @@ impl PyField {
     /// Second indicator
     #[getter]
     pub fn indicator2(&self) -> String {
-        (self.inner.indicator2() as char).to_string()
+        self.inner.indicator2().to_string()
     }
 
     #[setter]
