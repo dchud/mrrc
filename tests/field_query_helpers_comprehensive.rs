@@ -557,7 +557,7 @@ fn test_large_record_names_with_dates_performance() {
     // Add 200 author fields with dates
     for i in 0..200 {
         let tag = if i == 0 { "100" } else { "700" };
-        let mut field = Field::new(tag, '1', ' ');
+        let mut field = Field::new(tag.to_string(), '1', ' ');
         let name = format!("Author, Number {i}");
         let dates = format!("18{:02}-19{:02}", i % 100, (i + 50) % 100);
         field.add_subfield_str('a', &name);

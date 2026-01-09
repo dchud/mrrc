@@ -98,8 +98,7 @@ fn test_macro_method_chaining() {
 
     // Add multiple fields
     for i in 0..5 {
-        let tag = &format!("65{i}");
-        let field = Field::new(tag, ' ', '0');
+        let field = Field::new(format!("65{i}"), ' ', '0');
         record.add_first_field(field);
     }
 
@@ -115,5 +114,5 @@ fn test_macro_get_method_returns_slice() {
 
     // Test that we can use slice operations
     let fields = record.first_fields();
-    assert!(fields.iter().all(|f| f.tag_str().starts_with("24")));
+    assert!(fields.iter().all(|f| f.tag.starts_with("24")));
 }

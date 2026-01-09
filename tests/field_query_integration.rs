@@ -73,7 +73,7 @@ fn test_fields_by_indicator_lcsh() {
     assert_eq!(lcsh_fields.len(), 2);
     for field in lcsh_fields {
         assert_eq!(field.tag_str(), "650");
-        assert_eq!(field.indicator2(), '0');
+        assert_eq!(field.indicator2, '0');
     }
 }
 
@@ -88,8 +88,8 @@ fn test_fields_by_indicator_specific() {
 
     assert_eq!(fields.len(), 1);
     assert_eq!(fields[0].tag_str(), "245");
-    assert_eq!(fields[0].indicator1(), '1');
-    assert_eq!(fields[0].indicator2(), '0');
+    assert_eq!(fields[0].indicator1, '1');
+    assert_eq!(fields[0].indicator2, '0');
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn test_fields_by_indicator_wildcard() {
 
     assert_eq!(fields.len(), 2);
     for field in fields {
-        assert_eq!(field.indicator2(), '0');
+        assert_eq!(field.indicator2, '0');
     }
 }
 
@@ -114,7 +114,7 @@ fn test_fields_in_range_subjects() {
 
     assert_eq!(subject_fields.len(), 4); // 600, 650 (2x), 651
     for field in subject_fields {
-        assert!(field.tag_str().starts_with('6'));
+        assert!(field.tag.starts_with('6'));
     }
 }
 
@@ -127,7 +127,7 @@ fn test_fields_in_range_names() {
 
     assert_eq!(name_fields.len(), 2); // 700, 710
     for field in name_fields {
-        assert!(field.tag_str().as_str() >= "700" && field.tag_str().as_str() <= "799");
+        assert!(field.tag.as_str() >= "700" && field.tag.as_str() <= "799");
     }
 }
 
@@ -193,7 +193,7 @@ fn test_field_query_builder() {
     assert_eq!(matching.len(), 2);
     for field in matching {
         assert_eq!(field.tag_str(), "650");
-        assert_eq!(field.indicator2(), '0');
+        assert_eq!(field.indicator2, '0');
         assert!(field.get_subfield('a').is_some());
     }
 }
@@ -225,7 +225,7 @@ fn test_field_query_no_tag() {
     // Should match 245, 600, and possibly others with indicator1='1'
     assert!(matching.len() >= 2);
     for field in matching {
-        assert_eq!(field.indicator1(), '1');
+        assert_eq!(field.indicator1, '1');
     }
 }
 
@@ -246,8 +246,8 @@ fn test_tag_range_query() {
     // 600 (1), 650 (2), 651 (1) = 4 fields total
     assert_eq!(matching.len(), 4);
     for field in matching {
-        assert!(field.tag_str().as_str() >= "600" && field.tag_str().as_str() <= "699");
-        assert_eq!(field.indicator2(), '0');
+        assert!(field.tag.as_str() >= "600" && field.tag.as_str() <= "699");
+        assert_eq!(field.indicator2, '0');
         assert!(field.get_subfield('a').is_some());
     }
 }
