@@ -27,7 +27,7 @@ fn create_test_record_with_title() -> Record {
     let mut record = Record::new(create_test_leader());
     record.add_control_field("001".to_string(), "12345".to_string());
 
-    let mut title_field = Field::new("245".to_string(), '1', '0');
+    let mut title_field = Field::new("245", '1', '0');
     title_field.subfields.push(Subfield {
         code: 'a',
         value: "The Great Gatsby".to_string(),
@@ -72,7 +72,7 @@ fn test_record_helpers_with_isbn() {
     let mut record = Record::new(create_test_leader());
 
     // Add ISBN field 020
-    let mut isbn_field = Field::new("020".to_string(), ' ', ' ');
+    let mut isbn_field = Field::new("020", ' ', ' ');
     isbn_field.subfields.push(Subfield {
         code: 'a',
         value: "978-0-7432-7356-5".to_string(),
@@ -82,7 +82,7 @@ fn test_record_helpers_with_isbn() {
     assert_eq!(record.isbn(), Some("978-0-7432-7356-5"));
 
     // Test isbns() for multiple ISBNs
-    let mut second_isbn = Field::new("020".to_string(), ' ', ' ');
+    let mut second_isbn = Field::new("020", ' ', ' ');
     second_isbn.subfields.push(Subfield {
         code: 'a',
         value: "0-7432-7356-1".to_string(),
@@ -100,14 +100,14 @@ fn test_record_helpers_with_subjects() {
     let mut record = Record::new(create_test_leader());
 
     // Add subject headings
-    let mut subject1 = Field::new("650".to_string(), ' ', '0');
+    let mut subject1 = Field::new("650", ' ', '0');
     subject1.subfields.push(Subfield {
         code: 'a',
         value: "Literary fiction".to_string(),
     });
     record.add_field(subject1);
 
-    let mut subject2 = Field::new("650".to_string(), ' ', '0');
+    let mut subject2 = Field::new("650", ' ', '0');
     subject2.subfields.push(Subfield {
         code: 'a',
         value: "American fiction, 20th century".to_string(),
@@ -125,7 +125,7 @@ fn test_record_helpers_with_authors() {
     let mut record = Record::new(create_test_leader());
 
     // Primary author in 100
-    let mut author_100 = Field::new("100".to_string(), '1', ' ');
+    let mut author_100 = Field::new("100", '1', ' ');
     author_100.subfields.push(Subfield {
         code: 'a',
         value: "Fitzgerald, F. Scott".to_string(),
@@ -133,14 +133,14 @@ fn test_record_helpers_with_authors() {
     record.add_field(author_100);
 
     // Secondary authors in 700
-    let mut author_700_1 = Field::new("700".to_string(), '1', ' ');
+    let mut author_700_1 = Field::new("700", '1', ' ');
     author_700_1.subfields.push(Subfield {
         code: 'a',
         value: "Smith, John".to_string(),
     });
     record.add_field(author_700_1);
 
-    let mut author_700_2 = Field::new("700".to_string(), '1', ' ');
+    let mut author_700_2 = Field::new("700", '1', ' ');
     author_700_2.subfields.push(Subfield {
         code: 'a',
         value: "Doe, Jane".to_string(),
@@ -160,7 +160,7 @@ fn test_record_helpers_with_publication_info() {
     let mut record = Record::new(create_test_leader());
 
     // Add publication field 260
-    let mut pub_field = Field::new("260".to_string(), ' ', '1');
+    let mut pub_field = Field::new("260", ' ', '1');
     pub_field.subfields.push(Subfield {
         code: 'a',
         value: "New York :".to_string(),
@@ -257,7 +257,7 @@ fn test_record_helpers_is_audiovisual() {
 fn test_record_helpers_physical_description() {
     let mut record = Record::new(create_test_leader());
 
-    let mut phys_field = Field::new("300".to_string(), ' ', ' ');
+    let mut phys_field = Field::new("300", ' ', ' ');
     phys_field.subfields.push(Subfield {
         code: 'a',
         value: "416 pages :".to_string(),
@@ -271,7 +271,7 @@ fn test_record_helpers_physical_description() {
 fn test_record_helpers_series() {
     let mut record = Record::new(create_test_leader());
 
-    let mut series_field = Field::new("490".to_string(), '1', ' ');
+    let mut series_field = Field::new("490", '1', ' ');
     series_field.subfields.push(Subfield {
         code: 'a',
         value: "The Classic Library".to_string(),
@@ -285,7 +285,7 @@ fn test_record_helpers_series() {
 fn test_record_helpers_issn() {
     let mut record = Record::new(create_test_leader());
 
-    let mut issn_field = Field::new("022".to_string(), ' ', ' ');
+    let mut issn_field = Field::new("022", ' ', ' ');
     issn_field.subfields.push(Subfield {
         code: 'a',
         value: "0028-0836".to_string(),
@@ -299,7 +299,7 @@ fn test_record_helpers_issn() {
 fn test_record_helpers_lccn() {
     let mut record = Record::new(create_test_leader());
 
-    let mut lccn_field = Field::new("010".to_string(), ' ', ' ');
+    let mut lccn_field = Field::new("010", ' ', ' ');
     lccn_field.subfields.push(Subfield {
         code: 'a',
         value: "2004051930".to_string(),

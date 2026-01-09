@@ -215,14 +215,10 @@ impl<R: Read> AuthorityMarcReader<R> {
                     continue;
                 }
 
-                let indicator1 = field_bytes[0] as char;
-                let indicator2 = field_bytes[1] as char;
-
                 let mut field = Field {
-                    tag: tag.clone(),
-                    indicator1,
-                    indicator2,
-                    subfields: Vec::new(),
+                    tag: tag.parse::<u16>().unwrap_or(0),
+                    indicators: [field_bytes[0], field_bytes[1]],
+                    subfields: smallvec::SmallVec::new(),
                 };
 
                 // Parse subfields

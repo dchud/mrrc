@@ -217,7 +217,7 @@ fn try_parse_field(
 
     let indicator1 = data[0] as char;
     let indicator2 = data[1] as char;
-    let mut field = Field::new(tag.to_string(), indicator1, indicator2);
+    let mut field = Field::new(tag, indicator1, indicator2);
 
     let subfield_data = &data[2..];
     let mut current_position = 0;

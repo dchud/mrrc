@@ -96,7 +96,7 @@ impl<W: Write> AuthorityMarcWriter<W> {
             for field in fields {
                 add_field(
                     tag,
-                    Some((field.indicator1, field.indicator2)),
+                    Some((field.indicator1(), field.indicator2())),
                     None,
                     Some(&field.subfields),
                     &mut directory,

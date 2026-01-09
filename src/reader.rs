@@ -327,7 +327,7 @@ fn parse_data_field(data: &[u8], tag: &str) -> Result<Field> {
 
     let indicator1 = data[0] as char;
     let indicator2 = data[1] as char;
-    let mut field = Field::new(tag.to_string(), indicator1, indicator2);
+    let mut field = Field::new(tag, indicator1, indicator2);
 
     // Parse subfields
     let subfield_data = &data[2..];
@@ -460,8 +460,8 @@ mod tests {
         let fields = record.get_fields("245");
         assert!(fields.is_some());
         let field = &fields.unwrap()[0];
-        assert_eq!(field.indicator1, '1');
-        assert_eq!(field.indicator2, '0');
+        assert_eq!(field.indicator1(), '1');
+        assert_eq!(field.indicator2(), '0');
 
         let title = field.get_subfield('a');
         assert_eq!(title, Some("Test title"));

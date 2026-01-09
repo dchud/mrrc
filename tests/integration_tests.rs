@@ -220,7 +220,7 @@ fn test_read_simple_authority_record() {
     // Check heading field
     assert!(record.heading().is_some());
     let heading = record.heading().unwrap();
-    assert_eq!(heading.tag, "100");
+    assert_eq!(heading.tag_str(), "100");
     assert_eq!(heading.get_subfield('a'), Some("Smith, John"));
 }
 

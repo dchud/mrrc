@@ -9,7 +9,7 @@
 //! use mrrc::{Record, Field, Leader, csv};
 //!
 //! let mut record = Record::new(Leader::default());
-//! let mut field = Field::new("245".to_string(), '1', '0');
+//! let mut field = Field::new("245", '1', '0');
 //! field.add_subfield('a', "Title".to_string());
 //! record.add_field(field);
 //!
@@ -42,7 +42,7 @@ use crate::record::Record;
 /// let mut record = Record::new(Leader::default());
 /// record.add_control_field("001".to_string(), "12345".to_string());
 ///
-/// let mut field = Field::new("245".to_string(), '1', '0');
+/// let mut field = Field::new("245", '1', '0');
 /// field.add_subfield('a', "Title".to_string());
 /// field.add_subfield('b', "Subtitle".to_string());
 /// record.add_field(field);
@@ -73,7 +73,13 @@ pub fn records_to_csv(records: &[Record]) -> Result<String> {
             for field in field_list {
                 if field.subfields.is_empty() {
                     // Write field row without subfields
-                    writeln!(output, "{tag},{},{},", field.indicator1, field.indicator2).ok();
+                    writeln!(
+                        output,
+                        "{tag},{},{},",
+                        field.indicator1(),
+                        field.indicator2()
+                    )
+                    .ok();
                 } else {
                     // Write one row per subfield
                     for subfield in &field.subfields {
@@ -81,7 +87,10 @@ pub fn records_to_csv(records: &[Record]) -> Result<String> {
                         writeln!(
                             output,
                             "{tag},{},{},{},{}",
-                            field.indicator1, field.indicator2, subfield.code, escaped_value
+                            field.indicator1(),
+                            field.indicator2(),
+                            subfield.code,
+                            escaped_value
                         )
                         .ok();
                     }
@@ -109,7 +118,7 @@ pub fn records_to_csv(records: &[Record]) -> Result<String> {
 /// use mrrc::{Record, Field, Leader, csv};
 ///
 /// let mut record = Record::new(Leader::default());
-/// let mut field = Field::new("245".to_string(), '1', '0');
+/// let mut field = Field::new("245", '1', '0');
 /// field.add_subfield('a', "Title".to_string());
 /// record.add_field(field);
 ///
@@ -144,14 +153,23 @@ where
             if filter(tag) {
                 for field in field_list {
                     if field.subfields.is_empty() {
-                        writeln!(output, "{tag},{},{},", field.indicator1, field.indicator2).ok();
+                        writeln!(
+                            output,
+                            "{tag},{},{},",
+                            field.indicator1(),
+                            field.indicator2()
+                        )
+                        .ok();
                     } else {
                         for subfield in &field.subfields {
                             let escaped_value = escape_csv_value(&subfield.value);
                             writeln!(
                                 output,
                                 "{tag},{},{},{},{}",
-                                field.indicator1, field.indicator2, subfield.code, escaped_value
+                                field.indicator1(),
+                                field.indicator2(),
+                                subfield.code,
+                                escaped_value
                             )
                             .ok();
                         }
@@ -214,7 +232,7 @@ mod tests {
     #[test]
     fn test_data_field_with_subfields() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Title".to_string());
         field.add_subfield('b', "Subtitle".to_string());
         record.add_field(field);
@@ -228,7 +246,7 @@ mod tests {
     #[test]
     fn test_csv_escaping() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Title, with comma".to_string());
         record.add_field(field);
 
@@ -240,7 +258,7 @@ mod tests {
     #[test]
     fn test_csv_quote_escaping() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Title \"quoted\"".to_string());
         record.add_field(field);
 
@@ -254,11 +272,11 @@ mod tests {
         let mut record = Record::new(make_test_leader());
         record.add_control_field("001".to_string(), "12345".to_string());
 
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Title".to_string());
         record.add_field(field);
 
-        let mut field2 = Field::new("650".to_string(), ' ', '0');
+        let mut field2 = Field::new("650", ' ', '0');
         field2.add_subfield('a', "Subject".to_string());
         record.add_field(field2);
 

@@ -17,7 +17,7 @@
 //! let mut writer = MarcWriter::new(&mut file);
 //!
 //! let mut record = Record::new(Leader::default());
-//! let mut field = Field::new("245".to_string(), '1', '0');
+//! let mut field = Field::new("245", '1', '0');
 //! field.add_subfield('a', "Title".to_string());
 //! record.add_field(field);
 //!
@@ -112,7 +112,7 @@ impl<W: Write> MarcWriter<W> {
     /// {
     ///     let mut writer = MarcWriter::new(&mut buffer);
     ///     let mut record = Record::new(Leader::default());
-    ///     let mut field = Field::new("245".to_string(), '1', '0');
+    ///     let mut field = Field::new("245", '1', '0');
     ///     field.add_subfield('a', "Title".to_string());
     ///     record.add_field(field);
     ///     writer.write_record(&record)?;
@@ -154,8 +154,8 @@ impl<W: Write> MarcWriter<W> {
         for (tag, fields) in &record.fields {
             for field in fields {
                 let mut field_data = Vec::new();
-                field_data.push(field.indicator1 as u8);
-                field_data.push(field.indicator2 as u8);
+                field_data.push(field.indicator1() as u8);
+                field_data.push(field.indicator2() as u8);
 
                 for subfield in &field.subfields {
                     field_data.push(SUBFIELD_DELIMITER);
@@ -237,7 +237,7 @@ mod tests {
     fn test_write_simple_record() {
         let mut record = Record::new(make_test_leader());
 
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Test title".to_string());
         record.add_field(field);
 
@@ -258,7 +258,7 @@ mod tests {
 
         let mut record = Record::new(make_test_leader());
 
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Test title".to_string());
         field.add_subfield('c', "Author".to_string());
         record.add_field(field);
@@ -281,8 +281,8 @@ mod tests {
         assert_eq!(read_record.get_control_field("001"), Some("12345"));
 
         let fields = read_record.get_fields("245").unwrap();
-        assert_eq!(fields[0].indicator1, '1');
-        assert_eq!(fields[0].indicator2, '0');
+        assert_eq!(fields[0].indicator1(), '1');
+        assert_eq!(fields[0].indicator2(), '0');
         assert_eq!(fields[0].get_subfield('a'), Some("Test title"));
         assert_eq!(fields[0].get_subfield('c'), Some("Author"));
     }
@@ -293,7 +293,7 @@ mod tests {
 
         let mut record = Record::new(make_test_leader());
 
-        let mut field = Field::new("650".to_string(), ' ', '0');
+        let mut field = Field::new("650", ' ', '0');
         field.add_subfield('a', "Subject 1".to_string());
         field.add_subfield('v', "subdivision".to_string());
         record.add_field(field);
@@ -320,7 +320,7 @@ mod tests {
         let mut record = Record::new(make_test_leader());
 
         for i in 1..=3 {
-            let mut field = Field::new("650".to_string(), ' ', '0');
+            let mut field = Field::new("650", ' ', '0');
             field.add_subfield('a', format!("Subject {i}"));
             record.add_field(field);
         }

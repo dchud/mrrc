@@ -36,7 +36,7 @@
 //! let mut record = Record::new(Leader::default());
 //! record.add_control_field("001".to_string(), "12345".to_string());
 //!
-//! let mut field = Field::new("245".to_string(), '1', '0');
+//! let mut field = Field::new("245", '1', '0');
 //! field.add_subfield('a', "Test Title".to_string());
 //! record.add_field(field);
 //!
@@ -56,7 +56,7 @@
 //!
 //! let mut record = Record::new(Leader::default());
 //!
-//! let mut field_245 = Field::new("245".to_string(), '1', '0');
+//! let mut field_245 = Field::new("245", '1', '0');
 //! field_245.add_subfield('a', "The Great Gatsby".to_string());
 //! field_245.add_subfield('c', "F. Scott Fitzgerald".to_string());
 //! record.add_field(field_245);

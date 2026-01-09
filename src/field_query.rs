@@ -160,21 +160,21 @@ impl FieldQuery {
     pub fn matches(&self, field: &Field) -> bool {
         // Check tag
         if let Some(ref tag) = self.tag {
-            if field.tag != *tag {
+            if field.tag_str() != *tag {
                 return false;
             }
         }
 
         // Check first indicator
         if let Some(ind1) = self.indicator1 {
-            if field.indicator1 != ind1 {
+            if field.indicator1() != ind1 {
                 return false;
             }
         }
 
         // Check second indicator
         if let Some(ind2) = self.indicator2 {
-            if field.indicator2 != ind2 {
+            if field.indicator2() != ind2 {
                 return false;
             }
         }
@@ -217,18 +217,18 @@ impl TagRangeQuery {
     /// Check if a field matches this range query.
     #[must_use]
     pub fn matches(&self, field: &Field) -> bool {
-        if !self.tag_in_range(&field.tag) {
+        if !self.tag_in_range(&field.tag_str()) {
             return false;
         }
 
         if let Some(ind1) = self.indicator1 {
-            if field.indicator1 != ind1 {
+            if field.indicator1() != ind1 {
                 return false;
             }
         }
 
         if let Some(ind2) = self.indicator2 {
-            if field.indicator2 != ind2 {
+            if field.indicator2() != ind2 {
                 return false;
             }
         }
@@ -304,7 +304,7 @@ impl SubfieldPatternQuery {
     /// Check if a field matches this pattern query.
     #[must_use]
     pub fn matches(&self, field: &Field) -> bool {
-        if field.tag != self.tag {
+        if field.tag_str() != self.tag {
             return false;
         }
 
@@ -355,7 +355,7 @@ impl SubfieldValueQuery {
     /// Check if a field matches this value query.
     #[must_use]
     pub fn matches(&self, field: &Field) -> bool {
-        if field.tag != self.tag {
+        if field.tag_str() != self.tag {
             return false;
         }
 
@@ -375,7 +375,7 @@ mod tests {
     use crate::record::Field;
 
     fn create_test_field(tag: &str, ind1: char, ind2: char, subfields: &[(char, &str)]) -> Field {
-        let mut field = Field::new(tag.to_string(), ind1, ind2);
+        let mut field = Field::new(tag, ind1, ind2);
         for &(code, value) in subfields {
             field.add_subfield_str(code, value);
         }

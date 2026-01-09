@@ -48,7 +48,7 @@ fn make_leader() -> Leader {
 #[test]
 fn test_macro_generates_add_method() {
     let mut record = ExampleRecord::new(make_leader());
-    let field = Field::new("245".to_string(), '1', '0');
+    let field = Field::new("245", '1', '0');
 
     record.add_first_field(field);
     assert_eq!(record.first_fields().len(), 1);
@@ -57,32 +57,32 @@ fn test_macro_generates_add_method() {
 #[test]
 fn test_macro_generates_get_method() {
     let mut record = ExampleRecord::new(make_leader());
-    let field1 = Field::new("245".to_string(), '1', '0');
-    let field2 = Field::new("650".to_string(), ' ', '0');
+    let field1 = Field::new("245", '1', '0');
+    let field2 = Field::new("650", ' ', '0');
 
     record.add_first_field(field1);
     record.add_first_field(field2);
 
     let fields = record.first_fields();
     assert_eq!(fields.len(), 2);
-    assert_eq!(fields[0].tag, "245");
-    assert_eq!(fields[1].tag, "650");
+    assert_eq!(fields[0].tag_str(), "245");
+    assert_eq!(fields[1].tag_str(), "650");
 }
 
 #[test]
 fn test_macro_multiple_collections() {
     let mut record = ExampleRecord::new(make_leader());
 
-    let field1 = Field::new("100".to_string(), '1', ' ');
-    let field2 = Field::new("700".to_string(), '1', ' ');
+    let field1 = Field::new("100", '1', ' ');
+    let field2 = Field::new("700", '1', ' ');
 
     record.add_first_field(field1);
     record.add_second_field(field2);
 
     assert_eq!(record.first_fields().len(), 1);
     assert_eq!(record.second_fields().len(), 1);
-    assert_eq!(record.first_fields()[0].tag, "100");
-    assert_eq!(record.second_fields()[0].tag, "700");
+    assert_eq!(record.first_fields()[0].tag_str(), "100");
+    assert_eq!(record.second_fields()[0].tag_str(), "700");
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn test_macro_method_chaining() {
 #[test]
 fn test_macro_get_method_returns_slice() {
     let mut record = ExampleRecord::new(make_leader());
-    let field = Field::new("245".to_string(), '1', '0');
+    let field = Field::new("245", '1', '0');
     record.add_first_field(field);
 
     // Test that we can use slice operations

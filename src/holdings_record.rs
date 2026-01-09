@@ -251,10 +251,7 @@ impl HoldingsRecord {
 
     /// Add an item information field (876-878)
     pub fn add_item_information(&mut self, field: Field) {
-        self.fields
-            .entry(field.tag.clone())
-            .or_default()
-            .push(field);
+        self.fields.entry(field.tag_str()).or_default().push(field);
     }
 
     /// Get item information fields by tag
@@ -265,10 +262,7 @@ impl HoldingsRecord {
 
     /// Add a field
     pub fn add_field(&mut self, field: Field) {
-        self.fields
-            .entry(field.tag.clone())
-            .or_default()
-            .push(field);
+        self.fields.entry(field.tag_str()).or_default().push(field);
     }
 
     /// Get fields by tag
@@ -651,32 +645,32 @@ mod tests {
     fn test_add_location() {
         let leader = create_test_leader();
         let location = Field {
-            tag: "852".to_string(),
-            indicator1: ' ',
-            indicator2: '1',
+            tag: 852,
+            indicators: [32_u8, 49_u8],
             subfields: vec![Subfield {
                 code: 'b',
                 value: "Main Library".to_string(),
-            }],
+            }]
+            .into(),
         };
 
         let record = HoldingsRecord::builder(leader).location(location).build();
 
         assert_eq!(record.locations().len(), 1);
-        assert_eq!(record.locations()[0].tag, "852");
+        assert_eq!(record.locations()[0].tag_str(), "852");
     }
 
     #[test]
     fn test_add_textual_holdings() {
         let leader = create_test_leader();
         let holdings = Field {
-            tag: "866".to_string(),
-            indicator1: '4',
-            indicator2: '1',
+            tag: 866,
+            indicators: [52_u8, 49_u8],
             subfields: vec![Subfield {
                 code: 'a',
                 value: "v.1 (1990)-v.10 (2000)".to_string(),
-            }],
+            }]
+            .into(),
         };
 
         let record = HoldingsRecord::builder(leader)
@@ -819,23 +813,23 @@ mod tests {
         let leader = create_test_leader();
 
         let caption_field = Field {
-            tag: "853".to_string(),
-            indicator1: ' ',
-            indicator2: '1',
+            tag: 853,
+            indicators: [32_u8, 49_u8],
             subfields: vec![Subfield {
                 code: 'a',
                 value: "v.".to_string(),
-            }],
+            }]
+            .into(),
         };
 
         let enum_field = Field {
-            tag: "863".to_string(),
-            indicator1: ' ',
-            indicator2: '1',
+            tag: 863,
+            indicators: [32_u8, 49_u8],
             subfields: vec![Subfield {
                 code: 'a',
                 value: "v.1".to_string(),
-            }],
+            }]
+            .into(),
         };
 
         let record = HoldingsRecord::builder(leader)
@@ -845,8 +839,8 @@ mod tests {
 
         assert_eq!(record.captions_basic().len(), 1);
         assert_eq!(record.enumeration_basic().len(), 1);
-        assert_eq!(record.captions_basic()[0].tag, "853");
-        assert_eq!(record.enumeration_basic()[0].tag, "863");
+        assert_eq!(record.captions_basic()[0].tag_str(), "853");
+        assert_eq!(record.enumeration_basic()[0].tag_str(), "863");
     }
 
     #[test]
@@ -854,23 +848,23 @@ mod tests {
         let leader = create_test_leader();
 
         let item_876 = Field {
-            tag: "876".to_string(),
-            indicator1: ' ',
-            indicator2: ' ',
+            tag: 876,
+            indicators: [32_u8, 32_u8],
             subfields: vec![Subfield {
                 code: 'p',
                 value: "12345".to_string(),
-            }],
+            }]
+            .into(),
         };
 
         let item_877 = Field {
-            tag: "877".to_string(),
-            indicator1: ' ',
-            indicator2: ' ',
+            tag: 877,
+            indicators: [32_u8, 32_u8],
             subfields: vec![Subfield {
                 code: 'p',
                 value: "12346".to_string(),
-            }],
+            }]
+            .into(),
         };
 
         let record = HoldingsRecord::builder(leader)
@@ -888,19 +882,19 @@ mod tests {
         let leader = create_test_leader();
 
         let field_500 = Field {
-            tag: "500".to_string(),
-            indicator1: ' ',
-            indicator2: ' ',
+            tag: 500,
+            indicators: [32_u8, 32_u8],
             subfields: vec![Subfield {
                 code: 'a',
                 value: "General note".to_string(),
-            }],
+            }]
+            .into(),
         };
 
         let record = HoldingsRecord::builder(leader).add_field(field_500).build();
 
         assert!(record.get_fields("500").is_some());
-        assert_eq!(record.get_fields("500").unwrap()[0].tag, "500");
+        assert_eq!(record.get_fields("500").unwrap()[0].tag_str(), "500");
     }
 
     #[test]

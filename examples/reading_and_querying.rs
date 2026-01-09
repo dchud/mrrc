@@ -46,29 +46,29 @@ fn create_sample_record() -> Record {
         .control_field_str("001", "ocm12345678")
         .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
         .field(
-            Field::builder("245".to_string(), '1', '0')
+            Field::builder("245", '1', '0')
                 .subfield_str('a', "Advanced Rust patterns /")
                 .subfield_str('c', "Jane Smith.")
                 .build(),
         )
         .field(
-            Field::builder("650".to_string(), ' ', '0')
+            Field::builder("650", ' ', '0')
                 .subfield_str('a', "Rust (Computer program language)")
                 .build(),
         )
         .field(
-            Field::builder("650".to_string(), ' ', '0')
+            Field::builder("650", ' ', '0')
                 .subfield_str('a', "Programming languages")
                 .subfield_str('x', "Design and construction.")
                 .build(),
         )
         .field(
-            Field::builder("650".to_string(), ' ', '1')
+            Field::builder("650", ' ', '1')
                 .subfield_str('a', "Software engineering.")
                 .build(),
         )
         .field(
-            Field::builder("700".to_string(), '1', ' ')
+            Field::builder("700", '1', ' ')
                 .subfield_str('a', "Jones, Bob,")
                 .subfield_str('e', "editor.")
                 .build(),
@@ -93,7 +93,8 @@ fn basic_field_access(record: &Record) {
     if let Some(field) = record.get_field("245") {
         println!(
             "\nTitle field indicators: {}{}",
-            field.indicator1, field.indicator2
+            field.indicator1(),
+            field.indicator2()
         );
         for subfield in field.subfields() {
             println!("  ${}: {}", subfield.code, subfield.value);
@@ -107,7 +108,7 @@ fn filter_by_indicators(record: &Record) {
     // Get only LCSH (indicator 2 = '0') subjects
     let lcsh_subjects: Vec<_> = record
         .fields_by_tag("650")
-        .filter(|f| f.indicator2 == '0')
+        .filter(|f| f.indicator2() == '0')
         .collect();
 
     println!("LCSH subjects (indicator2 = '0'): {}", lcsh_subjects.len());
@@ -120,7 +121,7 @@ fn filter_by_indicators(record: &Record) {
     // Get non-LCSH subjects
     let other_subjects: Vec<_> = record
         .fields_by_tag("650")
-        .filter(|f| f.indicator2 != '0')
+        .filter(|f| f.indicator2() != '0')
         .collect();
 
     println!(
@@ -172,7 +173,7 @@ fn advanced_queries(record: &Record) {
     // Get multiple fields by range
     println!("\nAccess points (1XX, 6XX, 7XX range):");
     for field in record.fields_in_range("100", "799") {
-        println!("  {}: {}", field.tag, field.indicator1);
+        println!("  {}: {}", field.tag_str(), field.indicator1());
     }
 
     // Count fields by tag
@@ -180,7 +181,9 @@ fn advanced_queries(record: &Record) {
     let mut tag_counts: std::collections::BTreeMap<String, usize> =
         std::collections::BTreeMap::new();
     for field in record.fields() {
-        *tag_counts.entry(field.tag.clone()).or_insert(0) += 1;
+        *tag_counts
+            .entry(field.tag_str())
+            .or_insert(0) += 1;
     }
 
     for (tag, count) in tag_counts.iter().take(10) {

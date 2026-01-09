@@ -26,7 +26,7 @@
 //! use mrrc::{Record, Field, Leader, dublin_core};
 //!
 //! let mut record = Record::new(Leader::default());
-//! let mut field = Field::new("245".to_string(), '1', '0');
+//! let mut field = Field::new("245", '1', '0');
 //! field.add_subfield('a', "Title".to_string());
 //! record.add_field(field);
 //!
@@ -85,7 +85,7 @@ pub struct DublinCoreRecord {
 /// use mrrc::{Record, Field, Leader, dublin_core};
 ///
 /// let mut record = Record::new(Leader::default());
-/// let mut field = Field::new("245".to_string(), '1', '0');
+/// let mut field = Field::new("245", '1', '0');
 /// field.add_subfield('a', "My Book".to_string());
 /// record.add_field(field);
 ///
@@ -372,7 +372,7 @@ mod tests {
     #[test]
     fn test_title_extraction() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Test Title".to_string());
         record.add_field(field);
 
@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn test_title_with_subtitle() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Main Title".to_string());
         field.add_subfield('b', "Subtitle".to_string());
         record.add_field(field);
@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn test_creator_extraction() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("100".to_string(), '1', ' ');
+        let mut field = Field::new("100", '1', ' ');
         field.add_subfield('a', "Smith, John".to_string());
         record.add_field(field);
 
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn test_subject_extraction() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("650".to_string(), ' ', '0');
+        let mut field = Field::new("650", ' ', '0');
         field.add_subfield('a', "Science Fiction".to_string());
         record.add_field(field);
 
@@ -422,7 +422,7 @@ mod tests {
     #[test]
     fn test_isbn_identifier() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("020".to_string(), ' ', ' ');
+        let mut field = Field::new("020", ' ', ' ');
         field.add_subfield('a', "1234567890".to_string());
         record.add_field(field);
 
@@ -442,7 +442,7 @@ mod tests {
     #[test]
     fn test_dublin_core_to_xml() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Test".to_string());
         record.add_field(field);
 
@@ -458,7 +458,7 @@ mod tests {
     #[test]
     fn test_xml_escaping() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("245".to_string(), '1', '0');
+        let mut field = Field::new("245", '1', '0');
         field.add_subfield('a', "Title with <brackets> & ampersand".to_string());
         record.add_field(field);
 
@@ -473,7 +473,7 @@ mod tests {
     #[test]
     fn test_language_extraction() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("041".to_string(), ' ', ' ');
+        let mut field = Field::new("041", ' ', ' ');
         field.add_subfield('a', "eng fre".to_string());
         record.add_field(field);
 
@@ -484,7 +484,7 @@ mod tests {
     #[test]
     fn test_description_from_summary() {
         let mut record = Record::new(make_test_leader());
-        let mut field = Field::new("520".to_string(), ' ', ' ');
+        let mut field = Field::new("520", ' ', ' ');
         field.add_subfield('a', "This is a summary".to_string());
         record.add_field(field);
 
