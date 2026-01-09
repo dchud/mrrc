@@ -81,19 +81,21 @@ These suppressions are documented with technical rationale in `.cargo/asan_suppr
 
 ### ASAN Requires Nightly Rust
 
-Memory safety checks require Rust nightly (for `-Z sanitizer=address`):
+Memory safety checks require Rust nightly (for `-Z sanitizer=address`). This is only available via **rustup**, not Homebrew.
 
+**If you have Homebrew Rust:**
+Uninstall and use rustup instead:
 ```bash
-# Install nightly
+brew uninstall rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
 rustup install nightly
-
-# Or upgrade existing
-rustup update nightly
 ```
 
-If you don't have nightly, install it:
+**If you already have rustup:**
 ```bash
 rustup install nightly
+rustup update nightly
 ```
 
 ### Tests Fail with "Unsupported Sanitizer" Error

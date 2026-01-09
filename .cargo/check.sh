@@ -62,12 +62,35 @@ python -m pytest tests/python/test_unit_basic.py tests/python/test_pymarc_compat
 if [ "$MEMORY_CHECKS" = true ]; then
     echo ""
     echo "=== ASAN memory safety checks ==="
+    
+    # Check if rustup is available (required for nightly)
+    if ! command -v rustup &> /dev/null; then
+        echo "Error: ASAN memory checks require Rust nightly toolchain"
+        echo ""
+        echo "Currently using Homebrew Rust (stable only)."
+        echo "To use ASAN, install Rust via rustup:"
+        echo ""
+        echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+        echo ""
+        echo "Then install nightly:"
+        echo "  rustup install nightly"
+        echo ""
+        exit 1
+    fi
+    
+    # Verify nightly is installed
+    if ! rustup toolchain list | grep -q "nightly"; then
+        echo "Error: Rust nightly toolchain not found"
+        echo "Install it with: rustup install nightly"
+        exit 1
+    fi
+    
     export RUSTFLAGS="-Z sanitizer=address"
     export RUSTDOCFLAGS="${RUSTFLAGS}"
     export LSAN_OPTIONS="suppressions=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/asan_suppressions.txt"
     
-    # Run ASAN on library tests
-    cargo test --lib --package mrrc --all-targets -q
+    # Run ASAN on library tests using nightly toolchain
+    cargo +nightly test --lib --package mrrc --all-targets -q
     
     # Clear ASAN flags after tests
     unset RUSTFLAGS RUSTDOCFLAGS LSAN_OPTIONS
