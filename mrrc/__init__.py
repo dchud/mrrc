@@ -963,6 +963,71 @@ AuthorityRecord = _AuthorityRecord
 HoldingsRecord = _HoldingsRecord
 
 
+def get_leader_valid_values(position: int) -> Optional[dict]:
+    """Get valid values for a specific leader position (MARC 21 spec reference).
+    
+    Module-level function (also available as Leader.get_valid_values(position) 
+    or instance_leader.get_valid_values(position)).
+    
+    Returns a dictionary mapping valid character values to their descriptions
+    for the given position. Returns None if the position has no defined valid values.
+    
+    Args:
+        position: The leader position (5-19)
+        
+    Returns:
+        A dictionary mapping values to descriptions, or None for positions with no defined values
+        
+    Example:
+        >>> valid = get_leader_valid_values(5)
+        >>> # Returns: {'a': 'increase in encoding level', 'c': 'corrected or revised', ...}
+    """
+    return _Leader.get_valid_values(position)
+
+
+def get_leader_value_description(position: int, value: str) -> Optional[str]:
+    """Get description for a specific value at a leader position.
+    
+    Module-level function (also available as Leader.describe_value(position, value)
+    or instance_leader.describe_value(position, value)).
+    
+    Args:
+        position: The leader position (5-19)
+        value: The character value to look up
+        
+    Returns:
+        The description if found, or None if the value is invalid for the position
+        
+    Example:
+        >>> desc = get_leader_value_description(5, "a")
+        >>> # Returns: "increase in encoding level"
+    """
+    return _Leader.describe_value(position, value)
+
+
+def get_leader_is_valid_value(position: int, value: str) -> bool:
+    """Check if a value is valid for a specific leader position.
+    
+    Positions without defined valid values accept any value.
+    
+    Module-level function (also available as Leader.is_valid_value(position, value)).
+    
+    Args:
+        position: The leader position (5-19)
+        value: The character value to validate
+        
+    Returns:
+        True if the value is valid for the position, False otherwise
+    """
+    return _Leader.is_valid_value(position, value)
+
+
+# Expose as class methods on the Leader class
+Leader.get_valid_values = staticmethod(get_leader_valid_values)
+Leader.describe_value = staticmethod(get_leader_value_description)
+Leader.is_valid_value = staticmethod(get_leader_is_valid_value)
+Leader.get_value_description = staticmethod(get_leader_value_description)
+
 __all__ = [
     "AuthorityMARCReader",
     "AuthorityRecord",
@@ -989,4 +1054,7 @@ __all__ = [
     "record_to_dublin_core",
     "record_to_mods",
     "dublin_core_to_xml",
+    "get_leader_valid_values",
+    "get_leader_value_description",
+    "get_leader_is_valid_value",
 ]

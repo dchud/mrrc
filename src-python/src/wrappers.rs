@@ -222,6 +222,105 @@ impl PyLeader {
     fn __eq__(&self, other: &PyLeader) -> bool {
         self.inner == other.inner
     }
+
+    /// Get valid values for a specific leader position (MARC 21 spec reference).
+    ///
+    /// Returns a dictionary mapping valid character values to their descriptions
+    /// for the given position.
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The leader position (5-19)
+    ///
+    /// # Returns
+    ///
+    /// A dictionary mapping values to descriptions, or empty dict for unknown positions
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// leader = Leader()
+    /// valid = leader.get_valid_values(5)
+    /// # Returns: {'a': 'increase in encoding level', 'c': 'corrected or revised', ...}
+    /// ```
+    #[staticmethod]
+    pub fn get_valid_values(position: usize, py: Python) -> Option<Py<pyo3::PyAny>> {
+        use pyo3::types::PyDict;
+
+        match Leader::valid_values_at_position(position) {
+            Some(values) => {
+                let dict = PyDict::new(py);
+                for (code, desc) in values {
+                    dict.set_item(code, desc).expect("Failed to set dict item");
+                }
+                Some(dict.into())
+            },
+            None => None,
+        }
+    }
+
+    /// Get description for a specific value at a leader position.
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The leader position (5-19)
+    /// * `value` - The character value to look up
+    ///
+    /// # Returns
+    ///
+    /// The description if found, or None if the value is invalid for the position
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// leader = Leader()
+    /// desc = leader.describe_value(5, "a")
+    /// # Returns: "increase in encoding level"
+    /// ```
+    #[staticmethod]
+    pub fn describe_value(position: usize, value: &str) -> Option<String> {
+        Leader::describe_value(position, value).map(|s| s.to_string())
+    }
+
+    /// Check if a value is valid for a specific leader position.
+    ///
+    /// Positions without defined valid values accept any value.
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The leader position (5-19)
+    /// * `value` - The character value to validate
+    ///
+    /// # Returns
+    ///
+    /// True if the value is valid for the position, false otherwise
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// leader = Leader()
+    /// is_valid = leader.is_valid_value(5, "a")
+    /// # Returns: True
+    /// ```
+    #[staticmethod]
+    pub fn is_valid_value(position: usize, value: &str) -> bool {
+        Leader::is_valid_value(position, value)
+    }
+
+    /// Get description for a specific value at a leader position (alias for describe_value).
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The leader position (5-19)
+    /// * `value` - The character value to look up
+    ///
+    /// # Returns
+    ///
+    /// The description if found, or None if the value is invalid for the position
+    #[staticmethod]
+    pub fn get_value_description(position: usize, value: &str) -> Option<String> {
+        Leader::describe_value(position, value).map(|s| s.to_string())
+    }
 }
 
 impl Default for PyLeader {

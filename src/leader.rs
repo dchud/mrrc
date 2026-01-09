@@ -55,6 +55,138 @@ pub struct Leader {
 }
 
 impl Leader {
+    /// Get valid values for a specific leader position (MARC 21 spec reference).
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The leader position (5-19)
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples containing (value, description) for valid values at that position.
+    /// Returns an empty vector for unknown positions.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let valid_values = Leader::valid_values_at_position(5);
+    /// // Returns: [("a", "increase in encoding level"), ("c", "corrected"), ...]
+    /// ```
+    #[must_use]
+    pub fn valid_values_at_position(position: usize) -> Option<Vec<(&'static str, &'static str)>> {
+        match position {
+            5 => Some(vec![
+                ("a", "Increase in encoding level"),
+                ("c", "Corrected or revised"),
+                ("d", "Deleted"),
+                ("n", "New"),
+                ("p", "Increase in encoding level from prepublication"),
+            ]),
+            6 => Some(vec![
+                ("a", "Language material"),
+                ("c", "Notated music"),
+                ("d", "Manuscript notated music"),
+                ("e", "Cartographic material"),
+                ("f", "Manuscript cartographic material"),
+                ("g", "Projected medium"),
+                ("h", "Microform"),
+                ("i", "Nonmusical sound recording"),
+                ("j", "Musical sound recording"),
+                ("k", "Two-dimensional nonprojectable graphic"),
+                ("m", "Computer file"),
+                ("o", "Kit"),
+                ("p", "Mixed materials"),
+                (
+                    "r",
+                    "Three-dimensional artifact or naturally occurring object",
+                ),
+                ("t", "Text"),
+            ]),
+            7 => Some(vec![
+                ("a", "Language material"),
+                ("c", "Collection"),
+                ("d", "Subunit"),
+                ("i", "Integrating resource"),
+                ("m", "Monograph"),
+                ("s", "Serial"),
+            ]),
+            8 => Some(vec![("#", "No specified type"), ("a", "Archival")]),
+            9 => Some(vec![(" ", "MARC-8"), ("a", "UCS/Unicode")]),
+            17 => Some(vec![
+                (" ", "Full level"),
+                ("1", "Full level, material not examined"),
+                ("2", "Less-than-full level, material not examined"),
+                ("3", "Abbreviated level"),
+                ("4", "Core level"),
+                ("5", "Partial level"),
+                ("7", "Minimal level"),
+                ("8", "Prepublication level"),
+                ("u", "Unknown"),
+                ("z", "Not applicable"),
+            ]),
+            18 => Some(vec![
+                (" ", "Non-ISBD"),
+                ("a", "AACR 2"),
+                ("i", "ISBD"),
+                ("u", "Unknown"),
+            ]),
+            19 => Some(vec![
+                (" ", "Not specified or not applicable"),
+                ("a", "Set"),
+                ("b", "Part with independent title"),
+                ("c", "Part with dependent title"),
+            ]),
+            _ => None,
+        }
+    }
+
+    /// Get description for a specific value at a leader position.
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The leader position (5-19)
+    /// * `value` - The character value to look up
+    ///
+    /// # Returns
+    ///
+    /// The description if found, or None if the value is invalid for the position.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let desc = Leader::describe_value(5, "a");
+    /// // Returns: Some("increase in encoding level")
+    /// ```
+    #[must_use]
+    pub fn describe_value(position: usize, value: &str) -> Option<&'static str> {
+        Self::valid_values_at_position(position).and_then(|values| {
+            values
+                .into_iter()
+                .find(|(v, _)| *v == value)
+                .map(|(_, desc)| desc)
+        })
+    }
+
+    /// Check if a value is valid for a specific leader position.
+    ///
+    /// If the position has no defined valid values, any value is considered valid.
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The leader position (5-19)
+    /// * `value` - The character value to validate
+    ///
+    /// # Returns
+    ///
+    /// True if the value is valid for the position, false otherwise.
+    #[must_use]
+    pub fn is_valid_value(position: usize, value: &str) -> bool {
+        match Self::valid_values_at_position(position) {
+            Some(values) => values.iter().any(|(v, _)| *v == value),
+            None => true, // Positions without defined values accept any value
+        }
+    }
+
     /// Parse a leader from 24 bytes
     ///
     /// # Errors
@@ -229,5 +361,102 @@ mod tests {
         let bytes = b"01234567890X20123456DUMMY";
         let result = Leader::from_bytes(bytes);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_valid_values_position_5() {
+        let values = Leader::valid_values_at_position(5);
+        assert!(values.is_some());
+
+        let values = values.unwrap();
+        let value_codes: Vec<&str> = values.iter().map(|(code, _)| *code).collect();
+        assert!(value_codes.contains(&"a"));
+        assert!(value_codes.contains(&"n"));
+    }
+
+    #[test]
+    fn test_valid_values_position_6() {
+        let values = Leader::valid_values_at_position(6);
+        assert!(values.is_some());
+
+        let values = values.unwrap();
+        let value_codes: Vec<&str> = values.iter().map(|(code, _)| *code).collect();
+        assert!(value_codes.contains(&"a"));
+        assert!(value_codes.contains(&"t"));
+        assert!(value_codes.contains(&"m"));
+    }
+
+    #[test]
+    fn test_valid_values_position_7() {
+        let values = Leader::valid_values_at_position(7);
+        assert!(values.is_some());
+
+        let values = values.unwrap();
+        let value_codes: Vec<&str> = values.iter().map(|(code, _)| *code).collect();
+        assert!(value_codes.contains(&"m"));
+        assert!(value_codes.contains(&"s"));
+    }
+
+    #[test]
+    fn test_valid_values_invalid_position() {
+        let values = Leader::valid_values_at_position(0);
+        assert!(values.is_none());
+
+        let values = Leader::valid_values_at_position(99);
+        assert!(values.is_none());
+    }
+
+    #[test]
+    fn test_describe_value_position_5() {
+        let desc = Leader::describe_value(5, "a");
+        assert_eq!(desc, Some("Increase in encoding level"));
+
+        let desc = Leader::describe_value(5, "n");
+        assert_eq!(desc, Some("New"));
+    }
+
+    #[test]
+    fn test_describe_value_position_6() {
+        let desc = Leader::describe_value(6, "a");
+        assert_eq!(desc, Some("Language material"));
+
+        let desc = Leader::describe_value(6, "t");
+        assert_eq!(desc, Some("Text"));
+    }
+
+    #[test]
+    fn test_describe_value_invalid_value() {
+        let desc = Leader::describe_value(5, "z");
+        assert_eq!(desc, None);
+
+        let desc = Leader::describe_value(99, "a");
+        assert_eq!(desc, None);
+    }
+
+    #[test]
+    fn test_describe_value_all_valid_position_5() {
+        let values = Leader::valid_values_at_position(5).unwrap();
+        for (code, expected_desc) in values {
+            let desc = Leader::describe_value(5, code);
+            assert_eq!(desc, Some(expected_desc));
+        }
+    }
+
+    #[test]
+    fn test_describe_value_all_valid_position_6() {
+        let values = Leader::valid_values_at_position(6).unwrap();
+        for (code, expected_desc) in values {
+            let desc = Leader::describe_value(6, code);
+            assert_eq!(desc, Some(expected_desc));
+        }
+    }
+
+    #[test]
+    fn test_describe_value_all_valid_position_7() {
+        let values = Leader::valid_values_at_position(7).unwrap();
+        for (code, expected_desc) in values {
+            let desc = Leader::describe_value(7, code);
+            assert_eq!(desc, Some(expected_desc));
+        }
     }
 }
