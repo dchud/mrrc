@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-#### Code Quality & Cleanup
+#### Developer Experience (2026-01-11)
+- **Unified Testing Workflow**: Single command (`.cargo/check.sh`) for full pre-push verification (~30s)
+  - Runs rustfmt, clippy, documentation, security audit, maturin build, and Python tests
+  - Uses pytest marker-based test selection (`-m "not benchmark"`) to run 314 core tests in ~6s
+  - Excludes 61 benchmark tests from default run (available via `pytest -m benchmark`)
+  - Documented in AGENTS.md with command reference table and CI alignment
+- **CI Workflow Fixes**:
+  - Fixed ASAN memory-safety workflow: Exclude dev-dependencies (zerocopy) that have nightly Rust incompatibility
+  - Fixed coverage workflow: Exclude PyO3 bindings package to avoid Python linker errors in tarpaulin
+
+#### Code Quality & Cleanup (2026-01-09)
+- **Memory Safety CI**: Added ASAN (AddressSanitizer) workflow for nightly memory safety checks
+  - Runs on schedule (daily) and manual dispatch
+  - Validates no memory safety issues in core library
+  - Local `.cargo/check.sh --memory-checks` option for developers with nightly toolchain
 - **Phase Reference Removal**: Cleaned up implementation-plan-internal references from all user-facing code
   - Removed "Phase A-H" and gate nomenclature from source code comments
   - Removed from Python wrapper module documentation
