@@ -39,7 +39,10 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --out Xml --all --timeout 300 --exclude-files examples/ --exclude-files tests/
+        run: |
+          # Exclude mrrc-python (PyO3 bindings) as it requires Python linking
+          # Focus coverage on the core mrrc library
+          cargo tarpaulin --out Xml --package mrrc --timeout 300 --exclude-files examples/ --exclude-files tests/
 
       - name: Upload coverage to codecov.io
         uses: codecov/codecov-action@v3
@@ -51,7 +54,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Generate HTML coverage report
-        run: cargo tarpaulin --out Html --all --timeout 300 --exclude-files examples/ --exclude-files tests/
+        run: |
+          cargo tarpaulin --out Html --package mrrc --timeout 300 --exclude-files examples/ --exclude-files tests/
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
