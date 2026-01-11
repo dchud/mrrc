@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Query DSL Python Bindings (2026-01-11)
+- **Python Query DSL**: Exposed Rust Query DSL to Python with full feature parity
+  - `FieldQuery`: Builder pattern for complex field matching (tag, indicators, subfields)
+  - `TagRangeQuery`: Match fields within a tag range (e.g., 600-699 for all subjects)
+  - `SubfieldPatternQuery`: Regex matching on subfield values
+  - `SubfieldValueQuery`: Exact or partial string matching on subfield values
+- **Record Query Methods**: New methods on Record for advanced field searching
+  - `fields_by_indicator(tag, indicator1=None, indicator2=None)`: Filter by indicators
+  - `fields_in_range(start_tag, end_tag)`: Find fields within a tag range
+  - `fields_matching(query)`: Use FieldQuery objects for complex matching
+  - `fields_matching_range(query)`: Use TagRangeQuery for range-based matching
+  - `fields_matching_pattern(query)`: Regex matching via SubfieldPatternQuery
+  - `fields_matching_value(query)`: String matching via SubfieldValueQuery
+- **Query DSL Documentation**: Comprehensive guide at docs/QUERY_DSL.md covering:
+  - Philosophy: Why multiple query types (performance, clarity)
+  - All query types with examples
+  - Practical cataloging scenarios (LCSH filtering, ISBN-13, subject analysis)
+  - Comparison table vs pymarc's get_fields()
+- **Query DSL Tests**: 42 new tests in tests/python/test_query_dsl.py
+
 #### Developer Experience (2026-01-11)
 - **Unified Testing Workflow**: Single command (`.cargo/check.sh`) for full pre-push verification (~30s)
   - Runs rustfmt, clippy, documentation, security audit, maturin build, and Python tests
@@ -332,8 +352,9 @@ None known at this time. The following have been resolved:
 - **API Standardization** (mrrc-jwb): Code review enhancements including:
   - Format conversion API naming standardization (mrrc-jwb.1)
   - Dublin Core XML convenience function (mrrc-jwb.2)
-  - Query DSL and ValidationFramework documentation (mrrc-jwb.3)
+  - ~~Query DSL and ValidationFramework documentation (mrrc-jwb.3)~~ ✓ Completed in 0.4.0
   - Shared test helpers module (mrrc-jwb.4)
+  - ~~Expose Query DSL to Python wrapper (mrrc-jwb.5)~~ ✓ Completed in 0.4.0
 - **Performance Tracking** (mrrc-3od): Codspeed integration for CI performance regression detection
 
 ### Long-term Vision (0.5.0+)
