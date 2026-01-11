@@ -55,8 +55,8 @@ echo "=== Rust library tests ==="
 cargo test --lib --package mrrc --all-targets -q
 
 echo ""
-echo "=== Python tests ==="
-python -m pytest tests/python/test_unit_basic.py tests/python/test_pymarc_compatibility.py -q
+echo "=== Python tests (core functionality, excludes benchmarks) ==="
+python -m pytest tests/python/ -m "not benchmark" -q
 
 # ASAN memory safety checks (optional, nightly feature)
 if [ "$MEMORY_CHECKS" = true ]; then

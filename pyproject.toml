@@ -49,10 +49,11 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 markers = [
-    "benchmark: mark test as a benchmark",
-    "slow: mark test as slow running",
+    "benchmark: mark test as a benchmark (deselect with '-m \"not benchmark\"')",
+    "slow: mark test as slow running (deselect with '-m \"not slow\"')",
 ]
-addopts = "--benchmark-min-rounds=3 --benchmark-disable-gc --benchmark-warmup=true"
+# Note: benchmark addopts moved to explicit --benchmark-* flags when running benchmarks
+# Default runs skip benchmarks for fast feedback
 
 [tool.mypy]
 python_version = "3.9"

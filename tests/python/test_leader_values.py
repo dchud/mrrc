@@ -64,15 +64,15 @@ class TestLeaderValidValuesPosition6:
         leader = Leader()
         values = leader.get_valid_values(6)
 
-        assert values["a"] == "language material"
-        assert values["c"] == "notated music"
-        assert values["m"] == "computer file"
-        assert values["t"] == "text"
+        assert values["a"] == "Language material"
+        assert values["c"] == "Notated music"
+        assert values["m"] == "Computer file"
+        assert values["t"] == "Manuscript language material"
 
     def test_describe_value_position_6(self):
         """Test describing record type values."""
-        assert Leader.describe_value(6, "a") == "language material"
-        assert Leader.describe_value(6, "t") == "text"
+        assert Leader.describe_value(6, "a") == "Language material"
+        assert Leader.describe_value(6, "t") == "Manuscript language material"
 
 
 class TestLeaderValidValuesPosition7:
@@ -91,14 +91,16 @@ class TestLeaderValidValuesPosition7:
         """Test that bibliographic level values map to correct descriptions."""
         values = Leader.get_valid_values(7)
 
-        assert values["m"] == "monograph"
-        assert values["s"] == "serial"
-        assert values["i"] == "integrating resource"
+        assert values["a"] == "Monographic component part"
+        assert values["b"] == "Serial component part"
+        assert values["m"] == "Monograph/Item"
+        assert values["s"] == "Serial"
+        assert values["i"] == "Integrating resource"
 
     def test_describe_value_position_7(self):
         """Test describing bibliographic level values."""
-        assert Leader.describe_value(7, "m") == "monograph"
-        assert Leader.describe_value(7, "s") == "serial"
+        assert Leader.describe_value(7, "m") == "Monograph/Item"
+        assert Leader.describe_value(7, "s") == "Serial"
 
 
 class TestLeaderValidValuesPosition8:
@@ -115,13 +117,13 @@ class TestLeaderValidValuesPosition8:
         """Test that type of control values map to correct descriptions."""
         values = Leader.get_valid_values(8)
 
-        assert values["#"] == "no specified type"
-        assert values["a"] == "archival"
+        assert values["#"] == "No specified type"
+        assert values["a"] == "Archival"
 
     def test_describe_value_position_8(self):
         """Test describing type of control values."""
-        assert Leader.describe_value(8, "#") == "no specified type"
-        assert Leader.describe_value(8, "a") == "archival"
+        assert Leader.describe_value(8, "#") == "No specified type"
+        assert Leader.describe_value(8, "a") == "Archival"
 
 
 class TestLeaderValidValuesPosition9:
@@ -162,14 +164,14 @@ class TestLeaderValidValuesPosition17:
         """Test that encoding level values map to correct descriptions."""
         values = Leader.get_valid_values(17)
 
-        assert values[" "] == "full level"
-        assert values["3"] == "abbreviated level"
-        assert values["8"] == "prepublication level"
+        assert values[" "] == "Full level"
+        assert values["3"] == "Abbreviated level"
+        assert values["8"] == "Prepublication level"
 
     def test_describe_value_position_17(self):
         """Test describing encoding level values."""
-        assert Leader.describe_value(17, " ") == "full level"
-        assert Leader.describe_value(17, "8") == "prepublication level"
+        assert Leader.describe_value(17, " ") == "Full level"
+        assert Leader.describe_value(17, "8") == "Prepublication level"
 
 
 class TestLeaderValidValuesPosition18:
@@ -186,14 +188,17 @@ class TestLeaderValidValuesPosition18:
         """Test that cataloging form values map to correct descriptions."""
         values = Leader.get_valid_values(18)
 
-        assert values[" "] == "non-ISBD"
+        assert values[" "] == "Non-ISBD"
         assert values["a"] == "AACR 2"
-        assert values["i"] == "ISBD"
+        assert values["c"] == "ISBD punctuation omitted"
+        assert values["i"] == "ISBD punctuation included"
+        assert values["n"] == "Non-ISBD punctuation omitted"
 
     def test_describe_value_position_18(self):
         """Test describing cataloging form values."""
-        assert Leader.describe_value(18, " ") == "non-ISBD"
+        assert Leader.describe_value(18, " ") == "Non-ISBD"
         assert Leader.describe_value(18, "a") == "AACR 2"
+        assert Leader.describe_value(18, "i") == "ISBD punctuation included"
 
 
 class TestLeaderValidValuesPosition19:
@@ -210,28 +215,28 @@ class TestLeaderValidValuesPosition19:
         """Test that multipart level values map to correct descriptions."""
         values = Leader.get_valid_values(19)
 
-        assert values[" "] == "not specified or not applicable"
-        assert values["a"] == "set"
-        assert values["b"] == "part with independent title"
+        assert values[" "] == "Not specified or not applicable"
+        assert values["a"] == "Set"
+        assert values["b"] == "Part with independent title"
 
     def test_describe_value_position_19(self):
         """Test describing multipart level values."""
         assert (
-            Leader.describe_value(19, " ") == "not specified or not applicable"
+            Leader.describe_value(19, " ") == "Not specified or not applicable"
         )
-        assert Leader.describe_value(19, "a") == "set"
+        assert Leader.describe_value(19, "a") == "Set"
 
 
 class TestLeaderValidValuesInvalidPosition:
     """Test Leader behavior with invalid positions."""
 
     def test_get_valid_values_invalid_position(self):
-        """Test that invalid positions return empty dict."""
+        """Test that invalid positions return None."""
         values = Leader.get_valid_values(0)
-        assert values == {}
+        assert values is None
 
         values = Leader.get_valid_values(99)
-        assert values == {}
+        assert values is None
 
     def test_describe_value_invalid_position(self):
         """Test that invalid positions return None."""
@@ -255,7 +260,7 @@ class TestLeaderValueValidationIntegration:
 
         # Get its description
         desc = Leader.describe_value(5, leader.record_status)
-        assert desc == "increase in encoding level"
+        assert desc == "Increase in encoding level"
 
     def test_set_and_describe_record_type(self):
         """Test setting record type and getting its description."""
@@ -265,7 +270,7 @@ class TestLeaderValueValidationIntegration:
         assert leader.record_type == "t"
 
         desc = Leader.describe_value(6, leader.record_type)
-        assert desc == "text"
+        assert desc == "Manuscript language material"
 
     def test_set_and_describe_bibliographic_level(self):
         """Test setting bibliographic level and getting its description."""
@@ -275,7 +280,7 @@ class TestLeaderValueValidationIntegration:
         assert leader.bibliographic_level == "s"
 
         desc = Leader.describe_value(7, leader.bibliographic_level)
-        assert desc == "serial"
+        assert desc == "Serial"
 
     def test_describe_all_valid_values_position_5(self):
         """Test that all values in the valid_values dict are describable."""
@@ -305,7 +310,7 @@ class TestLeaderStaticMethods:
         assert len(values) > 0
 
         desc = Leader.describe_value(5, "n")
-        assert desc == "new"
+        assert desc == "New"
 
     def test_instance_method_access(self):
         """Test accessing get_valid_values via instance method."""
@@ -318,7 +323,7 @@ class TestLeaderStaticMethods:
         leader = Leader()
         # Static methods should be callable on instances too
         desc = leader.describe_value(5, "n")
-        assert desc == "new"
+        assert desc == "New"
 
 
 class TestLeaderAPICompatibility:

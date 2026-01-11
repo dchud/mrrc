@@ -90,7 +90,6 @@ impl Leader {
                 ("e", "Cartographic material"),
                 ("f", "Manuscript cartographic material"),
                 ("g", "Projected medium"),
-                ("h", "Microform"),
                 ("i", "Nonmusical sound recording"),
                 ("j", "Musical sound recording"),
                 ("k", "Two-dimensional nonprojectable graphic"),
@@ -101,14 +100,15 @@ impl Leader {
                     "r",
                     "Three-dimensional artifact or naturally occurring object",
                 ),
-                ("t", "Text"),
+                ("t", "Manuscript language material"),
             ]),
             7 => Some(vec![
-                ("a", "Language material"),
+                ("a", "Monographic component part"),
+                ("b", "Serial component part"),
                 ("c", "Collection"),
                 ("d", "Subunit"),
                 ("i", "Integrating resource"),
-                ("m", "Monograph"),
+                ("m", "Monograph/Item"),
                 ("s", "Serial"),
             ]),
             8 => Some(vec![("#", "No specified type"), ("a", "Archival")]),
@@ -119,7 +119,7 @@ impl Leader {
                 ("2", "Less-than-full level, material not examined"),
                 ("3", "Abbreviated level"),
                 ("4", "Core level"),
-                ("5", "Partial level"),
+                ("5", "Partial (preliminary) level"),
                 ("7", "Minimal level"),
                 ("8", "Prepublication level"),
                 ("u", "Unknown"),
@@ -128,7 +128,9 @@ impl Leader {
             18 => Some(vec![
                 (" ", "Non-ISBD"),
                 ("a", "AACR 2"),
-                ("i", "ISBD"),
+                ("c", "ISBD punctuation omitted"),
+                ("i", "ISBD punctuation included"),
+                ("n", "Non-ISBD punctuation omitted"),
                 ("u", "Unknown"),
             ]),
             19 => Some(vec![
@@ -423,7 +425,7 @@ mod tests {
         assert_eq!(desc, Some("Language material"));
 
         let desc = Leader::describe_value(6, "t");
-        assert_eq!(desc, Some("Text"));
+        assert_eq!(desc, Some("Manuscript language material"));
     }
 
     #[test]

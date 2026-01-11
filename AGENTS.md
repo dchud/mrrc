@@ -78,23 +78,47 @@ bd close bd-42 --reason "Completed" --json
 - `3` - Low (polish, optimization)
 - `4` - Backlog (future ideas)
 
-## Pre-Push CI Checks (Local)
+## Developer Testing Workflow
 
-Before pushing, run all CI checks locally to match GitHub Actions:
+### One Command to Rule Them All
+
+**Before pushing, run all CI checks locally:**
 
 ```bash
 .cargo/check.sh
 ```
 
-This runs (in order):
+This single command runs everything needed to verify your changes (~30s):
 1. **Rustfmt** - `cargo fmt --all -- --check`
-2. **Clippy** - `cargo clippy --all --all-targets --all-features -- -D warnings`
+2. **Clippy** - `cargo clippy --package mrrc --package mrrc-python --all-targets -- -D warnings`
 3. **Documentation** - `RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items`
 4. **Security audit** - `cargo audit`
 5. **Python extension** - `maturin develop` (builds PyO3 bindings)
-6. **Python tests** - Runs full test suite (75+ tests)
+6. **Python tests** - All core tests excluding benchmarks (~6s, 300+ tests)
 
-If any check fails, fix locally and re-run `.cargo/check.sh` before pushing.
+### Test Commands Reference
+
+| Command | What it does | Duration |
+|---------|--------------|----------|
+| `.cargo/check.sh` | Full pre-push verification | ~30s |
+| `cargo test --lib` | Rust unit tests only | ~2s |
+| `pytest tests/python/ -m "not benchmark"` | Python core tests (excludes benchmarks) | ~6s |
+| `pytest tests/python/ -m benchmark` | Python benchmarks only | ~4min |
+| `pytest tests/python/` | All Python tests including benchmarks | ~4min |
+
+### What's a Benchmark vs Core Test?
+
+- **Core tests** (`-m "not benchmark"`): Unit tests, pymarc compatibility, iterator semantics, batch reading - these verify correctness and are always run
+- **Benchmark tests** (`-m benchmark`): Performance measurements with pytest-benchmark - run separately via CI or when profiling
+
+### CI Workflow Alignment
+
+| Local Command | GitHub Actions Workflow |
+|---------------|------------------------|
+| `.cargo/check.sh` | `lint.yml` + `test.yml` + `python-build.yml` |
+| `pytest -m benchmark` | `python-benchmark.yml` |
+
+If `.cargo/check.sh` passes locally, CI will pass.
 
 ## Landing the Plane (Session Completion)
 
