@@ -814,6 +814,169 @@ impl PyRecord {
         self.inner.is_audiovisual()
     }
 
+    // =========================================================================
+    // Query DSL Methods - Advanced field searching beyond pymarc's get_fields()
+    // =========================================================================
+
+    /// Get fields matching indicator values.
+    ///
+    /// This is a convenience method for the common case of filtering by indicators.
+    /// For more complex queries, use `fields_matching()` with a `FieldQuery`.
+    ///
+    /// Args:
+    ///     tag: The 3-character field tag to search.
+    ///     indicator1: Optional first indicator value (None = match any).
+    ///     indicator2: Optional second indicator value (None = match any).
+    ///
+    /// Returns:
+    ///     List of Field objects matching the criteria.
+    ///
+    /// Example:
+    ///     >>> # Find all 650 fields with indicator2='0' (Library of Congress Subject Headings)
+    ///     >>> lcsh_subjects = record.fields_by_indicator("650", indicator2="0")
+    ///     >>> for field in lcsh_subjects:
+    ///     ...     print(field.get_subfield("a"))
+    #[pyo3(signature = (tag, *, indicator1=None, indicator2=None))]
+    pub fn fields_by_indicator(
+        &self,
+        tag: &str,
+        indicator1: Option<&str>,
+        indicator2: Option<&str>,
+    ) -> Vec<PyField> {
+        let ind1 = indicator1.and_then(|s| s.chars().next());
+        let ind2 = indicator2.and_then(|s| s.chars().next());
+        self.inner
+            .fields_by_indicator(tag, ind1, ind2)
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get fields within a tag range (inclusive).
+    ///
+    /// Useful for querying groups of related fields, such as all subject fields
+    /// (600-699) or all added entry fields (700-799).
+    ///
+    /// Args:
+    ///     start_tag: Start of range (inclusive), e.g., "600".
+    ///     end_tag: End of range (inclusive), e.g., "699".
+    ///
+    /// Returns:
+    ///     List of Field objects within the tag range.
+    ///
+    /// Example:
+    ///     >>> # Find all subject fields (600-699)
+    ///     >>> subjects = record.fields_in_range("600", "699")
+    ///     >>> for field in subjects:
+    ///     ...     print(f"{field.tag}: {field.get_subfield('a')}")
+    pub fn fields_in_range(&self, start_tag: &str, end_tag: &str) -> Vec<PyField> {
+        self.inner
+            .fields_in_range(start_tag, end_tag)
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get fields matching a FieldQuery.
+    ///
+    /// This method enables complex field matching using the Query DSL.
+    /// A FieldQuery can combine tag, indicator, and subfield requirements.
+    ///
+    /// Args:
+    ///     query: A FieldQuery object with the matching criteria.
+    ///
+    /// Returns:
+    ///     List of Field objects matching all query criteria.
+    ///
+    /// Example:
+    ///     >>> query = mrrc.FieldQuery().tag("650").indicator2("0").has_subfield("a")
+    ///     >>> lcsh = record.fields_matching(query)
+    ///     >>> for field in lcsh:
+    ///     ...     print(field.get_subfield("a"))
+    pub fn fields_matching(&self, query: &crate::query::PyFieldQuery) -> Vec<PyField> {
+        self.inner
+            .fields_matching(&query.inner)
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get fields matching a TagRangeQuery.
+    ///
+    /// This method finds fields within a tag range that also match indicator
+    /// and subfield requirements.
+    ///
+    /// Args:
+    ///     query: A TagRangeQuery object with range and filter criteria.
+    ///
+    /// Returns:
+    ///     List of Field objects matching all query criteria.
+    ///
+    /// Example:
+    ///     >>> # Find all 6XX subjects with indicator2='0' (LCSH) that have subfield 'a'
+    ///     >>> query = mrrc.TagRangeQuery("600", "699", indicator2="0", required_subfields=["a"])
+    ///     >>> subjects = record.fields_matching_range(query)
+    pub fn fields_matching_range(&self, query: &crate::query::PyTagRangeQuery) -> Vec<PyField> {
+        self.inner
+            .fields_matching_range(&query.inner)
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get fields matching a SubfieldPatternQuery (regex matching).
+    ///
+    /// This method finds fields where a specific subfield's value matches
+    /// a regular expression pattern.
+    ///
+    /// Args:
+    ///     query: A SubfieldPatternQuery object with tag, subfield, and regex.
+    ///
+    /// Returns:
+    ///     List of Field objects where the subfield matches the pattern.
+    ///
+    /// Example:
+    ///     >>> # Find all ISBN-13s (start with 978 or 979)
+    ///     >>> query = mrrc.SubfieldPatternQuery("020", "a", r"^97\[89\]-")
+    ///     >>> isbn13_fields = record.fields_matching_pattern(query)
+    pub fn fields_matching_pattern(
+        &self,
+        query: &crate::query::PySubfieldPatternQuery,
+    ) -> Vec<PyField> {
+        self.inner
+            .fields_matching_pattern(&query.inner)
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Get fields matching a SubfieldValueQuery (exact or partial string matching).
+    ///
+    /// This method finds fields where a specific subfield's value matches
+    /// a string exactly or as a substring.
+    ///
+    /// Args:
+    ///     query: A SubfieldValueQuery object with tag, subfield, value, and match type.
+    ///
+    /// Returns:
+    ///     List of Field objects where the subfield matches the value.
+    ///
+    /// Example:
+    ///     >>> # Find exact subject heading "History"
+    ///     >>> query = mrrc.SubfieldValueQuery("650", "a", "History")
+    ///     >>> history_fields = record.fields_matching_value(query)
+    ///
+    ///     >>> # Find subjects containing "History" anywhere
+    ///     >>> query = mrrc.SubfieldValueQuery("650", "a", "History", partial=True)
+    ///     >>> related_fields = record.fields_matching_value(query)
+    pub fn fields_matching_value(
+        &self,
+        query: &crate::query::PySubfieldValueQuery,
+    ) -> Vec<PyField> {
+        self.inner
+            .fields
+            .values()
+            .flatten()
+            .filter(|field| query.inner.matches(field))
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
     /// Convert record to JSON string
     ///
     /// # Example

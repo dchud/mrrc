@@ -31,6 +31,11 @@ from ._mrrc import (
     record_to_dublin_core,
     record_to_mods,
     dublin_core_to_xml,
+    # Query DSL classes
+    FieldQuery,
+    TagRangeQuery,
+    SubfieldPatternQuery,
+    SubfieldValueQuery,
 )
 from typing import Optional, List, Union, Any, Tuple
 
@@ -794,6 +799,166 @@ class Record:
         """Check if this is audiovisual."""
         return self._inner.is_audiovisual()
     
+    # =========================================================================
+    # Query DSL Methods - Advanced field searching beyond pymarc's get_fields()
+    # =========================================================================
+
+    def fields_by_indicator(
+        self, tag: str, *, indicator1: Optional[str] = None, indicator2: Optional[str] = None
+    ) -> List['Field']:
+        """Get fields matching indicator values.
+        
+        This is a convenience method for filtering by indicators.
+        For more complex queries, use `fields_matching()` with a `FieldQuery`.
+        
+        Args:
+            tag: The 3-character field tag to search.
+            indicator1: Optional first indicator value (None = match any).
+            indicator2: Optional second indicator value (None = match any).
+            
+        Returns:
+            List of Field objects matching the criteria.
+            
+        Example:
+            >>> # Find all 650 fields with indicator2='0' (Library of Congress Subject Headings)
+            >>> lcsh_subjects = record.fields_by_indicator("650", indicator2="0")
+            >>> for field in lcsh_subjects:
+            ...     print(field["a"])
+        """
+        result = []
+        for field in self._inner.fields_by_indicator(tag, indicator1=indicator1, indicator2=indicator2):
+            wrapper = Field(field.tag, field.indicator1, field.indicator2)
+            wrapper._inner = field
+            result.append(wrapper)
+        return result
+    
+    def fields_in_range(self, start_tag: str, end_tag: str) -> List['Field']:
+        """Get fields within a tag range (inclusive).
+        
+        Useful for querying groups of related fields, such as all subject fields
+        (600-699) or all added entry fields (700-799).
+        
+        Args:
+            start_tag: Start of range (inclusive), e.g., "600".
+            end_tag: End of range (inclusive), e.g., "699".
+            
+        Returns:
+            List of Field objects within the tag range.
+            
+        Example:
+            >>> # Find all subject fields (600-699)
+            >>> subjects = record.fields_in_range("600", "699")
+            >>> for field in subjects:
+            ...     print(f"{field.tag}: {field['a']}")
+        """
+        result = []
+        for field in self._inner.fields_in_range(start_tag, end_tag):
+            wrapper = Field(field.tag, field.indicator1, field.indicator2)
+            wrapper._inner = field
+            result.append(wrapper)
+        return result
+    
+    def fields_matching(self, query: 'FieldQuery') -> List['Field']:
+        """Get fields matching a FieldQuery.
+        
+        This method enables complex field matching using the Query DSL.
+        A FieldQuery can combine tag, indicator, and subfield requirements.
+        
+        Args:
+            query: A FieldQuery object with the matching criteria.
+            
+        Returns:
+            List of Field objects matching all query criteria.
+            
+        Example:
+            >>> query = FieldQuery().tag("650").indicator2("0").has_subfield("a")
+            >>> lcsh = record.fields_matching(query)
+            >>> for field in lcsh:
+            ...     print(field["a"])
+        """
+        result = []
+        for field in self._inner.fields_matching(query):
+            wrapper = Field(field.tag, field.indicator1, field.indicator2)
+            wrapper._inner = field
+            result.append(wrapper)
+        return result
+    
+    def fields_matching_range(self, query: 'TagRangeQuery') -> List['Field']:
+        """Get fields matching a TagRangeQuery.
+        
+        This method finds fields within a tag range that also match indicator
+        and subfield requirements.
+        
+        Args:
+            query: A TagRangeQuery object with range and filter criteria.
+            
+        Returns:
+            List of Field objects matching all query criteria.
+            
+        Example:
+            >>> # Find all 6XX subjects with indicator2='0' (LCSH) that have subfield 'a'
+            >>> query = TagRangeQuery("600", "699", indicator2="0", required_subfields=["a"])
+            >>> subjects = record.fields_matching_range(query)
+        """
+        result = []
+        for field in self._inner.fields_matching_range(query):
+            wrapper = Field(field.tag, field.indicator1, field.indicator2)
+            wrapper._inner = field
+            result.append(wrapper)
+        return result
+    
+    def fields_matching_pattern(self, query: 'SubfieldPatternQuery') -> List['Field']:
+        """Get fields matching a SubfieldPatternQuery (regex matching).
+        
+        This method finds fields where a specific subfield's value matches
+        a regular expression pattern.
+        
+        Args:
+            query: A SubfieldPatternQuery object with tag, subfield, and regex.
+            
+        Returns:
+            List of Field objects where the subfield matches the pattern.
+            
+        Example:
+            >>> # Find all ISBN-13s (start with 978 or 979)
+            >>> query = SubfieldPatternQuery("020", "a", r"^97[89]-")
+            >>> isbn13_fields = record.fields_matching_pattern(query)
+        """
+        result = []
+        for field in self._inner.fields_matching_pattern(query):
+            wrapper = Field(field.tag, field.indicator1, field.indicator2)
+            wrapper._inner = field
+            result.append(wrapper)
+        return result
+    
+    def fields_matching_value(self, query: 'SubfieldValueQuery') -> List['Field']:
+        """Get fields matching a SubfieldValueQuery (exact or partial string matching).
+        
+        This method finds fields where a specific subfield's value matches
+        a string exactly or as a substring.
+        
+        Args:
+            query: A SubfieldValueQuery object with tag, subfield, value, and match type.
+            
+        Returns:
+            List of Field objects where the subfield matches the value.
+            
+        Example:
+            >>> # Find exact subject heading "History"
+            >>> query = SubfieldValueQuery("650", "a", "History")
+            >>> history_fields = record.fields_matching_value(query)
+            
+            >>> # Find subjects containing "History" anywhere
+            >>> query = SubfieldValueQuery("650", "a", "History", partial=True)
+            >>> related_fields = record.fields_matching_value(query)
+        """
+        result = []
+        for field in self._inner.fields_matching_value(query):
+            wrapper = Field(field.tag, field.indicator1, field.indicator2)
+            wrapper._inner = field
+            result.append(wrapper)
+        return result
+    
     def to_json(self) -> str:
         """Serialize to JSON."""
         return self._inner.to_json()
@@ -1029,6 +1194,7 @@ Leader.is_valid_value = staticmethod(get_leader_is_valid_value)
 Leader.get_value_description = staticmethod(get_leader_value_description)
 
 __all__ = [
+    # Core classes
     "AuthorityMARCReader",
     "AuthorityRecord",
     "HoldingsMARCReader",
@@ -1043,6 +1209,12 @@ __all__ = [
     "MARCWriter",
     "RecordBoundaryScanner",
     "ProducerConsumerPipeline",
+    # Query DSL classes
+    "FieldQuery",
+    "TagRangeQuery",
+    "SubfieldPatternQuery",
+    "SubfieldValueQuery",
+    # Functions
     "parse_batch_parallel",
     "parse_batch_parallel_limited",
     "record_to_json",

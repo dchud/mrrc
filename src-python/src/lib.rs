@@ -12,6 +12,7 @@ mod formats;
 mod holdings_readers;
 mod parse_error;
 mod producer_consumer_pipeline_wrapper;
+mod query;
 mod rayon_parser_pool_wrapper;
 mod readers;
 mod unified_reader;
@@ -23,6 +24,7 @@ use boundary_scanner_wrapper::PyRecordBoundaryScanner;
 use holdings_readers::PyHoldingsMARCReader;
 use producer_consumer_pipeline_wrapper::PyProducerConsumerPipeline;
 use pyo3::prelude::*;
+use query::{PyFieldQuery, PySubfieldPatternQuery, PySubfieldValueQuery, PyTagRangeQuery};
 use rayon_parser_pool_wrapper::{parse_batch_parallel, parse_batch_parallel_limited};
 use readers::PyMARCReader;
 use wrappers::{PyAuthorityRecord, PyField, PyHoldingsRecord, PyLeader, PyRecord, PySubfield};
@@ -43,6 +45,12 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMARCWriter>()?;
     m.add_class::<PyRecordBoundaryScanner>()?;
     m.add_class::<PyProducerConsumerPipeline>()?;
+
+    // Query DSL classes
+    m.add_class::<PyFieldQuery>()?;
+    m.add_class::<PyTagRangeQuery>()?;
+    m.add_class::<PySubfieldPatternQuery>()?;
+    m.add_class::<PySubfieldValueQuery>()?;
 
     // Format conversion functions
     m.add_function(wrap_pyfunction!(formats::record_to_json, m)?)?;

@@ -6,6 +6,7 @@ Welcome to the MRRC (MARC Rust Crate) documentation. This directory contains com
 
 ### 📚 User Guides & Tutorials
 
+- **[Query DSL Guide](./QUERY_DSL.md)** - Advanced field searching with indicators, tag ranges, and pattern matching
 - **[Performance Guide](./PERFORMANCE.md)** - Detailed performance analysis, GIL release details, and optimization guidance
 - **[Threading Documentation](./THREADING.md)** - Thread safety, multi-threaded usage patterns, and best practices
 - **[Architecture](./ARCHITECTURE.md)** - System design, GIL management, record types, and implementation details
@@ -63,6 +64,9 @@ docs/
 
 ### I want to...
 
+**...search for fields by indicators, tag ranges, or patterns**
+→ Read `QUERY_DSL.md` for the Query DSL guide with examples
+
 **...understand how the project is structured**
 → Start with `ARCHITECTURE.md` for system design, then `history/README.md` for code review findings
 
@@ -90,6 +94,7 @@ docs/
 
 | Document | Type | Purpose |
 |----------|------|---------|
+| [QUERY_DSL.md](./QUERY_DSL.md) | Guide | Advanced field searching with Query DSL |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Reference | System design, components, GIL management |
 | [PERFORMANCE.md](./PERFORMANCE.md) | Guide | Performance analysis, tuning, backend strategy |
 | [THREADING.md](./THREADING.md) | Guide | Thread safety, patterns, and debugging |
@@ -199,5 +204,5 @@ When adding new documentation:
 
 ---
 
-**Last Updated**: 2026-01-06  
+**Last Updated**: 2026-01-11  
 **Next Review**: When major features complete or architectural changes occur
