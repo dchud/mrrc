@@ -49,10 +49,10 @@ jobs:
         run: |
           export RUSTFLAGS="-Z sanitizer=address"
           export LSAN_OPTIONS="suppressions=${{ github.workspace }}/.cargo/asan_suppressions.txt"
-          # Note: We use --lib only (not --all-targets) to avoid compiling dev-dependencies
-          # like criterion/proptest which pull in zerocopy, which has known nightly compatibility
-          # issues. See: https://github.com/rust-lang/rust/issues/144168
-          cargo test --lib --package mrrc -q
+          # Use -Zavoid-dev-deps to skip dev-dependencies (criterion/proptest pull in zerocopy
+          # which has known nightly compatibility issues on nightly).
+          # See: https://github.com/rust-lang/rust/issues/144168
+          cargo -Zavoid-dev-deps test --lib --package mrrc -q
 
       - name: Report results
         if: always()
