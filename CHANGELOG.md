@@ -39,22 +39,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed ASAN memory-safety workflow: Exclude dev-dependencies (zerocopy) that have nightly Rust incompatibility
   - Fixed coverage workflow: Exclude PyO3 bindings package to avoid Python linker errors in tarpaulin
 
+#### API Standardization (2026-01-12)
+- **Format Conversion API Naming**: Standardized across all format modules for consistency
+  - Added `record_to_csv()` for single-record CSV export (delegates to `records_to_csv()`)
+  - Documented `records_to_csv()` plural pattern: semantically correct for batch-oriented tabular format
+  - All format modules now follow: `record_to_format()` (single) + `records_to_format()` (batch where applicable)
+  - Python wrapper unaffected (CSV not exposed to Python)
+
 #### Code Quality & Cleanup (2026-01-09)
 - **Memory Safety CI**: Added ASAN (AddressSanitizer) workflow for nightly memory safety checks
-  - Runs on schedule (daily) and manual dispatch
-  - Validates no memory safety issues in core library
-  - Local `.cargo/check.sh --memory-checks` option for developers with nightly toolchain
+   - Runs on schedule (daily) and manual dispatch
+   - Validates no memory safety issues in core library
+   - Local `.cargo/check.sh --memory-checks` option for developers with nightly toolchain
 - **Phase Reference Removal**: Cleaned up implementation-plan-internal references from all user-facing code
-  - Removed "Phase A-H" and gate nomenclature from source code comments
-  - Removed from Python wrapper module documentation
-  - Removed from test file names and test documentation
-  - Removed from example code
-  - Codebase now approachable to new users unfamiliar with development history
+   - Removed "Phase A-H" and gate nomenclature from source code comments
+   - Removed from Python wrapper module documentation
+   - Removed from test file names and test documentation
+   - Removed from example code
+   - Codebase now approachable to new users unfamiliar with development history
 - **Test File Reorganization**:
-  - `test_h_gate_benchmarking.py` → `test_parallel_benchmarking.py`
-  - `test_h5_integration.py` → `test_integration.py`
-  - `test_queue_state_machine_c2.py` → `test_queue_state_machine.py`
-  - `test_memory_profiling_c4.py` → `test_memory_profiling.py`
+   - `test_h_gate_benchmarking.py` → `test_parallel_benchmarking.py`
+   - `test_h5_integration.py` → `test_integration.py`
+   - `test_queue_state_machine_c2.py` → `test_queue_state_machine.py`
+   - `test_memory_profiling_c4.py` → `test_memory_profiling.py`
 
 ### Previously Added (2026-01-08)
 

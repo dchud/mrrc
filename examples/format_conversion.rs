@@ -32,7 +32,7 @@ fn main() {
 
     // CSV format
     println!("\n=== CSV Format ===\n");
-    if let Ok(csv) = mrrc::csv::records_to_csv(std::slice::from_ref(&record)) {
+    if let Ok(csv) = mrrc::csv::record_to_csv(&record) {
         println!("{csv}");
     }
 
