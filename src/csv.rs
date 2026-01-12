@@ -3,8 +3,29 @@
 //! This module provides conversion of MARC records to CSV (Comma-Separated Values) format,
 //! suitable for import into spreadsheet applications and data analysis tools.
 //!
+//! # API Patterns
+//!
+//! - **Single record**: [`record_to_csv`] - Converts a single `Record` to CSV
+//! - **Batch records**: [`records_to_csv`] - Converts a slice of `Record`s to CSV with combined output
+//! - **Filtered batch**: [`records_to_csv_filtered`] - Converts records to CSV with field filtering
+//!
 //! # Examples
 //!
+//! Single record:
+//! ```ignore
+//! use mrrc::{Record, Field, Leader, csv};
+//!
+//! let mut record = Record::new(Leader::default());
+//! let mut field = Field::new("245".to_string(), '1', '0');
+//! field.add_subfield('a', "Title".to_string());
+//! record.add_field(field);
+//!
+//! let csv = csv::record_to_csv(&record)?;
+//! println!("{}", csv);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! Batch records:
 //! ```ignore
 //! use mrrc::{Record, Field, Leader, csv};
 //!
@@ -23,9 +44,44 @@ use std::fmt::Write;
 use crate::error::Result;
 use crate::record::Record;
 
-/// Convert MARC records to CSV format.
+/// Convert a single MARC record to CSV format.
 ///
 /// Produces a CSV with one row per field/subfield combination, with columns:
+/// - `tag`: The MARC field tag
+/// - `ind1`: First indicator (or empty for control fields)
+/// - `ind2`: Second indicator (or empty for control fields)
+/// - `subfield_code`: The subfield code (or empty for control fields)
+/// - `value`: The field or subfield value
+///
+/// Control fields (001-009) are output with empty indicator and subfield columns.
+///
+/// # Examples
+///
+/// ```ignore
+/// use mrrc::{Record, Field, Leader, csv};
+///
+/// let mut record = Record::new(Leader::default());
+/// record.add_control_field("001".to_string(), "12345".to_string());
+///
+/// let mut field = Field::new("245".to_string(), '1', '0');
+/// field.add_subfield('a', "Title".to_string());
+/// field.add_subfield('b', "Subtitle".to_string());
+/// record.add_field(field);
+///
+/// let csv = csv::record_to_csv(&record)?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the CSV cannot be written.
+pub fn record_to_csv(record: &Record) -> Result<String> {
+    records_to_csv(std::slice::from_ref(record))
+}
+
+/// Convert multiple MARC records to CSV format.
+///
+/// Produces a CSV with one row per field/subfield combination across all records, with columns:
 /// - `tag`: The MARC field tag
 /// - `ind1`: First indicator (or empty for control fields)
 /// - `ind2`: Second indicator (or empty for control fields)
