@@ -8,6 +8,17 @@ This document establishes the standardized evaluation framework and methodology 
 
 **Scope:** Each format evaluation produces a structured report following the templates in this document.
 
+### Encoding & Normalization Assumptions
+
+All evaluations operate on mrrc's internal MARC data model:
+
+- Input ISO 2709 (MARC) records MAY be in MARC-8 or UTF-8.
+- **mrrc is responsible for** decoding ISO 2709 and normalizing all record content to UTF-8 `MarcRecord` objects.
+- Candidate binary formats are evaluated only on their ability to faithfully represent and round-trip these **UTF-8 `MarcRecord` objects**.
+- Preservation of the original ISO 2709 byte encoding (e.g., MARC-8 escape sequences) is **out of scope** for binary format evaluation — that's tested separately in mrrc's import/export layer.
+
+All fidelity comparisons in this framework are defined on the normalized MARC data model (fields, indicators, subfields, UTF-8 strings), not on raw ISO 2709 bytes.
+
 ---
 
 ## 1. Schema Design Requirements
@@ -24,15 +35,15 @@ Every format evaluation must include a complete schema design addressing:
 | **Variable Fields** | Tags 010-999 | Tag + indicators + subfields |
 | **Indicators** | Two indicator positions | Must preserve blank vs missing |
 | **Subfields** | Code + value pairs | Variable count, ordered |
-| **Encoding** | MARC-8 or UTF-8 | Must preserve original encoding |
+| **Text encoding** | UTF-8 strings | Must preserve all Unicode content from mrrc's normalized `MarcRecord` |
 
 ### 1.2 Edge Cases Checklist
 
 - [ ] Empty subfield values
 - [ ] Repeating fields (multiple 650s, etc.)
 - [ ] Repeating subfields within a field
-- [ ] MARC-8 encoded characters (diacritics, special chars)
-- [ ] UTF-8 multilingual content (CJK, Arabic, Hebrew)
+- [ ] UTF-8 multilingual content (CJK, Arabic, Hebrew, Cyrillic)
+- [ ] Combining diacritics and special characters
 - [ ] Maximum field lengths (9999 bytes)
 - [ ] Control characters in data
 - [ ] Blank vs missing indicators
@@ -61,10 +72,11 @@ Composition:
 
 **Selection criteria:**
 - Must include all common record types (BKS, SER, MUS, MAP, etc.)
-- Must include records with MARC-8 encoding
 - Must include multilingual records (CJK, Arabic, Cyrillic)
 - Must include records with 100+ fields
 - Must include records with repeating fields/subfields
+
+Note: The test set includes MARC-8 encoded source records to exercise mrrc's normalization pipeline; binary formats only see the resulting UTF-8 `MarcRecord` objects.
 
 ### 2.2 Performance Test Set (10,000 records)
 
@@ -85,25 +97,27 @@ For extended performance evaluation and memory profiling.
 ### 3.1 Test Procedure
 
 ```
-1. Load original MARC record(s) from ISO 2709
-2. Convert to candidate format
-3. Serialize to bytes/file
-4. Deserialize from bytes/file
-5. Convert back to MARC
-6. Compare original vs round-tripped
+1. Load original MARC record(s) from ISO 2709 using mrrc
+2. mrrc decodes and normalizes to UTF-8 MarcRecord objects (this is the baseline)
+3. Convert baseline MarcRecord objects to candidate format
+4. Serialize to bytes/file
+5. Deserialize from bytes/file
+6. Convert back to MarcRecord objects
+7. Compare baseline vs round-tripped MarcRecord objects field-by-field
 ```
+
+Note: Comparison is performed on normalized `MarcRecord` structures (leader, fields, indicators, subfields, UTF-8 strings). We do not require round-trip preservation of original ISO 2709 bytes or MARC-8 escape sequences.
 
 ### 3.2 Validation Criteria
 
 | Criterion | Weight | Pass Condition |
 |-----------|--------|----------------|
-| Leader preservation | Critical | Byte-exact match |
+| Leader preservation | Critical | All 24 leader positions match baseline `MarcRecord` |
 | Field ordering | High | Fields in same sequence |
 | Tag values | Critical | All tags present and correct |
 | Indicator values | Critical | Exact match including blanks |
 | Subfield codes | Critical | All codes present and ordered |
-| Subfield values | Critical | Byte-exact match (encoding-aware) |
-| Encoding preservation | Critical | Original encoding maintained |
+| Subfield values | Critical | Exact match of UTF-8 strings in baseline vs round-tripped |
 
 ### 3.3 Fidelity Score
 
@@ -150,13 +164,14 @@ Document:
 
 | Metric | Unit | Description |
 |--------|------|-------------|
-| **Read Throughput** | records/sec | Deserialize from format to MARC objects |
-| **Write Throughput** | records/sec | Serialize from MARC objects to format |
+| **Read Throughput** | records/sec | Deserialize from format to `MarcRecord` objects |
+| **Write Throughput** | records/sec | Serialize from `MarcRecord` objects to format |
 | **File Size (raw)** | bytes | Output file size without compression |
-| **File Size (compressed)** | bytes | With gzip/zstd compression |
+| **File Size (gzip)** | bytes | Compressed with `gzip -9` |
 | **Compression Ratio** | % | `1 - (format_size / iso2709_size)` |
 | **Peak Memory** | MB | Maximum RSS during operation |
-| **Startup Cost** | ms | Time to initialize format handler |
+
+Benchmarks should run single-threaded to ensure comparable results across formats.
 
 ### 4.3 Benchmark Procedure
 
@@ -250,9 +265,7 @@ Rate each format 1-5 for each use case:
 |----------|-------|-------|
 | **Simple data exchange** | | API integration, file transfer |
 | **High-performance batch** | | Large-scale processing |
-| **Analytics/big data** | | Spark, Hadoop integration |
-| **IoT/embedded** | | Resource-constrained environments |
-| **Real-time streaming** | | Event-driven pipelines |
+| **Analytics/big data** | | Spark, Hadoop, Parquet ecosystem |
 | **API integration** | | REST/gRPC services |
 | **Long-term archival** | | 10+ year preservation |
 
@@ -351,3 +364,4 @@ After all evaluations complete, aggregate into:
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-01-12 | 1.0 | Initial framework definition |
+| 2026-01-12 | 1.1 | Clarify encoding assumptions: mrrc normalizes to UTF-8, formats don't handle MARC-8; remove startup cost metric; simplify use cases |

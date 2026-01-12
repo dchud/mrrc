@@ -63,8 +63,8 @@
 | Empty subfield values | ☐ Yes / ☐ No | |
 | Repeating fields | ☐ Yes / ☐ No | |
 | Repeating subfields | ☐ Yes / ☐ No | |
-| MARC-8 encoding | ☐ Yes / ☐ No | |
-| UTF-8 multilingual | ☐ Yes / ☐ No | |
+| UTF-8 multilingual (CJK, RTL) | ☐ Yes / ☐ No | |
+| Combining diacritics | ☐ Yes / ☐ No | |
 | Maximum field length | ☐ Yes / ☐ No | |
 | Control characters | ☐ Yes / ☐ No | |
 | Blank vs missing indicators | ☐ Yes / ☐ No | |
@@ -87,6 +87,8 @@
 | | | | |
 
 ### 2.3 Notes
+
+All comparisons are performed on normalized UTF-8 `MarcRecord` objects produced by mrrc (fields, indicators, subfields, string values), not on raw ISO 2709 bytes.
 
 [Any format-specific observations about fidelity]
 
@@ -170,13 +172,11 @@
 
 | Use Case | Score (1-5) | Notes |
 |----------|-------------|-------|
-| Simple data exchange | | |
-| High-performance batch | | |
-| Analytics/big data | | |
-| IoT/embedded | | |
-| Real-time streaming | | |
-| API integration | | |
-| Long-term archival | | |
+| Simple data exchange | | API integration, file transfer |
+| High-performance batch | | Large-scale processing |
+| Analytics/big data | | Spark, Hadoop, Parquet ecosystem |
+| API integration | | REST/gRPC services |
+| Long-term archival | | 10+ year preservation |
 
 ---
 

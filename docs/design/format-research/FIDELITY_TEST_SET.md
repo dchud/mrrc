@@ -10,6 +10,14 @@ This document specifies the requirements for the 100-record fidelity test set us
 
 Validate that a serialization format can perfectly round-trip MARC records without any data loss or transformation artifacts.
 
+### Encoding Note
+
+This test set intentionally includes both MARC-8 and UTF-8 encoded ISO 2709 source records to exercise mrrc's import pipeline. During binary format evaluations:
+
+- mrrc decodes all records and normalizes them to **UTF-8 `MarcRecord` objects** before passing to candidate formats
+- Candidate binary formats are **not required to understand MARC-8** — they only see normalized UTF-8 content
+- MARC-8 handling is tested separately in mrrc's import/export layer
+
 ## Composition
 
 | Category | Count | Description |
@@ -31,11 +39,11 @@ Validate that a serialization format can perfectly round-trip MARC records witho
 
 The 10 edge case records MUST include:
 
-### Encoding Edge Cases (3 records)
+### Character/Encoding Edge Cases (3 records)
 
-1. **MARC-8 with diacritics** — Record with MARC-8 encoding containing combining diacritics (à, é, ñ, etc.)
-2. **UTF-8 CJK** — Record with Chinese, Japanese, or Korean characters
-3. **UTF-8 RTL** — Record with Arabic or Hebrew text (right-to-left)
+1. **Combining diacritics** — Record with combining diacritical marks (à, é, ñ, etc.) — sourced from MARC-8 to exercise normalization
+2. **CJK characters** — Record with Chinese, Japanese, or Korean characters
+3. **RTL scripts** — Record with Arabic or Hebrew text (right-to-left)
 
 ### Size Edge Cases (3 records)
 
@@ -68,11 +76,15 @@ Must include examples of:
 - Holdings-specific fields (852, 853, 863, etc.)
 - Authority-specific fields (1XX, 4XX, 5XX for authority)
 
-### Encoding Coverage
+### Source Encoding Coverage
 
-- At least 20 records with MARC-8 encoding
-- At least 50 records with UTF-8 encoding
-- Records with encoding declaration in 066/880
+To exercise mrrc's normalization pipeline, the source ISO 2709 files should include:
+
+- ~20 records originally encoded in MARC-8 (mrrc normalizes these to UTF-8)
+- ~50 records originally encoded in UTF-8
+- Records with 066/880 encoding declarations (alternate script representations)
+
+Note: Binary formats only see the normalized UTF-8 output from mrrc.
 
 ## Selection Criteria
 
