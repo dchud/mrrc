@@ -209,6 +209,29 @@ pub fn record_to_mods(record: &PyRecord) -> PyResult<String> {
     mods::record_to_mods_xml(&record.inner).map_err(marc_error_to_py_err)
 }
 
+/// Convert a MARC record directly to Dublin Core XML format.
+///
+/// Convenience function that combines record_to_dublin_core() and dublin_core_to_xml()
+/// in a single call.
+///
+/// # Arguments
+/// * `record` - A PyRecord instance
+///
+/// # Returns
+/// An XML string in Dublin Core RDF/XML format
+///
+/// # Example
+/// ```python
+/// import mrrc
+/// record = mrrc.Record(mrrc.Leader())
+/// dc_xml = mrrc.record_to_dublin_core_xml(record)
+/// print(dc_xml)
+/// ```
+#[pyfunction]
+pub fn record_to_dublin_core_xml(record: &PyRecord) -> PyResult<String> {
+    dublin_core::record_to_dublin_core_xml(&record.inner).map_err(marc_error_to_py_err)
+}
+
 /// Convert Dublin Core metadata to XML.
 ///
 /// # Arguments

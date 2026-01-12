@@ -20,8 +20,16 @@
 //! - **Coverage** (dc:coverage)
 //! - **Rights** (dc:rights)
 //!
+//! # API Patterns
+//!
+//! Two conversion approaches are provided:
+//! - **Intermediate struct**: [`record_to_dublin_core()`] returns a `DublinCoreRecord` struct
+//!   for programmatic access to the 15 elements
+//! - **Direct XML**: [`record_to_dublin_core_xml()`] directly converts to XML format in one call
+//!
 //! # Examples
 //!
+//! Direct XML conversion (convenience function):
 //! ```ignore
 //! use mrrc::{Record, Field, Leader, dublin_core};
 //!
@@ -30,8 +38,23 @@
 //! field.add_subfield('a', "Title".to_string());
 //! record.add_field(field);
 //!
-//! let dc_xml = dublin_core::record_to_dublin_core(&record)?;
-//! println!("{}", dc_xml);
+//! let xml = dublin_core::record_to_dublin_core_xml(&record)?;
+//! println!("{}", xml);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! Intermediate struct (for programmatic access):
+//! ```ignore
+//! use mrrc::{Record, Field, Leader, dublin_core};
+//!
+//! let mut record = Record::new(Leader::default());
+//! let mut field = Field::new("245".to_string(), '1', '0');
+//! field.add_subfield('a', "Title".to_string());
+//! record.add_field(field);
+//!
+//! let dc = dublin_core::record_to_dublin_core(&record)?;
+//! println!("Title: {:?}", dc.title);
+//! println!("Creator: {:?}", dc.creator);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
@@ -78,6 +101,9 @@ pub struct DublinCoreRecord {
 /// Convert a MARC record to Dublin Core metadata.
 ///
 /// Maps MARC fields to Dublin Core elements based on standard crosswalks.
+/// This function returns an intermediate `DublinCoreRecord` struct that can be
+/// serialized to XML using [`dublin_core_to_xml()`] or used directly for programmatic
+/// access to the 15 Dublin Core elements.
 ///
 /// # Examples
 ///
@@ -93,6 +119,10 @@ pub struct DublinCoreRecord {
 /// assert!(!dc.title.is_empty());
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
+///
+/// # See also
+///
+/// - [`record_to_dublin_core_xml()`] - Convenience function combining this with XML serialization
 ///
 /// # Errors
 ///
@@ -113,6 +143,39 @@ pub fn record_to_dublin_core(record: &Record) -> Result<DublinCoreRecord> {
     extract_rights(record, &mut dc);
 
     Ok(dc)
+}
+
+/// Convert a MARC record directly to Dublin Core XML format.
+///
+/// Convenience function that combines [`record_to_dublin_core()`] and [`dublin_core_to_xml()`]
+/// in a single call for simplified API when XML output is desired.
+///
+/// # Examples
+///
+/// ```ignore
+/// use mrrc::{Record, Field, Leader, dublin_core};
+///
+/// let mut record = Record::new(Leader::default());
+/// let mut field = Field::new("245".to_string(), '1', '0');
+/// field.add_subfield('a', "My Book".to_string());
+/// record.add_field(field);
+///
+/// let xml = dublin_core::record_to_dublin_core_xml(&record)?;
+/// println!("{xml}");
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+///
+/// # See also
+///
+/// - [`record_to_dublin_core()`] - If you need the intermediate `DublinCoreRecord` struct
+/// - [`dublin_core_to_xml()`] - For serializing an existing `DublinCoreRecord`
+///
+/// # Errors
+///
+/// Returns an error if the record cannot be converted to Dublin Core metadata.
+pub fn record_to_dublin_core_xml(record: &Record) -> Result<String> {
+    let dc = record_to_dublin_core(record)?;
+    Ok(dublin_core_to_xml(&dc))
 }
 
 fn extract_titles(record: &Record, dc: &mut DublinCoreRecord) {
