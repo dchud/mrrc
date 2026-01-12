@@ -44,7 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `record_to_csv()` for single-record CSV export (delegates to `records_to_csv()`)
   - Documented `records_to_csv()` plural pattern: semantically correct for batch-oriented tabular format
   - All format modules now follow: `record_to_format()` (single) + `records_to_format()` (batch where applicable)
-  - Python wrapper unaffected (CSV not exposed to Python)
+- **CSV Export to Python**: Exposed Rust CSV functions to Python bindings
+  - `record_to_csv(record)`: Export single record to CSV format
+  - `records_to_csv(records)`: Export multiple records to CSV (batch mode)
+  - `records_to_csv_filtered(records, filter_fn)`: Export with custom field filtering (filter_fn takes tag string, returns bool)
+  - Handles both direct PyRecord and wrapped Record instances for flexibility
+  - Completes API consistency with other format converters (JSON, XML, MARCJSON, Dublin Core, MODS)
 
 #### Code Quality & Cleanup (2026-01-09)
 - **Memory Safety CI**: Added ASAN (AddressSanitizer) workflow for nightly memory safety checks

@@ -553,7 +553,7 @@ See [docs/THREADING.md](docs/THREADING.md) and [examples/concurrent_reading.py](
 ### Format Conversion (Python)
 
 ```python
-from mrrc import MARCReader
+from mrrc import MARCReader, record_to_csv, records_to_csv
 
 with open("records.mrc", "rb") as f:
     reader = MARCReader(f)
@@ -567,6 +567,16 @@ with open("records.mrc", "rb") as f:
     
     # Convert to MARCJSON
     marcjson_str = record.to_marcjson()
+    
+    # Convert to CSV (single or multiple records)
+    csv_str = record_to_csv(record)
+    
+    # Convert multiple records to CSV
+    records = [reader.read_record() for _ in range(10)]
+    csv_str = records_to_csv(records)
+    
+    # Filter specific fields when exporting to CSV
+    csv_str = records_to_csv_filtered(records, lambda tag: tag in ('245', '650', '700'))
 ```
 
 ### Error Handling

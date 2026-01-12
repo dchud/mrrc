@@ -23,7 +23,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    from mrrc import MARCReader, Record, Field, Leader
+    from mrrc import (
+        MARCReader, Record, Field, Leader,
+        record_to_csv, records_to_csv, records_to_csv_filtered
+    )
 except ImportError:
     print("Error: mrrc not installed")
     print("Install with: pip install mrrc")
@@ -312,56 +315,31 @@ def convert_to_csv(record):
         
         records.append(record2)
         
-        # Convert to CSV
-        csv_str = None
-        try:
-            csv_str = __import__('mrrc').csv.records_to_csv(records)
-        except (AttributeError, ImportError):
-            # CSV conversion might not be available in all versions
-            csv_str = None
+        # Convert to CSV - full tabular output
+        print("Full CSV export (all fields):")
+        csv_str = records_to_csv(records)
+        lines = csv_str.split('\n')
+        for line in lines[:10]:
+            print(f"  {line}")
+        print()
         
-        if csv_str:
-            print("CSV output (first 300 chars):")
-            lines = csv_str.split('\n')
-            for line in lines[:5]:
-                print(f"  {line}")
-            print()
-            
-            print("Use cases:")
-            print("  - Data analysis in Excel/Sheets")
-            print("  - SQL database import")
-            print("  - Python pandas DataFrames")
-            print("  - Statistical analysis tools")
-        else:
-            print("CSV conversion not available in this version.")
-            print("Showing alternative approach using field extraction:")
-            print()
-            
-            # Alternative: manual CSV generation
-            import csv
-            import io
-            
-            output = io.StringIO()
-            writer = csv.writer(output)
-            
-            # Header
-            writer.writerow(['Control_Number', 'Title', 'Author', 'ISBN', 'Subjects'])
-            
-            # Data rows
-            for rec in records:
-                subjects = '; '.join(rec.subjects()[:3])  # First 3 subjects
-                writer.writerow([
-                    rec.get_control_field('001') or '',
-                    rec.title() or '',
-                    rec.author() or '',
-                    ', '.join(rec.isbns()) or '',
-                    subjects,
-                ])
-            
-            csv_output = output.getvalue()
-            print("Generated CSV:")
-            for line in csv_output.split('\n')[:5]:
-                print(f"  {line}")
+        # Filtered CSV export
+        print("Filtered CSV export (only 245, 100, 650 fields):")
+        csv_filtered = records_to_csv_filtered(
+            records, 
+            lambda tag: tag in ('245', '100', '650')
+        )
+        lines_filtered = csv_filtered.split('\n')
+        for line in lines_filtered[:10]:
+            print(f"  {line}")
+        print()
+        
+        print("Use cases:")
+        print("  - Data analysis in Excel/Sheets")
+        print("  - SQL database import")
+        print("  - Python pandas DataFrames")
+        print("  - Statistical analysis tools")
+        print("  - Field-level filtering for reporting")
         
     except Exception as e:
         print(f"Error: {e}")
