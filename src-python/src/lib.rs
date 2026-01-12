@@ -63,6 +63,9 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(formats::record_to_dublin_core_xml, m)?)?;
     m.add_function(wrap_pyfunction!(formats::record_to_mods, m)?)?;
     m.add_function(wrap_pyfunction!(formats::dublin_core_to_xml, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::record_to_csv, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::records_to_csv, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::records_to_csv_filtered, m)?)?;
 
     // Rayon parser pool functions
     m.add_function(wrap_pyfunction!(parse_batch_parallel, m)?)?;

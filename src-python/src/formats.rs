@@ -10,7 +10,7 @@
 
 use crate::error::marc_error_to_py_err;
 use crate::wrappers::PyRecord;
-use mrrc::{dublin_core, json, marcjson, mods, xml};
+use mrrc::{csv, dublin_core, json, marcjson, mods, xml};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use serde_json::Value;
@@ -273,4 +273,153 @@ pub fn dublin_core_to_xml(
     };
 
     Ok(dublin_core::dublin_core_to_xml(&dc_record))
+}
+
+/// Convert a single MARC record to CSV format.
+///
+/// Produces a CSV with one row per field/subfield combination, with columns:
+/// - `tag`: The MARC field tag
+/// - `ind1`: First indicator (or empty for control fields)
+/// - `ind2`: Second indicator (or empty for control fields)
+/// - `subfield_code`: The subfield code (or empty for control fields)
+/// - `value`: The field or subfield value
+///
+/// # Arguments
+/// * `record` - A PyRecord instance (can be the internal _mrrc.Record or wrapped Record)
+///
+/// # Returns
+/// A CSV string representation of the record
+///
+/// # Example
+/// ```python
+/// import mrrc
+/// record = mrrc.Record(mrrc.Leader())
+/// csv_str = mrrc.record_to_csv(record)
+/// ```
+#[pyfunction]
+pub fn record_to_csv(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> {
+    Python::with_gil(|py| {
+        // Try to extract as PyRecord directly first
+        if let Ok(py_record) = record.extract::<pyo3::PyRef<'_, PyRecord>>() {
+            return csv::record_to_csv(&py_record.inner).map_err(marc_error_to_py_err);
+        }
+
+        // Otherwise, try to get the _inner attribute (wrapped Record)
+        if let Ok(inner) = record.getattr("_inner") {
+            if let Ok(py_record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
+                return csv::record_to_csv(&py_record.inner).map_err(marc_error_to_py_err);
+            }
+        }
+
+        Err(pyo3::exceptions::PyTypeError::new_err(
+            "record must be a PyRecord or wrapped Record",
+        ))
+    })
+}
+
+/// Convert multiple MARC records to CSV format.
+///
+/// Produces a CSV with one row per field/subfield combination across all records, with columns:
+/// - `tag`: The MARC field tag
+/// - `ind1`: First indicator (or empty for control fields)
+/// - `ind2`: Second indicator (or empty for control fields)
+/// - `subfield_code`: The subfield code (or empty for control fields)
+/// - `value`: The field or subfield value
+///
+/// # Arguments
+/// * `records` - A list of PyRecord instances
+///
+/// # Returns
+/// A CSV string representation of all records
+///
+/// # Example
+/// ```python
+/// import mrrc
+/// records = [mrrc.Record(mrrc.Leader()), mrrc.Record(mrrc.Leader())]
+/// csv_str = mrrc.records_to_csv(records)
+/// ```
+#[pyfunction]
+pub fn records_to_csv(records: &pyo3::Bound<'_, pyo3::types::PyList>) -> PyResult<String> {
+    Python::with_gil(|py| {
+        let mut rust_records = Vec::new();
+        for item in records.iter() {
+            // Try PyRecord first
+            if let Ok(record) = item.extract::<pyo3::PyRef<'_, PyRecord>>() {
+                rust_records.push(record.inner.clone());
+                continue;
+            }
+
+            // Try wrapped Record with _inner attribute
+            if let Ok(inner) = item.getattr("_inner") {
+                if let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
+                    rust_records.push(record.inner.clone());
+                    continue;
+                }
+            }
+
+            return Err(pyo3::exceptions::PyTypeError::new_err(
+                "All items must be PyRecord or wrapped Record",
+            ));
+        }
+        csv::records_to_csv(&rust_records).map_err(marc_error_to_py_err)
+    })
+}
+
+/// Convert MARC records to CSV format using a custom field filter.
+///
+/// Allows filtering which fields are exported to CSV. Only fields matching the
+/// provided filter function will be included.
+///
+/// # Arguments
+/// * `records` - A list of PyRecord instances
+/// * `filter_fn` - A callable that takes a field tag (str) and returns True to include it
+///
+/// # Returns
+/// A CSV string with only the filtered fields
+///
+/// # Example
+/// ```python
+/// import mrrc
+/// records = [mrrc.Record(mrrc.Leader())]
+/// # Only export 245 field (title)
+/// csv_str = mrrc.records_to_csv_filtered(records, lambda tag: tag == "245")
+/// ```
+#[pyfunction]
+pub fn records_to_csv_filtered(
+    records: &pyo3::Bound<'_, pyo3::types::PyList>,
+    filter_fn: PyObject,
+) -> PyResult<String> {
+    Python::with_gil(|py| {
+        let mut rust_records = Vec::new();
+        for item in records.iter() {
+            // Try PyRecord first
+            if let Ok(record) = item.extract::<pyo3::PyRef<'_, PyRecord>>() {
+                rust_records.push(record.inner.clone());
+                continue;
+            }
+
+            // Try wrapped Record with _inner attribute
+            if let Ok(inner) = item.getattr("_inner") {
+                if let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
+                    rust_records.push(record.inner.clone());
+                    continue;
+                }
+            }
+
+            return Err(pyo3::exceptions::PyTypeError::new_err(
+                "All items must be PyRecord or wrapped Record",
+            ));
+        }
+
+        // Create a closure that calls the Python filter function
+        csv::records_to_csv_filtered(&rust_records, |tag| {
+            let result = filter_fn
+                .call1(py, (tag,))
+                .ok()
+                .and_then(|obj| obj.extract::<bool>(py).ok())
+                .unwrap_or(false);
+            result
+        })
+        .map_err(marc_error_to_py_err)
+    })
 }
