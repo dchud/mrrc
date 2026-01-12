@@ -2,25 +2,10 @@
 //!
 //! Tests that the `MarcRecord` trait enables generic code working with any MARC record.
 
-use mrrc::{AuthorityRecord, HoldingsRecord, Leader, MarcRecord, Record};
+mod common;
 
-fn make_leader() -> Leader {
-    Leader {
-        record_length: 1000,
-        record_status: 'a',
-        record_type: 'a',
-        bibliographic_level: 'm',
-        control_record_type: 'a',
-        character_coding: ' ',
-        indicator_count: 2,
-        subfield_code_count: 2,
-        data_base_address: 100,
-        encoding_level: ' ',
-        cataloging_form: ' ',
-        multipart_level: ' ',
-        reserved: "4500".to_string(),
-    }
-}
+use common::make_leader;
+use mrrc::{AuthorityRecord, HoldingsRecord, MarcRecord, Record};
 
 /// Helper function demonstrating generic code using `MarcRecord` trait.
 fn set_and_verify_control_field<T: MarcRecord>(record: &mut T, tag: &str, value: &str) {

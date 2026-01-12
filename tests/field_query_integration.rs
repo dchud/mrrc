@@ -1,71 +1,13 @@
 //! Integration tests for advanced field query patterns
 
-use mrrc::{Field, FieldQuery, Leader, Record, TagRangeQuery};
+mod common;
 
-fn create_test_record() -> Record {
-    let leader = Leader {
-        record_length: 0,
-        record_status: 'n',
-        record_type: 'a',
-        bibliographic_level: 'm',
-        control_record_type: ' ',
-        character_coding: ' ',
-        indicator_count: 2,
-        subfield_code_count: 2,
-        data_base_address: 0,
-        encoding_level: ' ',
-        cataloging_form: 'a',
-        multipart_level: ' ',
-        reserved: "4500".to_string(),
-    };
-    let mut record = Record::new(leader);
-
-    // Add some fields with various indicators and subfields
-    let mut field_245 = Field::new("245".to_string(), '1', '0');
-    field_245.add_subfield_str('a', "The Great Gatsby");
-    field_245.add_subfield_str('c', "F. Scott Fitzgerald");
-    record.add_field(field_245);
-
-    // Add multiple 650 fields (LCSH subjects)
-    let mut field_650_1 = Field::new("650".to_string(), ' ', '0');
-    field_650_1.add_subfield_str('a', "Novels");
-    field_650_1.add_subfield_str('x', "American");
-    record.add_field(field_650_1);
-
-    let mut field_650_2 = Field::new("650".to_string(), ' ', '0');
-    field_650_2.add_subfield_str('a', "Coming of age");
-    field_650_2.add_subfield_str('x', "Fiction");
-    record.add_field(field_650_2);
-
-    // Add a 651 field (geographic subject)
-    let mut field_651 = Field::new("651".to_string(), ' ', '0');
-    field_651.add_subfield_str('a', "United States");
-    field_651.add_subfield_str('x', "Fiction");
-    record.add_field(field_651);
-
-    // Add a 600 field (name subject)
-    let mut field_600 = Field::new("600".to_string(), '1', '0');
-    field_600.add_subfield_str('a', "Gatsby, Jay");
-    field_600.add_subfield_str('c', "Fictional character");
-    record.add_field(field_600);
-
-    // Add a 700 field (name added entry) with different indicators
-    let mut field_700 = Field::new("700".to_string(), '1', ' ');
-    field_700.add_subfield_str('a', "Fitzgerald, F. Scott");
-    field_700.add_subfield_str('d', "1896-1940");
-    record.add_field(field_700);
-
-    // Add a 710 field (corporate body added entry)
-    let mut field_710 = Field::new("710".to_string(), '2', ' ');
-    field_710.add_subfield_str('a', "Scribner");
-    record.add_field(field_710);
-
-    record
-}
+use common::create_realistic_record;
+use mrrc::{FieldQuery, TagRangeQuery};
 
 #[test]
 fn test_fields_by_indicator_lcsh() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Get all 650 fields with indicator2='0' (LCSH)
     let lcsh_fields: Vec<_> = record.fields_by_indicator("650", None, Some('0')).collect();
@@ -79,7 +21,7 @@ fn test_fields_by_indicator_lcsh() {
 
 #[test]
 fn test_fields_by_indicator_specific() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Get all fields with indicator1='1', indicator2='0'
     let fields: Vec<_> = record
@@ -94,7 +36,7 @@ fn test_fields_by_indicator_specific() {
 
 #[test]
 fn test_fields_by_indicator_wildcard() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Get all 650 fields regardless of indicator1
     let fields: Vec<_> = record.fields_by_indicator("650", None, Some('0')).collect();
@@ -107,7 +49,7 @@ fn test_fields_by_indicator_wildcard() {
 
 #[test]
 fn test_fields_in_range_subjects() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Get all subject fields (600-699)
     let subject_fields: Vec<_> = record.fields_in_range("600", "699").collect();
@@ -120,7 +62,7 @@ fn test_fields_in_range_subjects() {
 
 #[test]
 fn test_fields_in_range_names() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Get all name-related fields (700-799)
     let name_fields: Vec<_> = record.fields_in_range("700", "799").collect();
@@ -133,7 +75,7 @@ fn test_fields_in_range_names() {
 
 #[test]
 fn test_fields_with_subfield_a() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Find all 650 fields with subfield 'a'
     let fields_with_a: Vec<_> = record.fields_with_subfield("650", 'a').collect();
@@ -146,7 +88,7 @@ fn test_fields_with_subfield_a() {
 
 #[test]
 fn test_fields_with_subfield_nonexistent() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Find all 650 fields with subfield 'z' (unlikely)
     let fields_with_z: Vec<_> = record.fields_with_subfield("650", 'z').collect();
@@ -156,7 +98,7 @@ fn test_fields_with_subfield_nonexistent() {
 
 #[test]
 fn test_fields_with_subfields_multiple() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Find all 650 fields with both 'a' and 'x'
     let fields_with_ax: Vec<_> = record.fields_with_subfields("650", &['a', 'x']).collect();
@@ -170,7 +112,7 @@ fn test_fields_with_subfields_multiple() {
 
 #[test]
 fn test_fields_with_subfields_partial_match() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Find all 650 fields with 'a' and 'z' (only a exists)
     let fields_with_az: Vec<_> = record.fields_with_subfields("650", &['a', 'z']).collect();
@@ -180,7 +122,7 @@ fn test_fields_with_subfields_partial_match() {
 
 #[test]
 fn test_field_query_builder() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Build a query for 650 fields with indicator2='0' and subfield 'a'
     let query = FieldQuery::new()
@@ -200,7 +142,7 @@ fn test_field_query_builder() {
 
 #[test]
 fn test_field_query_multiple_subfields() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Query for fields with multiple required subfields
     let query = FieldQuery::new()
@@ -215,7 +157,7 @@ fn test_field_query_multiple_subfields() {
 
 #[test]
 fn test_field_query_no_tag() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Query matching any tag with indicator value
     let query = FieldQuery::new().indicator1(Some('1'));
@@ -239,7 +181,7 @@ fn test_tag_range_query() {
         required_subfields: vec!['a'],
     };
 
-    let record = create_test_record();
+    let record = create_realistic_record();
     let matching: Vec<_> = record.fields_matching_range(&query).collect();
 
     // Should match fields in range 600-699 with ind2='0' and subfield 'a'
@@ -254,7 +196,7 @@ fn test_tag_range_query() {
 
 #[test]
 fn test_combined_queries() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Complex scenario: Find LCSH subject headings
     let lcsh_subjects: Vec<_> = record
@@ -269,7 +211,7 @@ fn test_combined_queries() {
 
 #[test]
 fn test_range_query_boundaries() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Test exact boundary matching
     let exactly_600_799: Vec<_> = record.fields_in_range("600", "799").collect();
@@ -284,7 +226,7 @@ fn test_range_query_boundaries() {
 
 #[test]
 fn test_query_default() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Default query should match all fields
     let query = FieldQuery::default();
@@ -295,7 +237,7 @@ fn test_query_default() {
 
 #[test]
 fn test_query_no_matches() {
-    let record = create_test_record();
+    let record = create_realistic_record();
 
     // Query that should match nothing
     let query = FieldQuery::new()

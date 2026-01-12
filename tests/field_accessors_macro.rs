@@ -2,19 +2,22 @@
 //!
 //! Demonstrates usage of the macro to eliminate boilerplate in field collection management.
 
-use mrrc::{define_field_accessors, Field, Leader};
+mod common;
+
+use common::make_leader;
+use mrrc::{define_field_accessors, Field};
 
 // Example record type for testing
 #[derive(Debug)]
 struct ExampleRecord {
     #[allow(dead_code)]
-    leader: Leader,
+    leader: mrrc::Leader,
     first_collection: Vec<Field>,
     second_collection: Vec<Field>,
 }
 
 impl ExampleRecord {
-    fn new(leader: Leader) -> Self {
+    fn new(leader: mrrc::Leader) -> Self {
         ExampleRecord {
             leader,
             first_collection: Vec::new(),
@@ -25,24 +28,6 @@ impl ExampleRecord {
     // Use the macro to generate methods
     define_field_accessors!(first_collection, add_first_field, first_fields);
     define_field_accessors!(second_collection, add_second_field, second_fields);
-}
-
-fn make_leader() -> Leader {
-    Leader {
-        record_length: 1000,
-        record_status: 'a',
-        record_type: 'a',
-        bibliographic_level: 'm',
-        control_record_type: 'a',
-        character_coding: ' ',
-        indicator_count: 2,
-        subfield_code_count: 2,
-        data_base_address: 100,
-        encoding_level: ' ',
-        cataloging_form: ' ',
-        multipart_level: ' ',
-        reserved: "4500".to_string(),
-    }
 }
 
 #[test]

@@ -3,25 +3,10 @@
 //! Validates that `RecordHelpers` trait extension is available and working
 //! across all record types (`Record`, `AuthorityRecord`, `HoldingsRecord`).
 
-use mrrc::{AuthorityRecord, Field, HoldingsRecord, Leader, Record, RecordHelpers, Subfield};
+mod common;
 
-fn create_test_leader() -> Leader {
-    Leader {
-        record_length: 1000,
-        record_status: 'a',
-        record_type: 'a',
-        bibliographic_level: 'm',
-        control_record_type: 'a',
-        character_coding: ' ',
-        indicator_count: 2,
-        subfield_code_count: 2,
-        data_base_address: 100,
-        encoding_level: ' ',
-        cataloging_form: ' ',
-        multipart_level: ' ',
-        reserved: "4500".to_string(),
-    }
-}
+use common::create_test_leader;
+use mrrc::{AuthorityRecord, Field, HoldingsRecord, Record, RecordHelpers, Subfield};
 
 fn create_test_record_with_title() -> Record {
     let mut record = Record::new(create_test_leader());

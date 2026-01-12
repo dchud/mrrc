@@ -8,25 +8,10 @@
 //! - Edge cases and error handling
 //! - Performance with large datasets
 
-use mrrc::{Field, FieldQueryHelpers, Leader, Record};
+mod common;
 
-fn make_leader() -> Leader {
-    Leader {
-        record_length: 0,
-        record_status: 'n',
-        record_type: 'a',
-        bibliographic_level: 'm',
-        control_record_type: ' ',
-        character_coding: ' ',
-        indicator_count: 2,
-        subfield_code_count: 2,
-        data_base_address: 0,
-        encoding_level: ' ',
-        cataloging_form: 'a',
-        multipart_level: ' ',
-        reserved: "4500".to_string(),
-    }
-}
+use common::make_leader;
+use mrrc::{Field, FieldQueryHelpers, Record};
 
 /// Create a realistic bibliographic record for testing
 fn create_realistic_record() -> Record {

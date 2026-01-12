@@ -1,24 +1,9 @@
 //! Integration tests for MARC 880 field linkage and linked field navigation
 
-use mrrc::{Field, Leader, LinkageInfo, Record};
+mod common;
 
-fn make_leader() -> Leader {
-    Leader {
-        record_length: 0,
-        record_status: 'n',
-        record_type: 'a',
-        bibliographic_level: 'm',
-        control_record_type: ' ',
-        character_coding: ' ',
-        indicator_count: 2,
-        subfield_code_count: 2,
-        data_base_address: 0,
-        encoding_level: ' ',
-        cataloging_form: 'a',
-        multipart_level: ' ',
-        reserved: "4500".to_string(),
-    }
-}
+use common::make_leader;
+use mrrc::{Field, LinkageInfo, Record};
 
 /// Create a record with linked 880 fields (Arabic author with romanized form)
 fn create_linked_record() -> Record {
