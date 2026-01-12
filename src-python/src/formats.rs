@@ -298,23 +298,21 @@ pub fn dublin_core_to_xml(
 /// ```
 #[pyfunction]
 pub fn record_to_csv(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> {
-    Python::with_gil(|py| {
-        // Try to extract as PyRecord directly first
-        if let Ok(py_record) = record.extract::<pyo3::PyRef<'_, PyRecord>>() {
+    // Try to extract as PyRecord directly first
+    if let Ok(py_record) = record.extract::<pyo3::PyRef<'_, PyRecord>>() {
+        return csv::record_to_csv(&py_record.inner).map_err(marc_error_to_py_err);
+    }
+
+    // Otherwise, try to get the _inner attribute (wrapped Record)
+    if let Ok(inner) = record.getattr("_inner") {
+        if let Ok(py_record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
             return csv::record_to_csv(&py_record.inner).map_err(marc_error_to_py_err);
         }
+    }
 
-        // Otherwise, try to get the _inner attribute (wrapped Record)
-        if let Ok(inner) = record.getattr("_inner") {
-            if let Ok(py_record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
-                return csv::record_to_csv(&py_record.inner).map_err(marc_error_to_py_err);
-            }
-        }
-
-        Err(pyo3::exceptions::PyTypeError::new_err(
-            "record must be a PyRecord or wrapped Record",
-        ))
-    })
+    Err(pyo3::exceptions::PyTypeError::new_err(
+        "record must be a PyRecord or wrapped Record",
+    ))
 }
 
 /// Convert multiple MARC records to CSV format.
@@ -340,29 +338,27 @@ pub fn record_to_csv(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> 
 /// ```
 #[pyfunction]
 pub fn records_to_csv(records: &pyo3::Bound<'_, pyo3::types::PyList>) -> PyResult<String> {
-    Python::with_gil(|py| {
-        let mut rust_records = Vec::new();
-        for item in records.iter() {
-            // Try PyRecord first
-            if let Ok(record) = item.extract::<pyo3::PyRef<'_, PyRecord>>() {
+    let mut rust_records = Vec::new();
+    for item in records.iter() {
+        // Try PyRecord first
+        if let Ok(record) = item.extract::<pyo3::PyRef<'_, PyRecord>>() {
+            rust_records.push(record.inner.clone());
+            continue;
+        }
+
+        // Try wrapped Record with _inner attribute
+        if let Ok(inner) = item.getattr("_inner") {
+            if let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
                 rust_records.push(record.inner.clone());
                 continue;
             }
-
-            // Try wrapped Record with _inner attribute
-            if let Ok(inner) = item.getattr("_inner") {
-                if let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
-                    rust_records.push(record.inner.clone());
-                    continue;
-                }
-            }
-
-            return Err(pyo3::exceptions::PyTypeError::new_err(
-                "All items must be PyRecord or wrapped Record",
-            ));
         }
-        csv::records_to_csv(&rust_records).map_err(marc_error_to_py_err)
-    })
+
+        return Err(pyo3::exceptions::PyTypeError::new_err(
+            "All items must be PyRecord or wrapped Record",
+        ));
+    }
+    csv::records_to_csv(&rust_records).map_err(marc_error_to_py_err)
 }
 
 /// Convert MARC records to CSV format using a custom field filter.
@@ -387,31 +383,31 @@ pub fn records_to_csv(records: &pyo3::Bound<'_, pyo3::types::PyList>) -> PyResul
 #[pyfunction]
 pub fn records_to_csv_filtered(
     records: &pyo3::Bound<'_, pyo3::types::PyList>,
-    filter_fn: PyObject,
+    filter_fn: pyo3::Py<pyo3::PyAny>,
 ) -> PyResult<String> {
-    Python::with_gil(|py| {
-        let mut rust_records = Vec::new();
-        for item in records.iter() {
-            // Try PyRecord first
-            if let Ok(record) = item.extract::<pyo3::PyRef<'_, PyRecord>>() {
+    let mut rust_records = Vec::new();
+    for item in records.iter() {
+        // Try PyRecord first
+        if let Ok(record) = item.extract::<pyo3::PyRef<'_, PyRecord>>() {
+            rust_records.push(record.inner.clone());
+            continue;
+        }
+
+        // Try wrapped Record with _inner attribute
+        if let Ok(inner) = item.getattr("_inner") {
+            if let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
                 rust_records.push(record.inner.clone());
                 continue;
             }
-
-            // Try wrapped Record with _inner attribute
-            if let Ok(inner) = item.getattr("_inner") {
-                if let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
-                    rust_records.push(record.inner.clone());
-                    continue;
-                }
-            }
-
-            return Err(pyo3::exceptions::PyTypeError::new_err(
-                "All items must be PyRecord or wrapped Record",
-            ));
         }
 
-        // Create a closure that calls the Python filter function
+        return Err(pyo3::exceptions::PyTypeError::new_err(
+            "All items must be PyRecord or wrapped Record",
+        ));
+    }
+
+    // Create a closure that calls the Python filter function
+    Python::attach(|py| {
         csv::records_to_csv_filtered(&rust_records, |tag| {
             let result = filter_fn
                 .call1(py, (tag,))
