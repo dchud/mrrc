@@ -4,9 +4,14 @@ This document establishes the standardized evaluation framework and methodology 
 
 ## Overview
 
-**Objective:** Evaluate modern binary formats for MARC data representation, measuring round-trip fidelity, performance, and ecosystem fit against the ISO 2709 baseline.
+**Objective:** Evaluate modern binary formats for MARC data representation as potential **Rust mrrc core implementations**, measuring round-trip fidelity, Rust performance, and ecosystem fit against the ISO 2709 baseline.
 
-**Scope:** Each format evaluation produces a structured report following the templates in this document.
+**Scope:** Each format evaluation focuses on **Rust implementation** with secondary consideration for Python/multi-language support:
+- **Primary:** Rust implementation for mrrc core (via `cargo` dependency or internal implementation)
+- **Secondary:** Python convenience wrappers (via PyO3) for applicable formats
+- **Tertiary:** Broader language ecosystem (Java, Go, C++) noted but not required
+
+Each format evaluation produces a structured report following the templates in this document.
 
 ### Encoding & Normalization Assumptions
 
@@ -260,8 +265,9 @@ Document:
 - RAM
 - Storage type (SSD/HDD)
 - OS version
-- Rust/Python versions
-- Library versions
+- **Rust version** (primary) and rustc optimization level (-O for release)
+- Format library version (Rust crate)
+- Python version and libraries (if evaluating multi-language support, secondary)
 
 ### 5.2 Metrics to Measure
 
@@ -295,18 +301,26 @@ Peak Memory | V MB
 
 Store this baseline result permanently in `BASELINE_ISO2709.md` for all subsequent format comparisons.
 
-### 5.4 Benchmark Procedure
+### 5.4 Benchmark Procedure (Rust Primary)
+
+**Rust benchmarks using Criterion.rs:**
 
 ```bash
+# Build release binary with optimizations
+cargo build --release
+
+# Run Criterion benchmarks
+cargo bench --bench format_benchmarks -- [format_name] --baseline iso2709
+
+# For manual timing:
 # Warm-up: 3 iterations (discarded)
 # Measured: 10 iterations (averaged)
-
-# Read benchmark
-hyperfine --warmup 3 --runs 10 'cargo run --release read_format input.{fmt}'
-
-# Write benchmark  
-hyperfine --warmup 3 --runs 10 'cargo run --release write_format input.mrc output.{fmt}'
+hyperfine --warmup 3 --runs 10 'target/release/mrrc_bench_read --format {fmt}'
 ```
+
+**Python secondary (if applicable):**
+- Only after Rust primary evaluation is complete
+- Document with lower priority than Rust metrics
 
 ### 5.5 Baseline Comparison
 
@@ -340,26 +354,29 @@ All metrics compared against ISO 2709 baseline:
 
 ## 6. Integration Assessment Criteria
 
-### 6.1 Dependency Analysis
+### 6.1 Dependency Analysis (Rust Focus)
 
-Evaluate the cost of integrating the format library:
+Evaluate the cost of integrating the format library into mrrc's Rust implementation:
 
 | Factor | Guidance |
 |--------|----------|
-| **External deps** | Count and list all required dependencies (direct + transitive). Fewer is better. |
-| **Dep health** | Rate each dependency: Is it actively maintained? Any security advisories? Last commit date? |
-| **Build complexity** | Simple `cargo add` (score 1) vs complex toolchain with native compilation (score 5) |
+| **Rust external deps** | Count Cargo crate dependencies (direct + transitive). Fewer is better. |
+| **Dep health** | Rate each Rust dependency: actively maintained? Security advisories? Recent commits? |
+| **Build complexity** | Simple `cargo add` (score 1) vs complex build scripts/native compilation (score 5) |
 | **License compatibility** | Must be compatible with Apache 2.0 (mrrc's license) |
+| **Compile time impact** | Measure incremental build time; Rust compile time matters for CI/iteration speed |
 
 ### 6.2 Language Support Matrix
 
-| Language | Library | Maturity | Notes |
-|----------|---------|----------|-------|
-| Rust | crate_name | ⭐⭐⭐⭐⭐ | |
-| Python | package_name | ⭐⭐⭐⭐ | |
-| Java | package_name | ⭐⭐⭐ | |
-| Go | package_name | ⭐⭐ | |
-| C++ | library_name | ⭐⭐⭐ | |
+**Priority order for mrrc:**
+
+| Language | Library | Maturity | Priority | Notes |
+|----------|---------|----------|----------|-------|
+| **Rust** | crate_name | ⭐⭐⭐⭐⭐ | **PRIMARY** | Must have mature Rust implementation |
+| Python | package_name | ⭐⭐⭐⭐ | Secondary | For PyO3 bindings (if format recommended) |
+| Java | package_name | ⭐⭐⭐ | Tertiary | Ecosystem context only |
+| Go | package_name | ⭐⭐ | Tertiary | Ecosystem context only |
+| C++ | library_name | ⭐⭐⭐ | Tertiary | Ecosystem context only |
 
 ### 6.3 Schema Evolution Score
 
@@ -492,3 +509,4 @@ After all evaluations complete, aggregate into:
 | 2026-01-12 | 1.1 | Clarify encoding assumptions: mrrc normalizes to UTF-8, formats don't handle MARC-8; remove startup cost metric; simplify use cases |
 | 2026-01-13 | 1.2 | **Correctness improvements:** Add explicit equality semantics; add failure modes testing; establish ISO 2709 baseline requirement; add synthetic worst-case records to test set; clarify leader position handling; add failure investigation checklist |
 | 2026-01-13 | 1.5 | **Ordering emphasis:** Elevated field & subfield ordering to CRITICAL in validation table; reorganized edge cases checklist to highlight ordering; enhanced failure checklist with field/subfield reordering detection; clarified correctness spec that field/subfield sequence must be preserved exactly |
+| 2026-01-13 | 2.0 | **Rust-first focus:** Reframed evaluations to prioritize Rust implementation for mrrc core; updated benchmark procedure to use Rust (Criterion.rs); added Rust dependency analysis emphasis; clarified language support matrix with priority tiers (Rust primary, Python secondary, others tertiary); updated environment documentation to emphasize Rust version and optimization level |

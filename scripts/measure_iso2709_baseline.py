@@ -2,6 +2,9 @@
 """
 Measure ISO 2709 (MARC binary) baseline performance.
 
+NOTE: This script uses Python pymarc to measure baseline performance.
+For Rust-native mrrc evaluation, use: cargo bench --bench marc_benchmarks
+
 Metrics:
 - Read throughput (records/sec)
 - Write throughput (records/sec)
@@ -9,6 +12,10 @@ Metrics:
 - Peak memory usage
 
 Output: docs/design/format-research/BASELINE_ISO2709.md
+
+EVALUATION FOCUS: Rust mrrc is the primary implementation platform.
+All binary format evaluations should measure Rust performance using the same environment.
+Python measurements are secondary and used only for infrastructure validation.
 """
 
 import subprocess

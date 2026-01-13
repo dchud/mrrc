@@ -1,9 +1,10 @@
-# [FORMAT NAME] Evaluation for MARC Data
+# [FORMAT NAME] Evaluation for MARC Data (Rust Implementation)
 
 **Issue:** mrrc-fks.X
 **Date:** YYYY-MM-DD
 **Author:** [name]
 **Status:** Draft | Complete
+**Focus:** Rust mrrc core implementation (primary); Python/multi-language support (secondary)
 
 ---
 
@@ -169,14 +170,21 @@ Test the format's robustness against malformed input:
 
 ## 4. Performance Benchmarks
 
-### 4.1 Test Environment
+### 4.1 Test Environment (Rust Primary)
 
+**Rust benchmarking environment:**
 - **CPU:** 
 - **RAM:** 
 - **Storage:** 
 - **OS:** 
-- **Rust version:** 
-- **Format library version:** 
+- **Rust version:** (and rustc optimization level)
+- **Format library version:** (Rust crate)
+- **Build command:** `cargo build --release`
+
+**Python secondary (if applicable):**
+- **Python version:** 
+- **Library version:**
+- (Only documented if Python bindings evaluated after Rust primary is complete) 
 
 ### 4.2 Results
 
@@ -200,23 +208,30 @@ Test the format's robustness against malformed input:
 
 ## 5. Integration Assessment
 
-### 5.1 Dependencies
+### 5.1 Dependencies (Rust Focus)
 
-| Dependency | Version | Status | Notes |
-|------------|---------|--------|-------|
+**Rust Cargo dependencies:**
+
+| Crate | Version | Status | Notes |
+|-------|---------|--------|-------|
 | | | | |
 
-**Total external dependencies:** X
+**Total Rust dependencies:** X (direct), Y (transitive)
+
+**Dependency health assessment:**
+- [ ] All dependencies actively maintained (commits within 6 months)
+- [ ] No known security advisories
+- [ ] Compile time impact acceptable (document if >5s incremental build)
 
 ### 5.2 Language Support
 
-| Language | Library | Maturity | Notes |
-|----------|---------|----------|-------|
-| Rust | | ⭐⭐⭐⭐⭐ | |
-| Python | | ⭐⭐⭐⭐ | |
-| Java | | ⭐⭐⭐ | |
-| Go | | ⭐⭐ | |
-| C++ | | ⭐⭐⭐ | |
+| Language | Library | Maturity | Priority | Notes |
+|----------|---------|----------|----------|-------|
+| **Rust** | | ⭐⭐⭐⭐⭐ | **PRIMARY** | Core mrrc implementation |
+| Python | | ⭐⭐⭐⭐ | Secondary | PyO3 bindings (if recommended) |
+| Java | | ⭐⭐⭐ | Tertiary | Ecosystem context |
+| Go | | ⭐⭐ | Tertiary | Ecosystem context |
+| C++ | | ⭐⭐⭐ | Tertiary | Ecosystem context |
 
 ### 5.3 Schema Evolution
 
@@ -254,19 +269,27 @@ Test the format's robustness against malformed input:
 
 ---
 
-## 7. Implementation Complexity
+## 7. Implementation Complexity (Rust)
 
 | Factor | Estimate |
 |--------|----------|
-| Lines of code (Rust) | |
-| Development time | |
+| Lines of Rust code | |
+| Development time (estimate) | |
 | Maintenance burden | Low / Medium / High |
+| Compile time impact | |
+| Binary size impact | |
 
-### Key Implementation Challenges
+### Key Implementation Challenges (Rust)
 
 1. 
 2. 
-3. 
+3.
+
+### Python Binding Complexity (Secondary)
+
+- PyO3 binding effort estimate:
+- Additional dependencies:
+- Maintenance considerations: 
 
 ---
 
