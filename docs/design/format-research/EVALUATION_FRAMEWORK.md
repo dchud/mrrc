@@ -39,15 +39,29 @@ Every format evaluation must include a complete schema design addressing:
 
 ### 1.2 Edge Cases Checklist
 
-- [ ] Empty subfield values
-- [ ] Repeating fields (multiple 650s, etc.)
-- [ ] Repeating subfields within a field
+**Data Structure & Ordering (CRITICAL):**
+- [ ] **Field ordering** — 001, 245, 650, 001 sequence preserved exactly (not alphabetized or renumbered)
+- [ ] **Subfield code ordering** — $d$c$a preserved as-is (not reordered to $a$c$d)
+- [ ] Repeating fields (multiple 650s, etc.) — **preserves in order**
+- [ ] Repeating subfields within a field (e.g., `$a $a $a`) — **preserves in order**
+- [ ] Empty subfield values (distinguish `$a ""` from missing `$a`)
+
+**Text Content:**
 - [ ] UTF-8 multilingual content (CJK, Arabic, Hebrew, Cyrillic)
-- [ ] Combining diacritics and special characters
-- [ ] Maximum field lengths (9999 bytes)
-- [ ] Control characters in data
-- [ ] Blank vs missing indicators
+- [ ] Combining diacritics and special characters (NOT precomposed)
+- [ ] Whitespace preservation (leading/trailing spaces in subfield values)
+- [ ] Control characters in data (0x00-0x1F) — handled or rejected?
+
+**Field Structure:**
+- [ ] Control fields (001-009) vs variable fields (010+) distinction preserved
+- [ ] Maximum field lengths (9999 bytes data, not including tag/indicators)
+- [ ] Blank vs missing indicators (space U+0020 vs null distinction)
 - [ ] Records with hundreds of fields
+
+**MARC-Specific & Validation:**
+- [ ] Repeating control fields (001 should not repeat; test preservation/error handling)
+- [ ] Invalid tag values (e.g., "999", "0AB", empty) — rejected or preserved?
+- [ ] Invalid subfield codes (e.g., "0", space, non-ASCII) — rejected or preserved?
 
 ### 1.3 Schema Notation
 
@@ -64,6 +78,8 @@ Provide schema in:
 
 Location: `tests/data/fixtures/fidelity_test_100.mrc`
 
+**Status:** Currently under development. See [FIDELITY_TEST_SET.md](./FIDELITY_TEST_SET.md) for detailed composition requirements and creation checklist.
+
 Composition:
 - 50 bibliographic records (varied formats: books, serials, scores, maps)
 - 25 authority records (personal, corporate, subject headings)
@@ -75,6 +91,9 @@ Composition:
 - Must include multilingual records (CJK, Arabic, Cyrillic)
 - Must include records with 100+ fields
 - Must include records with repeating fields/subfields
+- Must include synthetic worst-case records (maximum field sizes, control character boundaries)
+
+**Validation requirement:** Before using in evaluations, must pass validation script verifying composition, encoding coverage, and edge case presence.
 
 Note: The test set includes MARC-8 encoded source records to exercise mrrc's normalization pipeline; binary formats only see the resulting UTF-8 `MarcRecord` objects.
 
@@ -96,28 +115,58 @@ For extended performance evaluation and memory profiling.
 
 ### 3.1 Test Procedure
 
+The round-trip test validates that candidate formats can preserve `MarcRecord` data with perfect fidelity:
+
 ```
-1. Load original MARC record(s) from ISO 2709 using mrrc
-2. mrrc decodes and normalizes to UTF-8 MarcRecord objects (this is the baseline)
-3. Convert baseline MarcRecord objects to candidate format
-4. Serialize to bytes/file
-5. Deserialize from bytes/file
-6. Convert back to MarcRecord objects
-7. Compare baseline vs round-tripped MarcRecord objects field-by-field
+Step 1: Load ISO 2709 → MarcRecord (mrrc's import layer)
+        ↓
+Step 2: MarcRecord → Candidate Format (serialize)
+        ↓
+Step 3: Candidate Format → MarcRecord (deserialize)
+        ↓
+Step 4: Compare Step 1 MarcRecord vs Step 3 MarcRecord (field-by-field)
+        ↓
+Result: PASS if identical, FAIL if any mismatch
 ```
 
-Note: Comparison is performed on normalized `MarcRecord` structures (leader, fields, indicators, subfields, UTF-8 strings). We do not require round-trip preservation of original ISO 2709 bytes or MARC-8 escape sequences.
+**Important:** Comparison is performed on **normalized `MarcRecord` structures** (leader, fields, indicators, subfields, UTF-8 strings). We do NOT compare original ISO 2709 bytes or MARC-8 escape sequences — those are handled by mrrc's import layer, not the candidate format.
 
 ### 3.2 Validation Criteria
 
 | Criterion | Weight | Pass Condition |
 |-----------|--------|----------------|
-| Leader preservation | Critical | All 24 leader positions match baseline `MarcRecord` |
-| Field ordering | High | Fields in same sequence |
-| Tag values | Critical | All tags present and correct |
-| Indicator values | Critical | Exact match including blanks |
-| Subfield codes | Critical | All codes present and ordered |
-| Subfield values | Critical | Exact match of UTF-8 strings in baseline vs round-tripped |
+| Leader preservation | Critical | Positions 0-3, 12-15 may recalculate; all others match exactly |
+| Field ordering | **Critical** | **Fields in exact input sequence (not reordered or sorted)** |
+| Tag values | Critical | All tags present, matching baseline exactly (e.g., "001", "245") |
+| Indicator values | Critical | Exact match including blank (space char) vs missing distinction |
+| Subfield code ordering | **Critical** | **All codes present and in exact input order (not reordered)** |
+| Subfield values | Critical | Exact UTF-8 string match, preserving empty strings vs null distinction |
+
+#### 3.2.1 Correctness Specification
+
+**MUST Match Exactly:**
+- **Leader (24 chars):** Positions 0-3 (logical record length) and 12-15 (base address) MAY be recalculated, but all OTHER positions (5-11, 17-23) MUST match exactly
+- **Tag values:** String representation exactly (e.g., "001", "245") with numeric value preserved
+- **Field ordering:** Fields in exact input sequence (001, 245, 650, 001 → NOT reordered alphabetically or numerically)
+- **Indicator values:** Character values, where space (U+0020) is distinct from null/missing
+- **Subfield codes:** Character values in correct order (e.g., $d$c$a → NOT reordered to $a$c$d)
+- **Subfield values:** Exact UTF-8 byte-for-byte match, preserving empty strings (`""`) as distinct from missing values
+
+**MUST NOT Collapse or Transform:**
+- Whitespace within strings must be preserved exactly (no trim, no collapse, leading/trailing spaces matter)
+- Empty subfield values (`$a ""`) are distinct from absent subfields (no `$a`)
+- Combining diacritical marks must preserve their UTF-8 encoding (do NOT normalize to precomposed forms)
+- Field and subfield sequence must be preserved exactly (no reordering, no sorting, no deduplication)
+
+**MUST NOT Compare:**
+- Original ISO 2709 byte encoding (MARC-8 vs UTF-8) — that's mrrc's responsibility
+- Internal serialization order (e.g., protobuf field order vs JSON property order)
+- Memory representation or object IDs
+
+**Failure Threshold:**
+- Any mismatch in the "MUST Match" criteria → **FAIL** for that record
+- Any crash/panic on invalid input → **FAIL** entire evaluation
+- **100% perfect round-trip rate is MANDATORY for recommendation**
 
 ### 3.3 Fidelity Score
 
@@ -126,31 +175,85 @@ Calculate: `(records_perfect / total_records) × 100`
 - **100%** = Required for recommendation
 - **<100%** = Document all failures with root cause
 
-### 3.4 Reporting Format
+### 3.4 Failure Analysis Template
+
+For any failed round-trip, provide:
+
+| Record ID | Field/Tag | Criterion | Expected | Actual | Root Cause |
+|-----------|-----------|-----------|----------|--------|------------|
+| n/a | n/a | n/a | n/a | n/a | n/a |
+
+**Failure Investigation Checklist:**
+- [ ] **Field ordering changed** (001, 245, 650 reordered alphabetically or numerically)?
+- [ ] **Subfield code order changed** ($d$c$a reordered to $a$c$d)?
+- [ ] Encoding issue (UTF-8 normalization, combining diacritics)?
+- [ ] Indicator handling (space vs null)?
+- [ ] Subfield presence missing (wrong count, missing codes)?
+- [ ] Empty string handling (empty `$a ""` vs missing `$a`)?
+- [ ] Whitespace trimmed (leading/trailing spaces lost)?
+- [ ] Leader position recalculation (only 0-3, 12-15 expected to vary)?
+- [ ] Type conversion error (string, integer, character)?
+- [ ] Data truncation (field size limit)?
+
+### 3.5 Reporting Format
 
 ```markdown
 ## Round-Trip Fidelity Results
 
 **Test Set:** fidelity_test_100.mrc
 **Records Tested:** 100
-**Perfect Round-Trips:** 100/100 (100%)
+**Perfect Round-Trips:** XX/100 (XX%)
+**Test Date:** YYYY-MM-DD
 
 ### Failures (if any)
 
-| Record | Field | Issue | Root Cause |
-|--------|-------|-------|------------|
-| n/a | n/a | n/a | n/a |
+[Use failure analysis template above]
 
 ### Notes
 
-[Any format-specific observations]
+[Any format-specific observations about data preservation]
 ```
 
 ---
 
-## 4. Performance Benchmark Protocol
+## 4. Failure Modes Testing
 
-### 4.1 Test Environment
+**Before** running performance benchmarks, each format must be tested for robustness against invalid or edge-case input:
+
+### 4.1 Error Handling Protocol
+
+| Scenario | Test Input | Expected Behavior |
+|----------|-----------|-------------------|
+| **Truncated record** | Incomplete serialized record | Graceful error with clear message, no panic |
+| **Invalid tag** | Tag value "99A" or empty string | Rejected with validation error |
+| **Oversized field** | Field >9999 bytes | Either preserved exactly OR rejected with clear error |
+| **Invalid indicator** | Non-ASCII character as indicator | Rejected with validation error |
+| **Null subfield value** | Subfield with null pointer | Handled consistently (error or serialize as empty) |
+| **Malformed UTF-8** | Invalid UTF-8 byte sequence in text | Rejected with clear error message |
+| **Missing leader** | Record without 24-char leader | Rejected with validation error |
+
+### 4.2 Reporting Format
+
+Document in evaluation report:
+
+```markdown
+## 3. Failure Modes
+
+| Scenario | Result | Notes |
+|----------|--------|-------|
+| Truncated record | ✓ Graceful error | "Unexpected end of data" |
+| Invalid tag | ✓ Validation error | Rejected at deserialization |
+| Oversized field | ✓ Error | Rejected (limit enforced) |
+| ... | ... | ... |
+
+**Overall Assessment:** [Format handles errors gracefully / Format panics on invalid input / etc.]
+```
+
+---
+
+## 5. Performance Benchmark Protocol
+
+### 5.1 Test Environment
 
 Document:
 - CPU model and cores
@@ -160,7 +263,7 @@ Document:
 - Rust/Python versions
 - Library versions
 
-### 4.2 Metrics to Measure
+### 5.2 Metrics to Measure
 
 | Metric | Unit | Description |
 |--------|------|-------------|
@@ -173,7 +276,26 @@ Document:
 
 Benchmarks should run single-threaded to ensure comparable results across formats.
 
-### 4.3 Benchmark Procedure
+### 5.3 Baseline Measurement (ISO 2709)
+
+Before evaluating other formats, establish the ISO 2709 baseline:
+
+```
+Test Date: YYYY-MM-DD
+Environment: [CPU, RAM, OS, Rust version]
+
+Metric | Value
+-------|-------
+Read (rec/sec) | X
+Write (rec/sec) | Y
+File Size (10k records) | Z bytes
+Gzip Compressed | W bytes
+Peak Memory | V MB
+```
+
+Store this baseline result permanently in `BASELINE_ISO2709.md` for all subsequent format comparisons.
+
+### 5.4 Benchmark Procedure
 
 ```bash
 # Warm-up: 3 iterations (discarded)
@@ -186,7 +308,7 @@ hyperfine --warmup 3 --runs 10 'cargo run --release read_format input.{fmt}'
 hyperfine --warmup 3 --runs 10 'cargo run --release write_format input.mrc output.{fmt}'
 ```
 
-### 4.4 Baseline Comparison
+### 5.5 Baseline Comparison
 
 All metrics compared against ISO 2709 baseline:
 
@@ -196,7 +318,7 @@ All metrics compared against ISO 2709 baseline:
 | Write | X rec/sec | Y rec/sec | +/-Z% |
 | Size | X bytes | Y bytes | +/-Z% |
 
-### 4.5 Reporting Table
+### 5.6 Reporting Table
 
 ```markdown
 ## Performance Results
@@ -216,17 +338,20 @@ All metrics compared against ISO 2709 baseline:
 
 ---
 
-## 5. Integration Assessment Criteria
+## 6. Integration Assessment Criteria
 
-### 5.1 Dependency Analysis
+### 6.1 Dependency Analysis
 
-| Factor | Score Range | Description |
-|--------|-------------|-------------|
-| **External deps** | Count | Number of required dependencies |
-| **Dep health** | 1-5 | Maintenance status, security track record |
-| **Build complexity** | 1-5 | 1=simple cargo add, 5=complex toolchain |
+Evaluate the cost of integrating the format library:
 
-### 5.2 Language Support Matrix
+| Factor | Guidance |
+|--------|----------|
+| **External deps** | Count and list all required dependencies (direct + transitive). Fewer is better. |
+| **Dep health** | Rate each dependency: Is it actively maintained? Any security advisories? Last commit date? |
+| **Build complexity** | Simple `cargo add` (score 1) vs complex toolchain with native compilation (score 5) |
+| **License compatibility** | Must be compatible with Apache 2.0 (mrrc's license) |
+
+### 6.2 Language Support Matrix
 
 | Language | Library | Maturity | Notes |
 |----------|---------|----------|-------|
@@ -236,7 +361,7 @@ All metrics compared against ISO 2709 baseline:
 | Go | package_name | ⭐⭐ | |
 | C++ | library_name | ⭐⭐⭐ | |
 
-### 5.3 Schema Evolution Score
+### 6.3 Schema Evolution Score
 
 | Capability | Score |
 |------------|-------|
@@ -246,7 +371,7 @@ All metrics compared against ISO 2709 baseline:
 | Forward compatible | 4 |
 | Full bi-directional | 5 |
 
-### 5.4 Ecosystem Maturity
+### 6.4 Ecosystem Maturity
 
 - [ ] Production use cases documented
 - [ ] Active maintenance (commits in last 6 months)
@@ -257,7 +382,7 @@ All metrics compared against ISO 2709 baseline:
 
 ---
 
-## 6. Use Case Fit Scoring
+## 7. Use Case Fit Scoring
 
 Rate each format 1-5 for each use case:
 
@@ -271,7 +396,7 @@ Rate each format 1-5 for each use case:
 
 ---
 
-## 7. Evaluation Report Template
+## 8. Evaluation Report Template
 
 Each format evaluation produces a report following this structure:
 
@@ -346,7 +471,7 @@ Each format evaluation produces a report following this structure:
 
 ---
 
-## 8. Comparison Matrix Template
+## 9. Comparison Matrix Template
 
 After all evaluations complete, aggregate into:
 
@@ -365,3 +490,5 @@ After all evaluations complete, aggregate into:
 |------|---------|---------|
 | 2026-01-12 | 1.0 | Initial framework definition |
 | 2026-01-12 | 1.1 | Clarify encoding assumptions: mrrc normalizes to UTF-8, formats don't handle MARC-8; remove startup cost metric; simplify use cases |
+| 2026-01-13 | 1.2 | **Correctness improvements:** Add explicit equality semantics; add failure modes testing; establish ISO 2709 baseline requirement; add synthetic worst-case records to test set; clarify leader position handling; add failure investigation checklist |
+| 2026-01-13 | 1.5 | **Ordering emphasis:** Elevated field & subfield ordering to CRITICAL in validation table; reorganized edge cases checklist to highlight ordering; enhanced failure checklist with field/subfield reordering detection; clarified correctness spec that field/subfield sequence must be preserved exactly |

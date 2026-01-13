@@ -4,11 +4,14 @@ This directory contains research, evaluation, and documentation for the **mrrc-f
 
 ## Purpose
 
-Assess modern binary serialization formats as alternatives or complements to existing MARC formats (ISO 2709, JSON, XML, CSV), focusing on:
+Assess modern binary serialization formats as alternatives or complements to existing MARC formats (ISO 2709, JSON, XML, CSV), focusing on three key evaluation dimensions:
 
-- **Round-trip fidelity** — 100% data preservation required
-- **Performance** — Read/write throughput, file size, memory efficiency
+- **Round-trip fidelity** — 100% data preservation **including exact field and subfield ordering** (evaluated first)
+- **Robustness** — Graceful error handling, no panics (evaluated before performance)
+- **Performance** — Read/write throughput, file size, memory efficiency (evaluated last, only if fidelity+robustness pass)
 - **Ecosystem fit** — Dependencies, language support, schema evolution
+
+**Critical constraint:** Formats that reorder fields by tag number or reorder subfield codes are automatically rejected (reordering = data loss for semantics-preserving applications).
 
 ## Directory Structure
 
@@ -60,11 +63,15 @@ format-research/
 | Apache Arrow | mrrc-fks.7 | Pending | In-memory analytics, interchange |
 | Polars + DuckDB | mrrc-fks.10 | Pending | SQL analytics, DataFrames |
 
-## Quick Start
+## Quick Start for Evaluators
 
-1. **Read the framework** — [EVALUATION_FRAMEWORK.md](./EVALUATION_FRAMEWORK.md)
-2. **Copy the template** — [TEMPLATE_evaluation.md](./TEMPLATE_evaluation.md)
-3. **Follow the protocol** — Ensure results are comparable across formats
+1. **Read the framework** — [EVALUATION_FRAMEWORK.md](./EVALUATION_FRAMEWORK.md) for methodology and correctness rules
+2. **Understand the test data** — [FIDELITY_TEST_SET.md](./FIDELITY_TEST_SET.md) describes what you'll be testing
+3. **Copy the template** — [TEMPLATE_evaluation.md](./TEMPLATE_evaluation.md) is your evaluation report structure
+4. **Follow the three-layer evaluation:**
+   - Layer 1: Schema design + round-trip fidelity testing
+   - Layer 2: Failure modes testing (error handling)
+   - Layer 3: Performance benchmarks (only if layers 1+2 pass)
 
 ## Related Issues
 
@@ -74,8 +81,10 @@ format-research/
 
 ## Test Data
 
-| File | Records | Purpose |
-|------|---------|---------|
-| `tests/data/fixtures/fidelity_test_100.mrc` | 100 | Round-trip validation |
-| `tests/data/fixtures/10k_records.mrc` | 10,000 | Performance benchmarks |
-| `tests/data/fixtures/100k_records.mrc` | 100,000 | Stress testing |
+| File | Records | Purpose | Status |
+|------|---------|---------|--------|
+| `tests/data/fixtures/fidelity_test_100.mrc` | 100 | Round-trip validation (required for all evaluations) | **TODO:** Create per [FIDELITY_TEST_SET.md](./FIDELITY_TEST_SET.md) |
+| `tests/data/fixtures/10k_records.mrc` | 10,000 | Performance benchmarks | Available |
+| `tests/data/fixtures/100k_records.mrc` | 100,000 | Stress testing | Available |
+
+**Note:** The fidelity test set must be created and validated before any format evaluations can begin.

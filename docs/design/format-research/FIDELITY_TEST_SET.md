@@ -32,12 +32,12 @@ This test set intentionally includes both MARC-8 and UTF-8 encoded ISO 2709 sour
 | **Authority - Corporate** | 8 | Corporate body headings |
 | **Authority - Subject** | 7 | Subject headings |
 | **Holdings** | 15 | Holdings and item records |
-| **Edge Cases** | 10 | Encoding, sizes, special characters |
-| **Total** | 100 | |
+| **Edge Cases** | 15 | Encoding, sizes, structure, validation boundaries |
+| **Total** | 105 | |
 
 ## Edge Case Requirements
 
-The 10 edge case records MUST include:
+The 15 edge case records MUST include (covering encoding, sizing, structure, and validation):
 
 ### Character/Encoding Edge Cases (3 records)
 
@@ -105,18 +105,77 @@ A validation script should verify the test set meets all requirements:
 # Verify edge case presence
 ```
 
-## Creation Status
+## Synthetic Worst-Case Records
 
-**Status:** Not yet created
+The 10 edge case records MUST include synthetic records deliberately testing format boundaries. These are not real-world examples but engineering tests designed to break unprepared implementations.
+
+### Size Boundaries (test field limit handling)
+
+| Record | Size Test | Purpose |
+|--------|-----------|---------|
+| EC-01 | Single-char subfield | Minimum: $a "x" in 245 field |
+| EC-02 | 9998-byte field (1 byte under MARC limit) | Maximum: Field data of exactly 9998 bytes |
+| EC-03 | 255+ subfields in single field | Many: Single 999 field with 255 subfields |
+| EC-04 | 500+ fields in record | Many: Record with 500 fields (unusual but valid) |
+| EC-04b | Whitespace: leading/trailing spaces in $a | Preservation: $a "  text  " not collapsed or trimmed |
+
+### Character/Encoding Boundaries (test text handling)
+
+| Record | Character Test | Purpose |
+|--------|----------------|---------|
+| EC-05 | Unicode 0xFFFD + combining marks | Character boundary: Invalid Unicode + valid combining |
+| EC-06 | 10+ consecutive combining marks | Diacritics: "e\u0301\u0301\u0301..." (NOT precomposed é) |
+| EC-07 | Arabic + English + Hebrew in single 650 field | Mixed script: RTL + LTR + RTL in same subfield |
+
+### Structural Boundaries (test MARC structure)
+
+| Record | Structure Test | Purpose |
+|--------|---|---------|
+| EC-08 | Multiple 245 fields (semantically invalid) | Order: Verify all fields preserved in exact input order, not deduplicated or reordered |
+| EC-09 | All blank indicators vs mixed blank/filled | Indicator: Space (U+0020) vs null in all positions |
+| EC-10 | Empty string in 650$a (not repeating, genuinely empty) | Empty value: $a "" distinct from missing $a |
+| EC-11 | Field reordering (001, 650, 245, 001 sequence) | Order: Test that field order is preserved exactly, **NOT reordered alphabetically/numerically** |
+| EC-12 | Subfield code ordering ($d$c$a, not reordered to $a$c$d) | Subfield order: Test that subfield sequence is preserved exactly, **NOT reordered to $a$c$d** |
+| EC-13 | Control field (001) with exactly 12 chars | Control field: Test that 001 data is preserved exactly, no truncation |
+| EC-14 | Repeating control field (multiple 001 fields—invalid) | Validation: Test graceful error handling on invalid duplicate control field (should error, not crash) |
+| EC-15 | Invalid subfield codes ("0", space, "$") in data | Validation: Test graceful error handling on non-alphanumeric subfield codes (should error, not crash) |
+
+## Creation & Validation
+
+### Creation Status
+
+**Status:** In progress / Not yet created (select one)
 
 **TODO:**
-1. Source diverse MARC records from public datasets
-2. Select records meeting composition requirements
-3. Add synthetic edge case records as needed
-4. Validate against specification
-5. Place at `tests/data/fixtures/fidelity_test_100.mrc`
+1. [ ] Source ~70 diverse MARC records from:
+   - Library of Congress sample records
+   - OCLC WorldCat samples
+   - Diverse language coverage (English, Spanish, German, French, Chinese, Arabic)
+2. [ ] Create 10 synthetic edge case records with checklist coverage
+3. [ ] Assemble into ISO 2709 file with composition as specified
+4. [ ] Run validation script (see below)
+5. [ ] Place at `tests/data/fixtures/fidelity_test_100.mrc`
+
+### Validation Script
+
+Create script `scripts/validate_fidelity_test.sh` to verify:
+
+```bash
+#!/bin/bash
+# Input: fidelity_test_100.mrc
+# Output: report with pass/fail for each requirement
+
+# Count records by type
+# Verify encoding distribution (MARC-8 vs UTF-8)
+# Verify edge case presence (combining marks, CJK, RTL, etc.)
+# Verify field type coverage (001-009, 1XX, 2XX, etc.)
+# Verify leader position diversity
+# Verify max field size is present
+# Verify max subfield count is present
+# Report: PASS or list missing requirements
+```
 
 ## Related Issues
 
-- **Framework:** mrrc-fks.8 — Defines test set requirements
+- **Framework:** mrrc-fks.8 — Defines test set requirements and correctness semantics
 - **Usage:** All mrrc-fks.1 through mrrc-fks.7, mrrc-fks.10 evaluations
