@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package mrrc.formats.protobuf;
+
+// `MarcRecord` represents a single MARC bibliographic/authority/holdings record
+message MarcRecord {
+  // 24-character LEADER (positions 0-23)
+  string leader = 1;
+  
+  // Variable fields (tags 000-999)
+  repeated Field fields = 2;
+}
+
+// Field represents a single MARC field (control or variable)
+message Field {
+  // Tag as 3-character string ("001", "245", etc.)
+  string tag = 1;
+  
+  // Indicator 1 (1 character: space or ASCII 32-126)
+  // For control fields (001-009): empty string
+  // For variable fields (010+): required (space or printable ASCII)
+  string indicator1 = 2;
+  
+  // Indicator 2 (1 character: space or ASCII 32-126)
+  // For control fields (001-009): empty string
+  // For variable fields (010+): required (space or printable ASCII)
+  string indicator2 = 3;
+  
+  // Subfields (variable fields only, control fields have empty list)
+  repeated Subfield subfields = 4;
+}
+
+// Subfield represents a code + value pair within a MARC field
+message Subfield {
+  // Subfield code (1 character: ASCII 'a' - 'z', '0' - '9')
+  string code = 1;
+  
+  // Subfield value (UTF-8 string, can be empty)
+  string value = 2;
+}

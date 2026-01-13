@@ -121,6 +121,7 @@ pub mod marc_record;
 pub mod marcjson;
 pub mod mods;
 pub mod producer_consumer_pipeline;
+pub mod protobuf;
 pub mod rayon_parser_pool;
 pub mod reader;
 /// Core MARC record structures (`Record`, `Field`, `Subfield`)
