@@ -1,8 +1,20 @@
-#![allow(clippy::uninlined_format_args, missing_docs)]
+#![allow(
+    clippy::uninlined_format_args,
+    clippy::if_not_else,
+    clippy::print_stdout,
+    clippy::cast_precision_loss,
+    clippy::cast_lossless,
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::items_after_statements,
+    clippy::items_after_test_module,
+    clippy::doc_markdown,
+    missing_docs
+)]
 //! Comprehensive FlatBuffers evaluation for MARC data
 //!
 //! Tests fidelity of round-trip serialization through FlatBuffers and measures performance.
-//! Run with: cargo test --test flatbuffers_evaluation --release -- --nocapture
+//! Run with: `cargo test --test flatbuffers_evaluation --release -- --nocapture`
 
 use flate2::write::GzEncoder;
 use flate2::Compression;
