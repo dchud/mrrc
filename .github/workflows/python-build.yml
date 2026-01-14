@@ -28,6 +28,10 @@ jobs:
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install protobuf compiler (Ubuntu)
+        if: runner.os == 'Linux'
+        run: apt-get update && apt-get install -y protobuf-compiler
       
       - name: Install maturin
         run: pip install maturin
