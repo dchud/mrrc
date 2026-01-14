@@ -24,6 +24,9 @@ jobs:
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       
       - name: Build mrrc wheel
         uses: PyO3/maturin-action@v1
@@ -66,6 +69,9 @@ jobs:
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       
       - name: Build mrrc wheel
         uses: PyO3/maturin-action@v1
