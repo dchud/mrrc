@@ -109,6 +109,7 @@ pub mod field_collection;
 pub mod field_linkage;
 pub mod field_query;
 pub mod field_query_helpers;
+pub mod flatbuffers_impl;
 pub mod format_queries;
 pub mod holdings_reader;
 pub mod holdings_record;

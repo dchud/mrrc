@@ -1,0 +1,23 @@
+namespace mrrc.formats.flatbuffers;
+
+/// Subfield represents a code + value pair within a MARC field
+table Subfield {
+  code: string (required);     // 1-char subfield code ('a'-'z', '0'-'9')
+  value: string (required);    // UTF-8 string value (can be empty)
+}
+
+/// Field represents a single MARC field (control or variable)
+table Field {
+  tag: string (required);          // 3-character tag ("001", "245", etc.)
+  indicator1: string (required);   // 1 char indicator (or empty for control fields)
+  indicator2: string (required);   // 1 char indicator (or empty for control fields)
+  subfields: [Subfield];           // Variable-length array of subfields
+}
+
+/// MarcRecord represents a single MARC bibliographic/authority/holdings record
+table MarcRecord {
+  leader: string (required);   // 24-character LEADER
+  fields: [Field];             // Variable-length array of fields
+}
+
+root_type MarcRecord;

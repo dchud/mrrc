@@ -55,8 +55,10 @@ smallvec = "1.11"
 # Parallelism
 rayon = "1.7"
 crossbeam-channel = "0.5"
+flatbuffers = "25.12.19"
 
 [build-dependencies]
+flatbuffers = "25.12.19"
 prost-build = "0.12"
 
 [dev-dependencies]
