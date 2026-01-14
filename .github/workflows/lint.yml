@@ -36,7 +36,7 @@ jobs:
           components: clippy
 
       - name: Install protobuf compiler
-        run: apt-get update && apt-get install -y protobuf-compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Cache cargo registry
         uses: actions/cache@v3
@@ -69,7 +69,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install protobuf compiler
-        run: apt-get update && apt-get install -y protobuf-compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Cache cargo registry
         uses: actions/cache@v3
