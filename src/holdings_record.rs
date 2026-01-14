@@ -7,18 +7,21 @@
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
 use crate::record::Field;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 /// A MARC Holdings record (Type x/y/v/u, Leader/06)
+///
+/// Fields are stored in insertion order using `IndexMap`, preserving the order
+/// in which fields were added to the record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HoldingsRecord {
     /// Record leader (24 bytes)
     pub leader: Leader,
-    /// Control fields (000-009)
-    pub control_fields: BTreeMap<String, String>,
-    /// Variable fields (010+) - unified storage for all field types
-    pub fields: BTreeMap<String, Vec<Field>>,
+    /// Control fields (000-009) - preserves insertion order
+    pub control_fields: IndexMap<String, String>,
+    /// Variable fields (010+) - unified storage, preserves insertion order
+    pub fields: IndexMap<String, Vec<Field>>,
 }
 
 /// Type of holdings record (Leader/06)
@@ -85,8 +88,8 @@ impl HoldingsRecord {
     pub fn new(leader: Leader) -> Self {
         HoldingsRecord {
             leader,
-            control_fields: BTreeMap::new(),
-            fields: BTreeMap::new(),
+            control_fields: IndexMap::new(),
+            fields: IndexMap::new(),
         }
     }
 

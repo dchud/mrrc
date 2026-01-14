@@ -72,6 +72,16 @@ Specialized support for MARC Authority and Holdings records.
   - Holdings record implementation with location and call number support
   - Readers, writers, and comprehensive test coverage
 
+### Field Insertion Order Preservation (mrrc-e1l)
+
+Replaced BTreeMap with IndexMap to preserve field insertion order for round-trip fidelity.
+
+- **[FIELD_INSERTION_ORDER_PRESERVATION.md](./FIELD_INSERTION_ORDER_PRESERVATION.md)** - Design, implementation, and completion summary
+  - Replaced `BTreeMap` with `IndexMap` in Record, AuthorityRecord, HoldingsRecord
+  - Enables round-trip fidelity: serialization/deserialization preserves original field order
+  - Required for binary format evaluation (Protobuf, Avro, etc.)
+  - Trade-off: ~17-22% benchmark regression (acceptable for fidelity requirement)
+
 ---
 
 ## 🔗 Python Wrapper & GIL Release

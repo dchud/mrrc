@@ -5,6 +5,23 @@ All notable changes to MRRC (MARC Rust Crate) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+#### Field Insertion Order Preservation (2026-01-14)
+- **Record fields now preserve insertion order** instead of sorting by tag
+  - Uses `IndexMap` for field storage in `Record`, `AuthorityRecord`, and `HoldingsRecord`
+  - Enables round-trip fidelity: serialization and deserialization now preserve original field order
+  - Field iteration via `fields()` and `control_fields_iter()` returns fields in insertion order
+  - **Breaking change for code assuming tag-sorted order**: Use `fields_by_tag()` for explicit tag-based access
+- **Unplanned changes during implementation:**
+  - `fields_in_range()` now iterates and filters (was using `BTreeMap::range()`)
+  - `remove_fields_by_tag()` now uses `shift_remove()` to preserve order of remaining fields
+- **Performance impact**: ~17-22% regression in record parsing benchmarks (acceptable trade-off for round-trip fidelity)
+  - Baseline: 9.5ms for 10k records → After: 11.3ms for 10k records
+  - Still significantly faster than pymarc (7.5x+ improvement maintained)
+
 ## [0.4.0] - 2026-01-09
 
 ### Added

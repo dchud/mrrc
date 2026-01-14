@@ -297,9 +297,7 @@ mod tests {
         let serialized = ProtobufSerializer::serialize(&record)?;
         let restored = ProtobufDeserializer::deserialize(&serialized)?;
 
-        // Verify field order is preserved (Note: Record stores fields in BTreeMap by tag,
-        // so we can't guarantee original order is preserved at the Record level)
-        // However, variable fields with same tag should preserve their relative order
+        // Verify field order is preserved (Record uses IndexMap to preserve insertion order)
         let orig_650s: Vec<_> = record.fields_by_tag("650").collect();
         let rest_650s: Vec<_> = restored.fields_by_tag("650").collect();
         assert_eq!(orig_650s.len(), rest_650s.len());

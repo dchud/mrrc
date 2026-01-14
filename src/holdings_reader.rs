@@ -141,10 +141,8 @@ impl<R: Read> HoldingsMarcReader<R> {
         let data_section = &record_data[directory_size..];
 
         // Parse directory (entries are 12 bytes each: 3 bytes tag + 4 bytes length + 5 bytes start position)
-        let mut fields: std::collections::BTreeMap<String, Vec<Field>> =
-            std::collections::BTreeMap::new();
-        let mut control_fields: std::collections::BTreeMap<String, String> =
-            std::collections::BTreeMap::new();
+        let mut fields: indexmap::IndexMap<String, Vec<Field>> = indexmap::IndexMap::new();
+        let mut control_fields: indexmap::IndexMap<String, String> = indexmap::IndexMap::new();
 
         let mut i = 0;
         while i + 12 <= directory_bytes.len() {

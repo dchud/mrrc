@@ -7,18 +7,21 @@
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
 use crate::record::Field;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 /// A MARC Authority record (Type Z, Leader/06 = 'z')
+///
+/// Fields are stored in insertion order using `IndexMap`, preserving the order
+/// in which fields were added to the record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthorityRecord {
     /// Record leader (24 bytes)
     pub leader: Leader,
-    /// Control fields (000-009)
-    pub control_fields: BTreeMap<String, String>,
-    /// Variable fields (010+) - unified storage for all field types
-    pub fields: BTreeMap<String, Vec<Field>>,
+    /// Control fields (000-009) - preserves insertion order
+    pub control_fields: IndexMap<String, String>,
+    /// Variable fields (010+) - unified storage, preserves insertion order
+    pub fields: IndexMap<String, Vec<Field>>,
 }
 
 /// Type of heading in the authority record
@@ -82,8 +85,8 @@ impl AuthorityRecord {
     pub fn new(leader: Leader) -> Self {
         AuthorityRecord {
             leader,
-            control_fields: BTreeMap::new(),
-            fields: BTreeMap::new(),
+            control_fields: IndexMap::new(),
+            fields: IndexMap::new(),
         }
     }
 

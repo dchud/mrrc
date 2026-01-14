@@ -51,19 +51,24 @@
 use crate::bibliographic_helpers::PublicationInfo;
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ops::Index;
 
 /// A MARC bibliographic record
+///
+/// Fields are stored in insertion order using `IndexMap`, preserving the order
+/// in which fields were added to the record. This ensures round-trip fidelity
+/// when serializing and deserializing records.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Record {
     /// Record leader (24 bytes)
     pub leader: Leader,
-    /// Control fields (000-009) - tag -> value
-    pub control_fields: BTreeMap<String, String>,
-    /// Data fields (010+) - tag -> fields
-    pub fields: BTreeMap<String, Vec<Field>>,
+    /// Control fields (000-009) - tag -> value, preserves insertion order
+    pub control_fields: IndexMap<String, String>,
+    /// Data fields (010+) - tag -> fields, preserves insertion order
+    pub fields: IndexMap<String, Vec<Field>>,
 }
 
 /// A data field in a MARC record (fields 010 and higher)
@@ -94,8 +99,8 @@ impl Record {
     pub fn new(leader: Leader) -> Self {
         Record {
             leader,
-            control_fields: BTreeMap::new(),
-            fields: BTreeMap::new(),
+            control_fields: IndexMap::new(),
+            fields: IndexMap::new(),
         }
     }
 
@@ -134,8 +139,8 @@ impl Record {
         RecordBuilder {
             record: Record {
                 leader,
-                control_fields: BTreeMap::new(),
-                fields: BTreeMap::new(),
+                control_fields: IndexMap::new(),
+                fields: IndexMap::new(),
             },
         }
     }
@@ -271,7 +276,8 @@ impl Record {
         let start = start_tag.to_string();
         let end = end_tag.to_string();
         self.fields
-            .range(start..=end)
+            .iter()
+            .filter(move |(tag, _)| *tag >= &start && *tag <= &end)
             .flat_map(|(_, fields)| fields.iter())
     }
 
@@ -656,7 +662,7 @@ impl Record {
     /// let removed = record.remove_fields_by_tag("852");  // Remove holdings
     /// ```
     pub fn remove_fields_by_tag(&mut self, tag: &str) -> Vec<Field> {
-        self.fields.remove(tag).unwrap_or_default()
+        self.fields.shift_remove(tag).unwrap_or_default()
     }
 
     /// Remove fields matching a predicate
@@ -2471,5 +2477,97 @@ mod tests {
         field.add_subfield_str('x', "Subdivision");
 
         assert_eq!(field.format_field(), "Geographic Name -- Subdivision");
+    }
+
+    #[test]
+    fn test_field_insertion_order_preserved() {
+        let leader = crate::leader::Leader {
+            record_length: 0,
+            record_status: 'n',
+            record_type: 'a',
+            bibliographic_level: 'm',
+            control_record_type: 'a',
+            character_coding: ' ',
+            indicator_count: 2,
+            subfield_code_count: 2,
+            data_base_address: 0,
+            encoding_level: ' ',
+            cataloging_form: ' ',
+            multipart_level: ' ',
+            reserved: "4500".to_string(),
+        };
+
+        let mut record = Record::new(leader);
+
+        record.add_field(Field::new("650".to_string(), ' ', '0'));
+        record.add_field(Field::new("245".to_string(), '1', '0'));
+        record.add_field(Field::new("001".to_string(), ' ', ' '));
+        record.add_field(Field::new("650".to_string(), ' ', '1'));
+
+        let tags: Vec<&str> = record.fields().map(|f| f.tag.as_str()).collect();
+
+        assert_eq!(tags, vec!["650", "650", "245", "001"]);
+    }
+
+    #[test]
+    fn test_control_field_insertion_order_preserved() {
+        let leader = crate::leader::Leader {
+            record_length: 0,
+            record_status: 'n',
+            record_type: 'a',
+            bibliographic_level: 'm',
+            control_record_type: 'a',
+            character_coding: ' ',
+            indicator_count: 2,
+            subfield_code_count: 2,
+            data_base_address: 0,
+            encoding_level: ' ',
+            cataloging_form: ' ',
+            multipart_level: ' ',
+            reserved: "4500".to_string(),
+        };
+
+        let mut record = Record::new(leader);
+
+        record.add_control_field_str("008", "Fixed length data");
+        record.add_control_field_str("001", "Control number");
+        record.add_control_field_str("005", "Date time");
+
+        let tags: Vec<&str> = record.control_fields_iter().map(|(tag, _)| tag).collect();
+
+        assert_eq!(tags, vec!["008", "001", "005"]);
+    }
+
+    #[test]
+    fn test_mixed_field_insertion_order_preserved() {
+        let leader = crate::leader::Leader {
+            record_length: 0,
+            record_status: 'n',
+            record_type: 'a',
+            bibliographic_level: 'm',
+            control_record_type: 'a',
+            character_coding: ' ',
+            indicator_count: 2,
+            subfield_code_count: 2,
+            data_base_address: 0,
+            encoding_level: ' ',
+            cataloging_form: ' ',
+            multipart_level: ' ',
+            reserved: "4500".to_string(),
+        };
+
+        let mut record = Record::new(leader);
+
+        record.add_control_field_str("001", "id1");
+        record.add_field(Field::new("650".to_string(), ' ', '0'));
+        record.add_field(Field::new("245".to_string(), '1', '0'));
+        record.add_control_field_str("008", "fixed");
+        record.add_field(Field::new("100".to_string(), '1', ' '));
+
+        let control_tags: Vec<&str> = record.control_fields_iter().map(|(tag, _)| tag).collect();
+        assert_eq!(control_tags, vec!["001", "008"]);
+
+        let field_tags: Vec<&str> = record.fields().map(|f| f.tag.as_str()).collect();
+        assert_eq!(field_tags, vec!["650", "245", "100"]);
     }
 }
