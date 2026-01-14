@@ -32,7 +32,7 @@ jobs:
       - uses: PyO3/maturin-action@v1
         with:
           python-version: ${{ matrix.python-version }}
-          manylinux: auto
+          manylinux: off
           args: --release --out dist
       
       - name: Upload wheels
