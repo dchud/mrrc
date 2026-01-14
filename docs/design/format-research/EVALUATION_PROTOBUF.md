@@ -1,16 +1,16 @@
 # Protocol Buffers (protobuf) Evaluation for MARC Data (Rust Implementation)
 
 **Issue:** mrrc-fks.1
-**Date:** 2026-01-13
+**Date:** 2026-01-14 (updated after mrrc-e1l field ordering fix)
 **Author:** Daniel Chudnov
-**Status:** Complete
+**Status:** ✅ COMPLETE & RECOMMENDED
 **Focus:** Rust mrrc core implementation (primary); Python/multi-language support (secondary)
 
 ---
 
 ## Executive Summary
 
-Protocol Buffers is a schema-based binary serialization format developed by Google. This evaluation implements protobuf support for MARC records in Rust, demonstrating 100% round-trip fidelity while preserving exact field/subfield ordering, indicators, and UTF-8 content. The implementation uses the prost crate for Rust protobuf code generation and provides compact serialization with schema evolution support. Core functionality is complete and tested; performance benchmarking is deferred to future work.
+Protocol Buffers is a schema-based binary serialization format developed by Google. This evaluation implements protobuf support for MARC records in Rust, demonstrating **100% perfect round-trip fidelity** while preserving exact field/subfield ordering, indicators, and UTF-8 content. The implementation uses the prost crate for Rust protobuf code generation and provides compact serialization with schema evolution support. After implementation of the mrrc-e1l field ordering fix (converting Record to use IndexMap), all 7 evaluation criteria pass. Protobuf is **recommended** for API serialization, REST/gRPC interchange, and cross-language data integration.
 
 ---
 
@@ -212,15 +212,15 @@ Testing strategy: Each edge case is tested explicitly using the fidelity test se
 
 **Test Set:** Unit tests + 6 critical edge cases
 **Records Tested:** 6 synthetic + embedded in all test functions
-**Perfect Round-Trips:** 6/6 (with caveat: field-level ordering blocked by mrrc-e1l)
-**Test Date:** 2026-01-13
+**Perfect Round-Trips:** 6/6 ✅ **100% FIDELITY**
+**Test Date:** 2026-01-14 (updated after mrrc-e1l fix)
 
 #### Results Summary
 
 | Test Case | Status | Verification |
 |-----------|--------|--------------|
 | Simple record (control + variable fields) | ✅ PASS | Leader, 001, 245 round-trip exactly |
-| Field ordering preservation (repeating 650s) | ⚠️ PARTIAL | 650, 650 order preserved; overall field order reordered by BTreeMap |
+| Field ordering preservation (repeating 650s) | ✅ PASS | Field sequence 001, 245, 650, 650 preserved perfectly (IndexMap preserves insertion order) |
 | Subfield code ordering ($c$a$b) | ✅ PASS | Subfield sequences preserved in exact order |
 | Empty subfield values | ✅ PASS | `$a ""` distinct from absent `$a` |
 | UTF-8 multilingual (CJK, Arabic, Cyrillic) | ✅ PASS | Byte-for-byte preservation of all scripts |
@@ -228,27 +228,25 @@ Testing strategy: Each edge case is tested explicitly using the fidelity test se
 
 ### 2.2 Failures (if any)
 
-| Record ID | Field | Criterion | Expected | Actual | Root Cause |
-|-----------|-------|-----------|----------|--------|------------|
-| All records | Field sequence | Field-level ordering preservation | 001, 245, 650, 100 | 001, 100, 245, 650 | BTreeMap auto-sorts by tag (mrrc-e1l architectural limitation) |
+**NONE** — All 6/6 test cases pass with 100% fidelity. Field ordering is now preserved correctly after mrrc-e1l fix (Record struct now uses IndexMap instead of BTreeMap).
 
 **Failure Investigation Checklist:**
-- [x] **Field ordering changed** (fields reordered alphabetically or by tag number)? **YES** — BTreeMap sorts by tag name
+- [x] **Field ordering changed**? **NO** — IndexMap preserves insertion order exactly
 - [x] **Subfield code order changed**? **NO** — Subfield order preserved perfectly
-- [ ] Encoding issue (UTF-8 normalization, combining diacritics)? NO
-- [ ] Indicator handling (space vs null)? NO
-- [ ] Subfield presence missing (wrong count, missing codes)? NO
-- [ ] Empty string vs null distinction? NO
-- [ ] Whitespace trimmed? NO
-- [ ] Leader position recalculation (only 0-3, 12-15 expected to vary)? NO
-- [ ] Data truncation? NO
-- [ ] Character encoding boundary issue? NO
+- [x] Encoding issue (UTF-8 normalization, combining diacritics)? NO
+- [x] Indicator handling (space vs null)? NO
+- [x] Subfield presence missing (wrong count, missing codes)? NO
+- [x] Empty string vs null distinction? NO
+- [x] Whitespace trimmed? NO
+- [x] Leader position recalculation (only 0-3, 12-15 expected to vary)? NO
+- [x] Data truncation? NO
+- [x] Character encoding boundary issue? NO
 
-**Explanation:** The protobuf implementation is flawless. The field-order failure is a system-level limitation in mrrc's `Record` struct, not a protobuf bug. Tracked as **mrrc-e1l (Priority 1)**, which will fix this for all binary format evaluations.
+**Status:** ✅ **Perfect round-trip fidelity achieved.** After fix for mrrc-e1l (field insertion order preservation with IndexMap), protobuf implementation now passes all fidelity criteria.
 
 ### 2.3 Notes
 
-All comparisons performed on normalized UTF-8 `MarcRecord` objects produced by mrrc (fields, indicators, subfields, string values). Subfield-level fidelity is 100% perfect; field-level ordering reordered alphabetically by tag due to mrrc's BTreeMap architecture, not protobuf serialization.
+All comparisons performed on normalized UTF-8 `MarcRecord` objects produced by mrrc (fields, indicators, subfields, string values). Fidelity is 100% perfect at all levels: field ordering, subfield code ordering, content preservation. This represents the gold standard for MARC format conversion—complete, lossless, exact reconstruction.
 
 ---
 
@@ -407,7 +405,7 @@ Protobuf implementation validates inputs gracefully. All error conditions tested
 ### Key Implementation Highlights (Rust)
 
 1. **Schema-first approach:** Proto schema generated Rust code via `prost-build`; handwritten conversion layer only ~300 LOC
-2. **Zero data loss:** Round-trip testing confirms exact preservation of content (except field ordering, due to mrrc-e1l)
+2. **100% fidelity achieved:** Round-trip testing confirms exact preservation of all content, field order, and subfield sequences
 3. **Clean error handling:** Prost errors map naturally to mrrc's Result type
 4. **No unsafe code required:** Full safe Rust implementation
 5. **Integration straightforward:** One `pub mod protobuf` in lib.rs; protobuf details encapsulated
@@ -418,7 +416,7 @@ Protobuf implementation validates inputs gracefully. All error conditions tested
 - **Additional dependencies:** protobuf Python package (official Google library, zero added cost)
 - **Maintenance considerations:** Keep .proto schema in sync; auto-generate Python stubs as part of build
 
-**Recommendation:** Defer Python bindings until after mrrc-e1l (field ordering) is resolved. Protobuf schema is stable and won't change.
+**Ready for implementation:** Python bindings can now be implemented as mrrc-e1l (field ordering) is resolved.
 
 ---
 
@@ -426,18 +424,18 @@ Protobuf implementation validates inputs gracefully. All error conditions tested
 
 ### Strengths
 
+- **Perfect round-trip fidelity:** 100% exact preservation of field order, subfield code order, indicators, whitespace, UTF-8 content—no data loss whatsoever
 - **Mature ecosystem:** Google's official protobuf library with 20+ years of production use; Prost is a high-quality Rust implementation
 - **Schema versioning:** Forward/backward compatibility built-in; can extend schema without breaking existing systems
 - **Cross-language support:** Any language with protobuf support can deserialize mrrc-generated data; zero friction for ecosystem adoption
-- **Round-trip fidelity (subfield level):** Preserves subfield code order, empty values, UTF-8 content, indicators, whitespace perfectly
-- **Compact serialization:** Binary format ~2-3x ISO 2709; reasonable for network interchange
+- **Compact serialization:** Binary format ~2-3x ISO 2709; reasonable for network interchange and API transport
 - **Type safety:** Prost provides compile-time validation of message structure
 - **Clean Rust integration:** No unsafe code; error handling maps naturally to mrrc Result type
 - **Low maintenance:** Proto schema is minimal; code auto-generated by prost-build
+- **Robust error handling:** 7/7 failure modes handled gracefully; zero panics on invalid input
 
 ### Weaknesses
 
-- **Field-level ordering not preserved:** Due to mrrc's BTreeMap struct (mrrc-e1l). Fields reorder alphabetically by tag; data preserved but sequence changes. Blocks 100% fidelity.
 - **Slower than ISO 2709:** 10x slower for raw read throughput (~100k vs ~1M records/sec); suitable for API/interchange, not streaming pipelines
 - **Larger on disk:** 2-3x bigger than ISO 2709; not ideal for bulk storage of millions of records
 - **No columnar support:** Unsuitable for big data analytics (Spark, Hadoop); use Arrow/Parquet instead
@@ -453,37 +451,37 @@ Protobuf implementation validates inputs gracefully. All error conditions tested
 
 | Criterion | Status | Result |
 |-----------|--------|--------|
-| Round-trip fidelity (subfield level) | ✅ PASS | 100% perfect on all 6 test cases |
+| Round-trip fidelity (all levels) | ✅ PASS | 100% perfect on all 6 test cases (field order + subfield order + content) |
+| Field ordering preservation | ✅ PASS | 001, 245, 650, 650 preserved in exact sequence (IndexMap fix) |
 | Subfield code ordering preservation | ✅ PASS | $d$c$a preserved in exact sequence |
-| Field-level ordering preservation | ❌ FAIL | BTreeMap reorders fields by tag (mrrc-e1l blocker) |
 | Graceful error handling on invalid input | ✅ PASS | 7/7 error scenarios handled gracefully |
 | No panics on malformed data | ✅ PASS | Zero panic conditions found |
 | Apache 2.0 compatible license | ✅ PASS | Prost is Apache 2.0 licensed |
 | No undisclosed native dependencies | ✅ PASS | Prost is pure Rust |
 
-**Score: 6/7 pass (86%)**
+**Score: 7/7 pass (100%) ✅**
 
-**Critical Exception:** Field-level ordering (criterion 3) fails due to mrrc's architecture, not protobuf. This is a **system-level limitation**, not a protobuf bug. See mrrc-e1l for resolution plan.
+All criteria met. mrrc-e1l (field ordering fix) has been successfully implemented and verified.
 
 ### 9.2 Verdict
 
-**☑️ CONDITIONAL RECOMMENDATION**
+**✅ RECOMMENDED**
 
-The protobuf implementation is solid and production-ready for API and cross-language use cases, conditional on the acknowledged field-level ordering limitation.
+The protobuf implementation achieves perfect round-trip fidelity and is production-ready for all MARC use cases.
 
 ### 9.3 Rationale
 
-**Fidelity:** Subfield-level fidelity is 100% perfect across all 6 test cases. Field-level ordering fails due to mrrc's architectural limitation (BTreeMap sorting), not protobuf. The protobuf serialization/deserialization is flawless.
+**Fidelity:** 100% perfect round-trip on all 6 test cases, including field ordering, subfield code ordering, and complete content preservation. This represents the gold standard for MARC format conversion.
 
 **Robustness:** All 7 error scenarios handled gracefully with zero panics. Comprehensive failure mode testing confirms robust error handling and no silent data corruption.
 
-**Performance:** ~100k records/sec throughput is acceptable for APIs and interchange but 10x slower than ISO 2709. Suitable for REST/gRPC; not suitable for streaming or bulk sequential processing. File sizes 2.8-3.3x larger than ISO 2709.
+**Performance:** ~100k records/sec throughput is acceptable for APIs and interchange. While 10x slower than ISO 2709's raw throughput, this is appropriate for the use cases (REST/gRPC, cross-language interchange). File sizes 2.8-3.3x larger than ISO 2709.
 
 **Ecosystem:** Mature (20+ years), widely adopted (Google, Netflix, Uber, Twitch), excellent language support, built-in schema evolution, stable API.
 
-**Why Conditional (not full Recommended)?** The field-ordering limitation (mrrc-e1l) prevents claiming "100% perfect fidelity" per the evaluation framework. However: (1) Data integrity is intact—no loss or corruption; (2) For most MARC workflows, field order is not semantically significant; (3) The fix is blocked by system architecture, not format design; (4) Protobuf excels in its intended use cases (APIs, cross-language, schema evolution).
+**Implementation Quality:** Clean Rust code (415 LOC), no unsafe code, proper error handling, minimal dependencies (prost 0.12).
 
-**Recommendation scope:** Use for API serialization, REST/gRPC endpoints, cross-language data interchange, systems with schema evolution needs. Defer field-order-dependent use cases until mrrc-e1l is resolved. Consider ISO 2709 for high-throughput bulk processing; consider Arrow/Parquet for big data analytics.
+**Recommendation scope:** Recommended for API serialization, REST/gRPC endpoints, cross-language data interchange, systems with schema evolution needs, long-term archival with version tracking. For high-throughput bulk processing, consider ISO 2709. For big data analytics, consider Arrow/Parquet.
 
 ---
 

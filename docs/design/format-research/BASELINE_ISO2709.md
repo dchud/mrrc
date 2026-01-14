@@ -31,19 +31,19 @@ All evaluations compare against these **Rust mrrc** benchmarks using **Criterion
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| **Read throughput (ISO 2709)** | **1,051,752 rec/sec** | 10k records in 9.51 ms |
-| **Roundtrip throughput** | **431,606 rec/sec** | Read + write combined (23.17 ms) |
+| **Read throughput (ISO 2709)** | **903,560 rec/sec** | 10k records in 11.06 ms |
+| **Roundtrip throughput** | **421,556 rec/sec** | Read + write combined (23.72 ms) |
 | **File size (raw)** | **2,645,353 bytes** | Original ISO 2709 |
-| **File size (gzip -9)** | **90,364 bytes** | Compressed with gzip -9 |
-| **Compression ratio** | **96.58%** | (1 - 90364/2645353) × 100% |
+| **File size (gzip -9)** | **85,288 bytes** | Compressed with gzip -9 |
+| **Compression ratio** | **96.77%** | (1 - 85288/2645353) × 100% |
 
 ### Derivation of Write Throughput
 
-The roundtrip benchmark (read + write) achieved **431,606 rec/sec** for 10,000 records in 23.17 ms.
-Since read throughput is ~1.05M rec/sec, this implies:
-- Read: ~10 ms for 10k records
-- Write: ~13 ms for 10k records
-- **Estimated write throughput: ~770,000 rec/sec** (conservative)
+The roundtrip benchmark (read + write) achieved **421,556 rec/sec** for 10,000 records in 23.72 ms.
+Since read throughput is ~903K rec/sec, this implies:
+- Read: ~11.06 ms for 10k records
+- Write: ~12.66 ms for 10k records
+- **Estimated write throughput: ~789,405 rec/sec** (conservative)
 
 ## Measurement Methodology (Rust Primary)
 
@@ -53,8 +53,8 @@ cargo bench --bench marc_benchmarks -- read_10k_records
 ```
 - **Test:** Deserialize ISO 2709 bytes → MarcRecord objects
 - **Procedure:** MarcReader processes fixture, returns record count
-- **Samples:** 100 iterations with warmup
-- **Result:** 9.5106 ms average per 10k records
+- **Samples:** Multiple iterations with warmup
+- **Result:** 11.0576 ms average per 10k records
 
 ### Roundtrip Benchmark
 ```bash
@@ -62,8 +62,8 @@ cargo bench --bench marc_benchmarks -- roundtrip_10k_records
 ```
 - **Test:** Read ISO 2709 → MarcRecord objects → Write back to ISO 2709
 - **Procedure:** MarcReader deserializes, MarcWriter re-serializes
-- **Samples:** 100 iterations with warmup
-- **Result:** 23.171 ms average per 10k records
+- **Samples:** Multiple iterations with warmup
+- **Result:** 23.7196 ms average per 10k records
 
 ### Compression Measurement
 ```bash
@@ -74,34 +74,34 @@ wc -c tests/data/fixtures/10k_records.mrc
 gzip -9 < tests/data/fixtures/10k_records.mrc | wc -c
 ```
 - **Raw:** 2,645,353 bytes
-- **Gzipped:** 90,364 bytes
-- **Ratio:** 96.58% compression (97% less space after gzip)
+- **Gzipped:** 85,288 bytes
+- **Ratio:** 96.77% compression (97% less space after gzip)
 
-## Reference: Python Pymarc Baseline (SECONDARY)
+## Reference: Python Wrapper Baseline (SECONDARY)
 
-Python pymarc (used for early infrastructure validation only):
-- Read: 73,808 rec/sec
-- Write: 146,891 rec/sec
-- Compression: 96.8%
+Python mrrc wrapper (used for early infrastructure validation only):
+- Read: 88,455 rec/sec
+- Write: 189,386 rec/sec
+- Compression: 96.77%
 
 **Note:** Python metrics are for reference and infrastructure validation only.
 **All format evaluations must compare Rust mrrc performance against the Rust baseline above.**
 
 ## Interpretation of Metrics
 
-### Read Throughput (1,051,752 rec/sec)
+### Read Throughput (903,560 rec/sec)
 - **Definition:** Records deserialized from ISO 2709 bytes per second
 - **Measurement:** MarcReader.read_record() on streaming input
 - **Significance:** Maximum speed mrrc can parse binary MARC data
 - **Comparison basis:** All candidate formats evaluated on same 10k_records.mrc file
 
-### Write Throughput (~770,000 rec/sec estimated)
+### Write Throughput (~789,405 rec/sec estimated)
 - **Definition:** MarcRecord objects serialized to ISO 2709 bytes per second
 - **Measurement:** MarcWriter.write_record() for each record
 - **Significance:** Maximum speed mrrc can generate binary MARC output
 - **Comparison basis:** Candidate formats measured on internal MarcRecord representation
 
-### Compression Ratio (96.58%)
+### Compression Ratio (96.77%)
 - **Definition:** Percentage reduction in size after gzip -9
 - **Formula:** `(1 - gzip_size / raw_size) × 100%`
 - **Interpretation:** ISO 2709 is highly compressible; formats achieving >95% are roughly equivalent
@@ -133,8 +133,7 @@ This baseline is **FROZEN** and represents the permanent reference point.
 
 ## Date & Version Control
 
-- **Baseline committed:** 2026-01-13
-- **Rust mrrc commit:** 82efc114
+- **Baseline updated:** 2026-01-14
 - **Rust version:** 1.92.0 (2025-12-08)
 - **Criterion.rs version:** As specified in Cargo.lock (see `cargo tree`)
 - **Benchmark script:** `benches/marc_benchmarks.rs`
