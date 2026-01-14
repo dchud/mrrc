@@ -26,6 +26,10 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
 
+      - name: Install protobuf compiler (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
       - name: Cache cargo registry
         uses: actions/cache@v3
         with:
