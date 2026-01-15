@@ -94,6 +94,7 @@
 //! - **MODS** — Detailed metadata description schema for libraries
 //! - **Character Encodings** — MARC-8 and UTF-8 with automatic detection
 
+pub mod arrow_impl;
 pub mod authority_queries;
 pub mod authority_reader;
 pub mod authority_record;
