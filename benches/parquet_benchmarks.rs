@@ -135,10 +135,9 @@ fn benchmark_100_records(c: &mut Criterion) {
         b.iter_with_setup(
             || "target/bench_100_write.parquet".to_string(),
             |path| {
-                let result = parquet_impl::serialize_to_parquet(black_box(&records), &path)
+                parquet_impl::serialize_to_parquet(black_box(&records), &path)
                     .expect("Failed to serialize");
                 let _ = std::fs::remove_file(&path);
-                result
             },
         )
     });
