@@ -121,6 +121,7 @@ pub mod marc8_tables;
 pub mod marc_record;
 pub mod marcjson;
 pub mod mods;
+pub mod parquet_impl;
 pub mod producer_consumer_pipeline;
 pub mod protobuf;
 pub mod rayon_parser_pool;
