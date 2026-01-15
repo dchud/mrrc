@@ -1,7 +1,7 @@
 # Binary Format Comparison Matrix
 
-**Updated:** 2026-01-14  
-**Status:** In Progress (2/10 formats evaluated)  
+**Updated:** 2026-01-15  
+**Status:** In Progress (4/10 formats evaluated)  
 **Framework:** See [EVALUATION_FRAMEWORK.md](./EVALUATION_FRAMEWORK.md)
 
 This document aggregates results from all format evaluations for side-by-side comparison.
@@ -31,11 +31,11 @@ This document aggregates results from all format evaluations for side-by-side co
 | **ISO 2709** | 100% | **903,560** | **~789,405** | **421,556** | Baseline |
 | **Protobuf** | 100% ✅ | 100,000 | 100,000 | ~90,000 | -89% / -87% / -79% |
 | **FlatBuffers** | 100% ✅ | 259,240 | 108,932 | 69,767 | -71% / -86% / -83% |
-| **Parquet** | TBD | TBD | TBD | TBD | TBD |
+| **Parquet** | 100% ✅ | 518,273 | 711,533 | 328,467 | -42.6% / -9.9% / -22.1% |
+| **Arrow** | 100% ✅ | 865,331 | 712,407 | ~405,000* | -4.2% / -9.8% / -4% |
 | **Avro** | TBD | TBD | TBD | TBD | TBD |
 | **MessagePack** | TBD | TBD | TBD | TBD | TBD |
 | **CBOR** | TBD | TBD | TBD | TBD | TBD |
-| **Arrow** | TBD | TBD | TBD | TBD | TBD |
 
 ### File Size Metrics
 
@@ -44,11 +44,11 @@ This document aggregates results from all format evaluations for side-by-side co
 | **ISO 2709** | 2,645,353 B | Baseline | 85,288 B | Baseline | 96.77% |
 | **Protobuf** | 7.2-8.5 MB | **+2.8-3.3x** | 1.2-1.5 MB | **+14-18x** | 84-85% |
 | **FlatBuffers** | 6,703,891 B | **+2.5x** | 129,045 B | **+1.5x** | **98.08%** ✅ |
-| **Parquet** | TBD | TBD | TBD | TBD | TBD |
+| **Parquet** | 10,026,728 B | **+2.8x** | TBD | TBD | ~75% (JSON-based) |
+| **Arrow** | 1,847,294 B | **-30.1%** ✅ | 74,156 B | **-13.1%** ✅ | 95.99% |
 | **Avro** | TBD | TBD | TBD | TBD | TBD |
 | **MessagePack** | TBD | TBD | TBD | TBD | TBD |
 | **CBOR** | TBD | TBD | TBD | TBD | TBD |
-| **Arrow** | TBD | TBD | TBD | TBD | TBD |
 
 ### Memory Efficiency
 
@@ -57,11 +57,11 @@ This document aggregates results from all format evaluations for side-by-side co
 | **Baseline ISO 2709** | ~45 MB | Baseline | Reference point |
 | **Protobuf** | TBD | TBD | TBD |
 | **FlatBuffers** | ~16 MB | **-64%** ✅ | Streaming model; zero-copy capable |
-| **Parquet** | TBD | TBD | TBD |
+| **Parquet** | TBD | TBD | JSON serialization overhead |
+| **Arrow** | TBD | TBD | In-memory columnar; efficient representation |
 | **Avro** | TBD | TBD | TBD |
 | **MessagePack** | TBD | TBD | TBD |
 | **CBOR** | TBD | TBD | TBD |
-| **Arrow** | TBD | TBD | TBD |
 
 ---
 
@@ -74,11 +74,11 @@ This document aggregates results from all format evaluations for side-by-side co
 | **ISO 2709** | 0 | 0 | Baseline | mrrc native | Built-in; no external deps |
 | **Protobuf** | 2 (prost, prost-build) | Low | ⭐⭐⭐⭐⭐ | Active | Google-backed; widely adopted |
 | **FlatBuffers** | 2 (flatbuffers, serde_json) | Low | ⭐⭐⭐⭐⭐ | Active | Google-backed; production-ready |
-| **Parquet** | TBD | TBD | TBD | TBD | TBD |
+| **Parquet** | 0 (serde_json only) | 0 | ⭐⭐⭐ | mrrc custom | Custom JSON-based impl; no new deps |
+| **Arrow** | 1 (arrow) | Low | ⭐⭐⭐⭐⭐ | Active | Apache-backed; production-ready |
 | **Avro** | TBD | TBD | TBD | TBD | TBD |
 | **MessagePack** | TBD | TBD | TBD | TBD | TBD |
 | **CBOR** | TBD | TBD | TBD | TBD | TBD |
-| **Arrow** | TBD | TBD | TBD | TBD | TBD |
 
 ### Language Support
 
@@ -87,11 +87,11 @@ This document aggregates results from all format evaluations for side-by-side co
 | **ISO 2709** | ✅ mrrc | ✅ pymrrc | ⚠️ custom | ⚠️ custom | ⚠️ custom | mrrc is native Rust |
 | **Protobuf** | ✅⭐⭐⭐ | ✅⭐⭐⭐ | ✅⭐⭐⭐ | ✅⭐⭐⭐ | ✅⭐⭐⭐ | Official support all languages |
 | **FlatBuffers** | ✅⭐⭐⭐ | ✅⭐⭐⭐ | ✅⭐⭐⭐ | ✅⭐⭐ | ✅⭐⭐⭐ | Official support; good ecosystem |
-| **Parquet** | TBD | TBD | TBD | TBD | TBD | TBD |
+| **Parquet** | ✅ mrrc | ⚠️ JSON | ✅ std tools | ✅ std tools | ✅ std tools | Custom format; not standard Parquet |
+| **Arrow** | ✅⭐⭐⭐ | ✅⭐⭐⭐ (pyarrow) | ✅⭐⭐⭐ | ✅⭐⭐⭐ | ✅⭐⭐⭐ | Apache-backed; excellent support |
 | **Avro** | TBD | TBD | TBD | TBD | TBD | TBD |
 | **MessagePack** | TBD | TBD | TBD | TBD | TBD | TBD |
 | **CBOR** | TBD | TBD | TBD | TBD | TBD | TBD |
-| **Arrow** | TBD | TBD | TBD | TBD | TBD | TBD |
 
 ### Schema Evolution Capability
 
@@ -100,11 +100,11 @@ This document aggregates results from all format evaluations for side-by-side co
 | **ISO 2709** | 1 | ❌ No | ❌ No | ❌ No | Fixed binary format; no evolution |
 | **Protobuf** | **5** ✅ | ✅ Yes | ✅ Yes | ✅ Yes | Bi-directional; full compatibility |
 | **FlatBuffers** | 4 | ⚠️ Partial | ✅ Yes | ✅ Append-only | Append-only evolution constraint |
-| **Parquet** | TBD | TBD | TBD | TBD | TBD |
+| **Parquet** | 2 | ⚠️ Partial | ⚠️ Partial | ❌ No | JSON keys fixed; limited field evolution |
+| **Arrow** | **4** ✅ | ✅ Yes | ✅ Yes | ✅ Append-only | Flexible schema; column addition/renaming |
 | **Avro** | TBD | TBD | TBD | TBD | TBD |
 | **MessagePack** | 1 | ❌ No | ❌ No | ❌ No | Untyped; no schema versioning |
 | **CBOR** | 2 | ⚠️ Partial | ⚠️ Partial | ❌ No | Semantic tags provide some flexibility |
-| **Arrow** | TBD | TBD | TBD | TBD | TBD |
 
 ---
 
@@ -114,11 +114,11 @@ This document aggregates results from all format evaluations for side-by-side co
 |--------|-----------------|-----------|-------------------|-------|
 | **Protobuf** | ✅ All 7 scenarios | ✅ Zero panics | ✅ None | Comprehensive error handling |
 | **FlatBuffers** | ✅ All 7 scenarios | ✅ Zero panics | ✅ None | Comprehensive error handling |
-| **Parquet** | TBD | TBD | TBD | TBD |
+| **Parquet** | ✅ All 7 scenarios | ✅ Zero panics | ✅ None | JSON serialization is robust |
+| **Arrow** | ✅ All 7 scenarios | ✅ Zero panics | ✅ None | Arrow validation is thorough |
 | **Avro** | TBD | TBD | TBD | TBD |
 | **MessagePack** | TBD | TBD | TBD | TBD |
 | **CBOR** | TBD | TBD | TBD | TBD |
-| **Arrow** | TBD | TBD | TBD | TBD |
 
 ---
 
@@ -138,7 +138,9 @@ This document aggregates results from all format evaluations for side-by-side co
 | Format | Score | Notes |
 |--------|-------|-------|
 | **ISO 2709** | ⭐⭐⭐⭐⭐ | 900k+ rec/sec; highly optimized |
+| **Arrow** | ⭐⭐⭐⭐ | 865k rec/sec; negligible overhead vs ISO 2709 |
 | **MessagePack** | ⭐⭐⭐ | Compact; reasonable throughput |
+| **Parquet** | ⭐⭐ | 518k rec/sec; JSON parsing overhead |
 | **Protobuf** | ⭐⭐ | 100k rec/sec; acceptable but not ideal |
 | **FlatBuffers** | ⭐⭐ | 259k rec/sec; memory efficient but slow |
 
@@ -156,6 +158,7 @@ This document aggregates results from all format evaluations for side-by-side co
 | Format | Score | Notes |
 |--------|-------|-------|
 | **FlatBuffers** | ⭐⭐⭐⭐⭐ | 64% lower memory; zero-copy; perfect for mobile |
+| **Arrow** | ⭐⭐⭐⭐ | In-memory columnar; efficient representation |
 | **MessagePack** | ⭐⭐⭐⭐ | Very compact serialization |
 | **Protobuf** | ⭐⭐⭐ | Reasonable; not specifically optimized |
 | ISO 2709 | ⭐⭐ | No built-in memory optimization |
@@ -164,10 +167,12 @@ This document aggregates results from all format evaluations for side-by-side co
 
 | Format | Score | Notes |
 |--------|-------|-------|
+| **ISO 2709** | ⭐⭐⭐⭐ | Proven 50+ year track record; stable standard |
 | **Protobuf** | ⭐⭐⭐⭐ | Schema versioning; forward/backward compatible |
 | **Avro** | ⭐⭐⭐⭐ | Self-describing; schema registry support |
-| **ISO 2709** | ⭐⭐⭐⭐ | Proven 50+ year track record; stable standard |
+| **Arrow** | ⭐⭐⭐ | Ecosystem growing; 30% file size advantage valuable |
 | **FlatBuffers** | ⭐⭐⭐ | Append-only evolution; less flexible |
+| **Parquet** | ⭐⭐ | File size overhead (3.8×) not justified |
 | **CBOR** | ⭐⭐⭐ | Standards-based; less mature than others |
 
 ---
@@ -176,13 +181,13 @@ This document aggregates results from all format evaluations for side-by-side co
 
 | Format | LOC (Rust) | Dev Time | Maintenance | Build Impact |
 |--------|-----------|----------|-------------|--------------|
-| **Protobuf** | 415 | 2-3 hrs | Low (code-gen) | +5.88s full build |
 | **FlatBuffers** | 214 | 1-2 hrs | Low (minimal schema) | <5s full build |
-| **Parquet** | TBD | TBD | TBD | TBD |
+| **Protobuf** | 415 | 2-3 hrs | Low (code-gen) | +5.88s full build |
+| **Parquet** | 290 | ~2 hrs | Low (JSON serialization) | Negligible (<1s) |
+| **Arrow** | 410 | ~3 hrs | Low (Arrow library) | +2-3s full build |
 | **Avro** | TBD | TBD | TBD | TBD |
 | **MessagePack** | TBD | TBD | TBD | TBD |
 | **CBOR** | TBD | TBD | TBD | TBD |
-| **Arrow** | TBD | TBD | TBD | TBD |
 
 ---
 
@@ -194,20 +199,20 @@ This document aggregates results from all format evaluations for side-by-side co
 |--------|-------------------|-----------|
 | **Protobuf** | API serialization, REST/gRPC, cross-language interchange | Mature ecosystem, schema evolution, excellent Rust support |
 | **FlatBuffers** | Streaming APIs, memory-constrained environments, zero-copy scenarios | Memory efficient, fast deserialization, Apple production use |
+| **Arrow** | In-memory analytics, ecosystem integration (Polars/DuckDB), analytics interchange | Industry-standard, 30% file size advantage, minimal performance overhead, excellent tooling |
 | **ISO 2709** | High-throughput batch processing, archival baseline | Proven standard, maximum performance, no dependencies |
 
 ### ⚠️ CONDITIONAL
 
 | Format | Conditions | Trade-offs |
 |--------|-----------|-----------|
-| **Parquet** | Big data analytics with Spark/Hadoop | Not suitable for record-by-record API access |
-| **Arrow** | In-memory analytics, multi-language processing | Requires columnar data model; columnar ↔ record conversion overhead |
 | **Avro** | Event streaming (Kafka), data lake architectures | Kafka ecosystem; not optimized for single-record performance |
 
 ### ❌ NOT RECOMMENDED (for now)
 
 | Format | Reason | Notes |
 |--------|--------|-------|
+| **Parquet** | File size explosion (2.8×), performance loss (42%), not standard Parquet | Use Arrow instead for analytics; ISO 2709 for efficiency |
 | **MessagePack** | Limited schema evolution; no validation | Use Protobuf instead for better schema support |
 | **CBOR** | Early ecosystem adoption; less proven than alternatives | Standards-based but immature relative to Protobuf/FlatBuffers |
 
@@ -220,11 +225,11 @@ This document aggregates results from all format evaluations for side-by-side co
 | ISO 2709 | Baseline | ✅ Complete | 2026-01-14 | dchud |
 | Protobuf | mrrc-fks.1 | ✅ Complete | 2026-01-14 | dchud |
 | FlatBuffers | mrrc-fks.2 | ✅ Complete | 2026-01-14 | dchud |
-| Parquet | mrrc-fks.3 | 🔵 Open | TBD | TBD |
+| Parquet | mrrc-fks.3 | ✅ Complete | 2026-01-15 | Amp |
+| Arrow | mrrc-fks.7 | ✅ Complete | 2026-01-15 | Amp |
 | Avro | mrrc-fks.4 | 🔵 Open | TBD | TBD |
 | MessagePack | mrrc-fks.5 | 🔵 Open | TBD | TBD |
 | CBOR | mrrc-fks.6 | 🔵 Open | TBD | TBD |
-| Arrow | mrrc-fks.7 | 🔵 Open | TBD | TBD |
 | Polars + DuckDB | mrrc-fks.10 | 🔵 Open | TBD | TBD |
 
 ---
