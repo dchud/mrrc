@@ -60,6 +60,9 @@ flatbuffers = "25.12.19"
 # Arrow for columnar data (skip problematic 52.x, use latest stable)
 arrow = { version = "57", features = ["json"] }
 
+# Avro for schema-based serialization
+apache-avro = "0.17"
+
 
 
 [build-dependencies]
@@ -127,6 +130,10 @@ harness = false
 
 [[bench]]
 name = "eval_cbor"
+harness = false
+
+[[bench]]
+name = "eval_avro"
 harness = false
 
 [profile.release]
