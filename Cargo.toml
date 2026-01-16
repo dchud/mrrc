@@ -72,6 +72,8 @@ criterion = { version = "0.5", features = ["html_reports"] }
 rayon = "1.7"
 tempfile = "3.8"
 smallvec = "1.11"
+rmp-serde = "1.3"
+ciborium = "0.2"
 
 # Lint configuration following Rust API Guidelines
 [lints.rust]
@@ -117,6 +119,14 @@ harness = false
 
 [[bench]]
 name = "parquet_benchmarks"
+harness = false
+
+[[bench]]
+name = "eval_messagepack"
+harness = false
+
+[[bench]]
+name = "eval_cbor"
 harness = false
 
 [profile.release]
