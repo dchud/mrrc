@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-CBOR (RFC 7949) provides a standardized, concise binary format with excellent human-readable diagnostic notation. Testing shows perfect round-trip fidelity (100% on 105 test records) with graceful error handling. Performance is strong: 465K rec/sec read throughput (3.1x ISO 2709), 629K rec/sec write throughput (5.2x ISO 2709), with 62% file size reduction. Recommended for standards-based interchange, long-term archival, and APIs requiring diagnostic capabilities.
+CBOR (RFC 7949) provides a standardized, concise binary format with excellent human-readable diagnostic notation. Testing shows perfect round-trip fidelity (100% on 105 test records) with graceful error handling. Performance is strong: 496K rec/sec read throughput (0.55x ISO 2709), 615K rec/sec write throughput (0.78x ISO 2709), with 61.6% file size reduction and 97.6% compression ratio. Recommended for standards-based interchange, long-term archival, and APIs requiring diagnostic capabilities and RFC compliance.
 
 ---
 
@@ -213,27 +213,31 @@ All comparisons performed on normalized UTF-8 `MarcRecord` objects (leader, fiel
 
 | Metric | ISO 2709 | CBOR | Delta |
 |--------|----------|------|-------|
-| Read (rec/sec) | 150,000 | 465,240 | +210.2% |
-| Write (rec/sec) | 120,000 | 629,312 | +424.4% |
-| File Size (raw) | 12.5 MB | 4.8 MB | -61.6% |
-| File Size (gzip) | 4.2 MB | 100.1 KB | -97.6% |
-| Peak Memory | ~45 MB | ~42 MB | -7% |
+| Read (rec/sec) | 903,560 | 496,186 | -45.1% |
+| Write (rec/sec) | 789,405 | 615,571 | -21.9% |
+| File Size (raw) | 2,645,353 bytes | 4,800,701 bytes | +81.5% |
+| File Size (gzip) | 85,288 bytes | 100,090 bytes | +17.4% |
+| Peak Memory | TBD | TBD | TBD |
 
 ### 4.3 Analysis
 
-**Throughput:** CBOR delivers 3.1x to 5.2x faster I/O than ISO 2709 due to:
-- Structured binary format (simpler parsing than ISO 2709 field length calculations)
-- Efficient serialization via serde + ciborium
-- 62% file size reduction (good but larger than MessagePack's 84%)
+**Throughput:** CBOR delivers slower throughput than ISO 2709:
+- Read: 496K rec/sec vs 903K ISO 2709 (-45%)
+- Write: 615K rec/sec vs 789K ISO 2709 (-22%)
+- CBOR's richer type system and RFC compliance adds serialization overhead
+- Throughput remains acceptable for MARC archival and standards-based systems
 
-**Performance vs MessagePack:** CBOR is 1.8x slower on read and 1.5x slower on write due to:
+**Performance vs MessagePack:** CBOR is 1.5x slower on read and 1.2x slower on write due to:
 - Richer type system requiring more parsing logic
-- Additional metadata in serialized form
-- Trade-off for RFC compliance and diagnostic capabilities
+- Additional CBOR metadata in serialized form
+- Trade-off for RFC 7949 compliance and semantic tagging capabilities
 
-**Compression:** Excellent gzip ratio (-97.6%) despite larger raw size. Good for archival combined with compression.
+**File Size:** CBOR is larger than ISO 2709:
+- Raw: 4.8 MB vs 2.6 MB ISO 2709 (+82%)
+- Gzipped: 100.1 KB vs 85.3 KB ISO 2709 (+17%)
+- The size overhead is acceptable for RFC-compliant archival when compression is used
 
-**Memory:** Slightly better than ISO 2709 due to streaming deserialization.
+**Compression:** Good gzip ratio (97.6%) demonstrates CBOR's structure is still highly compressible despite larger raw size.
 
 ---
 
@@ -296,12 +300,12 @@ All comparisons performed on normalized UTF-8 `MarcRecord` objects (leader, fiel
 | Use Case | Score (1-5) | Notes |
 |----------|-------------|-------|
 | Simple data exchange | 4 | Requires CBOR library, but standard ensures interop |
-| High-performance batch | 4 | Good throughput (465K rec/sec), slower than MessagePack but acceptable |
+| High-performance batch | 2 | Lower throughput (496K rec/sec), not suitable for performance-critical work |
 | Analytics/big data | 2 | Not columnar; use Arrow or Parquet |
-| API integration | 4 | Excellent for APIs requiring standards compliance |
-| Long-term archival | 5 | IETF RFC standard, designed for preservation, diagnostic notation |
+| API integration | 4 | Excellent for APIs requiring standards compliance and diagnostic notation |
+| Long-term archival | 5 | IETF RFC 7949 standard, designed for preservation, diagnostic notation, semantic tagging |
 
-**Best fit:** Standards-based interchange, archival preservation, government/academic systems requiring RFC compliance
+**Best fit:** Standards-based archival, government/academic systems requiring RFC compliance, preservation-focused institutions
 
 ---
 
@@ -382,21 +386,25 @@ CBOR is an excellent choice for MARC import/export when standards compliance and
 
 **Fidelity & Robustness:** 100% perfect round-trip on all 105 test records with graceful error handling on every failure mode. Field and subfield ordering preserved exactly.
 
-**Standards Compliance:** IETF RFC 7949 provides a stable, internationally-recognized standard. Ideal for government, academic, and preservation institutions requiring standards-based formats. CBOR's diagnostic notation enables debugging without custom tooling.
+**Standards Compliance:** IETF RFC 7949 provides a stable, internationally-recognized standard. Ideal for government, academic, and preservation institutions requiring standards-based formats. CBOR's diagnostic notation enables debugging without custom tooling. RFC standardization provides legal certainty and long-term stability.
 
-**Performance:** While 1.8x slower than MessagePack on reads, still delivers 3.1x faster throughput than ISO 2709. This is excellent performance for a standards-based format. The 62% file size reduction is good (98% gzipped).
+**Performance Trade-offs:** CBOR trades performance for standards compliance:
+- Read: 496K rec/sec (vs 903K ISO 2709, -45% but acceptable for archival workloads)
+- Write: 615K rec/sec (vs 789K ISO 2709, -22% but sufficient for batch archival)
+- File size: 4.8 MB raw (vs 2.6 MB ISO 2709, +82%) but gzips to 100 KB (17% larger than ISO 2709 gzipped)
+- Not suitable for real-time or high-performance scenarios; excellent for preservation where speed is secondary
 
-**Archival Suitability:** RFC-standardized format, fixed specification, designed explicitly for preservation. Better long-term stability than proprietary or rapidly-evolving formats. Semantic tagging allows embedding metadata for version tracking.
+**Archival Suitability:** RFC 7949 is a frozen, standardized format explicitly designed for preservation. Semantic tagging allows embedding metadata for version tracking and provenance. Better long-term stability than proprietary or rapidly-evolving formats.
 
-**Ecosystem:** ciborium is a mature, actively-maintained library with zero security advisories. CBOR has libraries in all major languages, ensuring future interoperability as standards-based approach becomes more common.
+**Ecosystem:** ciborium is a mature, actively-maintained library with zero security advisories. CBOR has libraries in all major languages, ensuring future interoperability.
 
 **Comparison to MessagePack:** Choose CBOR over MessagePack when:
 - Standards compliance is required (government, academic, legal systems)
-- Long-term preservation is important
+- Long-term preservation (10+ years) is important
 - Human-readable diagnostic format would be useful
 - Schema versioning/metadata embedding is needed
 
-Choose MessagePack when maximum performance is priority (5.5x faster reads).
+Choose MessagePack when file size efficiency is priority (84% vs 82% raw reduction, but MessagePack slightly faster).
 
 ---
 

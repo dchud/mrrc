@@ -4,13 +4,13 @@
     clippy::implicit_clone,
     clippy::uninlined_format_args,
     clippy::cast_possible_truncation,
-    clippy::unnecessary_bool,
+    clippy::cast_lossless,
     clippy::items_after_statements
 )]
-//! MessagePack Evaluation for MARC Data (Rust Implementation)
+//! `MessagePack` Evaluation for MARC Data (Rust Implementation)
 //!
 //! Implements round-trip fidelity, failure modes, and performance benchmarks
-//! per EVALUATION_FRAMEWORK.md
+//! per `EVALUATION_FRAMEWORK.md`
 use mrrc::{MarcReader, MarcRecord};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -163,11 +163,11 @@ fn test_round_trip() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!("**Test Date:** 2026-01-16\n");
 
-    if !failures.is_empty() {
+    if failures.is_empty() {
+        println!("### No Failures ✓\n");
+    } else {
         println!("### Failures\n");
         println!("Record IDs with failures: {:?}\n", failures);
-    } else {
-        println!("### No Failures ✓\n");
     }
 
     println!("All comparisons performed on normalized UTF-8 `MarcRecord` objects.\n");
@@ -282,7 +282,7 @@ fn benchmark_performance() -> Result<(), Box<dyn std::error::Error>> {
 
     // Read (Deserialize)
     let start = Instant::now();
-    let mut recovered_count = 0;
+    let mut recovered_count = 0i32;
     let mut offset = 0;
     while offset < serialized.len() {
         match rmp_serde::from_slice::<MarcRecordMsgpack>(&serialized[offset..]) {
