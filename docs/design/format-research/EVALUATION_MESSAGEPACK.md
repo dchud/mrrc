@@ -316,8 +316,8 @@ All comparisons performed on normalized UTF-8 `MarcRecord` objects (leader, fiel
 ### Strengths
 
 - **Perfect fidelity:** 100% round-trip on all 105 test records
-- **Exceptional performance:** 5.5-7.7x faster than ISO 2709
-- **Massive compression:** 84% size reduction, 98% gzipped
+- **Excellent compression:** 84% raw size reduction, 98% gzipped
+- **Competitive throughput:** 750K rec/sec read, 746K write (practical for MARC processing)
 - **Zero-dependency:** Only rmp-serde (already compatible with mrrc serde ecosystem)
 - **Universal language support:** MessagePack libraries exist for 50+ languages
 - **Industry-proven:** Used in production by major tech companies (MessagePack is standard)

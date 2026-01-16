@@ -227,11 +227,6 @@ All comparisons performed on normalized UTF-8 `MarcRecord` objects (leader, fiel
 - CBOR's richer type system and RFC compliance adds serialization overhead
 - Throughput remains acceptable for MARC archival and standards-based systems
 
-**Performance vs MessagePack:** CBOR is 1.5x slower on read and 1.2x slower on write due to:
-- Richer type system requiring more parsing logic
-- Additional CBOR metadata in serialized form
-- Trade-off for RFC 7949 compliance and semantic tagging capabilities
-
 **File Size:** CBOR is larger than ISO 2709:
 - Raw: 4.8 MB vs 2.6 MB ISO 2709 (+82%)
 - Gzipped: 100.1 KB vs 85.3 KB ISO 2709 (+17%)
@@ -397,14 +392,6 @@ CBOR is an excellent choice for MARC import/export when standards compliance and
 **Archival Suitability:** RFC 7949 is a frozen, standardized format explicitly designed for preservation. Semantic tagging allows embedding metadata for version tracking and provenance. Better long-term stability than proprietary or rapidly-evolving formats.
 
 **Ecosystem:** ciborium is a mature, actively-maintained library with zero security advisories. CBOR has libraries in all major languages, ensuring future interoperability.
-
-**Comparison to MessagePack:** Choose CBOR over MessagePack when:
-- Standards compliance is required (government, academic, legal systems)
-- Long-term preservation (10+ years) is important
-- Human-readable diagnostic format would be useful
-- Schema versioning/metadata embedding is needed
-
-Choose MessagePack when file size efficiency is priority (84% vs 82% raw reduction, but MessagePack slightly faster).
 
 ---
 
