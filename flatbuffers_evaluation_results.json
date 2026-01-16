@@ -7,8 +7,8 @@
     "compression_ratio_percent": 98.07910265308195,
     "file_size_bytes": 6737372,
     "gzipped_size_bytes": 129418,
-    "read_throughput_rec_sec": 17704.346725707925,
-    "write_throughput_rec_sec": 30005.697301769476
+    "read_throughput_rec_sec": 17691.56218756867,
+    "write_throughput_rec_sec": 30113.02169869061
   },
   "total_records": 100
 }

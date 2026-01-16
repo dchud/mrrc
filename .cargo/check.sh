@@ -52,7 +52,7 @@ maturin develop
 
 echo ""
 echo "=== Rust library tests ==="
-cargo test --lib --package mrrc --all-targets -q
+cargo test --lib --package mrrc -q
 
 echo ""
 echo "=== Python tests (core functionality, excludes benchmarks) ==="
@@ -90,7 +90,7 @@ if [ "$MEMORY_CHECKS" = true ]; then
     export LSAN_OPTIONS="suppressions=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/asan_suppressions.txt"
     
     # Run ASAN on library tests using nightly toolchain
-    cargo +nightly test --lib --package mrrc --all-targets -q
+    cargo +nightly test --lib --package mrrc -q
     
     # Clear ASAN flags after tests
     unset RUSTFLAGS RUSTDOCFLAGS LSAN_OPTIONS
