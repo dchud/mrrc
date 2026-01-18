@@ -1,8 +1,8 @@
-/// Rust-only Arrow benchmark for MARC to columnar conversion
-use mrrc::{MarcReader, Record};
-use arrow::array::{StringBuilder, UInt32Builder, UInt16Builder};
+use arrow::array::{StringBuilder, UInt16Builder, UInt32Builder};
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
+/// Rust-only Arrow benchmark for MARC to columnar conversion
+use mrrc::{MarcReader, Record};
 use std::fs::File;
 use std::sync::Arc;
 use std::time::Instant;
@@ -121,8 +121,12 @@ fn main() {
 
     println!("  Time: {:.1} ms", ms);
     println!("  Throughput: {:.0} rec/sec", throughput);
-    println!("  Arrow table: {} rows × {} cols", arrow_table.num_rows(), arrow_table.num_columns());
-    
+    println!(
+        "  Arrow table: {} rows × {} cols",
+        arrow_table.num_rows(),
+        arrow_table.num_columns()
+    );
+
     // Estimate memory size (rough approximation)
     let mem_mb = (arrow_table.num_rows() * 100) as f64 / (1024.0 * 1024.0); // rough estimate
     println!("  Est. memory: ~{:.1} MB\n", mem_mb);
@@ -133,7 +137,10 @@ fn main() {
     let col = arrow_table.column(1); // field_tag column
     let _ = col.len();
     let duration = start.elapsed();
-    println!("  Column access (field_tag): {:.2} μs\n", duration.as_secs_f64() * 1_000_000.0);
+    println!(
+        "  Column access (field_tag): {:.2} μs\n",
+        duration.as_secs_f64() * 1_000_000.0
+    );
 
     println!("════════════════════════════════════════════════════════════════════");
     println!("BENCHMARK COMPLETE");
