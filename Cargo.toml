@@ -59,6 +59,7 @@ flatbuffers = "25.12.19"
 
 # Arrow for columnar data (skip problematic 52.x, use latest stable)
 arrow = { version = "57", features = ["json"] }
+parquet = { version = "57", features = ["arrow"] }
 
 # Avro for schema-based serialization
 apache-avro = "0.17"
