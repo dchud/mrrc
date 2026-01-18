@@ -1,7 +1,12 @@
+#![allow(
+    missing_docs,
+    clippy::cast_precision_loss,
+    clippy::needless_borrows_for_generic_args
+)]
+
 use arrow::array::{StringBuilder, UInt16Builder, UInt32Builder};
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
-/// Rust-only Arrow benchmark for MARC to columnar conversion
 use mrrc::{MarcReader, Record};
 use std::fs::File;
 use std::sync::Arc;
@@ -19,7 +24,7 @@ fn marc_to_arrow(records: &[Record]) -> RecordBatch {
     let mut subfield_sequences = UInt16Builder::new();
 
     for (record_id, record) in records.iter().enumerate() {
-        let record_id = record_id as u32 + 1;
+        let record_id = u32::try_from(record_id).unwrap_or(0) + 1;
 
         // Iterate over all fields (both control and variable fields)
         for (field_seq, (tag, field_list)) in record.fields.iter().enumerate() {
@@ -32,7 +37,7 @@ fn marc_to_arrow(records: &[Record]) -> RecordBatch {
                     indicator2s.append_null();
                     subfield_codes.append_null();
                     subfield_values.append_value(value);
-                    field_sequences.append_value(field_seq as u16);
+                    field_sequences.append_value(u16::try_from(field_seq).unwrap_or(0));
                     subfield_sequences.append_null();
                 }
             } else {
@@ -49,7 +54,7 @@ fn marc_to_arrow(records: &[Record]) -> RecordBatch {
                         indicator2s.append_value(&ind2);
                         subfield_codes.append_null();
                         subfield_values.append_value("");
-                        field_sequences.append_value(field_seq as u16);
+                        field_sequences.append_value(u16::try_from(field_seq).unwrap_or(0));
                         subfield_sequences.append_null();
                     } else {
                         // Field with subfields
@@ -60,8 +65,8 @@ fn marc_to_arrow(records: &[Record]) -> RecordBatch {
                             indicator2s.append_value(&ind2);
                             subfield_codes.append_value(&subfield.code.to_string());
                             subfield_values.append_value(&subfield.value);
-                            field_sequences.append_value(field_seq as u16);
-                            subfield_sequences.append_value(subf_seq as u16);
+                            field_sequences.append_value(u16::try_from(field_seq).unwrap_or(0));
+                            subfield_sequences.append_value(u16::try_from(subf_seq).unwrap_or(0));
                         }
                     }
                 }
@@ -117,10 +122,10 @@ fn main() {
     let arrow_table = marc_to_arrow(&records);
     let duration = start.elapsed();
     let ms = duration.as_secs_f64() * 1000.0;
-    let throughput = records.len() as f64 / duration.as_secs_f64();
+    let throughput = records.len() as u64 as f64 / duration.as_secs_f64();
 
-    println!("  Time: {:.1} ms", ms);
-    println!("  Throughput: {:.0} rec/sec", throughput);
+    println!("  Time: {ms:.1} ms");
+    println!("  Throughput: {throughput:.0} rec/sec");
     println!(
         "  Arrow table: {} rows × {} cols",
         arrow_table.num_rows(),
@@ -128,8 +133,8 @@ fn main() {
     );
 
     // Estimate memory size (rough approximation)
-    let mem_mb = (arrow_table.num_rows() * 100) as f64 / (1024.0 * 1024.0); // rough estimate
-    println!("  Est. memory: ~{:.1} MB\n", mem_mb);
+    let mem_mb = (arrow_table.num_rows() as u64 * 100) as f64 / (1024.0 * 1024.0); // rough estimate
+    println!("  Est. memory: ~{mem_mb:.1} MB\n");
 
     // Benchmark: Column access
     println!("Column Operations:");
