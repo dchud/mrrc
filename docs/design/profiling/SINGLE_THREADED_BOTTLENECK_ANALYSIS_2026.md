@@ -1,19 +1,27 @@
 # Single-Threaded Rust Bottleneck Analysis
 **Date:** 2026-01-19  
 **Issue:** mrrc-c7h  
-**Status:** In Progress - Initial Profiling Complete
+**Status:** COMPLETE - One optimization implemented and measured
 
 ## Executive Summary
 
-Current single-threaded pure Rust performance:
-- **Throughput:** ~900k rec/s (criterion), ~606k rec/s (custom harness with warmup)
-- **Latency:** ~1.1 µs/record
-- **Performance:** Excellent and consistent across file sizes
+**Work Completed:**
+- Analyzed Phase 1 optimization failure (SmallVec + compact tags: -1.5% regression)
+- Identified allocation overhead from parse_digits functions
+- Implemented optimization removing String allocations from parsing
+- **Result: +4.9% throughput improvement (898k → 945k rec/s)**
 
-Previous optimization attempt (Phase 1: SmallVec + compact tag encoding) resulted in **-1.5% regression** after fixes, with initial -12.7% regression at commit. This analysis focuses on:
-1. Understanding why that optimization failed
-2. Identifying actual bottlenecks in current code
-3. Finding high-ROI, low-risk improvements
+Current single-threaded pure Rust performance:
+- **Baseline:** ~900k rec/s (criterion)
+- **After optimization:** ~945k rec/s (+4.9%)
+- **Harness throughput:** ~648k rec/s (with warmup)
+- **Latency:** ~1.06-1.11 µs/record
+
+Lessons learned:
+1. Previous optimization (Phase 1) failed because architectural changes weren't on critical path
+2. Real improvements come from eliminating allocations in frequently-called functions
+3. Small, incremental optimizations with direct measurement work better than complex refactors
+4. Need to understand WHERE allocations happen (call stack), not just HOW MANY
 
 ---
 
