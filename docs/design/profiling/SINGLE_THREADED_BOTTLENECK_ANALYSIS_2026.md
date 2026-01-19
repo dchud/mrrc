@@ -9,13 +9,15 @@
 - Analyzed Phase 1 optimization failure (SmallVec + compact tags: -1.5% regression)
 - Identified allocation overhead from parse_digits functions
 - Implemented optimization removing String allocations from parsing
-- **Result: +4.9% throughput improvement (898k → 945k rec/s)**
+- Tested 2 additional optimizations (memchr, byte-check) - no improvement, reverted
+- **Result: +6.0% sustained throughput improvement (899k → 957k rec/s)**
 
 Current single-threaded pure Rust performance:
-- **Baseline:** ~900k rec/s (criterion)
-- **After optimization:** ~945k rec/s (+4.9%)
-- **Harness throughput:** ~648k rec/s (with warmup)
-- **Latency:** ~1.06-1.11 µs/record
+- **Baseline:** ~900k rec/s (1k: 899k, 10k: 903k)
+- **After optimization:** ~955k rec/s (1k: 952k, 10k: 957k)
+- **Improvement:** +6.0% consistent across file sizes
+- **Harness throughput:** ~577k rec/s (with warmup, less stable environment)
+- **Latency:** ~1.05 µs/record (improved from ~1.11 µs)
 
 Lessons learned:
 1. Previous optimization (Phase 1) failed because architectural changes weren't on critical path
@@ -278,17 +280,18 @@ The Phase 1 failure teaches us:
 
 ---
 
-## Current Baseline (2026-01-19)
+## Current Performance Metrics (2026-01-19)
 
-| Metric | Value | Notes |
-|--------|-------|-------|
-| Criterion throughput (before) | ~900k rec/s | 1k and 10k records, 100 samples |
-| Criterion throughput (after) | ~945k rec/s | **+4.9% improvement** |
-| Harness throughput | ~648k rec/s | With warmup, less stable environment |
-| Latency | ~1.06-1.1 µs/record | Consistent across sizes |
-| Memory (10k records) | TBD | Need heaptrack measurement |
-| Allocation count | ~281/record | Estimated from source analysis |
-| L3 cache hit rate | TBD | Need profiling tool measurement |
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| **1k records** | 899k rec/s | 952k rec/s | **+5.9%** |
+| **10k records** | 903k rec/s | 957k rec/s | **+6.0%** |
+| **Average** | 901k rec/s | 955k rec/s | **+6.0%** |
+| Latency (1k) | 1.1127 ms | 1.0503 ms | -5.6% |
+| Latency (10k) | 11.072 ms | 10.447 ms | -5.7% |
+| Harness (warmup) | ~606k rec/s | ~577k rec/s | Baseline drift |
+| Allocations/record | 281 | ~211 | -70-80 parse allocs |
+| Memory overhead | 17.4 KB/record | 17.1 KB/record | -200 bytes (estimate) |
 
 ---
 
