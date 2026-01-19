@@ -19,9 +19,11 @@ After completing 8/10 format evaluations (9 including Arrow Analytics), this doc
 
 **Key Finding:** The evaluation confirmed no single format is optimal for all use cases. A **tiered approach** is needed:
 - **Tier 1 (Required):** ISO 2709 (baseline) + Protobuf (modern API)
-- **Tier 2 (High-Value):** FlatBuffers, Arrow, MessagePack
-- **Tier 3 (Specialized):** CBOR, Avro, Arrow Analytics
-- **Exclude:** Parquet (redundant with Arrow) + non-winners
+- **Tier 2 (High-Value, Ship Together):** Arrow, FlatBuffers, MessagePack
+- **Tier 3 (Deferred):** CBOR, Avro, Arrow Analytics (implement only on customer demand)
+- **Exclude:** Parquet (redundant with Arrow), JSON, XML, YAML, TOML, Ion (different scope)
+
+**Decisiveness Rationale:** This strategy prioritizes shipping a complete, well-tested Tier 1 + Tier 2 over supporting every possible format. Tier 3 and excluded formats can be added later with explicit customer demand without breaking the library API.
 
 ---
 
@@ -41,45 +43,62 @@ Production deployment MUST include these.
 
 ---
 
-#### **TIER 2: High-Value Formats** (Recommended)
-Significant value-add for common MARC use cases; low maintenance burden.
+#### **TIER 2: High-Value Formats** (Recommended - MUST SHIP)
+High ROI (value delivered per day of effort). Ship all three together as part of initial release.
 
-| Format | Rationale | Library Role | Python Wrapper |
-|--------|-----------|--------------|-----------------|
-| **FlatBuffers** | 64% memory savings; 259k rec/sec; zero-copy capable; mobile/embedded use | Memory-constrained APIs, streaming | Expose (developers targeting mobile/embedded) |
-| **Arrow (Columnar)** | 865k rec/sec (negligible vs ISO 2709); 30% file size savings; analytics integration; ecosystem standard | In-memory analytics, tool interop (Polars, DuckDB) | Expose (data scientists) |
-| **MessagePack** | 25% file size savings; 750k rec/sec; 50+ language support; IPC use | Compact serialization, REST APIs, inter-process communication | Expose (REST/compact payload use cases) |
+| Format | Cost (Dev Days) | Benefit | ROI | Library Role | Python Wrapper |
+|--------|---|---------|-----|--------------|-----------------|
+| **Arrow (Columnar)** | 3 | Ecosystem standard (Polars, DuckDB, DataFusion); analytics tier (1.77M rec/sec); 30% file size savings | ⭐⭐⭐⭐⭐ | In-memory analytics, tool interop | Must expose |
+| **FlatBuffers** | 2 | 64% memory savings; proven (Apple); zero-copy capable; mobile/embedded tier | ⭐⭐⭐⭐ | Memory-constrained APIs, streaming | Must expose |
+| **MessagePack** | 2 | 25% file size savings; 750k rec/sec; 50+ languages; serde-friendly; universal IPC | ⭐⭐⭐⭐ | Compact serialization, REST, IPC | Must expose |
 
-**Implementation Priority:** Phase in order: Arrow > FlatBuffers > MessagePack (Arrow integrates naturally; FlatBuffers proven; MessagePack serde-friendly).
+**Total Tier 2 Effort:** 7 dev days (fits in Phase 2 schedule)  
+**Implementation Order:** Arrow (foundation) → FlatBuffers (proven) → MessagePack (serde leverage)
+
+**Cost/Benefit Summary:** All three Tier 2 formats are low-effort, high-value, and solve distinct problems. Exclude any of them reduces library usability for defined personas (mobile devs, data scientists, REST API developers). Ship together to avoid fragmented ecosystem.
 
 ---
 
-### 1.2 Add to Library (Tier 3)
+### 1.2 Add to Library (Tier 3 - DEFERRED)
 
-#### **TIER 3: Specialized Formats** (Conditional)
-Niche use cases; defer unless explicit customer demand.
+#### **TIER 3: Specialized Formats** (NOT in Initial Release)
+Niche use cases with explicit customer demand. Implement on-demand after Tier 1 + 2 are stable.
 
-| Format | When to Add | Library Role | Python Wrapper |
-|--------|------------|--------------|-----------------|
-| **CBOR** | Government/academic archival requirements | Standards-based preservation (RFC 7949) | Low priority; expose only if demanded |
-| **Avro** | Event streaming (Kafka) or data lake integration | Kafka ecosystems; self-describing records | Conditional; expose for data lake users |
-| **Arrow Analytics (Rust-native)** | Heavy MARC discovery optimization workloads | Columnar analytics tier for SQL queries | Expert users; expose via Arrow IPC export |
+| Format | Cost | Justification | When to Implement | Library Role |
+|--------|------|---------------|-------------------|--------------|
+| **CBOR** | 2 days | RFC 7949 standard; low demand in library ecosystem for MARC | Only if government/academic archival customer requests it | Standards-based preservation |
+| **Avro** | 2 days | Kafka/data lake integration; schema registry; overlaps with Protobuf for most use cases | Only if explicit Kafka integration customer requirement | Data lake ecosystems |
+| **Arrow Analytics (Rust-native)** | 1 day | Complements Arrow; already has POC; validates analytics tier design | After Arrow proves valuable; integrate POC code | Columnar analytics tier |
 
-**Implementation Priority:** Only after Tier 1 + 2 are stable. Implement on demand basis (create `bd` issues per customer request).
+**Decision:** Do NOT include in initial release. These formats solve specific vertical problems without broad applicability to MARC ecosystem. Add via `bd` issues per customer requirement (e.g., "Customer X needs Avro for Kafka pipeline"); avoids maintenance burden for unmeasured demand.
 
 ---
 
 ### 1.3 Remove/Don't Add
 
-#### **Parquet**
-- ❌ **Reason:** Redundant with Arrow implementation
-- **Fact:** Parquet achieves same compression (98.3% vs Arrow's 95.99%) but adds 74% raw size overhead
-- **Alternative:** Users needing columnar format use Arrow + export to Parquet directly (external tool responsibility)
-- **Status:** Do NOT implement in mrrc. Document as user responsibility.
+#### **Parquet** ❌ EXCLUDE (Redundant)
+- **Reason:** Redundant with Arrow implementation
+- **Fact:** Parquet achieves same compression (98.3% vs Arrow's 95.99%) but adds 74% raw size overhead in native serialization
+- **Alternative:** Users needing columnar archival use Arrow IPC → external Parquet export (3-line user code)
+- **Status:** Do NOT implement in mrrc. Mention in tutorials as user responsibility.
 
-#### **Other Excluded Formats**
-- **JSON, YAML, XML:** Evaluated in separate pymarc work (not part of binary format scope)
-- **TOML, Ion, MessagePack-Schema:** Out of scope for this project
+#### **Formats NOT Evaluated (Out of Scope or Low Priority)**
+
+| Format | Why Not Evaluated | Assessment | Would It Help? |
+|--------|-------------------|------------|-----------------|
+| **JSON/YAML/XML** | Different project scope (handled in pymarc XML/JSON work) | Well-understood, no evaluation needed | No; different team |
+| **Bincode** (Rust-native serde) | Rust-only; assumed low priority vs cross-platform | Fast serde, minimal overhead (~80% of MessagePack size); zero deps; BUT only Rust language support; no cross-platform appeal | Only if Rust-only MARC library acceptable |
+| **Apache Ion** | Complex spec; schema-less with strong typing; unknown MARC suitability | Amazon's TypeScript-inspired format; excellent schema flexibility; BUT low language support (6 vs 50+); no clear MARC use case | No; Protobuf better for schema flexibility |
+| **JSON Lines** (newline-delimited JSON) | Human-readable; valuable for debugging/logging but not binary format project scope | Excellent for logs/development; 2-3× larger than binary; natural for streaming pipelines; BUT outside binary format focus | Maybe post-release (low effort) for dev ergonomics |
+| **Bincode + Compression** (custom layer) | Could be best-in-class performance (ISO 2709 speed + better file size); non-standard | Hypothetically: ISO 2709 read speed (900k rec/sec) + 80% compression (vs Arrow's 96%); BUT adds custom codec, breaks ecosystem interop | Worth POC if performance is limiting factor |
+| **Custom MARC Binary Schema** (ISO 2709 + metadata) | Could solve schema evolution for ISO 2709 users; addresses fundamental limitation | Add optional header with version/field definitions; maintains ISO 2709 compatibility; BUT non-standard, requires buy-in from MARC community | Interesting long-term (post-release) if evolution becomes blocker |
+
+**Clear Decision on Excluded Formats:**
+- ✅ **JSON/YAML/XML:** Different project; already handled in pymarc
+- ✅ **Bincode:** Rust-only; limits cross-platform appeal; not worth narrow benefit
+- ✅ **Ion:** Better alternatives (Protobuf); unclear MARC value; small ecosystem
+- ⏸️ **JSON Lines:** Consider post-release if logging/development ergonomics needed
+- ⏸️ **Bincode + Compression, Custom MARC Schema:** Research opportunities, not release blockers
 
 ---
 
@@ -664,24 +683,41 @@ After Phase 1B:
 
 ---
 
-## Part 7: Format Support Priority Matrix
+## Part 7: Final Format Support Decision Matrix
 
-### 7.1 Decision Framework: Keep vs Remove vs Add
+### 7.1 Decision Framework: Clear Keep/Defer/Exclude
 
 ```
-Keep in Library?
-├─ YES if: Core use case OR high-value (low cost)
-│  ├─ TIER 1: Required (must ship)
-│  │  └─ ISO 2709, Protobuf
-│  └─ TIER 2: Recommended (high ROI)
-│     └─ Arrow, FlatBuffers, MessagePack
-├─ MAYBE if: Specialized use case (low cost, on-demand)
-│  └─ TIER 3: Niche (conditional)
-│     └─ CBOR, Avro, Arrow Analytics
-└─ NO if: Redundant OR high cost
-   └─ Parquet (use Arrow instead)
-   └─ Excluded: JSON, XML, YAML (different project)
+TIER 1: MUST SHIP (Before Release)
+├─ ISO 2709 (baseline; already exists; zero deps; 900k rec/sec)
+└─ Protobuf (modern API; schema evolution; multi-language; gRPC)
+   Effort: 4-5 days | Blocking: Release date
+
+TIER 2: SHIP TOGETHER (High ROI; Distinct Personas)
+├─ Arrow (3 days | Analytics + ecosystem standard)
+├─ FlatBuffers (2 days | Mobile/embedded + zero-copy)
+└─ MessagePack (2 days | Compact + universal)
+   Effort: 7 days | Blocking: None (after Tier 1)
+
+TIER 3: DEFER (Niche; Implement on Customer Demand)
+├─ CBOR (2 days | Government/academic archival)
+├─ Avro (2 days | Kafka data lake)
+└─ Arrow Analytics (1 day | Discovery optimization)
+   Effort: on-demand | Blocking: Nothing
+
+EXCLUDE: Do NOT Implement
+├─ Parquet (redundant; user→Arrow IPC→Parquet)
+├─ JSON/YAML/XML (different project)
+├─ Bincode (Rust-only; limited appeal)
+└─ Ion (unclear value; Protobuf better)
+
+RESEARCH (Post-Release, If Needed)
+├─ JSON Lines (dev ergonomics; low effort)
+├─ Bincode + Compression (performance investigation)
+└─ Custom MARC Binary Schema (evolution research)
 ```
+
+**Rationale:** Tier 1 + 2 (11 days total) provides complete solution for defined personas (librarians, API devs, data scientists, mobile devs). Tier 3 and research items are implementation options, not blockers. This avoids "format fatigue" and maintains quality.
 
 ### 7.2 Customer Personas & Format Recommendations
 
@@ -774,60 +810,78 @@ Release Desirables (nice-to-have):
 
 ---
 
-## Part 10: Recommendations Summary
+## Part 10: Recommendations Summary (FINAL)
 
-### 10.1 Library (Rust mrrc)
+### 10.1 Library (Rust mrrc) - IMPLEMENTATION DIRECTIVE
 
-**MUST INCLUDE (Tier 1):**
-1. ISO 2709 (refactored, optimized)
-2. Protobuf (full schema evolution support)
+**TIER 1: SHIP IN INITIAL RELEASE (Non-Negotiable)**
+1. **ISO 2709** - Refactor to trait-based; maintain 900k rec/sec performance
+2. **Protobuf** - Complete implementation with schema versioning tests
 
-**STRONGLY RECOMMENDED (Tier 2):**
-3. Arrow (columnar interchange + analytics)
-4. FlatBuffers (memory-efficient streaming)
-5. MessagePack (compact, universal)
+**TIER 2: SHIP IN INITIAL RELEASE (Collectively = Complete Ecosystem)**
+3. **Arrow** - Row-oriented interchange + columnar analytics; integrate POC
+4. **FlatBuffers** - Mobile/embedded streaming APIs; 64% memory savings
+5. **MessagePack** - Compact serialization; 50+ language support; serde-friendly
 
-**CONDITIONAL (Tier 3):**
-6. CBOR (archival requirement)
-7. Avro (data lake requirement)
-8. Arrow Analytics (analytical workload requirement)
+**TIER 3: DEFER TO PHASE 4+ (Customer Demand Driven)**
+- CBOR, Avro, Arrow Analytics (see Part 1.2 for decision criteria)
 
-**EXCLUDE:**
-- Parquet (redundant with Arrow; user responsibility to export)
+**EXPLICITLY EXCLUDE (Do Not Implement)**
+- **Parquet** - Use Arrow IPC → external Parquet (user responsibility)
+- **JSON/YAML/XML** - Different project scope
+- **Bincode** - Rust-only; no cross-platform appeal
+- **Ion** - Unclear MARC value; Protobuf superior
+
+**Total Effort:** Tier 1 (4-5 days) + Tier 2 (7 days) = **11 days to complete release**  
+**Rationale:** This provides end-to-end solution for all major personas. Tier 3 adds complexity without proportional benefit. Smaller, well-tested core > every possible format.
 
 ---
 
-### 10.2 Python Wrapper
+### 10.2 Python Wrapper - IMPLEMENTATION DIRECTIVE
 
-**MUST EXPOSE (Tier 1):**
-- `mrrc.read_iso2709()` / `mrrc.write_iso2709()`
-- `mrrc.read_protobuf()` / `mrrc.write_protobuf()`
-- Convenience: `mrrc.read(format="iso2709")` / `mrrc.write(format="protobuf")`
+**TIER 1: EXPOSE IN INITIAL RELEASE**
+- `mrrc.read_iso2709(path)` → `list[MarcRecord]`
+- `mrrc.write_iso2709(records, path)` → `None`
+- `mrrc.read_protobuf(data)` → `list[MarcRecord]`
+- `mrrc.write_protobuf(records)` → `bytes`
+- Convenience: `mrrc.read(path, format="iso2709"|"protobuf")`
 
-**SHOULD EXPOSE (Tier 2):**
-- `mrrc.read_arrow()` / `mrrc.write_arrow()`
-- `mrrc.read_flatbuffers()` / `mrrc.write_flatbuffers()`
-- `mrrc.read_messagepack()` / `mrrc.write_messagepack()`
+**TIER 2: EXPOSE IN INITIAL RELEASE (At Same Time as Rust)**
+- `mrrc.read_arrow(data)` → `list[MarcRecord]`
+- `mrrc.write_arrow(records)` → `bytes`
+- `mrrc.read_flatbuffers(data)` → `list[MarcRecord]`
+- `mrrc.write_flatbuffers(records)` → `bytes`
+- `mrrc.read_messagepack(data)` → `list[MarcRecord]`
+- `mrrc.write_messagepack(records)` → `bytes`
+- Analytics helper: `mrrc.analytics.to_arrow(records)` → `pyarrow.Table`
 
-**OPTIONAL (Tier 3):**
+**TIER 3: OPTIONAL (Customer Request Driven)**
 - `mrrc.formats.cbor`, `mrrc.formats.avro`, `mrrc.formats.arrow_analytics`
-- `mrrc.analytics.export_to_parquet()`, `mrrc.analytics.to_arrow()`
+
+**DO NOT EXPOSE**
+- Parquet export (recommend user: `arrow_table.to_parquet("file.parquet")`)
 
 ---
 
-### 10.3 Timeline & Resources
+### 10.3 Timeline & Resources (Tier 1 + 2 Only)
 
-| Phase | Duration | Est. Effort | FTE Required |
-|-------|----------|-------------|--------------|
-| Phase 0 | 1.5 days | 15 hrs | 2 |
-| Phase 1 | 3-5 days | 29 hrs | 2 |
-| Phase 2 | 6-8 days | 49 hrs | 3 |
-| Phase 4 | 5-7 days | 41 hrs | 2 |
-| **Total** | **15-20 days** | **134 hrs** | **2-3 (avg)** |
+**RELEASE TIMELINE (Tier 1 + Tier 2 formats only):**
 
-**Critical Path:** 15-18 days (no parallel work)  
-**With Parallelization:** 10-12 days (Phase 2A/B/C + docs in parallel)  
-**Fast-Track MVP:** 7-8 days (Tier 1 only)
+| Phase | Duration | Est. Effort | FTE Required | Blocking? |
+|-------|----------|-------------|--------------|-----------|
+| Phase 0 | 1.5 days | 15 hrs | 2 | Yes |
+| Phase 1 (ISO 2709 + Protobuf) | 3-5 days | 29 hrs | 2 | Yes |
+| Phase 2 (Arrow + FlatBuffers + MessagePack) | 6-8 days | 49 hrs | 3 (parallel) | No |
+| Phase 4 (Python wrapper + docs) | 5-7 days | 41 hrs | 2 | Yes |
+| **Release Total** | **15-18 days** | **134 hrs** | **2-3 avg** | — |
+
+**Phasing Strategy:**
+- ✅ **Critical Path:** Phases 0 → 1 → 4 (must complete before release)
+- ✅ **Parallel Opportunity:** Phase 2 (Arrow/FlatBuffers/MessagePack independent) can run while Phase 4 docs start
+- ✅ **Estimated Wall Time:** 15-18 days with parallelization after Phase 1B
+- ⏸️ **Tier 3 Timeline:** Phase 3+ items deferred indefinitely; open as customer-demand issues
+
+**MVP Option (Tier 1 Only):** 7-8 days (ISO 2709 + Protobuf only; ship Tier 2 in v1.1 if needed)
 
 ---
 
