@@ -81,7 +81,7 @@ fn msgpack_to_marc(msgpack: MarcRecordMsgpack) -> Result<mrrc::Record, String> {
     );
 
     for field_msg in msgpack.fields {
-        let subfields: Vec<mrrc::Subfield> = field_msg
+        let subfields: smallvec::SmallVec<[mrrc::Subfield; 4]> = field_msg
             .subfields
             .iter()
             .map(|sf| mrrc::Subfield {

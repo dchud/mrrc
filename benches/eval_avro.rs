@@ -194,7 +194,7 @@ fn avro_value_to_marc(value: &serde_json::Value) -> Result<mrrc::Record, String>
             .and_then(|v| v.as_array())
             .ok_or_else(|| "Missing subfields array".to_string())?;
 
-        let subfields: Result<Vec<mrrc::Subfield>, String> = subfields_arr
+        let subfields: Result<smallvec::SmallVec<[mrrc::Subfield; 4]>, String> = subfields_arr
             .iter()
             .map(|sf| {
                 let code_str = sf

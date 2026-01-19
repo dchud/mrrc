@@ -30,7 +30,7 @@ fn test_arrow_basic_roundtrip() {
         tag: "245".to_string(),
         indicator1: '1',
         indicator2: '0',
-        subfields: vec![],
+        subfields: smallvec::smallvec![],
     };
     field.subfields.push(mrrc::record::Subfield {
         code: 'a',
@@ -84,7 +84,7 @@ fn test_arrow_field_ordering() {
             tag: tag.to_string(),
             indicator1: ind1,
             indicator2: ind2,
-            subfields: vec![],
+            subfields: smallvec::smallvec![],
         };
         field.subfields.push(mrrc::record::Subfield {
             code,
@@ -130,7 +130,7 @@ fn test_arrow_empty_subfield_value() {
         tag: "650".to_string(),
         indicator1: ' ',
         indicator2: '0',
-        subfields: vec![],
+        subfields: smallvec::smallvec![],
     };
     field.subfields.push(mrrc::record::Subfield {
         code: 'a',
@@ -174,7 +174,7 @@ fn test_arrow_multiple_records() {
             tag: "245".to_string(),
             indicator1: '1',
             indicator2: '0',
-            subfields: vec![],
+            subfields: smallvec::smallvec![],
         };
         field.subfields.push(mrrc::record::Subfield {
             code: 'a',
@@ -216,7 +216,7 @@ fn test_arrow_marc_table() {
         tag: "245".to_string(),
         indicator1: '1',
         indicator2: '0',
-        subfields: vec![],
+        subfields: smallvec::smallvec![],
     };
     field.subfields.push(mrrc::record::Subfield {
         code: 'a',

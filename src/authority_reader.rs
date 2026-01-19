@@ -222,7 +222,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                     tag: tag.clone(),
                     indicator1,
                     indicator2,
-                    subfields: Vec::new(),
+                    subfields: smallvec::SmallVec::new(),
                 };
 
                 // Parse subfields

@@ -339,7 +339,7 @@ pub fn arrow_batch_to_records(batch: &RecordBatch) -> Result<Vec<Record>, std::i
                 tag,
                 indicator1: ind1,
                 indicator2: ind2,
-                subfields: Vec::new(),
+                subfields: smallvec::SmallVec::new(),
             };
 
             // Add subfields in order

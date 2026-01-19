@@ -190,7 +190,7 @@ impl<R: Read> HoldingsMarcReader<R> {
 
                 let indicator1 = field_data[0] as char;
                 let indicator2 = field_data[1] as char;
-                let mut subfields = Vec::new();
+                let mut subfields = smallvec::SmallVec::new();
                 let mut j = 2;
 
                 while j < field_data.len() - 1 {
@@ -299,7 +299,7 @@ mod tests {
             tag: "852".to_string(),
             indicator1: ' ',
             indicator2: '1',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'b',
                 value: "Main Library".to_string(),
             }],

@@ -471,10 +471,10 @@ impl PyField {
         };
 
         // Convert PySubfield objects to inner Subfield objects
-        let sfs = if let Some(sfs) = subfields {
+        let sfs: smallvec::SmallVec<[_; 4]> = if let Some(sfs) = subfields {
             sfs.iter().map(|psf| psf.inner.clone()).collect()
         } else {
-            vec![]
+            smallvec::SmallVec::new()
         };
 
         Ok(PyField {

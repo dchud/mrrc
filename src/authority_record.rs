@@ -473,7 +473,7 @@ mod tests {
             tag: "100".to_string(),
             indicator1: '1',
             indicator2: ' ',
-            subfields: vec![],
+            subfields: smallvec::smallvec![],
         };
         let record = AuthorityRecord::builder(leader).heading(field).build();
         assert_eq!(record.heading_type(), Some(HeadingType::PersonalName));
@@ -483,7 +483,7 @@ mod tests {
             tag: "150".to_string(),
             indicator1: ' ',
             indicator2: '0',
-            subfields: vec![],
+            subfields: smallvec::smallvec![],
         };
         let record = AuthorityRecord::builder(create_test_leader())
             .heading(field)
@@ -629,7 +629,7 @@ mod tests {
             tag: "400".to_string(),
             indicator1: '1',
             indicator2: ' ',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'a',
                 value: "Smith, John".to_string(),
             }],
@@ -639,7 +639,7 @@ mod tests {
             tag: "500".to_string(),
             indicator1: '1',
             indicator2: ' ',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'a',
                 value: "Smith, J. (John)".to_string(),
             }],
@@ -661,7 +661,7 @@ mod tests {
             tag: "670".to_string(),
             indicator1: ' ',
             indicator2: ' ',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'a',
                 value: "DNB, 1985".to_string(),
             }],

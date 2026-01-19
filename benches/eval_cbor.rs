@@ -81,7 +81,7 @@ fn cbor_to_marc(cbor: MarcRecordCbor) -> Result<mrrc::Record, String> {
     );
 
     for field_cbor in cbor.fields {
-        let subfields: Vec<mrrc::Subfield> = field_cbor
+        let subfields: smallvec::SmallVec<[mrrc::Subfield; 4]> = field_cbor
             .subfields
             .iter()
             .map(|sf| mrrc::Subfield {

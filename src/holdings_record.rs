@@ -657,7 +657,7 @@ mod tests {
             tag: "852".to_string(),
             indicator1: ' ',
             indicator2: '1',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'b',
                 value: "Main Library".to_string(),
             }],
@@ -676,7 +676,7 @@ mod tests {
             tag: "866".to_string(),
             indicator1: '4',
             indicator2: '1',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'a',
                 value: "v.1 (1990)-v.10 (2000)".to_string(),
             }],
@@ -825,7 +825,7 @@ mod tests {
             tag: "853".to_string(),
             indicator1: ' ',
             indicator2: '1',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'a',
                 value: "v.".to_string(),
             }],
@@ -835,7 +835,7 @@ mod tests {
             tag: "863".to_string(),
             indicator1: ' ',
             indicator2: '1',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'a',
                 value: "v.1".to_string(),
             }],
@@ -860,7 +860,7 @@ mod tests {
             tag: "876".to_string(),
             indicator1: ' ',
             indicator2: ' ',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'p',
                 value: "12345".to_string(),
             }],
@@ -870,7 +870,7 @@ mod tests {
             tag: "877".to_string(),
             indicator1: ' ',
             indicator2: ' ',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'p',
                 value: "12346".to_string(),
             }],
@@ -894,7 +894,7 @@ mod tests {
             tag: "500".to_string(),
             indicator1: ' ',
             indicator2: ' ',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'a',
                 value: "General note".to_string(),
             }],

@@ -234,7 +234,7 @@ pub fn arrow_batch_to_records(batch: &RecordBatch) -> Result<Vec<Record>> {
                 tag,
                 indicator1: ind1,
                 indicator2: ind2,
-                subfields: Vec::new(),
+                subfields: smallvec::SmallVec::new(),
             };
 
             for row_idx in row_indices_for_field {

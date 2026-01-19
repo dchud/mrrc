@@ -211,7 +211,7 @@ mod tests {
             tag: "852".to_string(),
             indicator1: ' ',
             indicator2: '1',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'b',
                 value: "Main Library".to_string(),
             }],
@@ -237,7 +237,7 @@ mod tests {
             tag: "852".to_string(),
             indicator1: ' ',
             indicator2: '1',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'b',
                 value: "Main Library".to_string(),
             }],
@@ -248,7 +248,7 @@ mod tests {
             tag: "866".to_string(),
             indicator1: '4',
             indicator2: '1',
-            subfields: vec![Subfield {
+            subfields: smallvec::smallvec![Subfield {
                 code: 'a',
                 value: "v.1-5".to_string(),
             }],

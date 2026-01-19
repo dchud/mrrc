@@ -53,6 +53,7 @@ use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 use std::collections::BTreeMap;
 use std::ops::Index;
 
@@ -80,8 +81,8 @@ pub struct Field {
     pub indicator1: char,
     /// Second indicator
     pub indicator2: char,
-    /// Subfields
-    pub subfields: Vec<Subfield>,
+    /// Subfields (stored in `SmallVec` to avoid allocation for typical fields with 4 or fewer subfields)
+    pub subfields: SmallVec<[Subfield; 4]>,
 }
 
 /// A subfield within a field
@@ -1185,7 +1186,7 @@ impl Field {
             tag,
             indicator1,
             indicator2,
-            subfields: Vec::new(),
+            subfields: SmallVec::new(),
         }
     }
 
@@ -1208,7 +1209,7 @@ impl Field {
                 tag,
                 indicator1,
                 indicator2,
-                subfields: Vec::new(),
+                subfields: SmallVec::new(),
             },
         }
     }
