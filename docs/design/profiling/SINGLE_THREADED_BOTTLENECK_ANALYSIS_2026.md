@@ -342,26 +342,66 @@ Ok(result)
 
 ---
 
+## Optimization #2: Attempted memchr subfield scan ✗ (No improvement)
+
+**Date:** 2026-01-19  
+**Status:** TESTED, REVERTED - No measurable improvement  
+**Attempted change:** Use memchr2 to find SUBFIELD_DELIMITER or FIELD_TERMINATOR instead of byte-by-byte loop
+
+**Results:**
+- 1k: 961 → 955 rec/s (-0.69% - within noise)
+- 10k: 961 → 961 rec/s (+0.08% - within noise)
+
+**Lesson:** The subfield scanning loop (lines 353-358) is NOT on the critical path. LLVM's loop optimization already handles this efficiently. memchr doesn't help because:
+1. Subfield values are typically short (5-50 bytes)
+2. The per-byte iteration cost is already negligible
+3. memchr setup cost may exceed benefit for short scans
+
+**Conclusion:** Don't optimize loops that iterate over small amounts of data. Focus on allocation-heavy code.
+
+---
+
+## Optimization #3: Attempted byte-check control field detection ✗ (No improvement)
+
+**Date:** 2026-01-19  
+**Status:** TESTED, REVERTED - No measurable improvement  
+**Attempted change:** Replace `tag.chars().all(char::is_numeric)` with byte-by-byte checks
+
+**Results:**
+- 1k: 961 → 955 rec/s (-0.65% - within noise)
+- 10k: 961 → 965 rec/s (+0.45% - within noise)
+
+**Lesson:** Character iteration on a 3-character string is not on the critical path. This check happens ~35-40 times per record, but the cost is negligible compared to the actual String allocations and subfield parsing.
+
+**Conclusion:** LLVM optimizes small string operations very well. Focus on reducing allocation count, not loop iterations.
+
+---
+
 ## Next Steps
 
-1. **Look for similar allocation patterns** in other parse functions
-   - Check parse_data_field for unnecessary String allocations
-   - Check subfield value extraction
+1. **No other obvious byte-level optimizations** - LLVM handles these well
+2. **Remaining unavoidable allocations** (require API changes to optimize):
+   - Tag allocation: 35-40 String allocs/record (Field requires String tag)
+   - Subfield value allocation: 100-200 String allocs/record (API requires owned String)
+   - Vector allocations: 20-40 Vec allocations/record for subfield storage
 
-2. **Profile remaining bottlenecks:**
-   - Tag allocation: 35-40 String allocs/record
-   - Subfield value allocation: 200+ String allocs/record
-   - Vector allocations: 35-40 Vec allocations/record
+3. **Potential future optimizations** (API-changing, lower priority):
+   - SmallVec for subfields (requires pub API change)
+   - u16 encoding for tags (requires pub API change)
+   - Streaming parser (requires major refactor)
+   - Memory pooling (complex, needs careful ownership)
 
-3. **Decide on next optimizations** based on ROI vs risk:
-   - **High confidence optimizations** (like this one):
-     - Find more allocations in hot paths
-     - Replace with direct parsing
-   
-   - **Lower confidence optimizations** (require more testing):
-     - SmallVec for subfields
-     - u16 encoding for tags
-     - Compact layout changes (may cache misalign)
+---
+
+## Performance Summary
+
+| Optimization | Committed | Improvement | Risk | Notes |
+|---|---|---|---|---|
+| parse_digits direct parsing | ✅ Yes | +4.9% | Low | Eliminates 70-80 String allocs/record |
+| memchr subfield scan | ❌ No | None | — | Loop already optimized by LLVM |
+| byte-check control field | ❌ No | None | — | String iteration already optimized |
+
+**Conclusion:** We found the main bottleneck (parse_digits allocations) and fixed it. Remaining optimizations would require API changes. Current ~945k rec/s performance is solid.
 
 ---
 
