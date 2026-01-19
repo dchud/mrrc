@@ -379,9 +379,19 @@ fn parse_4digits(bytes: &[u8]) -> Result<usize> {
         )));
     }
 
-    let s = String::from_utf8_lossy(bytes);
-    s.parse::<usize>()
-        .map_err(|_| MarcError::InvalidRecord(format!("Invalid numeric field: '{s}'")))
+    // Parse ASCII digits directly without string allocation
+    let mut result = 0usize;
+    for &byte in bytes {
+        if byte.is_ascii_digit() {
+            result = result * 10 + (byte - b'0') as usize;
+        } else {
+            return Err(MarcError::InvalidRecord(format!(
+                "Invalid numeric field: expected digits, got byte {}",
+                byte as char
+            )));
+        }
+    }
+    Ok(result)
 }
 
 /// Parse a 5-digit ASCII number from bytes
@@ -393,9 +403,19 @@ fn parse_digits(bytes: &[u8]) -> Result<usize> {
         )));
     }
 
-    let s = String::from_utf8_lossy(bytes);
-    s.parse::<usize>()
-        .map_err(|_| MarcError::InvalidRecord(format!("Invalid numeric field: '{s}'")))
+    // Parse ASCII digits directly without string allocation
+    let mut result = 0usize;
+    for &byte in bytes {
+        if byte.is_ascii_digit() {
+            result = result * 10 + (byte - b'0') as usize;
+        } else {
+            return Err(MarcError::InvalidRecord(format!(
+                "Invalid numeric field: expected digits, got byte {}",
+                byte as char
+            )));
+        }
+    }
+    Ok(result)
 }
 
 #[cfg(test)]
