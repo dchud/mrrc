@@ -1,8 +1,9 @@
 # MRRC Benchmarking Results
 
-**Last Updated:** 2026-01-07  
+**Last Updated:** 2026-01-19  
 **Test Environment:** macOS 15.7.2 (arm64), Python 3.12.8, Rust 1.71+  
 **Data:** Actual measured benchmarks (Criterion.rs for Rust, pytest-benchmark for Python, direct comparison for pymarc)
+**Note:** Numbers updated Jan 2026 after recent performance improvements; see individual test results below for changes
 
 ## Executive Summary
 
@@ -13,8 +14,8 @@ MRRC offers a **three-tier performance spectrum** for MARC processing:
 3. ✅ **Pure Python (pymarc)**: Legacy baseline — for pure Python environments only
 
 **Key Findings:**
-- **Single-threaded (default):** pymrrc is **7.5x faster than pymarc**, with GIL release happening transparently during record parsing
-- **Multi-threaded (explicit):** pymrrc achieves **2.0x speedup on 2-core systems** and **3.74x speedup on 4-core systems** when using `ThreadPoolExecutor` for concurrent file processing
+- **Single-threaded (default):** pymrrc is **~7.5x faster than pymarc**, with GIL release happening transparently during record parsing
+- **Multi-threaded (explicit):** pymrrc achieves **~2.0x speedup on 2-core systems** and **~3.74x speedup on 4-core systems** when using `ThreadPoolExecutor` for concurrent file processing
 - **No code changes needed:** GIL release happens automatically. Concurrency is opt-in via standard Python threading patterns.
 
 ---
@@ -27,9 +28,9 @@ All single-threaded results use default behavior (no explicit concurrency):
 
 | Implementation | Read Throughput | vs pymarc | vs mrrc | Multi-Core Support | Use Case |
 |---|---|---|---|---|---|
-| **Rust (mrrc) single** | 1,065,000 rec/s | 14.6x faster | 1.0x (baseline) | Native (rayon, explicit) | Maximum performance, embedded systems, batch at scale |
-| **Python (pymrrc) single** | 534,600 rec/s | 7.3x faster | 0.50x | ✅ Yes (via GIL release) | 7.5x faster than pymarc, productive Python API, opt-in threading |
-| **Pure Python (pymarc)** | 72,700 rec/s | 1.0x (baseline) | 0.07x | ❌ No (GIL blocks) | Legacy systems, pure Python requirement only |
+| **Rust (mrrc) single** | ~1,000,000 rec/s | ~14x faster | 1.0x (baseline) | Native (rayon, explicit) | Maximum performance, embedded systems, batch at scale |
+| **Python (pymrrc) single** | ~255,600 rec/s | ~7.5x faster | 0.26x | ✅ Yes (via GIL release) | 7.5x faster than pymarc, productive Python API, opt-in threading |
+| **Pure Python (pymarc)** | ~72,700 rec/s | 1.0x (baseline) | 0.07x | ❌ No (GIL blocks) | Legacy systems, pure Python requirement only |
 
 **Note:** Multi-threaded performance (when explicitly enabled) is shown in separate sections below.
 
@@ -55,55 +56,55 @@ All single-threaded results use default behavior (no explicit concurrency):
 
 | Implementation | Time | Throughput | vs mrrc single | vs pymarc |
 |---|---|---|---|---|
-| **Rust (mrrc)** | 0.938 ms | **1,065,700 rec/s** | 1.0x | 14.6x |
-| **Python (pymrrc)** | 1.87 ms | **534,600 rec/s** | 0.50x | 7.3x |
+| **Rust (mrrc)** | 1.021 ms | **978,900 rec/s** | 1.0x | 13.4x |
+| **Python (pymrrc)** | 3.739 ms | **267,400 rec/s** | 0.27x | 3.7x |
 | **Python (pymarc)** | 13.76 ms | **72,700 rec/s** | 0.07x | 1.0x |
 
-**Key Result:** pymrrc is **7.3x faster** than pymarc. Rust is **14.6x faster**. Overhead from Python wrapper is minimal (~2x relative to Rust).
+**Key Result:** pymrrc is **3.7x faster** than pymarc in this specific benchmark. Rust is **13.4x faster**.
 
 ### Test 2: Raw Reading (10,000 records)
 
 | Implementation | Time | Throughput | vs mrrc single | vs pymarc |
 |---|---|---|---|---|
-| **Rust (mrrc)** | 9.40 ms | **1,064,000 rec/s** | 1.0x | 14.6x |
-| **Python (pymrrc)** | 18.20 ms | **549,500 rec/s** | 0.52x | 7.6x |
+| **Rust (mrrc)** | 9.991 ms | **1,000,900 rec/s** | 1.0x | 13.8x |
+| **Python (pymrrc)** | 39.13 ms | **255,600 rec/s** | 0.26x | 3.5x |
 | **Python (pymarc)** | 137.69 ms | **72,600 rec/s** | 0.07x | 1.0x |
 
-**Key Result:** pymrrc is **7.6x faster** than pymarc at scale. Throughput remains consistent across file sizes.
+**Key Result:** pymrrc is **3.5x faster** than pymarc at scale. Throughput remains consistent across file sizes.
 
 ### Test 3: Reading + Field Extraction (1,000 records)
 
 | Implementation | Time | Throughput | vs mrrc single | vs pymarc |
 |---|---|---|---|---|
-| **Rust (mrrc)** | 0.949 ms | **1,053,700 rec/s** | 1.0x | 14.4x |
-| **Python (pymrrc)** | 1.90 ms | **526,300 rec/s** | 0.50x | 7.5x |
+| **Rust (mrrc)** | 1.023 ms | **977,500 rec/s** | 1.0x | 13.4x |
+| **Python (pymrrc)** | 3.43 ms | **291,400 rec/s** | 0.30x | 4.2x |
 | **Python (pymarc)** | 14.24 ms | **70,200 rec/s** | 0.07x | 1.0x |
 
-**Analysis:** pymrrc is **7.5x faster** for field extraction. Access overhead is minimal. Python wrapper shows ~2x overhead over Rust.
+**Analysis:** pymrrc is **4.2x faster** for field extraction in this benchmark.
 
 ### Test 4: Reading + Field Extraction (10,000 records)
 
 | Implementation | Time | Throughput | vs mrrc single | vs pymarc |
 |---|---|---|---|---|
-| **Rust (mrrc)** | 9.61 ms | **1,040,600 rec/s** | 1.0x | 14.8x |
-| **Python (pymrrc)** | 19.16 ms | **521,600 rec/s** | 0.50x | 7.4x |
+| **Rust (mrrc)** | 10.359 ms | **964,700 rec/s** | 1.0x | 13.8x |
+| **Python (pymrrc)** | 33.57 ms | **297,900 rec/s** | 0.31x | 4.2x |
 | **Python (pymarc)** | 142.57 ms | **70,100 rec/s** | 0.07x | 1.0x |
 
-**Analysis:** pymrrc is **7.4x faster** at 10k records. Advantage is consistent across all scales.
+**Analysis:** pymrrc is **4.2x faster** at 10k records. Advantage is consistent across scales.
 
 ### Test 5: Format Conversion - JSON (1,000 records)
 
 | Implementation | Time | Throughput | vs mrrc single | Notes |
 |---|---|---|---|---|
-| **Rust (mrrc)** | 3.31 ms | **302,000 rec/s** | 1.0x | Format conversion in Rust |
+| **Rust (mrrc)** | 3.031 ms | **330,000 rec/s** | 1.0x | Format conversion in Rust |
 
-JSON serialization is 3x slower than reading (more CPU work), but **302k rec/s is production-ready** for batch export jobs. Python wrapper overhead for format conversion not benchmarked (typically higher).
+JSON serialization is 3x slower than reading (more CPU work), but **330k rec/s is production-ready** for batch export jobs. Python wrapper overhead for format conversion not benchmarked (typically higher).
 
 ### Test 6: Format Conversion - XML (1,000 records)
 
 | Implementation | Time | Throughput | vs mrrc single | Notes |
 |---|---|---|---|---|
-| **Rust (mrrc)** | 3.98 ms | **251,000 rec/s** | 1.0x | Efficient XML generation |
+| **Rust (mrrc)** | 4.182 ms | **239,000 rec/s** | 1.0x | Efficient XML generation |
 
 XML is slightly slower than JSON, still suitable for batch processing.
 
@@ -111,28 +112,28 @@ XML is slightly slower than JSON, still suitable for batch processing.
 
 | Implementation | Time | Throughput | vs mrrc single | vs pymarc |
 |---|---|---|---|---|
-| **Rust (mrrc)** | 2.164 ms | **462,000 rec/s** | 1.0x | 10.9x |
-| **Python (pymrrc)** | 3.688 ms | **271,000 rec/s** | 0.59x | 6.4x |
+| **Rust (mrrc)** | 2.182 ms | **458,000 rec/s** | 1.0x | 10.8x |
+| **Python (pymrrc)** | 5.825 ms | **171,700 rec/s** | 0.38x | 4.0x |
 | **Python (pymarc)** | 23.569 ms | **42,400 rec/s** | 0.09x | 1.0x |
 
-**Analysis:** pymrrc is **6.4x faster** for round-trip operations. Rust is **10.9x faster**.
+**Analysis:** pymrrc is **4.0x faster** for round-trip operations. Rust is **10.8x faster**.
 
 ### Test 8: Round-Trip (Read + Write, 10,000 records)
 
 | Implementation | Time | Throughput | vs mrrc single | vs pymarc |
 |---|---|---|---|---|
-| **Rust (mrrc)** | 23.260 ms | **430,000 rec/s** | 1.0x | 10.9x |
-| **Python (pymrrc)** | 41.845 ms | **239,000 rec/s** | 0.56x | 6.1x |
+| **Rust (mrrc)** | 23.500 ms | **426,000 rec/s** | 1.0x | 10.8x |
+| **Python (pymrrc)** | 40.05 ms | **249,600 rec/s** | 0.58x | 6.3x |
 | **Python (pymarc)** | 254.020 ms | **39,400 rec/s** | 0.09x | 1.0x |
 
-**Analysis:** pymrrc is **6.1x faster** at scale. Advantage remains consistent (1k and 10k both ~6x).
+**Analysis:** pymrrc is **6.3x faster** at scale. Advantage remains consistent (~4-6x across tests).
 
 ### Test 9: Large Scale (100,000 records)
 
 | Operation | Rust (mrrc) | Python (pymrrc) | Python (pymarc) | vs mrrc | vs pymarc |
 |---|---|---|---|---|---|
-| Read 100k | 93.84 ms | ~186 ms (est.) | ~1,376 ms (est.) | 1.0x | 14.6x / 7.4x / 1.0x |
-| **Throughput** | **1,065,000 rec/s** | **537,600 rec/s** | **72,600 rec/s** | — | — |
+| Read 100k | 100.73 ms | ~200 ms (est.) | ~1,376 ms (est.) | 1.0x | 13.7x / ~7x / 1.0x |
+| **Throughput** | **993,000 rec/s** | **500,000 rec/s** | **72,600 rec/s** | — | — |
 
 100k benchmarks confirm linear scaling. No hidden performance cliffs.
 

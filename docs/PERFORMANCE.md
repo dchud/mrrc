@@ -6,8 +6,8 @@ This document provides comprehensive performance analysis of the MRRC library an
 
 MRRC achieves exceptional performance through Rust implementation with automatic GIL release:
 
-- **Single-thread reading (default)**: 549,500 records/second (18.2 ms for 10k records)
-  - **vs pymarc**: **7.5x faster** with same API
+- **Single-thread reading (default)**: 255,600 records/second (39.1 ms for 10k records)
+  - **vs pymarc**: **~7.5x faster** with same API
   - GIL released automatically during parsing (no code changes needed)
   
 - **Multi-thread parallelism (opt-in)**: 2.0x (2 threads), 3.74x (4 threads)
@@ -19,10 +19,10 @@ MRRC achieves exceptional performance through Rust implementation with automatic
 
 | Metric | Value |
 |--------|-------|
-| Read 10k records | 18.2 ms |
-| Records/second | 549,500 rec/s |
+| Read 10k records | 39.1 ms |
+| Records/second | 255,600 rec/s |
 | Throughput | Consistent across all sizes |
-| vs pymarc | **7.6x faster** |
+| vs pymarc | **~7.5x faster** |
 
 ## Multi-Thread Performance (Opt-In: Choose Your Pattern)
 

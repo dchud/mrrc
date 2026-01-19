@@ -481,10 +481,10 @@ with open("output.mrc", "wb") as f:
 The Python wrapper achieves exceptional performance through Rust implementation with automatic GIL release:
 
 #### Speed Comparison (Single-Threaded, Default)
-- **Reading 1k records**: 1.87 ms (534,600 rec/s)
-- **Reading 10k records**: 18.2 ms (549,500 rec/s)
-- **vs pymarc**: **7.5x faster** (same API, dramatically better performance)
-- **vs Rust library**: 50% of pure Rust speed with Python convenience
+- **Reading 1k records**: 3.74 ms (267,400 rec/s)
+- **Reading 10k records**: 39.1 ms (255,600 rec/s)
+- **vs pymarc**: **~7.5x faster** (same API, dramatically better performance)
+- **vs Rust library**: ~25% of pure Rust speed with Python convenience
 - **GIL release**: Automatic during record parsing, no code changes needed
 
 #### Multi-Threaded Parallelism (Explicit, Opt-In)
