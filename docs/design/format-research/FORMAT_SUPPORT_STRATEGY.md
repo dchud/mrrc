@@ -1,0 +1,863 @@
+# Format Support Strategy & Implementation Plan
+
+**Document:** mrrc-fks.9 Follow-Up  
+**Date:** 2026-01-19  
+**Status:** Strategic Planning (No Implementation)  
+**Scope:** Rust library + Python wrapper format support roadmap  
+
+---
+
+## Executive Overview
+
+After completing 8/10 format evaluations (9 including Arrow Analytics), this document consolidates learnings and provides a concrete roadmap for:
+
+1. **Which formats to support** in mrrc Rust library (keep/add/remove)
+2. **Which formats to expose** in the Python wrapper
+3. **Identified gaps** in the evaluation or feature sets
+4. **Phase-based implementation plan** with clear ordering and dependencies
+5. **Documentation needed** for each format tier and user personas
+
+**Key Finding:** The evaluation confirmed no single format is optimal for all use cases. A **tiered approach** is needed:
+- **Tier 1 (Required):** ISO 2709 (baseline) + Protobuf (modern API)
+- **Tier 2 (High-Value):** FlatBuffers, Arrow, MessagePack
+- **Tier 3 (Specialized):** CBOR, Avro, Arrow Analytics
+- **Exclude:** Parquet (redundant with Arrow) + non-winners
+
+---
+
+## Part 1: Format Support Recommendations
+
+### 1.1 Keep in Library (Tier 1 + Tier 2)
+
+#### **TIER 1: Core Formats** (Required)
+Production deployment MUST include these.
+
+| Format | Rationale | Library Role | Python Wrapper |
+|--------|-----------|--------------|-----------------|
+| **ISO 2709** | Baseline; 50+ year proven standard; zero deps; 900k rec/sec | Primary import/export | Must expose (compatibility with pymarc) |
+| **Protobuf** | Modern API standard; schema evolution; multi-language; gRPC support; 100% fidelity | API/cross-language interchange | Must expose (natural for gRPC APIs) |
+
+**Implementation Priority:** Tier 1 must be complete before release.
+
+---
+
+#### **TIER 2: High-Value Formats** (Recommended)
+Significant value-add for common MARC use cases; low maintenance burden.
+
+| Format | Rationale | Library Role | Python Wrapper |
+|--------|-----------|--------------|-----------------|
+| **FlatBuffers** | 64% memory savings; 259k rec/sec; zero-copy capable; mobile/embedded use | Memory-constrained APIs, streaming | Expose (developers targeting mobile/embedded) |
+| **Arrow (Columnar)** | 865k rec/sec (negligible vs ISO 2709); 30% file size savings; analytics integration; ecosystem standard | In-memory analytics, tool interop (Polars, DuckDB) | Expose (data scientists) |
+| **MessagePack** | 25% file size savings; 750k rec/sec; 50+ language support; IPC use | Compact serialization, REST APIs, inter-process communication | Expose (REST/compact payload use cases) |
+
+**Implementation Priority:** Phase in order: Arrow > FlatBuffers > MessagePack (Arrow integrates naturally; FlatBuffers proven; MessagePack serde-friendly).
+
+---
+
+### 1.2 Add to Library (Tier 3)
+
+#### **TIER 3: Specialized Formats** (Conditional)
+Niche use cases; defer unless explicit customer demand.
+
+| Format | When to Add | Library Role | Python Wrapper |
+|--------|------------|--------------|-----------------|
+| **CBOR** | Government/academic archival requirements | Standards-based preservation (RFC 7949) | Low priority; expose only if demanded |
+| **Avro** | Event streaming (Kafka) or data lake integration | Kafka ecosystems; self-describing records | Conditional; expose for data lake users |
+| **Arrow Analytics (Rust-native)** | Heavy MARC discovery optimization workloads | Columnar analytics tier for SQL queries | Expert users; expose via Arrow IPC export |
+
+**Implementation Priority:** Only after Tier 1 + 2 are stable. Implement on demand basis (create `bd` issues per customer request).
+
+---
+
+### 1.3 Remove/Don't Add
+
+#### **Parquet**
+- ❌ **Reason:** Redundant with Arrow implementation
+- **Fact:** Parquet achieves same compression (98.3% vs Arrow's 95.99%) but adds 74% raw size overhead
+- **Alternative:** Users needing columnar format use Arrow + export to Parquet directly (external tool responsibility)
+- **Status:** Do NOT implement in mrrc. Document as user responsibility.
+
+#### **Other Excluded Formats**
+- **JSON, YAML, XML:** Evaluated in separate pymarc work (not part of binary format scope)
+- **TOML, Ion, MessagePack-Schema:** Out of scope for this project
+
+---
+
+## Part 2: Library Architecture (Rust Core)
+
+### 2.1 Recommended Module Structure
+
+```
+mrrc/src/
+├── formats/
+│   ├── iso2709/          (TIER 1)
+│   │   ├── reader.rs     (native Rust, already exists)
+│   │   ├── writer.rs     (native Rust, already exists)
+│   │   └── tests/
+│   │
+│   ├── protobuf/         (TIER 1)
+│   │   ├── schema.proto
+│   │   ├── reader.rs     (generated + wrapper)
+│   │   ├── writer.rs
+│   │   └── tests/
+│   │
+│   ├── flatbuffers/      (TIER 2)
+│   │   ├── schema.fbs
+│   │   ├── reader.rs     (generated + wrapper)
+│   │   ├── writer.rs
+│   │   └── tests/
+│   │
+│   ├── arrow/            (TIER 2)
+│   │   ├── columnar.rs   (Arrow builders for analytics)
+│   │   ├── ipc.rs        (Arrow IPC format for interop)
+│   │   ├── reader.rs
+│   │   ├── writer.rs
+│   │   └── tests/
+│   │
+│   ├── messagepack/      (TIER 2)
+│   │   ├── reader.rs     (serde-based)
+│   │   ├── writer.rs
+│   │   └── tests/
+│   │
+│   ├── cbor/             (TIER 3, optional)
+│   │   ├── reader.rs
+│   │   ├── writer.rs
+│   │   └── tests/
+│   │
+│   ├── avro/             (TIER 3, optional)
+│   │   ├── schema.avsc
+│   │   ├── reader.rs
+│   │   ├── writer.rs
+│   │   └── tests/
+│   │
+│   └── mod.rs            (central feature-gated exports)
+│
+└── lib.rs                (top-level exports)
+```
+
+### 2.2 Feature Flags
+
+```toml
+[features]
+# Core (always enabled)
+default = ["iso2709", "protobuf"]
+
+# Tier 1: Required formats
+iso2709 = []
+protobuf = ["prost", "prost-build"]
+
+# Tier 2: High-value formats
+flatbuffers = ["flatbuffers"]
+arrow = ["arrow", "parquet"]  # Note: Parquet via Arrow, user respons. for export
+messagepack = ["rmp-serde", "serde"]
+
+# Tier 3: Specialized formats
+cbor = ["ciborium"]
+avro = ["apache-avro"]
+arrow-analytics = ["arrow"]  # Requires Arrow; distinct from columnar format
+
+# Bundle features
+all-formats = ["iso2709", "protobuf", "flatbuffers", "arrow", "messagepack"]
+stdlib-formats = ["iso2709", "protobuf", "flatbuffers", "arrow", "messagepack"]
+archival-formats = ["iso2709", "cbor"]
+streaming-formats = ["protobuf", "avro"]
+```
+
+### 2.3 API Design Consistency
+
+Each format reader/writer should follow the same pattern for discoverability:
+
+```rust
+// Generic pattern for all formats
+pub struct [Format]Reader {
+    // format-specific fields
+}
+
+impl Reader<MarcRecord> for [Format]Reader {
+    fn read_record(&mut self) -> Result<Option<MarcRecord>> { }
+    fn into_iter(self) -> impl Iterator<Item = Result<MarcRecord>> { }
+}
+
+pub struct [Format]Writer {
+    // format-specific fields
+}
+
+impl Writer for [Format]Writer {
+    fn write_record(&mut self, record: &MarcRecord) -> Result<()> { }
+    fn write_batch(&mut self, records: &[MarcRecord]) -> Result<()> { }
+    fn finish(self) -> Result<()> { }
+}
+
+// Convenience functions
+pub fn read_[format](source: impl Read) -> Result<Vec<MarcRecord>> { }
+pub fn write_[format](records: &[MarcRecord], target: impl Write) -> Result<()> { }
+```
+
+---
+
+## Part 3: Python Wrapper Strategy
+
+### 3.1 Tier-Based Exposure
+
+**TIER 1 (must_have):**
+```python
+# Always available
+import mrrc
+records = mrrc.read_iso2709(path)
+records = mrrc.read_protobuf(data)
+mrrc.write_iso2709(records, path)
+mrrc.write_protobuf(records) -> bytes
+```
+
+**TIER 2 (strongly_recommended):**
+```python
+# Feature-gated in PyO3 module
+import mrrc
+records = mrrc.read_flatbuffers(data)
+records = mrrc.read_arrow(data)      # Returns list[MarcRecord]
+records = mrrc.read_messagepack(data)
+# ...write variants
+```
+
+**TIER 3 (optional):**
+```python
+# Only if explicitly imported
+from mrrc.formats import cbor, avro, arrow_analytics
+records = cbor.read(data)
+```
+
+### 3.2 Python Wrapper Modules
+
+```
+mrrc-python/src/
+├── mrrc/
+│   ├── __init__.py           (Tier 1 + 2 exports)
+│   ├── _mrrc.pyi             (PyO3 type hints)
+│   │
+│   ├── formats/              (Tier 2/3 modules)
+│   │   ├── __init__.py
+│   │   ├── flatbuffers.py    (wrapper around Rust impl)
+│   │   ├── arrow.py          (wrapper + PyArrow integration)
+│   │   ├── messagepack.py
+│   │   ├── cbor.py
+│   │   ├── avro.py
+│   │   └── arrow_analytics.py (Parquet export guidance)
+│   │
+│   ├── analytics/            (Arrow Analytics helpers)
+│   │   ├── __init__.py
+│   │   ├── export.py         (MARC → Arrow RecordBatch)
+│   │   ├── duckdb_integration.py (optional; show how to query)
+│   │   └── polars_integration.py (optional; show how to use)
+│   │
+│   └── types.py              (common type definitions)
+```
+
+### 3.3 Python API Design
+
+**Simple path (Tier 1 + 2 most users):**
+```python
+import mrrc
+
+# Read various formats
+records = mrrc.read("data.iso", format="iso2709")
+records = mrrc.read("data.pb", format="protobuf")
+records = mrrc.read("data.fb", format="flatbuffers")
+
+# Write various formats
+mrrc.write(records, "output.iso", format="iso2709")
+mrrc.write(records, "output.pb", format="protobuf")
+
+# Batch operations with streaming
+with mrrc.Reader("large.iso", format="iso2709") as reader:
+    for batch in reader.batches(size=1000):
+        process(batch)
+```
+
+**Advanced path (Tier 3 + analytics):**
+```python
+import mrrc
+from mrrc.formats import avro, cbor
+from mrrc.analytics import to_arrow
+
+# Specialized formats
+records = avro.read("kafka_export.avro")
+records = cbor.read("archive.cbor")
+
+# Analytics export
+records = mrrc.read("data.iso")
+arrow_table = to_arrow(records)  # → pyarrow.Table
+arrow_table.to_parquet("output.parquet")
+
+# DuckDB integration (user responsibility)
+import duckdb
+con = duckdb.connect()
+con.execute("SELECT * FROM arrow_table WHERE field_tag = '650'").show()
+```
+
+---
+
+## Part 4: Identified Gaps & Missing Evaluations
+
+### 4.1 Format Evaluation Gaps
+
+#### **Partially Explored**
+- **Arrow Analytics streaming:** Evaluated POC; should test streaming Arrow IPC reader (>100M records)
+- **Parquet compression variants:** Only tested Snappy; should benchmark ZSTD/LZ4 for archival
+- **Protobuf vs FlatBuffers schema evolution:** Both scored well; should test upgrade scenario (record v1 → v2)
+- **Cross-language round-trip:** Rust → Python → Java verification (Python wrapper may diverge)
+
+#### **Not Evaluated (Potentially Valuable)**
+- **Bincode (Rust-native serde):** No external deps; ~10% file size overhead; worth POC if performance is critical
+- **Abomonated (specialized serde):** Zero-copy serialization; explore for memory-constrained workloads
+- **JSON Lines (newline-delimited JSON):** Human-readable streaming; useful for debugging/logging
+- **Protocol Buffer V2 vs V3:** Evaluated V3 (default); V2 has different evolution semantics
+- **Custom compressed format:** ISO 2709 + zstd/br compression layer; might beat all options combined
+- **Hybrid format (ISO 2709 with schema metadata):** Add optional schema header to ISO 2709 for evolution support
+
+#### **Recommendation:**
+Create follow-up `bd` issues for:
+1. **mrrc-fks.11:** Streaming Arrow IPC evaluation (>100M records)
+2. **mrrc-fks.12:** Protobuf/FlatBuffers schema evolution upgrade testing
+3. **mrrc-fks.13:** Cross-language round-trip verification (Rust ↔ Python ↔ Java)
+4. **Optional research:** Bincode POC, JSON Lines benchmarking
+
+### 4.2 Non-Binary Format Coverage
+
+The evaluation focused on binary formats. Consider future scope:
+
+| Format Type | Status | Recommendation |
+|-------------|--------|-----------------|
+| **JSON** | ✅ Covered in pymarc (not in this scope) | Evaluate separately if needed |
+| **XML/MARC-XML** | ✅ Covered in pymarc | Different project |
+| **CSV/TSV** | ⚠️ Partial (MARC field extraction) | Low priority; users export via other tools |
+| **RDF/Linked Data** | ❌ Not evaluated | Future project if semantic MARC demanded |
+| **YAML** | ❌ Not evaluated | Low priority; JSON preferred for MARC |
+
+**Action:** Create separate MARC-XML and JSON evaluation documents if customer demand exists.
+
+---
+
+## Part 5: Implementation Plan
+
+### 5.1 Phase Structure
+
+**Phase 0 (Foundation):** Establish test framework, module structure, documentation patterns  
+**Phase 1 (Core):** ISO 2709 validation, Protobuf implementation  
+**Phase 2 (Value-Add):** Arrow, FlatBuffers, MessagePack  
+**Phase 3 (Specialized):** CBOR, Avro, Arrow Analytics  
+**Phase 4 (Polish):** Documentation, Python wrapper, tutorials  
+
+---
+
+### 5.2 Detailed Implementation Roadmap
+
+#### **PHASE 0: Foundation (2-3 days)**
+
+**Objective:** Set up project structure and validation framework before implementing first new format.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Create `formats/mod.rs` with feature flags | 2 hrs | — | Modular format architecture |
+| Establish generic Reader/Writer traits | 4 hrs | — | `traits.rs` with standard API |
+| Create format test fixtures from FIDELITY_TEST_SET | 2 hrs | FIDELITY_TEST_SET.md | Shared test data for all formats |
+| Add Cargo.toml feature gates + docs | 2 hrs | — | Build-time format selection |
+| Create FORMAT_IMPLEMENTATION_CHECKLIST (how to add a format) | 3 hrs | — | Template for format additions |
+| Update main README with format matrix + installation guide | 2 hrs | — | User-facing documentation |
+
+**Estimate:** ~15 hrs (1.5 days)  
+**Dependencies:** None  
+**Blocking:** Nothing; can start immediately
+
+**Expected Issue Creation:** bd create "Phase 0: Foundation setup" --parent mrrc-fks.9
+
+---
+
+#### **PHASE 1: Core Formats (4-5 days)**
+
+##### **1A: ISO 2709 Validation & Refactoring (2 days)**
+
+**Objective:** Ensure ISO 2709 reader/writer conform to new module structure and generic traits.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Refactor existing ISO 2709 reader into `formats/iso2709/reader.rs` | 3 hrs | Phase 0 | Trait-compliant reader |
+| Refactor existing ISO 2709 writer into `formats/iso2709/writer.rs` | 3 hrs | Phase 0 | Trait-compliant writer |
+| Add round-trip tests (FIDELITY_TEST_SET) | 2 hrs | Phase 0 | 100+ test cases |
+| Benchmark vs baseline (should be identical) | 1 hr | Phase 0 | Performance regression check |
+| Document ISO 2709 format specifics (compression, streaming, edge cases) | 2 hrs | — | FORMATS_ISO2709.md |
+
+**Estimate:** ~11 hrs (1.5 days)  
+**Dependencies:** Phase 0  
+**Blocking:** Protobuf work (needs traits established)
+
+**Expected Issue:** bd create "Phase 1A: ISO 2709 refactoring" --parent mrrc-fks.9
+
+---
+
+##### **1B: Protobuf Implementation (2-3 days)**
+
+**Objective:** Implement Protobuf reader/writer with full schema versioning support.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Define MARC.proto schema (field tags, indicators, subfields) | 4 hrs | Phase 0 | `src/formats/protobuf/schema.proto` |
+| Generate Rust code via prost-build | 1 hr | Phase 0 | Auto-generated `marc.rs` |
+| Implement ProtobufReader (trait-compliant) | 3 hrs | Phase 1A | `src/formats/protobuf/reader.rs` |
+| Implement ProtobufWriter (trait-compliant) | 3 hrs | Phase 1A | `src/formats/protobuf/writer.rs` |
+| Add round-trip tests (FIDELITY_TEST_SET) | 2 hrs | Phase 0 | 100+ test cases |
+| Test schema versioning (add optional field, old reader still works) | 2 hrs | Phase 1B | Evolution verification |
+| Benchmark (target: 100k rec/sec) | 1 hr | Phase 1B | Performance verification |
+| Document schema design + evolution strategy | 2 hrs | — | FORMATS_PROTOBUF.md |
+
+**Estimate:** ~18 hrs (2-3 days)  
+**Dependencies:** Phase 0, Phase 1A  
+**Blocking:** Python wrapper (Tier 1 Protobuf support)
+
+**Expected Issue:** bd create "Phase 1B: Protobuf implementation" --parent mrrc-fks.9 --deps mrrc-fks.1
+
+---
+
+#### **PHASE 2: High-Value Formats (6-8 days)**
+
+##### **2A: Arrow (Columnar + Analytics) (3 days)**
+
+**Objective:** Implement Arrow reader/writer for both interchange and analytics use cases.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Design Arrow schema for row-oriented interchange (MarcRecord → RecordBatch) | 2 hrs | Phase 0 | Arrow schema design |
+| Implement ArrowWriter (builds RecordBatch from MarcRecord) | 4 hrs | Phase 0 | `src/formats/arrow/writer.rs` |
+| Implement ArrowReader (reads RecordBatch, reconstructs MarcRecord) | 4 hrs | Phase 0 | `src/formats/arrow/reader.rs` |
+| Implement ArrowIpcWriter (serializes to Arrow IPC format for DuckDB/Polars) | 2 hrs | Phase 2A | `src/formats/arrow/ipc.rs` |
+| Add round-trip tests (FIDELITY_TEST_SET) | 2 hrs | Phase 0 | 100+ test cases |
+| Test IPC interop with DuckDB (read via Python) | 2 hrs | Phase 2A | Integration verification |
+| Benchmark (target: 865k rec/sec) | 1 hr | Phase 2A | Performance verification |
+| Implement Arrow Analytics builder (MARC → long format columnar) | 3 hrs | Phase 2A | `src/formats/arrow/columnar.rs` |
+| Document Arrow interchange + analytics tier distinction | 2 hrs | — | FORMATS_ARROW.md |
+
+**Estimate:** ~22 hrs (3 days)  
+**Dependencies:** Phase 1A (MarcRecord trait)  
+**Blocking:** Python wrapper Arrow support, Arrow Analytics tier
+
+**Expected Issue:** bd create "Phase 2A: Arrow implementation" --parent mrrc-fks.9 --deps mrrc-fks.7
+
+---
+
+##### **2B: FlatBuffers (2 days)**
+
+**Objective:** Implement FlatBuffers reader/writer for memory-efficient APIs.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Define MARC.fbs schema (field tags, indicators, subfields) | 2 hrs | Phase 0 | `src/formats/flatbuffers/schema.fbs` |
+| Generate Rust code via flatc | 1 hr | Phase 0 | Auto-generated builders |
+| Implement FlatBuffersWriter (trait-compliant) | 3 hrs | Phase 1A | `src/formats/flatbuffers/writer.rs` |
+| Implement FlatBuffersReader (trait-compliant) | 3 hrs | Phase 1A | `src/formats/flatbuffers/reader.rs` |
+| Add round-trip tests (FIDELITY_TEST_SET) | 2 hrs | Phase 0 | 100+ test cases |
+| Memory profile verification (target: 64% memory savings) | 1 hr | Phase 2B | Memory regression check |
+| Benchmark (target: 259k rec/sec) | 1 hr | Phase 2B | Performance verification |
+| Document FlatBuffers schema + zero-copy design | 2 hrs | — | FORMATS_FLATBUFFERS.md |
+
+**Estimate:** ~15 hrs (2 days)  
+**Dependencies:** Phase 1A  
+**Blocking:** Python wrapper FlatBuffers support
+
+**Expected Issue:** bd create "Phase 2B: FlatBuffers implementation" --parent mrrc-fks.9 --deps mrrc-fks.2
+
+---
+
+##### **2C: MessagePack (2 days)**
+
+**Objective:** Implement MessagePack reader/writer for compact, universal serialization.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Define MessagePack schema via serde impl on MarcRecord | 2 hrs | Phase 1A | Serde traits on MarcRecord |
+| Implement MessagePackWriter (serialize MarcRecord) | 2 hrs | Phase 1A | `src/formats/messagepack/writer.rs` |
+| Implement MessagePackReader (deserialize to MarcRecord) | 2 hrs | Phase 1A | `src/formats/messagepack/reader.rs` |
+| Add round-trip tests (FIDELITY_TEST_SET) | 2 hrs | Phase 0 | 100+ test cases |
+| Benchmark (target: 750k rec/sec) | 1 hr | Phase 2C | Performance verification |
+| Compare with MessagePack-Schema and raw serde (document tradeoff) | 1 hr | Phase 2C | Design decision |
+| Document MessagePack schema-less design + compatibility | 2 hrs | — | FORMATS_MESSAGEPACK.md |
+
+**Estimate:** ~12 hrs (2 days)  
+**Dependencies:** Phase 1A  
+**Blocking:** Python wrapper MessagePack support
+
+**Expected Issue:** bd create "Phase 2C: MessagePack implementation" --parent mrrc-fks.9 --deps mrrc-fks.5
+
+---
+
+#### **PHASE 3: Specialized Formats (On-Demand)**
+
+To be implemented only if customer demand or explicit project requirement.
+
+| Format | Effort | Condition |
+|--------|--------|-----------|
+| **CBOR** | 2 days | Archival requirement OR government/academic mandate |
+| **Avro** | 2 days | Kafka/data lake integration required |
+| **Arrow Analytics** | 1 day | Heavy MARC analytics workload (integrate existing POC) |
+
+**Expected Issues:**
+- bd create "Phase 3A: CBOR implementation" --parent mrrc-fks.9 --priority 3
+- bd create "Phase 3B: Avro implementation" --parent mrrc-fks.9 --priority 3
+- bd create "Phase 3C: Arrow Analytics integration" --parent mrrc-fks.9 --priority 3
+
+---
+
+#### **PHASE 4: Python Wrapper & Documentation (5-7 days)**
+
+##### **4A: Python PyO3 Bindings (3 days)**
+
+**Objective:** Expose all Tier 1 + Tier 2 formats to Python with type hints and convenient APIs.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Update PyO3 module to export Tier 1 formats (iso2709, protobuf) | 2 hrs | Phase 1 | Python access to core formats |
+| Add Tier 2 format exports (arrow, flatbuffers, messagepack) | 2 hrs | Phase 2 | Python access to high-value formats |
+| Implement format-agnostic `mrrc.read(path, format=...)` function | 2 hrs | Phase 1-2 | Convenient single API |
+| Implement format-agnostic `mrrc.write(records, path, format=...)` function | 2 hrs | Phase 1-2 | Convenient single API |
+| Add `.pyi` type hints for all formats | 2 hrs | Phase 1-2 | IDE autocompletion |
+| Test round-trip fidelity via Python (FIDELITY_TEST_SET) | 2 hrs | Phase 4A | Cross-language verification |
+| Benchmark Python wrapper overhead | 1 hr | Phase 4A | Performance profile |
+
+**Estimate:** ~13 hrs (2 days)  
+**Dependencies:** Phase 1 + Phase 2  
+**Blocking:** User-facing Python documentation
+
+**Expected Issue:** bd create "Phase 4A: Python PyO3 bindings" --parent mrrc-fks.9
+
+---
+
+##### **4B: Format Modules & Helpers (1 day)**
+
+**Objective:** Create user-friendly format-specific modules and integration guides.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Create `mrrc/formats/` package with format-specific modules | 2 hrs | Phase 4A | Format submodule structure |
+| Implement `mrrc.formats.arrow.export_to_parquet()` helper | 2 hrs | Phase 2A | Parquet export convenience |
+| Implement `mrrc.analytics` module with Arrow analytics helpers | 2 hrs | Phase 2A | Analytics export convenience |
+| Create integration examples (DuckDB queries, Polars dataframes) | 2 hrs | Phase 2A | User education |
+
+**Estimate:** ~8 hrs (1 day)  
+**Dependencies:** Phase 2A, Phase 4A  
+**Blocking:** Documentation
+
+**Expected Issue:** bd create "Phase 4B: Python format modules" --parent mrrc-fks.9
+
+---
+
+##### **4C: Comprehensive Documentation (2-3 days)**
+
+**Objective:** Write user guides, tutorials, and architecture documentation.
+
+| Task | Effort | Dependencies | Deliverable |
+|------|--------|--------------|------------|
+| Update main README with format support matrix (which versions?) | 2 hrs | Phase 4A-4B | User-facing overview |
+| Write INSTALLATION_GUIDE.md (feature flags, optional deps) | 2 hrs | Phase 0 | Getting started |
+| Write FORMAT_SELECTION_GUIDE.md (decision tree for users) | 3 hrs | All | Format choice guidance |
+| Create PYTHON_TUTORIAL.md (read/write examples, format conversions) | 3 hrs | Phase 4A-4B | Python user education |
+| Create RUST_TUTORIAL.md (trait-based APIs, custom implementations) | 2 hrs | Phase 4A | Rust user education |
+| Write STREAMING_GUIDE.md (large file handling, memory optimization) | 2 hrs | Phase 1A | Performance guidance |
+| Create MIGRATION_GUIDE.md (pymarc → mrrc format mapping) | 2 hrs | All | Legacy user support |
+| Update API docs (rustdoc + Python docstrings) | 2 hrs | Phase 4A | Code-level documentation |
+| Write ARCHITECTURE.md (format hierarchy, feature interactions) | 2 hrs | Phase 0 | Maintainer documentation |
+
+**Estimate:** ~20 hrs (2-3 days)  
+**Dependencies:** All phases  
+**Blocking:** Release
+
+**Expected Issue:** bd create "Phase 4C: Comprehensive documentation" --parent mrrc-fks.9
+
+---
+
+### 5.3 Implementation Sequence & Critical Path
+
+```
+PHASE 0: Foundation (1.5 days) [CRITICAL]
+  └─ Traits, module structure, test fixtures
+      │
+      ├─→ PHASE 1A: ISO 2709 refactoring (1.5 days) [CRITICAL]
+      │    │
+      │    └─→ PHASE 1B: Protobuf (2-3 days) [CRITICAL]
+      │         ├─→ PHASE 2A: Arrow (3 days) [HIGH VALUE]
+      │         ├─→ PHASE 2B: FlatBuffers (2 days) [HIGH VALUE]
+      │         └─→ PHASE 2C: MessagePack (2 days) [HIGH VALUE]
+      │              │
+      │              └─→ PHASE 4A: Python bindings (2 days)
+      │                   │
+      │                   └─→ PHASE 4B: Python modules (1 day)
+      │                        │
+      │                        └─→ PHASE 4C: Documentation (2-3 days) [BLOCKING]
+      │
+      └─→ PHASE 3: Specialized (On-demand)
+           └─ CBOR, Avro, Arrow Analytics
+```
+
+**Critical Path Duration:** 15-18 days (Tier 1 + Tier 2 complete)
+
+**Fast-Track Option (MVP):** Phase 0 + Phase 1A + Phase 1B + Phase 4C = 7-8 days (ISO 2709 + Protobuf only)
+
+---
+
+### 5.4 Parallel Tracks Opportunity
+
+After Phase 1B, the following can run in parallel:
+- Phase 2A, 2B, 2C can be independent (no inter-format dependencies)
+- Documentation can start after Phase 1 is feature-complete
+- Python wrapper work can start once Phase 2 is underway
+
+**Recommended Parallel Structure:**
+```
+After Phase 1B:
+- Developer 1: Phase 2A (Arrow)
+- Developer 2: Phase 2B (FlatBuffers) 
+- Developer 3: Phase 2C (MessagePack)
+- Developer 4: Phase 4C (Documentation) [can start early]
+```
+
+---
+
+## Part 6: Documentation Gaps & New Documents Needed
+
+### 6.1 New Documents to Create
+
+#### **User-Facing Documentation**
+
+| Document | Purpose | Owner | Effort | Phase |
+|----------|---------|-------|--------|-------|
+| `INSTALLATION_GUIDE.md` | How to install mrrc with desired formats | Tech writer | 2 hrs | Phase 4C |
+| `FORMAT_SELECTION_GUIDE.md` | Decision tree for choosing formats | Product | 3 hrs | Phase 4C |
+| `PYTHON_TUTORIAL.md` | Examples: read/write/convert in Python | Tech writer | 3 hrs | Phase 4C |
+| `RUST_TUTORIAL.md` | Examples: Reader/Writer trait usage | Tech writer | 2 hrs | Phase 4C |
+| `STREAMING_GUIDE.md` | Large file handling & memory optimization | Architect | 2 hrs | Phase 4C |
+| `MIGRATION_GUIDE.md` | pymarc → mrrc format compatibility | Tech writer | 2 hrs | Phase 4C |
+| `FORMATS_*.md` (per format) | Format-specific design + tradeoffs | Implementer | 2 hrs each | Per phase |
+
+#### **Developer/Maintainer Documentation**
+
+| Document | Purpose | Owner | Effort | Phase |
+|----------|---------|-------|--------|-------|
+| `FORMAT_IMPLEMENTATION_CHECKLIST.md` | Template for adding new formats | Architect | 3 hrs | Phase 0 |
+| `ARCHITECTURE.md` | Module organization + dependencies | Architect | 2 hrs | Phase 0 |
+| `TRAIT_DESIGN.md` | Reader/Writer trait specification | Architect | 1.5 hrs | Phase 0 |
+
+#### **Evaluation Follow-Ups**
+
+| Document | Purpose | Owner | Effort | Phase |
+|----------|---------|-------|--------|-------|
+| Updated `COMPARISON_MATRIX.md` | Include implementation status + timeline | Architect | 2 hrs | After Phase 4C |
+| `EVALUATION_BINCODE.md` (optional) | Rust-native serde POC | Researcher | 4 hrs | Post-release |
+| `EVALUATION_JSON_LINES.md` (optional) | Human-readable streaming format | Researcher | 4 hrs | Post-release |
+
+### 6.2 Documentation Update Checklist
+
+**Existing documents to update:**
+
+- [ ] `README.md` - Add format support matrix, installation, quick start
+- [ ] `CONTRIBUTING.md` - Add "How to implement a format" section (link to checklist)
+- [ ] `Cargo.toml` - Add feature flag documentation
+- [ ] `src/lib.rs` - Add module-level docs explaining format tiers
+- [ ] `src/formats/mod.rs` - Document Reader/Writer traits
+- [ ] `pyproject.toml` - Add Python format availability docs
+
+---
+
+## Part 7: Format Support Priority Matrix
+
+### 7.1 Decision Framework: Keep vs Remove vs Add
+
+```
+Keep in Library?
+├─ YES if: Core use case OR high-value (low cost)
+│  ├─ TIER 1: Required (must ship)
+│  │  └─ ISO 2709, Protobuf
+│  └─ TIER 2: Recommended (high ROI)
+│     └─ Arrow, FlatBuffers, MessagePack
+├─ MAYBE if: Specialized use case (low cost, on-demand)
+│  └─ TIER 3: Niche (conditional)
+│     └─ CBOR, Avro, Arrow Analytics
+└─ NO if: Redundant OR high cost
+   └─ Parquet (use Arrow instead)
+   └─ Excluded: JSON, XML, YAML (different project)
+```
+
+### 7.2 Customer Personas & Format Recommendations
+
+| Persona | Primary Formats | Secondary Formats | Why |
+|---------|-----------------|-------------------|-----|
+| **MARC Librarian (pymarc migrant)** | ISO 2709, Protobuf | Arrow (analytics) | Familiar with ISO 2709; gRPC for modern APIs |
+| **REST API Developer** | Protobuf, FlatBuffers | MessagePack | gRPC/REST standard; memory-efficient |
+| **Data Scientist** | Arrow, MessagePack | Avro | Analytics-first; Parquet export optional |
+| **Embedded/Mobile Dev** | FlatBuffers, MessagePack | Arrow | Memory-constrained; zero-copy important |
+| **Enterprise Data Lake** | Avro, Arrow | Protobuf | Kafka/Hadoop integration; schema registry |
+| **Preservation/Archival** | ISO 2709, CBOR | Protobuf | Long-term standard; RFC 7949 compliance |
+| **High-Frequency Batch** | ISO 2709, Arrow | MessagePack | Maximum throughput; minimal overhead |
+
+---
+
+## Part 8: Risk Mitigation & Known Issues
+
+### 8.1 Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|-----------|
+| Dependency bloat (too many formats) | Medium | Low | Feature flags; clear tier structure; minimum viable set |
+| Breaking API changes across formats | Low | High | Stabilize Reader/Writer traits in Phase 0; test cross-version compat |
+| Performance regression (adding formats) | Low | Medium | Benchmark each phase; CI performance gates |
+| Python wrapper maintenance burden | Medium | Medium | Keep wrapper thin; delegate to PyO3 + serde where possible |
+| Schema evolution issues (Protobuf/FlatBuffers) | Low | High | Design schemas carefully in Phase 1; add evolution tests |
+| DuckDB/Polars interop breaks | Low | Medium | Test with pinned versions; monitor upstream changes |
+
+### 8.2 Known Limitations
+
+| Limitation | Workaround | Priority |
+|------------|------------|----------|
+| Parquet export not built-in (user responsibility) | Document in tutorials; provide Arrow IPC → Parquet example | Low |
+| Arrow Analytics requires full materialization | OK for typical collections (<10M records); document trade-offs | Medium |
+| MessagePack schema-less (no versioning) | Document and accept limitation; use Protobuf for schema evolution | Low |
+| FlatBuffers append-only schema evolution | Document constraint; offer Protobuf alternative for complex evolution | Low |
+| Python round-trip fidelity unverified (yet) | Phase 4A testing; create cross-language CI check | High |
+
+---
+
+## Part 9: Success Criteria & Completion Definition
+
+### 9.1 Phase Completion Criteria
+
+**Phase 0:**
+- [ ] All feature flags defined and documented
+- [ ] Reader/Writer traits established and tested
+- [ ] Test fixtures available for all formats
+- [ ] Module structure in place with placeholders
+
+**Phase 1:**
+- [ ] ISO 2709 refactored and benchmarked (≥900k rec/sec)
+- [ ] Protobuf reader/writer complete (≥100k rec/sec)
+- [ ] Schema versioning tested (forward + backward compat)
+- [ ] Round-trip fidelity 100% (FIDELITY_TEST_SET)
+- [ ] Documentation: FORMATS_ISO2709.md, FORMATS_PROTOBUF.md
+
+**Phase 2:**
+- [ ] Arrow, FlatBuffers, MessagePack all complete
+- [ ] Performance targets met (Arrow ≥865k, FlatBuffers ≥259k, MessagePack ≥750k)
+- [ ] Round-trip fidelity 100% for all formats
+- [ ] IPC interop verified (Arrow ↔ DuckDB)
+- [ ] Documentation: FORMATS_ARROW.md, FORMATS_FLATBUFFERS.md, FORMATS_MESSAGEPACK.md
+
+**Phase 4 (Complete Release):**
+- [ ] Python wrapper exports all Tier 1 + 2 formats
+- [ ] Type hints (`.pyi`) complete
+- [ ] Comprehensive tutorials (Python + Rust)
+- [ ] Format selection guide + installation instructions
+- [ ] Updated README with full matrix
+- [ ] CI tests: Round-trip + cross-language + performance gates
+
+### 9.2 Quality Gates Before Release
+
+```
+Release Blockers (must-have):
+- [ ] All Tier 1 formats pass round-trip tests (100% fidelity)
+- [ ] All Tier 1 formats meet performance targets (±10% variance)
+- [ ] No regressions in existing ISO 2709 functionality
+- [ ] Python wrapper tested with Tier 1 formats
+- [ ] Installation docs complete (feature flags clear)
+- [ ] MIGRATION_GUIDE.md for pymarc users written
+
+Release Desirables (nice-to-have):
+- [ ] All Tier 2 formats complete + tested
+- [ ] Python wrapper for all Tier 2 formats
+- [ ] Streaming guide documentation
+- [ ] Benchmark report vs pymarc
+```
+
+---
+
+## Part 10: Recommendations Summary
+
+### 10.1 Library (Rust mrrc)
+
+**MUST INCLUDE (Tier 1):**
+1. ISO 2709 (refactored, optimized)
+2. Protobuf (full schema evolution support)
+
+**STRONGLY RECOMMENDED (Tier 2):**
+3. Arrow (columnar interchange + analytics)
+4. FlatBuffers (memory-efficient streaming)
+5. MessagePack (compact, universal)
+
+**CONDITIONAL (Tier 3):**
+6. CBOR (archival requirement)
+7. Avro (data lake requirement)
+8. Arrow Analytics (analytical workload requirement)
+
+**EXCLUDE:**
+- Parquet (redundant with Arrow; user responsibility to export)
+
+---
+
+### 10.2 Python Wrapper
+
+**MUST EXPOSE (Tier 1):**
+- `mrrc.read_iso2709()` / `mrrc.write_iso2709()`
+- `mrrc.read_protobuf()` / `mrrc.write_protobuf()`
+- Convenience: `mrrc.read(format="iso2709")` / `mrrc.write(format="protobuf")`
+
+**SHOULD EXPOSE (Tier 2):**
+- `mrrc.read_arrow()` / `mrrc.write_arrow()`
+- `mrrc.read_flatbuffers()` / `mrrc.write_flatbuffers()`
+- `mrrc.read_messagepack()` / `mrrc.write_messagepack()`
+
+**OPTIONAL (Tier 3):**
+- `mrrc.formats.cbor`, `mrrc.formats.avro`, `mrrc.formats.arrow_analytics`
+- `mrrc.analytics.export_to_parquet()`, `mrrc.analytics.to_arrow()`
+
+---
+
+### 10.3 Timeline & Resources
+
+| Phase | Duration | Est. Effort | FTE Required |
+|-------|----------|-------------|--------------|
+| Phase 0 | 1.5 days | 15 hrs | 2 |
+| Phase 1 | 3-5 days | 29 hrs | 2 |
+| Phase 2 | 6-8 days | 49 hrs | 3 |
+| Phase 4 | 5-7 days | 41 hrs | 2 |
+| **Total** | **15-20 days** | **134 hrs** | **2-3 (avg)** |
+
+**Critical Path:** 15-18 days (no parallel work)  
+**With Parallelization:** 10-12 days (Phase 2A/B/C + docs in parallel)  
+**Fast-Track MVP:** 7-8 days (Tier 1 only)
+
+---
+
+### 10.4 Next Immediate Steps
+
+1. **Create Phase 0 issue:** `bd create "Phase 0: Foundation setup" -p 1 --parent mrrc-fks.9`
+2. **Establish writer ownership:** Assign Phase leads (ISO 2709, Protobuf, Arrow, FlatBuffers, etc.)
+3. **Finalize FORMAT_IMPLEMENTATION_CHECKLIST.md** in Phase 0
+4. **Set up CI gates:** Performance benchmarking, round-trip tests
+5. **Schedule kick-off:** Phase 0 starts immediately after mrrc-fks.9 approval
+
+---
+
+## Appendix: Format at a Glance
+
+### Quick Reference: When to Use Each Format
+
+| Use Case | Recommended Format | Why |
+|----------|-------------------|-----|
+| **Default/Legacy** | ISO 2709 | Proven standard, maximum performance |
+| **Modern API** | Protobuf | Schema contracts, gRPC, cross-language |
+| **Streaming, Low Memory** | FlatBuffers | 64% memory savings, zero-copy |
+| **Analytics, In-Memory** | Arrow | Columnar format, DuckDB/Polars integration |
+| **Compact Storage** | MessagePack | 25% smaller, 50+ language support |
+| **Government Archival** | CBOR | RFC 7949 standard, diagnostic notation |
+| **Kafka/Data Lakes** | Avro | Schema registry, self-describing |
+| **Discovery Optimization** | Arrow Analytics | SQL queries, field frequency analysis |
+
+---
+
+**Document Complete**  
+For implementation planning questions, refer to Part 5 (Implementation Plan).  
+For format selection questions, refer to Part 10 (Recommendations Summary).
