@@ -2,8 +2,8 @@
 
 **Last Updated:** 2026-01-19  
 **Test Environment:** macOS 15.7.2 (arm64), Python 3.12.8, Rust 1.71+  
-**Data:** Actual measured benchmarks (Criterion.rs for Rust, pytest-benchmark for Python, direct comparison for pymarc)
-**Note:** Numbers updated Jan 2026 after recent performance improvements; see individual test results below for changes
+**Data:** Actual measured benchmarks (Criterion.rs for Rust, pytest-benchmark for Python with warm-up, direct comparison for pymarc)
+**Important:** Python benchmarks use pytest-benchmark which automatically warms up over multiple iterations. Cold-start performance is ~20% slower due to JIT/caching effects. Warm-up numbers (~300k rec/s) are what matter for real workloads.
 
 ## Executive Summary
 
@@ -14,7 +14,8 @@ MRRC offers a **three-tier performance spectrum** for MARC processing:
 3. ✅ **Pure Python (pymarc)**: Legacy baseline — for pure Python environments only
 
 **Key Findings:**
-- **Single-threaded (default):** pymrrc is **~7.5x faster than pymarc**, with GIL release happening transparently during record parsing
+- **Single-threaded (default, after warm-up):** pymrrc is **~4x faster than pymarc**, with GIL release happening transparently during record parsing
+- **Cold-start penalty:** ~20% slower due to JIT/caching, but warm-up is automatic in real workloads
 - **Multi-threaded (explicit):** pymrrc achieves **~2.0x speedup on 2-core systems** and **~3.74x speedup on 4-core systems** when using `ThreadPoolExecutor` for concurrent file processing
 - **No code changes needed:** GIL release happens automatically. Concurrency is opt-in via standard Python threading patterns.
 
