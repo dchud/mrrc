@@ -34,6 +34,7 @@
 //! ```
 
 use crate::error::{MarcError, Result};
+use crate::formats::FormatReader;
 use crate::leader::Leader;
 use crate::record::{Field, Record};
 use crate::recovery::RecoveryMode;
@@ -67,6 +68,7 @@ const SUBFIELD_DELIMITER: u8 = 0x1F;
 pub struct MarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
+    records_read: usize,
 }
 
 impl<R: Read> MarcReader<R> {
@@ -90,6 +92,7 @@ impl<R: Read> MarcReader<R> {
         MarcReader {
             reader,
             recovery_mode: RecoveryMode::Strict,
+            records_read: 0,
         }
     }
 
@@ -313,7 +316,20 @@ impl<R: Read> MarcReader<R> {
             }
         }
 
+        self.records_read += 1;
         Ok(Some(record))
+    }
+}
+
+// Implement the FormatReader trait for MarcReader
+impl<R: Read + std::fmt::Debug> FormatReader for MarcReader<R> {
+    fn read_record(&mut self) -> Result<Option<Record>> {
+        // Delegate to the existing implementation
+        MarcReader::read_record(self)
+    }
+
+    fn records_read(&self) -> Option<usize> {
+        Some(self.records_read)
     }
 }
 
@@ -551,5 +567,120 @@ mod tests {
 
         let record3 = reader.read_record().unwrap();
         assert!(record3.is_none());
+    }
+
+    #[test]
+    fn test_format_reader_trait() {
+        // Build two records
+        let mut all_bytes = Vec::new();
+
+        for _ in 0..2 {
+            let mut field_245 = Vec::new();
+            field_245.extend_from_slice(b"10");
+            field_245.push(SUBFIELD_DELIMITER);
+            field_245.push(b'a');
+            field_245.extend_from_slice(b"Test title");
+            field_245.push(FIELD_TERMINATOR);
+
+            let mut directory = Vec::new();
+            directory.extend_from_slice(b"245");
+            directory.extend_from_slice(format!("{:04}", field_245.len()).as_bytes());
+            directory.extend_from_slice(b"00000");
+
+            let base_address = 24 + directory.len() + 1;
+            directory.push(FIELD_TERMINATOR);
+            let record_length = base_address + field_245.len() + 1;
+
+            let mut leader = Vec::new();
+            leader.extend_from_slice(format!("{record_length:05}").as_bytes());
+            leader.push(b'n');
+            leader.push(b'a');
+            leader.push(b'm');
+            leader.push(b' ');
+            leader.push(b'a');
+            leader.push(b'2');
+            leader.push(b'2');
+            leader.extend_from_slice(format!("{base_address:05}").as_bytes());
+            leader.push(b' ');
+            leader.push(b' ');
+            leader.push(b' ');
+            leader.extend_from_slice(b"4500");
+
+            all_bytes.extend_from_slice(&leader);
+            all_bytes.extend_from_slice(&directory);
+            all_bytes.extend_from_slice(&field_245);
+            all_bytes.push(RECORD_TERMINATOR);
+        }
+
+        let cursor = Cursor::new(all_bytes);
+        let mut reader = MarcReader::new(cursor);
+
+        // Verify records_read starts at 0
+        assert_eq!(reader.records_read(), Some(0));
+
+        // Use the FormatReader trait method read_all
+        let records = FormatReader::read_all(&mut reader).unwrap();
+        assert_eq!(records.len(), 2);
+
+        // Verify records_read counter
+        assert_eq!(reader.records_read(), Some(2));
+    }
+
+    #[test]
+    fn test_format_reader_iterator() {
+        use crate::formats::FormatReaderExt;
+
+        // Build two records
+        let mut all_bytes = Vec::new();
+
+        for _ in 0..3 {
+            let mut field_245 = Vec::new();
+            field_245.extend_from_slice(b"10");
+            field_245.push(SUBFIELD_DELIMITER);
+            field_245.push(b'a');
+            field_245.extend_from_slice(b"Test title");
+            field_245.push(FIELD_TERMINATOR);
+
+            let mut directory = Vec::new();
+            directory.extend_from_slice(b"245");
+            directory.extend_from_slice(format!("{:04}", field_245.len()).as_bytes());
+            directory.extend_from_slice(b"00000");
+
+            let base_address = 24 + directory.len() + 1;
+            directory.push(FIELD_TERMINATOR);
+            let record_length = base_address + field_245.len() + 1;
+
+            let mut leader = Vec::new();
+            leader.extend_from_slice(format!("{record_length:05}").as_bytes());
+            leader.push(b'n');
+            leader.push(b'a');
+            leader.push(b'm');
+            leader.push(b' ');
+            leader.push(b'a');
+            leader.push(b'2');
+            leader.push(b'2');
+            leader.extend_from_slice(format!("{base_address:05}").as_bytes());
+            leader.push(b' ');
+            leader.push(b' ');
+            leader.push(b' ');
+            leader.extend_from_slice(b"4500");
+
+            all_bytes.extend_from_slice(&leader);
+            all_bytes.extend_from_slice(&directory);
+            all_bytes.extend_from_slice(&field_245);
+            all_bytes.push(RECORD_TERMINATOR);
+        }
+
+        let cursor = Cursor::new(all_bytes);
+        let mut reader = MarcReader::new(cursor);
+
+        // Use the FormatReaderExt iterator
+        let mut count = 0;
+        for result in reader.records() {
+            result.unwrap();
+            count += 1;
+        }
+        assert_eq!(count, 3);
+        assert_eq!(reader.records_read(), Some(3));
     }
 }

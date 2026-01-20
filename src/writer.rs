@@ -43,6 +43,7 @@
 //! ```
 
 use crate::error::{MarcError, Result};
+use crate::formats::FormatWriter;
 use crate::record::Record;
 use std::io::Write;
 
@@ -73,6 +74,8 @@ const RECORD_TERMINATOR: u8 = 0x1D;
 #[derive(Debug)]
 pub struct MarcWriter<W: Write> {
     writer: W,
+    records_written: usize,
+    finished: bool,
 }
 
 impl<W: Write> MarcWriter<W> {
@@ -90,7 +93,11 @@ impl<W: Write> MarcWriter<W> {
     /// let writer = MarcWriter::new(buffer);
     /// ```
     pub fn new(writer: W) -> Self {
-        MarcWriter { writer }
+        MarcWriter {
+            writer,
+            records_written: 0,
+            finished: false,
+        }
     }
 
     /// Write a single MARC record.
@@ -127,6 +134,12 @@ impl<W: Write> MarcWriter<W> {
     /// - The record structure is invalid
     /// - An I/O error occurs during writing
     pub fn write_record(&mut self, record: &Record) -> Result<()> {
+        if self.finished {
+            return Err(MarcError::InvalidRecord(
+                "Cannot write to a finished writer".to_string(),
+            ));
+        }
+
         // Build the data area first
         let mut data_area = Vec::new();
         let mut directory = Vec::new();
@@ -204,7 +217,44 @@ impl<W: Write> MarcWriter<W> {
         // Write record terminator
         self.writer.write_all(&[RECORD_TERMINATOR])?;
 
+        self.records_written += 1;
         Ok(())
+    }
+
+    /// Flush the writer and mark it as finished.
+    ///
+    /// After calling `finish`, no more records can be written.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if flushing the underlying writer fails.
+    pub fn finish(&mut self) -> Result<()> {
+        self.writer.flush()?;
+        self.finished = true;
+        Ok(())
+    }
+
+    /// Returns the number of records written so far.
+    #[must_use]
+    pub fn records_written(&self) -> usize {
+        self.records_written
+    }
+}
+
+// Implement the FormatWriter trait for MarcWriter
+impl<W: Write + std::fmt::Debug> FormatWriter for MarcWriter<W> {
+    fn write_record(&mut self, record: &Record) -> Result<()> {
+        // Delegate to the existing implementation
+        MarcWriter::write_record(self, record)
+    }
+
+    fn finish(&mut self) -> Result<()> {
+        // Delegate to the existing implementation
+        MarcWriter::finish(self)
+    }
+
+    fn records_written(&self) -> Option<usize> {
+        Some(self.records_written)
     }
 }
 
@@ -340,5 +390,93 @@ mod tests {
         assert_eq!(fields[0].get_subfield('a'), Some("Subject 1"));
         assert_eq!(fields[1].get_subfield('a'), Some("Subject 2"));
         assert_eq!(fields[2].get_subfield('a'), Some("Subject 3"));
+    }
+
+    #[test]
+    fn test_format_writer_trait() {
+        let mut record = Record::new(make_test_leader());
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test title".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = MarcWriter::new(&mut buffer);
+
+            // Verify records_written starts at 0
+            assert_eq!(writer.records_written(), 0);
+
+            // Write using the inherent method (which FormatWriter delegates to)
+            writer.write_record(&record).unwrap();
+            assert_eq!(writer.records_written(), 1);
+
+            writer.write_record(&record).unwrap();
+            assert_eq!(writer.records_written(), 2);
+
+            // Finish writing
+            writer.finish().unwrap();
+        }
+
+        // Verify we can read both records back
+        let cursor = Cursor::new(buffer);
+        let mut reader = crate::reader::MarcReader::new(cursor);
+        let r1 = reader.read_record().unwrap();
+        assert!(r1.is_some());
+        let r2 = reader.read_record().unwrap();
+        assert!(r2.is_some());
+        let r3 = reader.read_record().unwrap();
+        assert!(r3.is_none());
+    }
+
+    #[test]
+    fn test_format_writer_batch() {
+        use crate::formats::FormatWriter;
+
+        let records: Vec<Record> = (0..3)
+            .map(|i| {
+                let mut record = Record::new(make_test_leader());
+                let mut field = Field::new("245".to_string(), '1', '0');
+                field.add_subfield('a', format!("Title {i}"));
+                record.add_field(field);
+                record
+            })
+            .collect();
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = MarcWriter::new(&mut buffer);
+            // Use the trait's write_batch method (default implementation)
+            FormatWriter::write_batch(&mut writer, &records).unwrap();
+            assert_eq!(writer.records_written(), 3);
+            writer.finish().unwrap();
+        }
+
+        // Verify we can read all records back
+        let cursor = Cursor::new(buffer);
+        let mut reader = crate::reader::MarcReader::new(cursor);
+        for i in 0..3 {
+            let record = reader.read_record().unwrap().unwrap();
+            let fields = record.get_fields("245").unwrap();
+            assert_eq!(
+                fields[0].get_subfield('a'),
+                Some(format!("Title {i}").as_str())
+            );
+        }
+        assert!(reader.read_record().unwrap().is_none());
+    }
+
+    #[test]
+    fn test_writer_cannot_write_after_finish() {
+        let mut record = Record::new(make_test_leader());
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        let mut writer = MarcWriter::new(&mut buffer);
+        writer.finish().unwrap();
+
+        let result = writer.write_record(&record);
+        assert!(result.is_err());
     }
 }
