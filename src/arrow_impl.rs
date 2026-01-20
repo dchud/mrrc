@@ -45,22 +45,27 @@ fn mk_error(msg: &str) -> std::io::Error {
 ///
 /// ```text
 /// RecordBatch
-/// ├── record_index: uint32 (row ID)
+/// ├── record_index: uint32 (row ID for the MARC record)
+/// ├── field_sequence: uint32 (field order within record, for distinguishing repeated fields)
 /// ├── leader: string (24-char leader)
 /// ├── field_tag: string (3-char tag, repeated per field)
-/// ├── field_indicator1: string (1-char)
-/// ├── field_indicator2: string (1-char)
-/// ├── subfield_code: string (1-char)
+/// ├── field_indicator1: string (1-char, empty for control fields)
+/// ├── field_indicator2: string (1-char, empty for control fields)
+/// ├── subfield_code: string (1-char, empty for control fields)
 /// └── subfield_value: string
 /// ```
 ///
 /// This flattened design sacrifices some theoretical columnar efficiency
 /// but provides 100% round-trip fidelity and excellent compatibility with Arrow's API.
+/// The `field_sequence` column allows distinguishing between different fields with
+/// the same tag and indicators.
+///
 /// Create Arrow schema for MARC records.
 #[must_use]
 pub fn create_arrow_schema() -> Arc<Schema> {
     let schema = Schema::new(vec![
         Field::new("record_index", DataType::UInt32, false),
+        Field::new("field_sequence", DataType::UInt32, false),
         Field::new("leader", DataType::Utf8, false),
         Field::new("field_tag", DataType::Utf8, false),
         Field::new("field_indicator1", DataType::Utf8, false),
@@ -111,6 +116,7 @@ pub fn records_to_arrow_batch(records: &[Record]) -> Result<RecordBatch, std::io
     }
 
     let mut record_indices = Vec::new();
+    let mut field_sequences = Vec::new();
     let mut leaders = Vec::new();
     let mut field_tags = Vec::new();
     let mut field_ind1s = Vec::new();
@@ -128,6 +134,23 @@ pub fn records_to_arrow_batch(records: &[Record]) -> Result<RecordBatch, std::io
             .map_err(|e| mk_error(&format!("Failed to serialize leader: {e}")))?;
         let leader_str = String::from_utf8_lossy(&leader_bytes).to_string();
 
+        let mut field_seq: u32 = 0;
+
+        // Add control fields first (001-009)
+        // Control fields have no indicators or subfield codes
+        for (tag, value) in record.control_fields_iter() {
+            record_indices.push(record_idx);
+            field_sequences.push(field_seq);
+            leaders.push(leader_str.clone());
+            field_tags.push(tag.to_string());
+            field_ind1s.push(String::new()); // No indicator for control fields
+            field_ind2s.push(String::new());
+            subfield_codes.push(String::new()); // No subfield code for control fields
+            subfield_values.push(value.to_string());
+            field_seq += 1;
+        }
+
+        // Add variable fields (010+)
         let fields = record.fields();
         for field in fields {
             let tag = field.tag.clone();
@@ -136,6 +159,7 @@ pub fn records_to_arrow_batch(records: &[Record]) -> Result<RecordBatch, std::io
 
             for subfield in &field.subfields {
                 record_indices.push(record_idx);
+                field_sequences.push(field_seq);
                 leaders.push(leader_str.clone());
                 field_tags.push(tag.clone());
                 field_ind1s.push(ind1.clone());
@@ -143,12 +167,14 @@ pub fn records_to_arrow_batch(records: &[Record]) -> Result<RecordBatch, std::io
                 subfield_codes.push(subfield.code.to_string());
                 subfield_values.push(subfield.value.clone());
             }
+            field_seq += 1;
         }
     }
 
     let schema = create_arrow_schema();
 
     let record_index_array = Arc::new(UInt32Array::from(record_indices));
+    let field_sequence_array = Arc::new(UInt32Array::from(field_sequences));
     let leader_array = Arc::new(StringArray::from(leaders));
     let field_tag_array = Arc::new(StringArray::from(field_tags));
     let field_ind1_array = Arc::new(StringArray::from(field_ind1s));
@@ -160,6 +186,7 @@ pub fn records_to_arrow_batch(records: &[Record]) -> Result<RecordBatch, std::io
         schema,
         vec![
             record_index_array,
+            field_sequence_array,
             leader_array,
             field_tag_array,
             field_ind1_array,
@@ -201,8 +228,8 @@ pub fn records_to_arrow_batch(records: &[Record]) -> Result<RecordBatch, std::io
 pub fn arrow_batch_to_records(batch: &RecordBatch) -> Result<Vec<Record>, std::io::Error> {
     // Validate schema
     let schema = batch.schema();
-    if schema.fields().len() != 7 {
-        return Err(mk_error("Invalid Arrow schema: expected 7 columns"));
+    if schema.fields().len() != 8 {
+        return Err(mk_error("Invalid Arrow schema: expected 8 columns"));
     }
 
     // Extract columns
@@ -212,38 +239,44 @@ pub fn arrow_batch_to_records(batch: &RecordBatch) -> Result<Vec<Record>, std::i
         .downcast_ref::<UInt32Array>()
         .ok_or_else(|| mk_error("record_index column is not uint32"))?;
 
-    let leaders = batch
+    let field_sequences = batch
         .column(1)
+        .as_any()
+        .downcast_ref::<UInt32Array>()
+        .ok_or_else(|| mk_error("field_sequence column is not uint32"))?;
+
+    let leaders = batch
+        .column(2)
         .as_any()
         .downcast_ref::<StringArray>()
         .ok_or_else(|| mk_error("leader column is not string"))?;
 
     let field_tags = batch
-        .column(2)
+        .column(3)
         .as_any()
         .downcast_ref::<StringArray>()
         .ok_or_else(|| mk_error("field_tag column is not string"))?;
 
     let field_ind1s = batch
-        .column(3)
+        .column(4)
         .as_any()
         .downcast_ref::<StringArray>()
         .ok_or_else(|| mk_error("field_indicator1 column is not string"))?;
 
     let field_ind2s = batch
-        .column(4)
+        .column(5)
         .as_any()
         .downcast_ref::<StringArray>()
         .ok_or_else(|| mk_error("field_indicator2 column is not string"))?;
 
     let subfield_codes = batch
-        .column(5)
+        .column(6)
         .as_any()
         .downcast_ref::<StringArray>()
         .ok_or_else(|| mk_error("subfield_code column is not string"))?;
 
     let subfield_values = batch
-        .column(6)
+        .column(7)
         .as_any()
         .downcast_ref::<StringArray>()
         .ok_or_else(|| mk_error("subfield_value column is not string"))?;
@@ -301,26 +334,28 @@ pub fn arrow_batch_to_records(batch: &RecordBatch) -> Result<Vec<Record>, std::i
 
         let mut record = Record::new(leader);
 
-        // Group rows by field (tag, ind1, ind2) to reconstruct field order
-        let mut field_groups: Vec<(String, String, String, Vec<usize>)> = Vec::new();
-        let mut current_field: Option<(String, String, String, Vec<usize>)> = None;
+        // Group rows by field_sequence to reconstruct fields
+        // field_sequence uniquely identifies each field within a record
+        let mut field_groups: Vec<(u32, String, String, String, Vec<usize>)> = Vec::new();
+        let mut current_field: Option<(u32, String, String, String, Vec<usize>)> = None;
 
         for row_idx in &row_indices {
+            let field_seq = field_sequences.value(*row_idx);
             let tag = field_tags.value(*row_idx).to_string();
             let ind1 = field_ind1s.value(*row_idx).to_string();
             let ind2 = field_ind2s.value(*row_idx).to_string();
 
             match &mut current_field {
                 None => {
-                    current_field = Some((tag, ind1, ind2, vec![*row_idx]));
+                    current_field = Some((field_seq, tag, ind1, ind2, vec![*row_idx]));
                 },
-                Some((curr_tag, curr_ind1, curr_ind2, rows)) => {
-                    if curr_tag == &tag && curr_ind1 == &ind1 && curr_ind2 == &ind2 {
+                Some((curr_seq, _curr_tag, _curr_ind1, _curr_ind2, rows)) => {
+                    if *curr_seq == field_seq {
                         rows.push(*row_idx);
                     } else {
                         let old_field = current_field.take().unwrap();
                         field_groups.push(old_field);
-                        current_field = Some((tag, ind1, ind2, vec![*row_idx]));
+                        current_field = Some((field_seq, tag, ind1, ind2, vec![*row_idx]));
                     }
                 },
             }
@@ -331,27 +366,38 @@ pub fn arrow_batch_to_records(batch: &RecordBatch) -> Result<Vec<Record>, std::i
         }
 
         // Reconstruct fields in order
-        for (tag, ind1_str, ind2_str, row_indices_for_field) in field_groups {
-            let ind1 = ind1_str.chars().next().unwrap_or(' ');
-            let ind2 = ind2_str.chars().next().unwrap_or(' ');
+        for (_field_seq, tag, ind1_str, ind2_str, row_indices_for_field) in field_groups {
+            // Check if this is a control field (empty indicators and subfield code)
+            let first_row = row_indices_for_field[0];
+            let first_subfield_code = subfield_codes.value(first_row);
 
-            let mut field = crate::record::Field {
-                tag,
-                indicator1: ind1,
-                indicator2: ind2,
-                subfields: smallvec::SmallVec::new(),
-            };
+            if first_subfield_code.is_empty() && ind1_str.is_empty() && ind2_str.is_empty() {
+                // Control field: add directly to control_fields
+                let value = subfield_values.value(first_row).to_string();
+                record.add_control_field(tag, value);
+            } else {
+                // Variable field: has indicators and subfields
+                let ind1 = ind1_str.chars().next().unwrap_or(' ');
+                let ind2 = ind2_str.chars().next().unwrap_or(' ');
 
-            // Add subfields in order
-            for row_idx in row_indices_for_field {
-                let code = subfield_codes.value(row_idx).chars().next().unwrap_or('?');
-                let value = subfield_values.value(row_idx).to_string();
-                field
-                    .subfields
-                    .push(crate::record::Subfield { code, value });
+                let mut field = crate::record::Field {
+                    tag,
+                    indicator1: ind1,
+                    indicator2: ind2,
+                    subfields: smallvec::SmallVec::new(),
+                };
+
+                // Add subfields in order
+                for row_idx in row_indices_for_field {
+                    let code = subfield_codes.value(row_idx).chars().next().unwrap_or('?');
+                    let value = subfield_values.value(row_idx).to_string();
+                    field
+                        .subfields
+                        .push(crate::record::Subfield { code, value });
+                }
+
+                record.add_field(field);
             }
-
-            record.add_field(field);
         }
 
         result_records.push(record);
@@ -414,13 +460,106 @@ impl ArrowMarcTable {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Leader;
+
+    fn make_test_leader() -> Leader {
+        Leader::from_bytes(b"00345nam a2200133 a 4500").unwrap()
+    }
 
     #[test]
     fn test_arrow_schema_creation() {
         let schema = create_arrow_schema();
-        assert_eq!(schema.fields().len(), 7);
+        assert_eq!(schema.fields().len(), 8);
         assert_eq!(schema.field(0).name(), "record_index");
-        assert_eq!(schema.field(1).name(), "leader");
-        assert_eq!(schema.field(2).name(), "field_tag");
+        assert_eq!(schema.field(1).name(), "field_sequence");
+        assert_eq!(schema.field(2).name(), "leader");
+        assert_eq!(schema.field(3).name(), "field_tag");
+    }
+
+    #[test]
+    fn test_roundtrip_with_control_fields() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test001".to_string());
+        record.add_control_field("005".to_string(), "20260120120000.0".to_string());
+
+        let mut field = crate::record::Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test Title".to_string());
+        record.add_field(field);
+
+        let records = vec![record];
+        let batch = records_to_arrow_batch(&records).unwrap();
+        let restored = arrow_batch_to_records(&batch).unwrap();
+
+        assert_eq!(restored.len(), 1);
+        let r = &restored[0];
+        assert_eq!(r.get_control_field("001"), Some("test001"));
+        assert_eq!(r.get_control_field("005"), Some("20260120120000.0"));
+        assert!(r.get_field("245").is_some());
+    }
+
+    #[test]
+    fn test_roundtrip_multiple_records() {
+        let records: Vec<Record> = (0..3)
+            .map(|i| {
+                let mut r = Record::new(make_test_leader());
+                r.add_control_field("001".to_string(), format!("rec{i:03}"));
+                let mut f = crate::record::Field::new("245".to_string(), '1', '0');
+                f.add_subfield('a', format!("Title {i}"));
+                r.add_field(f);
+                r
+            })
+            .collect();
+
+        let batch = records_to_arrow_batch(&records).unwrap();
+        let restored = arrow_batch_to_records(&batch).unwrap();
+
+        assert_eq!(restored.len(), 3);
+        for i in 0..3 {
+            assert_eq!(
+                restored[i].get_control_field("001"),
+                Some(format!("rec{i:03}").as_str())
+            );
+        }
+    }
+
+    #[test]
+    fn test_roundtrip_preserves_field_order() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test001".to_string());
+
+        for i in 1..=3 {
+            let mut f = crate::record::Field::new("650".to_string(), ' ', '0');
+            f.add_subfield('a', format!("Subject {i}"));
+            record.add_field(f);
+        }
+
+        let records = vec![record];
+        let batch = records_to_arrow_batch(&records).unwrap();
+        let restored = arrow_batch_to_records(&batch).unwrap();
+
+        let subjects: Vec<_> = restored[0].fields_by_tag("650").collect();
+        assert_eq!(subjects.len(), 3);
+        assert_eq!(subjects[0].get_subfield('a'), Some("Subject 1"));
+        assert_eq!(subjects[1].get_subfield('a'), Some("Subject 2"));
+        assert_eq!(subjects[2].get_subfield('a'), Some("Subject 3"));
+    }
+
+    #[test]
+    fn test_roundtrip_preserves_subfield_order() {
+        let mut record = Record::new(make_test_leader());
+        let mut field = crate::record::Field::new("245".to_string(), '1', '0');
+        // Non-alphabetical order
+        field.add_subfield('c', "Author".to_string());
+        field.add_subfield('a', "Title".to_string());
+        field.add_subfield('b', "Subtitle".to_string());
+        record.add_field(field);
+
+        let records = vec![record];
+        let batch = records_to_arrow_batch(&records).unwrap();
+        let restored = arrow_batch_to_records(&batch).unwrap();
+
+        let f = restored[0].get_field("245").unwrap();
+        let codes: Vec<char> = f.subfields.iter().map(|s| s.code).collect();
+        assert_eq!(codes, vec!['c', 'a', 'b']);
     }
 }
