@@ -13,12 +13,13 @@ This document provides a step-by-step, executable procedure for preparing, testi
 3. [Update Configuration Files](#update-configuration-files)
 4. [Update Changelog](#update-changelog)
 5. [Update Documentation](#update-documentation)
-6. [Git Operations](#git-operations)
-7. [Publishing](#publishing)
-8. [Post-Release Verification](#post-release-verification)
-9. [Post-Release Setup](#post-release-setup)
-10. [Rollback Procedures](#rollback-procedures)
-11. [Troubleshooting](#troubleshooting)
+6. [Final Sanity Check](#final-sanity-check-before-git-operations)
+7. [Git Operations](#git-operations)
+8. [Publishing](#publishing)
+9. [Post-Release Verification](#post-release-verification)
+10. [Post-Release Setup](#post-release-setup)
+11. [Rollback Procedures](#rollback-procedures)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -70,14 +71,21 @@ Check that all features merged since the last release are documented:
 
 ```bash
 # View unreleased changelog section
-head -100 CHANGELOG.md
+head -150 CHANGELOG.md
 ```
 
 **Checklist**:
 - [ ] All recent features are listed in [Unreleased] section
-- [ ] All breaking changes are documented
-- [ ] Bug fixes are noted
+- [ ] All breaking changes are documented with migration guidance
+- [ ] All bug fixes are noted
+- [ ] All performance improvements documented
 - [ ] Known limitations are listed if applicable
+
+**Breaking Changes Specific Check**:
+If this release includes breaking changes:
+- [ ] **REQUIRED**: Migration guide exists in [Unreleased] or referenced
+- [ ] **REQUIRED**: Deprecation notices were given in previous release (if applicable)
+- [ ] **REQUIRED**: Major version bump scheduled (e.g., 0.x → 1.0)
 
 ---
 
@@ -260,77 +268,135 @@ Check all documentation files for version-specific content or broken references.
 ### 5.1 Check README.md
 
 ```bash
-grep -i "version\|0\.4\|0\.5" README.md
+grep -i "version\|0\.4\|0\.5\|installation" README.md
+head -50 README.md
 ```
 
 Update any version-specific instructions or examples. Pay special attention to:
 - Installation instructions with version constraints
 - Feature availability notes tied to versions
 - Example code showing output from specific versions
+- Supported Rust versions or Python versions if changed
 
 **Checklist**:
 - [ ] README.md reviewed for version references
-- [ ] Installation instructions updated if needed
-- [ ] Example code is current
+- [ ] Installation instructions are current
+- [ ] Example code compiles and runs
+- [ ] Badge versions (if any) are current
 
 ### 5.2 Check docs/ Directory
 
 ```bash
-grep -r "0\.4\|0\.5\|version" docs/ --include="*.md" | grep -v "CHANGELOG\|history" | head -20
+# Check for hardcoded version numbers
+grep -r "0\.[0-9]\|version" docs/ --include="*.md" | grep -v "CHANGELOG\|history\|version =" | head -20
+
+# Check for broken internal links
+grep -r "\[.*\](.*\.md)" docs/ --include="*.md" | grep -v "http"
 ```
 
 Update any version-specific documentation in:
-- `docs/MIGRATION_GUIDE.md` - Note the new release
-- `docs/PERFORMANCE.md` - Update performance baselines if needed
+- `docs/MIGRATION_GUIDE.md` - Add section for new release
+- `docs/PERFORMANCE.md` - Update performance baselines if optimizations were made
 - `docs/ARCHITECTURE.md` - Note architectural changes if any
 - `docs/design/` - Update design documents if decisions changed
+- Any docs with "Supported in X.Y+" style language
 
 **Checklist**:
 - [ ] docs/ directory scanned for version references
-- [ ] Relevant documentation updated
-- [ ] Migration guide notes new release
+- [ ] All hardcoded versions updated or explained
+- [ ] Internal links are still valid
+- [ ] Migration guide updated if breaking changes
 - [ ] Performance baselines are current (if applicable)
 
 ### 5.3 Check Example Code
 
 ```bash
-ls examples/
+ls -la examples/
+cargo build --examples
 ```
 
 Run all example code to ensure it still works with the new version:
 
 ```bash
-cargo run --example format_conversion
-cargo run --example query_dsl
+# Run a few key examples to verify they work
+cargo run --example format_conversion -- --help 2>&1 | head -5
 ```
 
-Fix any broken examples.
+If examples take file arguments, verify they run without the arguments too (should show usage/help):
+
+```bash
+# For examples that are expected to fail gracefully if missing args
+cargo run --example some_example 2>&1 | head -10
+```
+
+Fix any broken examples before release.
 
 **Checklist**:
-- [ ] Example code compiles
-- [ ] Example code runs without errors
-- [ ] Example output is sensible
+- [ ] All examples compile successfully
+- [ ] Key examples run without errors
+- [ ] Example output is sensible (or shows expected error if args missing)
 
 ### 5.4 Update AGENTS.md (if workflow changed)
 
-Check if the release procedure itself changed:
+Check if the release procedure itself changed or if any development workflows were modified:
 
 ```bash
 # Review AGENTS.md for outdated instructions
-grep -i "test\|check\|version\|release" AGENTS.md | head -10
+grep -i "release\|version\|publish\|tag" AGENTS.md | head -10
 ```
 
-Update if needed.
+If you modified the release procedure in this session, add a note for future updates.
 
 **Checklist**:
-- [ ] AGENTS.md reviewed
-- [ ] Release workflow notes are current (or update for next time)
+- [ ] AGENTS.md reviewed for stale guidance
+- [ ] Release workflow notes are accurate
+- [ ] If procedure changed, note updates for next release
+
+---
+
+## Final Sanity Check (Before Git Operations)
+
+Before committing version changes and creating the git tag, perform one final verification pass.
+
+### 6.0 Final Verification
+
+```bash
+# 1. Verify all version files match
+echo "=== Version Check ==="
+echo "Root: $(grep '^version' Cargo.toml)"
+echo "Python Cargo: $(grep '^version' src-python/Cargo.toml)"
+echo "PyProject: $(grep '^version' pyproject.toml)"
+
+# 2. Verify changelog was updated
+echo ""
+echo "=== Changelog Check ==="
+head -20 CHANGELOG.md | grep -E "Unreleased|^\[0-9]"
+
+# 3. Run tests one more time
+echo ""
+echo "=== Running Tests ==="
+.cargo/check.sh
+```
+
+All checks must pass before proceeding to git operations.
+
+**Checklist**:
+- [ ] All three version numbers are identical
+- [ ] Changelog shows new version with today's date
+- [ ] All tests pass
+- [ ] Git status is clean (only version files changed)
+- [ ] Confidence level: Ready to tag and push
+
+**If anything fails**:
+1. Fix the issue
+2. Re-run checks above
+3. Do **NOT** proceed until all pass
 
 ---
 
 ## Git Operations
 
-### 6.1 Commit Version and Changelog Updates
+### 7.1 Commit Version and Changelog Updates
 
 ```bash
 git add Cargo.toml src-python/Cargo.toml pyproject.toml CHANGELOG.md
@@ -358,7 +424,7 @@ Should show your new commit.
 - [ ] Commit message is clear
 - [ ] All version files included in commit
 
-### 6.2 Create Git Tag
+### 7.2 Create Git Tag
 
 Create an annotated tag for the release:
 
@@ -385,7 +451,7 @@ Should show your new tag.
 - [ ] Tag name matches version number
 - [ ] Tag message is clear
 
-### 6.3 Push Commit and Tag
+### 7.3 Push Commit and Tag
 
 ```bash
 git push origin main
@@ -415,7 +481,7 @@ git ls-remote origin | grep "refs/tags/vX.Y.Z"
 
 The publishing process is **mostly automated** via GitHub Actions. The workflow is triggered by pushing the `v*` tag.
 
-### 7.1 Verify GitHub Actions Triggered
+### 8.1 Verify GitHub Actions Triggered
 
 Go to: https://github.com/dchud/mrrc/actions
 
@@ -431,7 +497,7 @@ Look for the "Python Release to PyPI" workflow:
 - [ ] Workflow appears in GitHub Actions
 - [ ] Workflow status is "in progress" or "completed"
 
-### 7.2 Monitor Build Process
+### 8.2 Monitor Build Process
 
 **Wait for**:
 1. **build-release-wheels** job - Builds Python wheels for 3×3.9-3.12 on macOS/Ubuntu/Windows
@@ -447,7 +513,7 @@ Each job has multiple matrix runs (fail-fast: false means all run even if some f
 
 **If any job fails**: See [Troubleshooting](#troubleshooting)
 
-### 7.3 Verify crates.io Publication (Manual)
+### 8.3 Verify crates.io Publication (Manual)
 
 The crates.io publication is **manual** (requires crates.io API token).
 
@@ -473,7 +539,7 @@ Should list your new version within 1-2 minutes.
 - [ ] Version appears on crates.io
 - [ ] Version documentation is correct on docs.rs
 
-### 7.4 Verify PyPI Publication
+### 8.4 Verify PyPI Publication
 
 https://pypi.org/project/mrrc/
 
@@ -486,7 +552,7 @@ Should show your new version with wheels for Python 3.9, 3.10, 3.11, 3.12 across
 - [ ] All wheels are present (12 total)
 - [ ] Documentation is correct
 
-### 7.5 Verify GitHub Release Created
+### 8.5 Verify GitHub Release Created
 
 GitHub Actions automatically creates a GitHub Release with wheels attached.
 
@@ -588,22 +654,14 @@ Link to release: https://github.com/dchud/mrrc/releases/tag/vX.Y.Z" \
 
 ### 9.3 Begin Next Development Cycle
 
-Create a placeholder in [Unreleased] section if you have planned features:
+After release, update the [Unreleased] section to reflect the next development direction.
 
 **File**: `CHANGELOG.md`
 
-Under `## [Unreleased]`, add planned items with issue references:
+The [Unreleased] section should remain mostly empty with just subsection headers:
 
 ```markdown
 ## [Unreleased]
-
-### Planned (Priority 1)
-
-#### Calendar Versioning Evaluation (mrrc-vmk)
-- Evaluate calver adoption for future releases
-
-#### Release Procedure Documentation (mrrc-0kw) ✓ Completed
-- Comprehensive release procedure guide
 
 ### Added
 
@@ -616,18 +674,39 @@ Under `## [Unreleased]`, add planned items with issue references:
 ### Documentation
 ```
 
+**Planning & Tracking**:
+
+If you have identified planned work items for the next release, create beads issues INSTEAD of hardcoding them in the changelog. This keeps CHANGELOG.md clean and issues tracked in the issue system.
+
+Example workflow:
+1. After release, review roadmap and open issues
+2. Create new issues for planned work: `bd create "Feature: ..." -p 2`
+3. Link major items in README roadmap or docs/RELEASES.md (but NOT in CHANGELOG [Unreleased])
+4. The [Unreleased] section fills up organically as work is completed during development
+
+**Why?** CHANGELOG documents what was released, not what's planned. Planning belongs in the issue tracker (beads).
+
 **Checklist**:
-- [ ] [Unreleased] section reflects current roadmap
-- [ ] Beads issues linked where applicable
-- [ ] Commit message explains post-release updates
+- [ ] [Unreleased] section has empty subsections ready for new content
+- [ ] Major planned work items created as beads issues (not hardcoded in CHANGELOG)
+- [ ] Issue tracker (beads) reflects the development roadmap
+- [ ] README or docs reflect high-level roadmap if needed
 
 ### 9.4 Commit Post-Release Changes (if any)
 
+Only commit if you made changelog changes:
+
 ```bash
+git status
+# If only CHANGELOG.md changed:
 git add CHANGELOG.md
-git commit -m "docs: update [Unreleased] section with post-release roadmap"
+git commit -m "docs: clear [Unreleased] section after vX.Y.Z release"
 git push origin main
 ```
+
+**Checklist**:
+- [ ] No uncommitted changes
+- [ ] Post-release commit (if needed) pushed to main
 
 ---
 
@@ -781,43 +860,61 @@ twine upload dist/mrrc-*.whl
 
 ## Checklist: Full Release Workflow
 
-**Pre-Release Phase**:
+**Phase 1: Pre-Release Verification**
 - [ ] `.cargo/check.sh` passes all checks
 - [ ] Git status is clean
 - [ ] [Unreleased] section is complete and accurate
+- [ ] Breaking changes checked (if any)
 
-**Version Update Phase**:
-- [ ] Version number selected (SemVer rationale noted)
+**Phase 2: Version Number Selection**
+- [ ] Version number determined (SemVer rationale noted)
+- [ ] Current version identified from Cargo.toml
+
+**Phase 3: Configuration File Updates**
 - [ ] Cargo.toml updated
 - [ ] src-python/Cargo.toml updated
 - [ ] pyproject.toml updated
 - [ ] All three versions match
 
-**Changelog & Documentation Phase**:
+**Phase 4: Changelog & Documentation**
 - [ ] CHANGELOG.md: [Unreleased] → [X.Y.Z]
 - [ ] New [Unreleased] section created
 - [ ] README.md reviewed and updated
-- [ ] docs/ directory reviewed and updated
-- [ ] Example code tested and works
-- [ ] AGENTS.md reviewed (updated if needed)
+- [ ] docs/ directory scanned for version refs
+- [ ] Example code compiles and runs
+- [ ] AGENTS.md reviewed for stale guidance
 
-**Git & Publishing Phase**:
-- [ ] Version update commit created and pushed
+**Phase 5: Final Sanity Check**
+- [ ] Version consistency verified (all three files match)
+- [ ] Changelog shows new version with correct date
+- [ ] All tests pass (full `.cargo/check.sh`)
+- [ ] Git status is clean (only config files changed)
+
+**Phase 6: Git Operations**
+- [ ] Version update commit created with proper message
+- [ ] Commit pushed to origin/main
 - [ ] Git tag created with `v` prefix
 - [ ] Tag pushed to origin
-- [ ] GitHub Actions triggered and running
+
+**Phase 7: Publishing & Verification**
+- [ ] GitHub Actions triggered successfully
 - [ ] build-release-wheels job passed
 - [ ] test-release-wheels job passed
 - [ ] publish-pypi job completed
-
-**Post-Release Phase**:
-- [ ] PyPI publication verified (wheels present)
-- [ ] crates.io publication verified (version listed)
-- [ ] GitHub release created with wheels
+- [ ] PyPI publication verified (12 wheels present)
+- [ ] crates.io publication verified (manual or CI)
+- [ ] GitHub release created and visible
 - [ ] docs.rs documentation available
-- [ ] Local installation test passed (PyPI)
-- [ ] Local dependency test passed (Rust)
-- [ ] Post-release roadmap updated in CHANGELOG.md
+
+**Phase 8: Post-Release Verification**
+- [ ] Local PyPI installation test passed
+- [ ] Local Rust dependency test passed
+
+**Phase 9: Post-Release Setup**
+- [ ] Beads sync completed
+- [ ] [Unreleased] section cleaned (empty subsections)
+- [ ] Post-release commit pushed (if any)
+- [ ] Next development issues created (if planned)
 
 ---
 
