@@ -71,6 +71,7 @@
 //! - [`record`] — Core MARC record structures (`Record`, `Field`, `Subfield`)
 //! - [`reader`] — Reading MARC records from binary data streams
 //! - [`writer`] — Writing MARC records to binary format
+//! - [`formats`] — Multi-format support with unified Reader/Writer traits
 //! - [`boundary_scanner`] — Record boundary detection for parallel processing
 //! - [`leader`] — MARC record leader (24-byte header)
 //! - [`json`] — JSON serialization/deserialization
@@ -84,8 +85,18 @@
 //!
 //! ## Format Support
 //!
-//! The library supports:
+//! The library supports multiple serialization formats through the [`formats`] module:
+//!
+//! **Tier 1 (Core):**
 //! - **ISO 2709 Binary Format** — The standard MARC interchange format
+//! - **Protocol Buffers** — Schema-based binary format with evolution support
+//!
+//! **Tier 2 (High-Value, Feature-Gated):**
+//! - **Apache Arrow** — Columnar format for analytics (enable with `format-arrow`)
+//! - **Flatbuffers** — Zero-copy format for streaming (enable with `format-flatbuffers`)
+//! - **Messagepack** — Compact binary format (enable with `format-messagepack`)
+//!
+//! **Other Formats:**
 //! - **JSON** — Generic JSON representation of records
 //! - **MARCJSON** — Standard JSON-LD format for MARC records
 //! - **XML** — XML representation with proper field/subfield structure
@@ -112,6 +123,11 @@ pub mod field_query;
 pub mod field_query_helpers;
 pub mod flatbuffers_impl;
 pub mod format_queries;
+/// Multi-format support with unified Reader/Writer traits.
+///
+/// See the [`formats`] module documentation for details on supported formats
+/// and how to use format-agnostic code.
+pub mod formats;
 pub mod holdings_reader;
 pub mod holdings_record;
 pub mod holdings_writer;

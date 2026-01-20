@@ -17,6 +17,21 @@ rust-version = "1.71"
 keywords = ["marc", "bibliographic", "library", "metadata"]
 categories = ["encoding", "parser-implementations"]
 
+[features]
+default = []
+
+# Tier 2: High-value formats (feature-gated)
+format-arrow = []          # Apache Arrow columnar format
+format-flatbuffers = []    # FlatBuffers zero-copy format
+format-messagepack = []    # MessagePack compact binary format
+
+# Tier 3: Specialized formats (feature-gated, on-demand)
+format-cbor = []           # CBOR (RFC 7049) for archival
+format-avro = []           # Apache Avro for Kafka/data lakes
+
+# Bundle features
+all-formats = ["format-arrow", "format-flatbuffers", "format-messagepack", "format-cbor", "format-avro"]
+
 [dependencies]
 # Core parsing and data handling
 bytes = "1.5"
