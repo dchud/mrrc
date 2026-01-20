@@ -912,6 +912,392 @@ Release Desirables (nice-to-have):
 
 ---
 
+## Part 8: Cleanup & Consolidation of Evaluation Artifacts
+
+This section documents how evaluation code, tests, documentation, and schemas from the format research phase will be consolidated into the production implementation or archived.
+
+### 8.1 Evaluation Artifacts Overview
+
+The format research project produced the following evaluation artifacts:
+
+| Artifact | Location | Type | Status |
+|----------|----------|------|--------|
+| **Evaluation Benchmarks** | `benches/eval_*.rs` (CBOR, Avro, MessagePack) | Code | Evaluation only |
+| **Evaluation Tests** | `tests/flatbuffers_evaluation.rs` | Code | Evaluation only |
+| **Protobuf Implementation** | `src/protobuf.rs` | Code | Production-ready |
+| **Arrow Implementation** | `src/arrow_impl.rs` | Code | Needs refactoring |
+| **FlatBuffers Implementation** | `src/flatbuffers_impl.rs` | Code | Placeholder (serde-based) |
+| **Evaluation Documentation** | `docs/design/format-research/EVALUATION_*.md` (10 files) | Docs | Reference only |
+| **Framework Documentation** | `docs/design/format-research/EVALUATION_FRAMEWORK.md` | Docs | Foundation |
+| **Fidelity Test Specification** | `docs/design/format-research/FIDELITY_TEST_SET.md` | Docs | Reusable |
+| **Baseline Comparison** | `docs/design/format-research/BASELINE_ISO2709.md` | Docs | Reference |
+| **Comparison Matrix** | `docs/design/format-research/COMPARISON_MATRIX.md` | Docs | Reference |
+| **Example/POC Code** | `examples/polars_arrow_eval.rs` | Code | Evaluation POC |
+
+### 8.2 Consolidation Strategy by Artifact Type
+
+#### **8.2.1 Code: Evaluation Benchmarks (benches/eval_*.rs)**
+
+**What:** Standalone benchmark files for CBOR, Avro, MessagePack formats  
+**Current Location:** `benches/eval_avro.rs`, `benches/eval_cbor.rs`, `benches/eval_messagepack.rs`  
+**Action:** Migrate → Phase 2 per-format benchmarks
+
+| Format | Action | Destination | Phase | Notes |
+|--------|--------|-------------|-------|-------|
+| **MessagePack** | Migrate | `benches/` → Phase 2C tests | Phase 2C | Core logic reusable; performance targets already defined |
+| **CBOR** | Archive | `docs/design/format-research/archive/` | Phase 3 (deferred) | Keep for Tier 3 implementation reference |
+| **Avro** | Archive | `docs/design/format-research/archive/` | Phase 3 (deferred) | Keep for Tier 3 implementation reference |
+
+**Implementation:** After Phase 0 is complete, migrate MessagePack eval code structure into the per-format test suite. Archive CBOR/Avro evaluation benchmarks in a `/archive` subdirectory of the format-research docs for future Phase 3 implementation reference.
+
+---
+
+#### **8.2.2 Code: Evaluation Tests (tests/flatbuffers_evaluation.rs)**
+
+**What:** Comprehensive FlatBuffers round-trip evaluation test  
+**Current Location:** `tests/flatbuffers_evaluation.rs`  
+**Action:** Migrate → Phase 2B FlatBuffers test suite
+
+The evaluation test includes:
+- Fidelity comparison logic (comparing original vs. round-tripped records)
+- Performance metric collection
+- Batch serialization/deserialization logic
+
+All of this is reusable in Phase 2B. The test infrastructure pattern (fidelity comparison functions, metrics collection) should be extracted and generalized in Phase 0 as part of the test infrastructure.
+
+**Implementation:** Extract comparison logic into `tests/common/fidelity.rs` utility module in Phase 0. Phase 2B reuses this for FlatBuffers-specific round-trip tests.
+
+---
+
+#### **8.2.3 Code: Production Implementations**
+
+##### **Protobuf (src/protobuf.rs)** ✅ Production-Ready
+- **Status:** Already complete and tested
+- **Action:** No changes; part of Phase 1B deliverable
+- **Note:** Uses generated code from `build.rs` via prost
+
+##### **Arrow (src/arrow_impl.rs)** ⚠️ Needs Refactoring
+- **Status:** Evaluation implementation; placeholder for production
+- **Current Design:** Single-file, evaluation-focused
+- **Action:** 
+  - Phase 2A: Refactor into modular structure (`src/formats/arrow/` directory)
+  - Split into: `columnar.rs` (arrow array builders), `ipc.rs` (Arrow IPC format), `reader.rs`, `writer.rs`
+  - Remove evaluation-only code (diagnostic output, etc.)
+  - Implement Reader/Writer trait pattern consistently with other formats
+
+##### **FlatBuffers (src/flatbuffers_impl.rs)** ❌ Placeholder, Will Replace
+- **Status:** Evaluation implementation using serde_json as intermediary
+- **Current Design:** Simplified for evaluation; NOT production-ready
+- **Action:**
+  - Phase 0: Delete `src/flatbuffers_impl.rs` (placeholder)
+  - Phase 2B: Replace with proper FlatBuffers schema-based implementation via flatc code generation
+  - New implementation: `src/formats/flatbuffers/` (schema.fbs → reader.rs, writer.rs)
+
+---
+
+#### **8.2.4 Code: Examples & POCs (examples/)**
+
+**Polars/Arrow Evaluation (examples/polars_arrow_eval.rs)**
+- **Status:** Evaluation POC demonstrating Arrow integration with Polars/DuckDB
+- **Action:** Migrate → Phase 4B integration examples
+- **Reuse:** Core logic shows Arrow → Polars dataframe conversion; adapt as tutorial example in `examples/arrow_to_polars.rs`
+- **Archive:** Keep original in `docs/design/format-research/archive/` for reference
+
+---
+
+#### **8.2.5 Data: Test Fixtures**
+
+**FIDELITY_TEST_SET (tests/data/fixtures/)**
+- **Status:** 100-record test set used in evaluation
+- **Action:** Reuse in Phase 0 and all subsequent phases
+- **Location:** Keep in `tests/data/fixtures/fidelity_test_100.mrc`
+- **Note:** Reference spec in `docs/design/format-research/FIDELITY_TEST_SET.md` (keep as living doc)
+
+**Performance Test Sets (tests/data/fixtures/10k_records.mrc, etc.)**
+- **Status:** Used in evaluation benchmarks
+- **Action:** Reuse in Phase 2 benchmarks
+- **Cleanup:** Consolidate naming and location after Phase 0
+
+---
+
+#### **8.2.6 Documentation: Evaluation Reports (EVALUATION_*.md)**
+
+**Scope:** 10 evaluation documents (Arrow, Avro, CBOR, FlatBuffers, MessagePack, Parquet, Polars/Arrow/DuckDB, Protobuf, plus Framework and Baseline)
+
+| Document | Purpose | Action | Archive Location |
+|----------|---------|--------|------------------|
+| `EVALUATION_FRAMEWORK.md` | Methodology template | **Keep** (living reference) | `docs/design/format-research/` |
+| `EVALUATION_PROTOBUF.md` | Protobuf evaluation | Archive | `archive/evaluation-reports/` |
+| `EVALUATION_ARROW.md` | Arrow evaluation | Archive | `archive/evaluation-reports/` |
+| `EVALUATION_FLATBUFFERS.md` | FlatBuffers evaluation | Archive | `archive/evaluation-reports/` |
+| `EVALUATION_MESSAGEPACK.md` | MessagePack evaluation | Archive | `archive/evaluation-reports/` |
+| `EVALUATION_CBOR.md` | CBOR evaluation | Archive | `archive/evaluation-reports/` |
+| `EVALUATION_AVRO.md` | Avro evaluation | Archive | `archive/evaluation-reports/` |
+| `EVALUATION_PARQUET.md` | Parquet evaluation (excluded) | Archive | `archive/evaluation-reports/` |
+| `EVALUATION_POLARS_ARROW_DUCKDB.md` | Ecosystem evaluation | Archive | `archive/evaluation-reports/` |
+| `BASELINE_ISO2709.md` | ISO 2709 baseline | Archive | `archive/evaluation-reports/` |
+| `COMPARISON_MATRIX.md` | Format comparison | **Keep & Update** (post-Phase 4) | `docs/design/format-research/` |
+| `FIDELITY_TEST_SET.md` | Test spec | **Keep** (living doc) | `docs/design/format-research/` |
+
+**Implementation:** 
+- Move evaluation reports to `docs/design/format-research/archive/evaluation-reports/` in Phase 4C
+- Update `COMPARISON_MATRIX.md` after Phase 4C with implementation status, timelines, and production results
+- Keep framework docs and test specifications as reference material
+
+---
+
+### 8.3 Cleanup Tasks in Implementation Plan
+
+The following cleanup tasks are integrated into the mrrc-d4g epic:
+
+| Task ID | Phase | Description | Blocking |
+|---------|-------|-------------|----------|
+| `mrrc-d4g.1.5` | Phase 0 | Consolidate evaluation code into test infrastructure | Phase 2A-2C |
+| `mrrc-d4g.1.6` | Phase 0 | Remove evaluation-only implementations (flatbuffers_impl, arrow_impl placeholders) | Phase 2A, 2B |
+| `mrrc-d4g.3.4` | Phase 2 | Migrate evaluation benchmarks to per-format test suites | None |
+| `mrrc-d4g.4.3.10` | Phase 4C | Remove/archive evaluation documentation (EVALUATION_*.md, etc.) | None |
+
+---
+
+### 8.4 Detailed Cleanup Workflow
+
+#### **Phase 0: Foundation (setup for consolidation)**
+
+1. **Extract test utilities:**
+   - Create `tests/common/fidelity.rs` with record comparison helpers
+   - Create `tests/common/metrics.rs` with performance collection
+   - Both extracted from `tests/flatbuffers_evaluation.rs` for reuse
+
+2. **Organize evaluation code:**
+   - Note locations of `benches/eval_*.rs` for later migration
+   - Identify reusable patterns in `src/arrow_impl.rs` and `src/flatbuffers_impl.rs`
+
+#### **Phase 1B (after Protobuf complete)**
+
+1. **Verify Protobuf implementation:**
+   - Ensure `src/protobuf.rs` passes FIDELITY_TEST_SET
+   - Document integration points
+
+#### **Phase 2A (Arrow implementation)**
+
+1. **Refactor Arrow implementation:**
+   - Delete `src/arrow_impl.rs` (evaluation version)
+   - Create `src/formats/arrow/` module structure
+   - Implement proper Reader/Writer traits
+   - Port relevant logic from evaluation code
+
+2. **Create Arrow benchmarks:**
+   - Start with evaluation benchmark structure from `benches/eval_messagepack.rs` pattern
+   - Adapt for Arrow-specific metrics
+
+#### **Phase 2B (FlatBuffers implementation)**
+
+1. **Delete placeholder implementation:**
+   - Remove `src/flatbuffers_impl.rs`
+
+2. **Implement FlatBuffers from scratch:**
+   - Use flatc code generation
+   - Define `src/formats/flatbuffers/schema.fbs`
+   - Migrate evaluation test logic into Phase 2B test suite
+
+3. **Migrate evaluation tests:**
+   - Extract fidelity comparison logic from `tests/flatbuffers_evaluation.rs`
+   - Move to Phase 2B test suite
+   - Archive evaluation-only test file
+
+#### **Phase 2C (MessagePack implementation)**
+
+1. **Migrate MessagePack benchmark:**
+   - Port `benches/eval_messagepack.rs` core logic
+   - Adapt to production implementation
+   - Archive evaluation benchmark
+
+2. **Archive CBOR/Avro evaluation benchmarks:**
+   - Move `benches/eval_cbor.rs` → `docs/design/format-research/archive/evaluation-code/`
+   - Move `benches/eval_avro.rs` → `docs/design/format-research/archive/evaluation-code/`
+
+#### **Phase 4B (Python modules & examples)**
+
+1. **Migrate Polars example:**
+   - Refactor `examples/polars_arrow_eval.rs` → `examples/arrow_to_polars.rs`
+   - Create tutorial-style example for Phase 4B documentation
+   - Archive evaluation POC
+
+#### **Phase 4C (Documentation & final cleanup)**
+
+1. **Update documentation before archival:**
+   - Update `COMPARISON_MATRIX.md` with final implementation status, performance results, and actual timelines
+   - Verify `FIDELITY_TEST_SET.md` and `EVALUATION_FRAMEWORK.md` are current
+   - Ensure `FORMAT_SUPPORT_STRATEGY.md` Part 8 accurately reflects all cleanup actions
+
+2. **Archive entire format-research directory:**
+   - Move `docs/design/format-research/` → `docs/history/format-research/`
+   - This keeps the completed evaluation project separate from active implementation work
+   - Create `docs/history/format-research/README.md` as archive index (see Section 8.5 template)
+   - Preserves all evaluation reports, code, tests, and decision documentation
+
+3. **Transition notification:**
+   - Add note to `docs/design/` README (or create) explaining format-research project moved to history
+   - Point implementation references to `docs/history/format-research/` if needed for Tier 3
+   - Cross-link to mrrc-d4g epic for ongoing implementation status
+
+4. **Verify post-archival:**
+   - Confirm `docs/history/format-research/` contains all original artifacts
+   - Verify `docs/design/format-research/` no longer exists in active docs
+   - Update any internal links in other docs that referenced format-research path
+
+---
+
+### 8.5 Archival Strategy
+
+**Why Archive Instead of Delete:**
+- Preserves decision history and evaluation methodology for future reference
+- Enables post-release analysis (e.g., "Did Arrow perform as expected?")
+- Supports Tier 3 format implementation (CBOR/Avro can reference evaluation results)
+- Documents what was evaluated and why certain formats were excluded
+- Keeps active implementation docs separate from historical evaluation artifacts
+
+**Archive Location & Strategy:** 
+
+After Phase 4C completes, move the entire `docs/design/format-research/` directory to `docs/history/format-research/`. This separates the completed evaluation project from the ongoing implementation work.
+
+```
+BEFORE (during implementation):
+docs/
+├── design/
+│   ├── format-research/          ← Active during Phase 0-4
+│   │   ├── FORMAT_SUPPORT_STRATEGY.md
+│   │   ├── EVALUATION_FRAMEWORK.md
+│   │   └── ...
+│   └── other/
+
+AFTER (post-Phase 4C):
+docs/
+├── design/
+│   ├── other/                    ← Non-format-research docs
+├── history/
+│   ├── format-research/          ← Historical evaluation project
+│   │   ├── FORMAT_SUPPORT_STRATEGY.md
+│   │   ├── EVALUATION_FRAMEWORK.md
+│   │   ├── EVALUATION_*.md
+│   │   ├── eval_*.rs
+│   │   └── README.md (archive index)
+```
+
+**Archive Index (README in docs/history/format-research/):**
+```markdown
+# Format Evaluation Archive
+
+Historical artifacts from the binary format evaluation project
+(mrrc format research, Phase 0-4, completed January 2026).
+
+## About This Project
+
+This directory contains all evaluation reports, benchmarks, POCs, and decision documentation for the mrrc binary format evaluation project. The evaluation concluded with the Format Support Strategy, which recommended implementing Tier 1 (ISO 2709, Protobuf) and Tier 2 (Arrow, FlatBuffers, MessagePack) formats.
+
+Production implementation is tracked in epic `mrrc-d4g` and not documented here.
+
+## Contents
+
+### Decision Documents
+- `FORMAT_SUPPORT_STRATEGY.md` — Final strategy document with implementation plan
+- `COMPARISON_MATRIX.md` — Detailed format comparison (updated with implementation results)
+
+### Evaluation Reports
+- `EVALUATION_FRAMEWORK.md` — Methodology and evaluation criteria
+- `EVALUATION_PROTOBUF.md`, `EVALUATION_ARROW.md`, etc. — Per-format detailed evaluations
+- `BASELINE_ISO2709.md` — ISO 2709 baseline performance metrics
+
+### Test Specifications
+- `FIDELITY_TEST_SET.md` — Test set specification (100 records, edge cases, coverage)
+
+### Evaluation Code
+- `benches/eval_*.rs` — Standalone benchmarks (CBOR, Avro, MessagePack)
+- `tests/flatbuffers_evaluation.rs` — FlatBuffers evaluation test
+- `examples/polars_arrow_eval.rs` — Arrow/Polars integration POC
+
+## Using This Archive
+
+### For Tier 3 Implementation (CBOR, Avro, Arrow Analytics)
+
+When implementing deferred Tier 3 formats, reference the original evaluation:
+
+1. Read `EVALUATION_[FORMAT].md` for detailed analysis
+2. Review performance and fidelity targets in the report
+3. Check `FIDELITY_TEST_SET.md` for test specification
+4. Follow `EVALUATION_FRAMEWORK.md` methodology for verification
+
+### For Future Format Evaluation
+
+To evaluate new formats (e.g., JSON Lines post-release):
+
+1. Use `EVALUATION_FRAMEWORK.md` as a template
+2. Follow the same fidelity/performance testing methodology
+3. Create a new EVALUATION_[FORMAT].md report
+4. Update `COMPARISON_MATRIX.md` with results
+
+### For Production Implementation Reference
+
+The production implementation of Tier 1 and Tier 2 formats is NOT documented here.
+For implementation status and details, see:
+
+- Implementation planning: `/docs/design/format-research/FORMAT_SUPPORT_STRATEGY.md` (Part 5)
+- Issue tracking: Epic `mrrc-d4g` in beads (`bd ready`)
+- Source code: `src/formats/` (production modules)
+
+## Project Timeline
+
+| Phase | Dates | Status |
+|-------|-------|--------|
+| Evaluation Project | Jan 2026 | Complete (see evaluation reports) |
+| Implementation (mrrc-d4g) | Jan-Feb 2026 | In Progress (tracked separately) |
+
+---
+
+*This archive was created January 2026 after completion of the binary format evaluation project.*
+```
+
+---
+
+### 8.6 Migration Checklist (by Phase)
+
+Use this checklist when executing cleanup tasks:
+
+- **Phase 0:**
+  - [ ] Create `tests/common/fidelity.rs` with record comparison helpers
+  - [ ] Create `tests/common/metrics.rs` with performance utilities
+  - [ ] Document evaluation code locations and reuse strategy
+
+- **Phase 2A:**
+  - [ ] Delete `src/arrow_impl.rs`
+  - [ ] Create `src/formats/arrow/` module structure
+  - [ ] Create Arrow benchmarks (reuse eval_messagepack pattern)
+
+- **Phase 2B:**
+  - [ ] Delete `src/flatbuffers_impl.rs`
+  - [ ] Create `src/formats/flatbuffers/schema.fbs` and code generation
+  - [ ] Migrate `tests/flatbuffers_evaluation.rs` logic into Phase 2B tests
+  - [ ] Archive `tests/flatbuffers_evaluation.rs` original
+
+- **Phase 2C:**
+  - [ ] Migrate `benches/eval_messagepack.rs` core logic
+  - [ ] Archive `benches/eval_cbor.rs` → archive/evaluation-code/
+  - [ ] Archive `benches/eval_avro.rs` → archive/evaluation-code/
+
+- **Phase 4B:**
+  - [ ] Refactor `examples/polars_arrow_eval.rs` → `examples/arrow_to_polars.rs`
+  - [ ] Archive evaluation POC
+
+- **Phase 4C:**
+  - [ ] Update COMPARISON_MATRIX.md with final implementation results
+  - [ ] Verify FIDELITY_TEST_SET.md and EVALUATION_FRAMEWORK.md are current
+  - [ ] Move entire `docs/design/format-research/` → `docs/history/format-research/`
+  - [ ] Create `docs/history/format-research/README.md` as archive index
+  - [ ] Add transition note to `docs/design/` README
+  - [ ] Verify no broken links to old format-research path
+
+---
+
 **Document Complete**  
 For implementation planning questions, refer to Part 5 (Implementation Plan).  
 For format selection questions, refer to Part 10 (Recommendations Summary).
