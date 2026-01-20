@@ -133,9 +133,31 @@ pub mod iso2709 {
 /// The Protobuf schema supports forward and backward compatibility:
 /// - New optional fields can be added without breaking old readers
 /// - Old fields can be deprecated but remain readable
+///
+/// # Usage
+///
+/// ```ignore
+/// use mrrc::formats::{FormatReader, FormatWriter};
+/// use mrrc::formats::protobuf::{ProtobufReader, ProtobufWriter};
+/// use std::io::Cursor;
+///
+/// // Writing records
+/// let mut buffer = Vec::new();
+/// let mut writer = ProtobufWriter::new(&mut buffer);
+/// writer.write_record(&record)?;
+/// writer.finish()?;
+///
+/// // Reading records
+/// let cursor = Cursor::new(buffer);
+/// let mut reader = ProtobufReader::new(cursor);
+/// while let Some(record) = reader.read_record()? {
+///     // process record
+/// }
+/// ```
 pub mod protobuf {
-    // Re-export existing implementation
-    // TODO: Create ProtobufReader and ProtobufWriter types that implement traits
+    // Re-export streaming reader/writer that implement FormatReader/FormatWriter traits
+    pub use crate::protobuf::{ProtobufReader, ProtobufWriter};
+    // Re-export single-record serializer/deserializer for direct use
     pub use crate::protobuf::{ProtobufDeserializer, ProtobufSerializer};
 }
 

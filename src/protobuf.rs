@@ -38,8 +38,10 @@
 // Include generated protobuf code
 include!(concat!(env!("OUT_DIR"), "/mrrc.formats.protobuf.rs"));
 
+use crate::formats::{FormatReader, FormatWriter};
 use crate::{Field as MarcField, MarcError, Record, Result};
 use prost::Message;
+use std::io::{Read, Write};
 
 /// Serializes a MARC Record to Protocol Buffers binary format.
 #[derive(Debug)]
@@ -188,6 +190,233 @@ fn convert_field_to_protobuf(field: &MarcField) -> Result<Field> {
     })
 }
 
+/// Writer for streaming MARC records to protobuf format.
+///
+/// `ProtobufWriter` implements the [`FormatWriter`] trait, allowing it to be used
+/// interchangeably with other format writers. Records are written using length-delimited
+/// encoding (each record is prefixed with its size as a varint).
+///
+/// # Example
+///
+/// ```ignore
+/// use mrrc::protobuf::ProtobufWriter;
+/// use mrrc::formats::FormatWriter;
+///
+/// let mut buffer = Vec::new();
+/// let mut writer = ProtobufWriter::new(&mut buffer);
+///
+/// writer.write_record(&record)?;
+/// writer.finish()?;
+/// ```
+#[derive(Debug)]
+pub struct ProtobufWriter<W: Write> {
+    writer: W,
+    records_written: usize,
+    finished: bool,
+}
+
+impl<W: Write> ProtobufWriter<W> {
+    /// Create a new protobuf writer.
+    ///
+    /// # Arguments
+    ///
+    /// * `writer` - Any destination implementing [`std::io::Write`]
+    pub fn new(writer: W) -> Self {
+        Self {
+            writer,
+            records_written: 0,
+            finished: false,
+        }
+    }
+
+    /// Write a single MARC record to protobuf format.
+    ///
+    /// Records are written with length-delimited encoding for streaming support.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization or I/O fails.
+    pub fn write_record(&mut self, record: &Record) -> Result<()> {
+        if self.finished {
+            return Err(MarcError::InvalidRecord(
+                "Cannot write to a finished writer".to_string(),
+            ));
+        }
+
+        let pb_record = convert_record_to_protobuf(record)?;
+
+        // Encode to a buffer first, then write
+        let mut buffer = Vec::new();
+        pb_record
+            .encode_length_delimited(&mut buffer)
+            .map_err(|e| MarcError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+        self.writer.write_all(&buffer)?;
+        self.records_written += 1;
+        Ok(())
+    }
+
+    /// Flush the writer and mark it as finished.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if flushing fails.
+    pub fn finish(&mut self) -> Result<()> {
+        self.writer.flush()?;
+        self.finished = true;
+        Ok(())
+    }
+
+    /// Returns the number of records written so far.
+    #[must_use]
+    pub fn records_written(&self) -> usize {
+        self.records_written
+    }
+}
+
+impl<W: Write + std::fmt::Debug> FormatWriter for ProtobufWriter<W> {
+    fn write_record(&mut self, record: &Record) -> Result<()> {
+        ProtobufWriter::write_record(self, record)
+    }
+
+    fn finish(&mut self) -> Result<()> {
+        ProtobufWriter::finish(self)
+    }
+
+    fn records_written(&self) -> Option<usize> {
+        Some(self.records_written)
+    }
+}
+
+/// Reader for streaming MARC records from protobuf format.
+///
+/// `ProtobufReader` implements the [`FormatReader`] trait, allowing it to be used
+/// interchangeably with other format readers. Records are read using length-delimited
+/// encoding (each record is prefixed with its size as a varint).
+///
+/// # Example
+///
+/// ```ignore
+/// use mrrc::protobuf::ProtobufReader;
+/// use mrrc::formats::FormatReader;
+/// use std::fs::File;
+///
+/// let file = File::open("records.pb")?;
+/// let mut reader = ProtobufReader::new(file);
+///
+/// while let Some(record) = reader.read_record()? {
+///     println!("Record: {:?}", record);
+/// }
+/// ```
+#[derive(Debug)]
+pub struct ProtobufReader<R: Read> {
+    reader: R,
+    records_read: usize,
+}
+
+impl<R: Read> ProtobufReader<R> {
+    /// Create a new protobuf reader.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - Any source implementing [`std::io::Read`]
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader,
+            records_read: 0,
+        }
+    }
+
+    /// Read a single MARC record from the protobuf stream.
+    ///
+    /// Returns `Ok(Some(record))` if a record was read, `Ok(None)` at EOF,
+    /// or `Err` if parsing fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data is malformed or I/O fails.
+    pub fn read_record(&mut self) -> Result<Option<Record>> {
+        // Read length-delimited protobuf message
+        // First, read the varint length prefix
+        let len = match read_varint(&mut self.reader) {
+            Ok(len) => len,
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
+            Err(e) => return Err(MarcError::IoError(e)),
+        };
+
+        if len == 0 {
+            return Ok(None);
+        }
+
+        // Read the message bytes
+        let len_usize: usize = len.try_into().map_err(|_| {
+            MarcError::ParseError("Protobuf message length exceeds platform limit".to_string())
+        })?;
+        let mut buffer = vec![0u8; len_usize];
+        match self.reader.read_exact(&mut buffer) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                return Err(MarcError::TruncatedRecord(
+                    "Unexpected EOF while reading protobuf record".to_string(),
+                ));
+            }
+            Err(e) => return Err(MarcError::IoError(e)),
+        }
+
+        // Decode the protobuf message
+        let pb_record = MarcRecord::decode(&buffer[..])
+            .map_err(|e| MarcError::ParseError(format!("Protobuf decoding failed: {e}")))?;
+
+        let record = convert_protobuf_to_record(&pb_record)?;
+        self.records_read += 1;
+        Ok(Some(record))
+    }
+
+    /// Returns the number of records read so far.
+    #[must_use]
+    pub fn records_read(&self) -> usize {
+        self.records_read
+    }
+}
+
+impl<R: Read + std::fmt::Debug> FormatReader for ProtobufReader<R> {
+    fn read_record(&mut self) -> Result<Option<Record>> {
+        ProtobufReader::read_record(self)
+    }
+
+    fn records_read(&self) -> Option<usize> {
+        Some(self.records_read)
+    }
+}
+
+/// Read a varint from a reader.
+///
+/// Varints are used by protobuf for length-delimited encoding.
+fn read_varint<R: Read>(reader: &mut R) -> std::io::Result<u64> {
+    let mut result: u64 = 0;
+    let mut shift = 0;
+
+    loop {
+        let mut byte = [0u8; 1];
+        reader.read_exact(&mut byte)?;
+
+        let b = byte[0];
+        result |= u64::from(b & 0x7F) << shift;
+
+        if b & 0x80 == 0 {
+            return Ok(result);
+        }
+
+        shift += 7;
+        if shift >= 64 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Varint too large",
+            ));
+        }
+    }
+}
+
 /// Converts a protobuf `MarcRecord` message to a mrrc `Record`.
 fn convert_protobuf_to_record(pb_record: &MarcRecord) -> Result<Record> {
     // Validate leader
@@ -245,6 +474,11 @@ fn convert_protobuf_to_record(pb_record: &MarcRecord) -> Result<Record> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
+
+    // ============================================================================
+    // Tests for ProtobufSerializer/ProtobufDeserializer (single-record API)
+    // ============================================================================
 
     #[test]
     fn test_roundtrip_simple_record() -> Result<()> {
@@ -409,6 +643,351 @@ mod tests {
             "  Leading and trailing  ",
             &restored.get_field("245").unwrap().subfields[0].value
         );
+
+        Ok(())
+    }
+
+    // ============================================================================
+    // Tests for ProtobufWriter/ProtobufReader (streaming API with FormatWriter/FormatReader)
+    // ============================================================================
+
+    fn make_test_leader() -> crate::Leader {
+        crate::Leader::from_bytes(b"00345nam a2200133 a 4500").unwrap()
+    }
+
+    #[test]
+    fn test_streaming_write_read_single_record() -> Result<()> {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test001".to_string());
+
+        let mut field = MarcField::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test Title".to_string());
+        record.add_field(field);
+
+        // Write using ProtobufWriter
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            assert_eq!(writer.records_written(), 1);
+            writer.finish()?;
+        }
+
+        // Read using ProtobufReader
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+
+        let restored = reader.read_record()?.expect("Should read one record");
+        assert_eq!(reader.records_read(), 1);
+
+        // Verify content
+        assert_eq!(restored.get_control_field("001"), Some("test001"));
+        let field_245 = restored.get_field("245").expect("Should have 245");
+        assert_eq!(field_245.get_subfield('a'), Some("Test Title"));
+
+        // Should return None on second read
+        assert!(reader.read_record()?.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_write_read_multiple_records() -> Result<()> {
+        let records: Vec<Record> = (0..5)
+            .map(|i| {
+                let mut record = Record::new(make_test_leader());
+                record.add_control_field("001".to_string(), format!("rec{i:03}"));
+
+                let mut field = MarcField::new("245".to_string(), '1', '0');
+                field.add_subfield('a', format!("Title {i}"));
+                record.add_field(field);
+                record
+            })
+            .collect();
+
+        // Write all records
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            for record in &records {
+                writer.write_record(record)?;
+            }
+            assert_eq!(writer.records_written(), 5);
+            writer.finish()?;
+        }
+
+        // Read all records back
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+
+        for i in 0..5 {
+            let record = reader.read_record()?.expect("Should have record");
+            assert_eq!(record.get_control_field("001"), Some(format!("rec{i:03}").as_str()));
+            let field_245 = record.get_field("245").expect("Should have 245");
+            assert_eq!(field_245.get_subfield('a'), Some(format!("Title {i}").as_str()));
+        }
+
+        assert_eq!(reader.records_read(), 5);
+        assert!(reader.read_record()?.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_format_writer_trait() -> Result<()> {
+        use crate::formats::FormatWriter;
+
+        let records: Vec<Record> = (0..3)
+            .map(|i| {
+                let mut record = Record::new(make_test_leader());
+                let mut field = MarcField::new("245".to_string(), '1', '0');
+                field.add_subfield('a', format!("Title {i}"));
+                record.add_field(field);
+                record
+            })
+            .collect();
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            // Use the trait's write_batch method
+            FormatWriter::write_batch(&mut writer, &records)?;
+            assert_eq!(FormatWriter::records_written(&writer), Some(3));
+            FormatWriter::finish(&mut writer)?;
+        }
+
+        // Read back using FormatReader trait
+        use crate::formats::FormatReader;
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+
+        let read_records = FormatReader::read_all(&mut reader)?;
+        assert_eq!(read_records.len(), 3);
+        assert_eq!(FormatReader::records_read(&reader), Some(3));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_format_reader_iterator() -> Result<()> {
+        use crate::formats::FormatReaderExt;
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            for i in 0..4 {
+                let mut record = Record::new(make_test_leader());
+                let mut field = MarcField::new("245".to_string(), '1', '0');
+                field.add_subfield('a', format!("Title {i}"));
+                record.add_field(field);
+                writer.write_record(&record)?;
+            }
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+
+        let mut count = 0;
+        for result in reader.records() {
+            result?;
+            count += 1;
+        }
+        assert_eq!(count, 4);
+        assert_eq!(reader.records_read(), 4);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_empty_file() -> Result<()> {
+        let buffer: Vec<u8> = Vec::new();
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+
+        assert!(reader.read_record()?.is_none());
+        assert_eq!(reader.records_read(), 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_writer_cannot_write_after_finish() -> Result<()> {
+        let mut record = Record::new(make_test_leader());
+        let mut field = MarcField::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        let mut writer = ProtobufWriter::new(&mut buffer);
+        writer.finish()?;
+
+        let result = writer.write_record(&record);
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_preserves_field_order() -> Result<()> {
+        let mut record = Record::new(make_test_leader());
+
+        // Add fields in specific order
+        record.add_control_field("001".to_string(), "test001".to_string());
+        record.add_control_field("005".to_string(), "20260120".to_string());
+
+        let mut field_100 = MarcField::new("100".to_string(), '1', ' ');
+        field_100.add_subfield('a', "Author".to_string());
+        record.add_field(field_100);
+
+        let mut field_245 = MarcField::new("245".to_string(), '1', '0');
+        field_245.add_subfield('a', "Title".to_string());
+        record.add_field(field_245);
+
+        // Add multiple 650 fields
+        for i in 1..=3 {
+            let mut field_650 = MarcField::new("650".to_string(), ' ', '0');
+            field_650.add_subfield('a', format!("Subject {i}"));
+            record.add_field(field_650);
+        }
+
+        // Write and read back
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
+
+        // Verify field ordering preserved
+        let subjects: Vec<_> = restored.fields_by_tag("650").collect();
+        assert_eq!(subjects.len(), 3);
+        assert_eq!(subjects[0].get_subfield('a'), Some("Subject 1"));
+        assert_eq!(subjects[1].get_subfield('a'), Some("Subject 2"));
+        assert_eq!(subjects[2].get_subfield('a'), Some("Subject 3"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_preserves_subfield_order() -> Result<()> {
+        let mut record = Record::new(make_test_leader());
+
+        let mut field = MarcField::new("245".to_string(), '1', '0');
+        // Add subfields in non-alphabetical order
+        field.add_subfield('c', "Author".to_string());
+        field.add_subfield('a', "Title".to_string());
+        field.add_subfield('b', "Subtitle".to_string());
+        record.add_field(field);
+
+        // Write and read back
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
+
+        // Verify subfield order preserved (c, a, b)
+        let field_245 = restored.get_field("245").unwrap();
+        let codes: Vec<char> = field_245.subfields.iter().map(|s| s.code).collect();
+        assert_eq!(codes, vec!['c', 'a', 'b']);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_preserves_utf8() -> Result<()> {
+        let mut record = Record::new(make_test_leader());
+
+        let mut field = MarcField::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test 测试 тест العربية 日本語".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
+
+        assert_eq!(
+            restored.get_field("245").unwrap().get_subfield('a'),
+            Some("Test 测试 тест العربية 日本語")
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_preserves_whitespace() -> Result<()> {
+        let mut record = Record::new(make_test_leader());
+
+        let mut field = MarcField::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "  Leading and trailing  ".to_string());
+        field.add_subfield('b', "\ttab\there\t".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
+
+        let field_245 = restored.get_field("245").unwrap();
+        assert_eq!(field_245.get_subfield('a'), Some("  Leading and trailing  "));
+        assert_eq!(field_245.get_subfield('b'), Some("\ttab\there\t"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_streaming_preserves_indicators() -> Result<()> {
+        let mut record = Record::new(make_test_leader());
+
+        let mut field = MarcField::new("245".to_string(), '1', '4');
+        field.add_subfield('a', "The Title".to_string());
+        record.add_field(field);
+
+        let mut field2 = MarcField::new("650".to_string(), ' ', '0');
+        field2.add_subfield('a', "Subject".to_string());
+        record.add_field(field2);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ProtobufWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = ProtobufReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
+
+        let field_245 = restored.get_field("245").unwrap();
+        assert_eq!(field_245.indicator1, '1');
+        assert_eq!(field_245.indicator2, '4');
+
+        let field_650 = restored.get_field("650").unwrap();
+        assert_eq!(field_650.indicator1, ' ');
+        assert_eq!(field_650.indicator2, '0');
 
         Ok(())
     }
