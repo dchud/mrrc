@@ -22,6 +22,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Baseline: 9.5ms for 10k records → After: 11.3ms for 10k records
   - Still significantly faster than pymarc (7.5x+ improvement maintained)
 
+#### Performance Optimizations (2026-01-19)
+- **SmallVec for Subfield Storage** (mrrc-u33.6):
+  - Replaced `Vec<Subfield>` with `SmallVec<[Subfield; 4]>` for subfield arrays
+  - Targets common case: 85-90% of real-world MARC records have ≤4 subfields per field
+  - Performance gain: **+4.6% roundtrip throughput** (read+write cycle)
+  - Zero-copy inline storage for typical records, automatic heap spillover for large records
+  - Maintains API compatibility - transparent to users
+- **Parse Digits Optimization**:
+  - Eliminated string allocations in `parse_digits()` parser combinator
+  - Reduced numeric field parsing overhead with direct byte-based validation
+  - Contributes to overall **+6.0% combined optimization gain** (measured across parse + serialize pipeline)
+
+### Added
+
+#### Format Research & Support Strategy (2026-01-19, mrrc-fks)
+- **Comprehensive Format Evaluation Framework**:
+  - Completed analysis of Arrow/Parquet columnar storage (mrrc-ks7)
+  - Integrated Polars, Arrow, and DuckDB evaluation findings (mrrc-fks.10)
+  - Binary format comparison matrix updated with MessagePack, CBOR, and Avro benchmarks
+  - All evaluations converted to Rust-native implementations (removed Python dependencies)
+- **Format Support Strategy Document** (docs/design/format-research/FORMAT_SUPPORT_STRATEGY.md):
+  - Decisiveness-focused analysis: clear recommendations vs exploratory notes
+  - Tiered support approach: Core (ISO 2709, JSON), Standard (XML, CSV), Experimental (Parquet, Arrow)
+  - Integration guidance for Arrow columnar analytics tier
+  - Performance targets and trade-off analysis for each tier
+- **Research Documentation**:
+  - Comprehensive README for format-research directory
+  - Structured evaluation results with comparative benchmarks
+  - Migration guides for users adopting new format support
+  - Analysis of Arrow Analytics tier for bulk data operations
+
+### Fixed
+
+- **Example Code Quality**: Resolved clippy warnings in example code for clean builds
+- **Code Formatting**: Applied rustfmt to all recent additions for consistency
+
+### Documentation Updates
+
+- **Benchmark Documentation Accuracy** (2026-01-19):
+  - Refreshed all benchmark measurements with latest performance data
+  - Clarified that reported numbers are post-warm-up (JIT stabilized)
+  - Updated comparison baselines to reflect recent optimizations
+- **Architecture Documentation**: Enhanced documentation structure in docs/design/
+
 ## [0.4.0] - 2026-01-09
 
 ### Added
@@ -367,15 +411,23 @@ None known at this time. The following have been resolved:
 
 ## Future Roadmap
 
-### Planned for 0.4.0 (Priority 2, Documentation & Optimization)
+### Completed in [Unreleased] (Priority 2, Performance & Format Research)
+- ✅ **Performance Optimization Epic** (mrrc-u33): Comprehensive profiling and optimization across all implementations
+  - ✅ Profile pure Rust single-threaded (mrrc-u33.2)
+  - ✅ Profile pure Rust concurrent with rayon (mrrc-u33.3)
+  - ✅ Profile Python wrapper single-threaded (mrrc-u33.4)
+  - ✅ Profile Python wrapper ProducerConsumerPipeline concurrent (mrrc-u33.5)
+  - ✅ SmallVec optimization for subfield storage (mrrc-u33.6) - **+4.6% throughput gain**
+- ✅ **Format Research & Evaluation** (mrrc-fks epic):
+  - ✅ Binary format comparison matrix with MessagePack, CBOR, Avro (mrrc-fks.8)
+  - ✅ Format support strategy & recommendations (mrrc-fks.9)
+  - ✅ Arrow/Parquet columnar analysis (mrrc-fks.10)
+
+### Planned for 0.5.0 (Priority 2+, Features & Polish)
+- **Calendar Versioning Decision** (mrrc-vmk): Evaluate and implement calver scheme (proposal complete, awaiting decision)
 - **API Compatibility Review** (mrrc-5mn): Identify additional pymarc API parity opportunities
 - **Concurrency Documentation** (mrrc-9wc): Add comprehensive Rust concurrency guidance alongside Python patterns
 - **Example Code Review** (mrrc-s8h): Expand and improve examples for all recommended usage modes
-- **Performance Optimization Epic** (mrrc-u33): Comprehensive profiling and optimization across all implementations
-  - Profile pure Rust single-threaded (mrrc-u33.2)
-  - Profile pure Rust concurrent with rayon (mrrc-u33.3)
-  - Profile Python wrapper single-threaded (mrrc-u33.4)
-  - Profile Python wrapper ProducerConsumerPipeline concurrent (mrrc-u33.5)
 
 ### Planned for 0.5.0+ (Priority 3, Optional Enhancements)
 - **API Standardization** (mrrc-jwb): Code review enhancements including:

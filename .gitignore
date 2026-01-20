@@ -25,6 +25,11 @@ Cargo.lock
 *.lcov
 cobertura.xml
 tarpaulin-report.html
+flamegraph.svg
+flamegraphs/
+*.perf
+perf.data
+perf.data.old
 
 # Documentation
 /doc/
