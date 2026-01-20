@@ -16,6 +16,9 @@ jobs:
   asan-library-tests:
     name: ASAN Memory Safety Tests
     runs-on: ubuntu-latest
+    # Temporarily disabled due to zerocopy nightly incompatibility (rust-lang/rust#144168)
+    # See: https://github.com/dchud/mrrc/issues/mrrc-4fs
+    if: false
     strategy:
       # Let all ASAN tests run even if one fails, for comprehensive feedback
       fail-fast: false
