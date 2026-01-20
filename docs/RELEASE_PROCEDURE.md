@@ -1,10 +1,93 @@
 # MRRC Release Procedure
 
-**Status**: Reference documentation for release managers  
+**Status**: Executable reference for humans and coding agents  
 **Estimated Duration**: 30-45 minutes for a standard release  
 **Last Updated**: 2026-01-20
 
 This document provides a step-by-step, executable procedure for preparing, testing, and publishing a new release of MRRC (MARC Rust Crate). Follow these steps sequentially to ensure nothing is missed.
+
+## Quick Start for Agents
+
+To prepare a release, run with a specific version number:
+```bash
+# Set the version to release (e.g., 0.5.0)
+export VERSION="0.5.0"
+
+# Validate environment and dependencies
+# Then follow Sections 1-6 for preparation, or Sections 1-9 for full workflow
+```
+
+**Terminology**: 
+- **"Prepare"** (Sections 1-6): Version updates through git tag creation (ends with tag ready to push)
+- **"Publish"** (Sections 7-8): Publishing to registries (automated via GitHub Actions)
+- **"Post-Release"** (Sections 9-10): Cleanup and next cycle setup
+
+## Definition of Done: "Prepare Release X.Y.Z"
+
+When a coding agent receives a task "prepare release version X.Y.Z", it should follow sections 1-7.2 (Preflight through Create Git Tag). The release is **prepared and ready to publish** when:
+
+### Machine-Checkable Success Criteria
+
+```bash
+# 1. All version files updated and matching
+ROOT_VER=$(sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version' | sed 's/.*"\([^"]*\)".*/\1/')
+[ "$ROOT_VER" = "$VERSION" ] || exit 1
+
+# 2. CHANGELOG.md structure correct
+[ "$(grep -c "## \[Unreleased\]" CHANGELOG.md)" = "1" ] || exit 1
+grep -q "## \[$VERSION\]" CHANGELOG.md || exit 1
+
+# 3. All pre-release checks passed
+bash .cargo/check.sh || exit 1
+
+# 4. Git state correct
+[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || exit 1
+git diff --quiet || exit 1
+git diff --cached --quiet || exit 1
+
+# 5. Release commit exists locally
+git log --oneline -1 | grep -q "chore(release): v$VERSION" || exit 1
+
+# 6. Release tag exists locally (not pushed yet)
+git rev-parse "v$VERSION" >/dev/null || exit 1
+
+# If all above succeed, preparation is complete
+echo "✓ Release v$VERSION prepared and ready to push"
+```
+
+**Status Check Command** (agent can use to verify work):
+```bash
+# Quickly verify all success criteria
+cd "$(git rev-parse --show-toplevel)"
+VERSION="0.5.0"  # Set to target version
+
+# Run all checks
+bash << 'EOF'
+set -e
+echo "Checking release preparation..."
+
+# Versions
+ROOT=$(sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version' | sed 's/.*"\([^"]*\)".*/\1/')
+[ "$ROOT" = "$VERSION" ] && echo "✓ Versions match" || (echo "✗ Version mismatch" && exit 1)
+
+# Changelog
+[ "$(grep -c "## \[Unreleased\]" CHANGELOG.md)" = "1" ] && echo "✓ Changelog structure OK" || (echo "✗ Changelog issue" && exit 1)
+
+# Git state
+[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] && echo "✓ On main branch" || (echo "✗ Wrong branch" && exit 1)
+git diff --quiet && echo "✓ No unstaged changes" || (echo "✗ Unstaged changes" && exit 1)
+
+# Commit exists
+git log --oneline -1 | grep -q "chore(release)" && echo "✓ Release commit exists" || (echo "✗ Release commit missing" && exit 1)
+
+# Tag exists
+git rev-parse "v$VERSION" >/dev/null && echo "✓ Release tag created locally" || (echo "✗ Tag missing" && exit 1)
+
+echo ""
+echo "✓ Release v$VERSION is READY TO PUSH"
+echo "  Next: git push origin main && git push origin v$VERSION"
+EOF
+```
 
 ## Table of Contents
 
@@ -20,6 +103,86 @@ This document provides a step-by-step, executable procedure for preparing, testi
 10. [Post-Release Setup](#post-release-setup)
 11. [Rollback Procedures](#rollback-procedures)
 12. [Troubleshooting](#troubleshooting)
+
+---
+
+## Preflight Dependencies & Setup
+
+**Run this first to validate your environment is ready.**
+
+### P.1 Determine Repo Root
+
+All commands must run from the repository root. Set up the environment:
+
+```bash
+# Determine repo root and validate
+REPO_ROOT="$(git rev-parse --show-toplevel)" || { echo "Not in a git repo"; exit 1; }
+cd "$REPO_ROOT"
+echo "Repo root: $(pwd)"
+```
+
+**Checklist**:
+- [ ] You are in a git repository
+- [ ] Path contains `.git`, `Cargo.toml`, `src-python/`, `docs/` directories
+
+### P.2 Validate Required Tools
+
+Verify all tools are installed and accessible:
+
+```bash
+# Rust toolchain
+rustc --version || { echo "rustc not found"; exit 1; }
+cargo --version || { echo "cargo not found"; exit 1; }
+
+# Python and build tools
+python3 --version || { echo "python3 not found"; exit 1; }
+maturin --version || { echo "maturin not found"; exit 1; }
+
+# Utility tools
+git --version || { echo "git not found"; exit 1; }
+protoc --version || { echo "protoc not found"; exit 1; }
+```
+
+**Expected**:
+- Rust 1.71+ (see `Cargo.toml` rust-version)
+- Python 3.9+
+- maturin 1.0+
+- protoc 3.0+
+
+**Checklist**:
+- [ ] All tools are installed and at expected versions
+
+### P.3 Validate GitHub Secrets (if publishing)
+
+If you will publish to PyPI or crates.io, verify credentials:
+
+```bash
+# For PyPI publication (GitHub Actions uses PYPI_API_TOKEN)
+# Manual verification: GitHub repo → Settings → Secrets → PYPI_API_TOKEN should exist
+
+# For crates.io publication (manual as fallback)
+cargo login --registry crates-io 2>&1 | head -1 || echo "Note: crates.io token check"
+```
+
+**Checklist**:
+- [ ] PYPI_API_TOKEN is set in GitHub repository secrets (if doing PyPI)
+- [ ] crates.io token is configured locally (if manual publish needed)
+
+### P.4 Set VERSION Variable
+
+Set the version you are releasing:
+
+```bash
+# Example: 0.5.0
+export VERSION="0.5.0"
+
+# Validate format (MAJOR.MINOR.PATCH)
+echo "Releasing version: $VERSION"
+```
+
+**Checklist**:
+- [ ] VERSION is set in shell (e.g., `echo $VERSION` prints `0.5.0`)
+- [ ] VERSION follows SemVer format (X.Y.Z)
 
 ---
 
@@ -117,24 +280,33 @@ Note the reason for the chosen version increment in your release notes/commit me
 
 Update version numbers in all configuration files. **Do this in order** and **verify each file** before proceeding.
 
+The VERSION variable is used throughout. Ensure `$VERSION` is set before starting (see [Preflight Dependencies](#preflight-dependencies--setup)).
+
 ### 3.1 Update Root Cargo.toml
 
-**File**: `Cargo.toml`
+**File**: `Cargo.toml` (in repo root)
+
+Find the `[package]` section (should be near the top) and update the `version` field:
 
 ```bash
-# Edit Cargo.toml with your preferred editor
-# Find the [package] section and update version:
-# version = "0.4.0"  →  version = "0.5.0"  (example)
-```
+# Show current version
+echo "=== Current Root Cargo.toml version ==="
+sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version'
 
-**Verification**:
-```bash
-grep '^version' Cargo.toml
+# Update version (using sed)
+sed -i.bak '/^\[package\]/,/^\[/{
+  s/^version = .*/version = "'$VERSION'"/
+}' Cargo.toml
+
+# Verify
+echo "=== Updated Root Cargo.toml version ==="
+sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version'
 ```
 
 **Checklist**:
 - [ ] Root Cargo.toml updated
-- [ ] Version number is correct
+- [ ] Version number shows `version = "X.Y.Z"` where X.Y.Z matches $VERSION
+- [ ] No other section's version was changed
 
 ### 3.2 Update Python Cargo.toml
 
@@ -143,32 +315,39 @@ grep '^version' Cargo.toml
 Update the version in the `[package]` section to match the root version:
 
 ```bash
-# Same version as root Cargo.toml
-```
+# Show current version
+echo "=== Current Python Cargo.toml version ==="
+sed -n '/^\[package\]/,/^\[/p' src-python/Cargo.toml | grep '^version'
 
-**Verification**:
-```bash
+# Update version
+sed -i.bak 's/^version = .*/version = "'$VERSION'"/' src-python/Cargo.toml
+
+# Verify
+echo "=== Updated Python Cargo.toml version ==="
 grep '^version' src-python/Cargo.toml
 ```
 
 **Checklist**:
 - [ ] Python Cargo.toml updated
-- [ ] Version number matches root
+- [ ] Version number matches root (should show `version = "X.Y.Z"`)
 
 ### 3.3 Update pyproject.toml
 
-**File**: `pyproject.toml`
+**File**: `pyproject.toml` (in repo root)
 
 Update the version in the `[project]` section:
 
 ```bash
-# Find: version = "0.4.0"
-# Change to: version = "0.5.0"  (example)
-```
+# Show current version
+echo "=== Current pyproject.toml version ==="
+sed -n '/^\[project\]/,/^\[/p' pyproject.toml | grep '^version'
 
-**Verification**:
-```bash
-grep '^version' pyproject.toml
+# Update version
+sed -i.bak 's/^version = .*/version = "'$VERSION'"/' pyproject.toml
+
+# Verify
+echo "=== Updated pyproject.toml version ==="
+sed -n '/^\[project\]/,/^\[/p' pyproject.toml | grep '^version'
 ```
 
 **Checklist**:
@@ -178,86 +357,119 @@ grep '^version' pyproject.toml
 ### 3.4 Verify All Versions Match
 
 ```bash
-echo "Root: $(grep '^version' Cargo.toml)"
-echo "Python Cargo: $(grep '^version' src-python/Cargo.toml)"
-echo "PyProject: $(grep '^version' pyproject.toml)"
-```
+echo "=== Version Consistency Check ==="
+ROOT_VER=$(sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version' | head -1 | sed 's/.*= "\([^"]*\)".*/\1/')
+PYTHON_VER=$(grep '^version' src-python/Cargo.toml | head -1 | sed 's/.*= "\([^"]*\)".*/\1/')
+PYPROJECT_VER=$(sed -n '/^\[project\]/,/^\[/p' pyproject.toml | grep '^version' | head -1 | sed 's/.*= "\([^"]*\)".*/\1/')
 
-All three lines should show the same version number.
+echo "Root Cargo.toml: $ROOT_VER"
+echo "Python Cargo.toml: $PYTHON_VER"
+echo "pyproject.toml: $PYPROJECT_VER"
+echo "Expected: $VERSION"
+
+# Exit with failure if any don't match
+if [ "$ROOT_VER" != "$VERSION" ] || [ "$PYTHON_VER" != "$VERSION" ] || [ "$PYPROJECT_VER" != "$VERSION" ]; then
+  echo "ERROR: Version mismatch detected!"
+  exit 1
+fi
+echo "✓ All versions match"
+```
 
 **Checklist**:
 - [ ] All three version numbers are identical
+- [ ] All match the $VERSION variable
+- [ ] Script exits with success (code 0)
 
 ---
 
 ## Update Changelog
 
-### 4.1 Prepare Changelog Section
+**File**: `CHANGELOG.md` (in repo root)
 
-**File**: `CHANGELOG.md`
+The changelog requires a deterministic transformation: the current `[Unreleased]` section becomes the new release, and a fresh `[Unreleased]` is created above it.
 
-Locate the `## [Unreleased]` section at the top of the file.
+### 4.1 Validate Changelog Structure
+
+Ensure the file starts with `## [Unreleased]`:
+
+```bash
+head -10 CHANGELOG.md
+```
+
+**Expected output**:
+```
+## [Unreleased]
+
+### Added
+...
+```
+
+**Checklist**:
+- [ ] File starts with `## [Unreleased]`
+- [ ] There is exactly one `## [Unreleased]` section (check with: `grep -c "## \[Unreleased\]" CHANGELOG.md`)
 
 ### 4.2 Create Release Entry
 
-Replace `## [Unreleased]` with:
+The transformation adds a dated entry before the new Unreleased. Use this procedure:
 
-```markdown
-## [X.Y.Z] - YYYY-MM-DD
+```bash
+# Get today's date in ISO 8601 format
+RELEASE_DATE=$(date +%Y-%m-%d)
 
-### Added
+# Create a temporary file with the new structure
+{
+  # New empty [Unreleased] section
+  echo "## [Unreleased]"
+  echo ""
+  echo "### Added"
+  echo ""
+  echo "### Changed"
+  echo ""
+  echo "### Fixed"
+  echo ""
+  echo "### Performance"
+  echo ""
+  echo "### Documentation"
+  echo ""
+  
+  # Replace old [Unreleased] with versioned header and keep the rest
+  sed '1,/^## \[Unreleased\]/d' CHANGELOG.md | sed "1s/^/## [$VERSION] - $RELEASE_DATE\n\n/"
+} > CHANGELOG.md.tmp
 
-### Changed
-
-### Fixed
-
-### Performance
-
-### Documentation
-
-## [Unreleased]
+# Backup and replace
+mv CHANGELOG.md CHANGELOG.md.bak
+mv CHANGELOG.md.tmp CHANGELOG.md
 ```
 
-Where:
-- `X.Y.Z` is the new version number
-- `YYYY-MM-DD` is today's date (ISO 8601 format)
+### 4.3 Verify Changelog Structure
 
-### 4.3 Move Content
+Validate the transformation succeeded:
 
-Move all content from the old `## [Unreleased]` section into the new versioned section, organizing by category if needed:
-- **Added**: New features
-- **Changed**: Changes to existing functionality
-- **Fixed**: Bug fixes
-- **Performance**: Performance improvements
-- **Documentation**: Documentation changes
+```bash
+echo "=== Unreleased Sections ==="
+grep -n "## \[Unreleased\]" CHANGELOG.md
 
-### 4.4 Create New Unreleased Section
+echo ""
+echo "=== Release Sections ==="
+grep -n "## \[$VERSION\]" CHANGELOG.md
 
-Add a fresh `## [Unreleased]` section at the top with empty subsections:
-
-```markdown
-## [Unreleased]
-
-### Added
-
-### Changed
-
-### Fixed
-
-### Performance
-
-### Documentation
+echo ""
+echo "=== First 20 lines ==="
+head -20 CHANGELOG.md
 ```
 
-### 4.5 Verify Format
+**Expected**:
+- Exactly one `## [Unreleased]` (at the top, line ~1)
+- Exactly one `## [X.Y.Z] - YYYY-MM-DD` (around line ~9-11)
+- Empty subsections under `[Unreleased]` (Added, Changed, Fixed, Performance, Documentation)
+- Release content under the versioned section
 
 **Checklist**:
-- [ ] Old [Unreleased] section converted to versioned section
-- [ ] New [Unreleased] section created
-- [ ] Version number matches all config files
-- [ ] Date is correct (today's date)
-- [ ] All content is categorized appropriately
-- [ ] No placeholder text remains in released section
+- [ ] One `## [Unreleased]` section at the top
+- [ ] One `## [$VERSION] - YYYY-MM-DD` section below it
+- [ ] Release date is today (ISO 8601 format)
+- [ ] No duplicate `## [Unreleased]` sections
+- [ ] Content is properly categorized
 
 ---
 
@@ -396,84 +608,132 @@ All checks must pass before proceeding to git operations.
 
 ## Git Operations
 
-### 7.1 Commit Version and Changelog Updates
+Before starting, ensure you are on the `main` branch with a clean working tree.
+
+### 7.0 Validate Git State
 
 ```bash
-git add Cargo.toml src-python/Cargo.toml pyproject.toml CHANGELOG.md
-git commit -m "chore: release version X.Y.Z
+# Verify branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "ERROR: Not on main branch (on: $CURRENT_BRANCH)"
+  exit 1
+fi
 
-- Update Cargo.toml, src-python/Cargo.toml, pyproject.toml to version X.Y.Z
-- Update CHANGELOG.md with release notes and date
-- All tests passing, ready for publication"
+# Ensure up to date with remote
+git fetch origin
+
+# Check for uncommitted changes
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "ERROR: Working tree is not clean"
+  git status
+  exit 1
+fi
+
+# Verify origin is set correctly
+ORIGIN_URL=$(git config --get remote.origin.url)
+echo "Remote origin: $ORIGIN_URL"
 ```
 
-**Format notes**:
-- Use `chore:` prefix for release commits
-- Include all updated files in commit message body
-- Keep message clear and concise
+**Checklist**:
+- [ ] On `main` branch
+- [ ] Working tree is clean (no staged or unstaged changes)
+- [ ] Remote origin is correct
+- [ ] Script exits with code 0
 
-**Verification**:
+### 7.1 Commit Version and Changelog Updates
+
+Stage and commit the updated files:
+
 ```bash
+# Stage the exact files we modified
+git add Cargo.toml src-python/Cargo.toml pyproject.toml CHANGELOG.md
+
+# Verify staging
+echo "=== Staged changes ==="
+git diff --cached --stat
+
+# Commit with clear message
+git commit -m "chore(release): v$VERSION
+
+- Update Cargo.toml, src-python/Cargo.toml, pyproject.toml to $VERSION
+- Update CHANGELOG.md with release notes and date ($RELEASE_DATE)
+- All pre-release checks passing, ready for publication"
+
+# Show the commit
+echo "=== New commit ==="
 git log --oneline -1
 ```
 
-Should show your new commit.
-
 **Checklist**:
-- [ ] Commit created successfully
-- [ ] Commit message is clear
-- [ ] All version files included in commit
+- [ ] Only these 4 files staged: Cargo.toml, src-python/Cargo.toml, pyproject.toml, CHANGELOG.md
+- [ ] Commit message includes version number
+- [ ] `git log --oneline -1` shows the new commit
+- [ ] Git status shows nothing to commit
 
 ### 7.2 Create Git Tag
 
-Create an annotated tag for the release:
+Create an annotated tag for the release. **The `v` prefix is required** for GitHub Actions to trigger.
 
 ```bash
-git tag -a vX.Y.Z -m "Release version X.Y.Z"
+# Verify tag doesn't already exist
+if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+  echo "ERROR: Tag v$VERSION already exists"
+  exit 1
+fi
+
+# Create annotated tag (signed optional, but not required for CI)
+git tag -a "v$VERSION" -m "Release version $VERSION"
+
+# Verify
+echo "=== New tag ==="
+git tag -l "v$VERSION" -n1
 ```
-
-Where `X.Y.Z` is the version number. The `v` prefix is **required** for GitHub Actions to trigger the release workflow.
-
-**Example**:
-```bash
-git tag -a v0.5.0 -m "Release version 0.5.0"
-```
-
-**Verification**:
-```bash
-git tag -l -n1 | grep "v0\."
-```
-
-Should show your new tag.
 
 **Checklist**:
-- [ ] Tag created with `v` prefix
-- [ ] Tag name matches version number
-- [ ] Tag message is clear
+- [ ] Tag does not already exist
+- [ ] Tag created with `v` prefix (e.g., `v0.5.0`)
+- [ ] Tag message is "Release version X.Y.Z"
+- [ ] `git tag -l v$VERSION -n1` shows the tag
 
-### 7.3 Push Commit and Tag
+### 7.3 Push Commit and Tag to Origin
+
+Push the commit and tag in the correct order:
 
 ```bash
+# Push commit to main
+echo "Pushing commit to origin/main..."
 git push origin main
-git push origin vX.Y.Z
-```
 
-**Verification**:
-```bash
+# Verify commit pushed
+echo "=== Verifying commit pushed ==="
+git log --oneline -1
+git rev-list --left-right --count origin/main...HEAD
+# (should show: 0	0)
+
+# Push tag
+echo "Pushing tag v$VERSION to origin..."
+git push origin "v$VERSION"
+
+# Verify tag pushed
+echo "=== Verifying tag pushed ==="
+git ls-remote origin | grep "refs/tags/v$VERSION"
+
+# Final status check
+echo "=== Final git status ==="
 git status
 ```
 
-Should show "Your branch is up to date with 'origin/main'."
-
-Also verify tags pushed:
-```bash
-git ls-remote origin | grep "refs/tags/vX.Y.Z"
-```
+**Expected output**:
+- Commit is up to date with origin/main
+- Tag appears in `git ls-remote origin`
+- `git status` shows nothing to commit
 
 **Checklist**:
 - [ ] Commit pushed to origin/main
 - [ ] Tag pushed to origin
-- [ ] Git status shows "up to date"
+- [ ] `git status` shows "Your branch is up to date with 'origin/main'."
+- [ ] Tag is visible in GitHub: https://github.com/dchud/mrrc/tags
 
 ---
 
