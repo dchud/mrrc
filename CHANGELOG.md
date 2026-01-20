@@ -38,20 +38,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Format Research & Support Strategy (2026-01-19, mrrc-fks)
 - **Comprehensive Format Evaluation Framework**:
-  - Completed analysis of Arrow/Parquet columnar storage (mrrc-ks7)
-  - Integrated Polars, Arrow, and DuckDB evaluation findings (mrrc-fks.10)
-  - Binary format comparison matrix updated with MessagePack, CBOR, and Avro benchmarks
-  - All evaluations converted to Rust-native implementations (removed Python dependencies)
+   - Completed analysis of Arrow/Parquet columnar storage (mrrc-ks7)
+   - Integrated Polars, Arrow, and DuckDB evaluation findings (mrrc-fks.10)
+   - Binary format comparison matrix updated with MessagePack, CBOR, and Avro benchmarks
+   - All evaluations converted to Rust-native implementations (removed Python dependencies)
 - **Format Support Strategy Document** (docs/design/format-research/FORMAT_SUPPORT_STRATEGY.md):
-  - Decisiveness-focused analysis: clear recommendations vs exploratory notes
-  - Tiered support approach: Core (ISO 2709, JSON), Standard (XML, CSV), Experimental (Parquet, Arrow)
-  - Integration guidance for Arrow columnar analytics tier
-  - Performance targets and trade-off analysis for each tier
+   - Decisiveness-focused analysis: clear recommendations vs exploratory notes
+   - Tiered support approach: Tier 1 (ISO 2709, Protobuf), Tier 2 (Arrow, FlatBuffers, MessagePack), Tier 3 (CBOR, Avro - deferred)
+   - Integration guidance for Arrow columnar analytics tier
+   - Performance targets and trade-off analysis for each tier
 - **Research Documentation**:
-  - Comprehensive README for format-research directory
-  - Structured evaluation results with comparative benchmarks
-  - Migration guides for users adopting new format support
-  - Analysis of Arrow Analytics tier for bulk data operations
+   - Comprehensive README for format-research directory
+   - Structured evaluation results with comparative benchmarks
+   - Migration guides for users adopting new format support
+   - Analysis of Arrow Analytics tier for bulk data operations
+
+#### Format Support Implementation Planning (2026-01-20, mrrc-d4g)
+- **Implementation Epic & Issue Planning**:
+   - Created mrrc-d4g epic: "Format Support Implementation (Tiers 1-2)" with 63 total issues
+   - Structured as Phase 0-4 with hierarchical sub-epics matching implementation roadmap
+   - Phase 0: Foundation (4 tasks + 2 cleanup tasks)
+   - Phase 1: Core Formats (1A: ISO 2709 refactoring + 1B: Protobuf implementation)
+   - Phase 2: High-Value Formats (2A: Arrow + 2B: FlatBuffers + 2C: MessagePack)
+   - Phase 4: Python Wrapper & Documentation (4A: PyO3 bindings + 4B: Format modules + 4C: Documentation)
+- **Evaluation Artifact Consolidation Strategy** (Part 8 of FORMAT_SUPPORT_STRATEGY.md):
+   - Mapped all evaluation artifacts (code, docs, data) to production use or archival
+   - Identified reusable components from evaluation phase (protobuf.rs, test fixtures, benchmark patterns)
+   - Documented refactoring needs (arrow_impl.rs, flatbuffers_impl.rs module structure)
+   - Cleanup tasks integrated into mrrc-d4g phases to minimize blocking
+   - Archive strategy: Move docs/design/format-research/ → docs/history/format-research/ in Phase 4C
+- **Implementation Workflow Documentation**:
+   - Detailed Phase 0-4 cleanup workflows with task dependencies
+   - Migration checklist for consolidating evaluation code into production test infrastructure
+   - Archive index template for docs/history/format-research/README.md
+   - Clear separation of completed evaluation project from ongoing implementation work
 
 ### Fixed
 
