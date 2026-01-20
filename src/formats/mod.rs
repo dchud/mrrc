@@ -217,27 +217,42 @@ pub mod flatbuffers {
 
 /// MessagePack compact binary format support.
 ///
-/// MessagePack provides compact serialization with broad language support.
-/// Enable with the `format-messagepack` feature.
-#[cfg(feature = "format-messagepack")]
+/// MessagePack provides compact serialization with broad language support (50+ languages),
+/// making it ideal for REST APIs, IPC, and language-agnostic data exchange.
+///
+/// # Use Cases
+///
+/// - REST API responses (smaller than JSON)
+/// - Inter-process communication
+/// - Language-agnostic data exchange
+///
+/// # Performance
+///
+/// - Read/Write: ~750,000 records/second
+/// - ~25% smaller than equivalent JSON
+///
+/// # Usage
+///
+/// ```ignore
+/// use mrrc::formats::messagepack::{MessagePackReader, MessagePackWriter};
+/// use mrrc::formats::{FormatReader, FormatWriter};
+/// use std::io::Cursor;
+///
+/// // Writing records
+/// let mut buffer = Vec::new();
+/// let mut writer = MessagePackWriter::new(&mut buffer);
+/// writer.write_record(&record)?;
+/// writer.finish()?;
+///
+/// // Reading records
+/// let cursor = Cursor::new(buffer);
+/// let mut reader = MessagePackReader::new(cursor);
+/// while let Some(record) = reader.read_record()? {
+///     // process record
+/// }
+/// ```
 pub mod messagepack {
-    //! MessagePack format for MARC records.
-    //!
-    //! MessagePack is a compact binary format supported by 50+ languages,
-    //! making it ideal for REST APIs and IPC.
-    //!
-    //! # Use Cases
-    //!
-    //! - REST API responses (smaller than JSON)
-    //! - Inter-process communication
-    //! - Language-agnostic data exchange
-    //!
-    //! # Performance
-    //!
-    //! - Read/Write: ~750,000 records/second
-    //! - 25% smaller than equivalent JSON
-
-    // TODO: Implement MessagePackReader and MessagePackWriter with trait conformance
+    pub use crate::messagepack::{MessagePackReader, MessagePackWriter};
 }
 
 // ============================================================================

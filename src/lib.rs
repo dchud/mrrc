@@ -137,6 +137,7 @@ pub mod macros;
 pub mod marc8_tables;
 pub mod marc_record;
 pub mod marcjson;
+pub mod messagepack;
 pub mod mods;
 pub mod parquet_impl;
 pub mod producer_consumer_pipeline;
