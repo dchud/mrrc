@@ -152,6 +152,10 @@ harness = false
 name = "eval_avro"
 harness = false
 
+[[bench]]
+name = "protobuf_benchmarks"
+harness = false
+
 [profile.release]
 opt-level = 3
 
