@@ -128,6 +128,8 @@ pub mod format_queries;
 /// See the [`formats`] module documentation for details on supported formats
 /// and how to use format-agnostic code.
 pub mod formats;
+/// Generated `FlatBuffers` code from `proto/marc.fbs`.
+pub mod generated;
 pub mod holdings_reader;
 pub mod holdings_record;
 pub mod holdings_writer;

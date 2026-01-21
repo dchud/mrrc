@@ -97,7 +97,8 @@ ciborium = "0.2"
 
 # Lint configuration following Rust API Guidelines
 [lints.rust]
-unsafe_code = "forbid"
+# Use deny instead of forbid to allow overriding in generated FlatBuffers code
+unsafe_code = "deny"
 missing_docs = "warn"
 missing_debug_implementations = "warn"
 
