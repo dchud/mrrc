@@ -18,7 +18,7 @@
 
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use mrrc::flatbuffers_impl::{FlatBuffersDeserializer, FlatBuffersSerializer};
+use mrrc::flatbuffers_impl::{FlatbuffersDeserializer, FlatbuffersSerializer};
 use mrrc::{MarcReader, Record};
 use serde_json::{json, Value};
 use std::fs::File;
@@ -237,11 +237,11 @@ fn test_fidelity_100() -> Result<Vec<FidelityFailure>, Box<dyn std::error::Error
         record_num += 1;
 
         // Serialize
-        let serialized = FlatBuffersSerializer::serialize(&original)
+        let serialized = FlatbuffersSerializer::serialize(&original)
             .map_err(|e| format!("Serialization failed for record {}: {}", record_num, e))?;
 
         // Deserialize
-        let restored = FlatBuffersDeserializer::deserialize(&serialized)
+        let restored = FlatbuffersDeserializer::deserialize(&serialized)
             .map_err(|e| format!("Deserialization failed for record {}: {}", record_num, e))?;
 
         // Compare
@@ -263,7 +263,7 @@ fn test_performance_10k() -> Result<PerformanceMetrics, Box<dyn std::error::Erro
     // Read and serialize
     let start = Instant::now();
     while let Some(record) = reader.read_record()? {
-        let serialized = FlatBuffersSerializer::serialize(&record)
+        let serialized = FlatbuffersSerializer::serialize(&record)
             .map_err(|e| format!("Serialization error: {e}"))?;
         all_serialized.push(serialized);
         record_count += 1;
@@ -275,7 +275,7 @@ fn test_performance_10k() -> Result<PerformanceMetrics, Box<dyn std::error::Erro
     let start = Instant::now();
     let mut deserialize_count = 0;
     for serialized in &all_serialized {
-        let _ = FlatBuffersDeserializer::deserialize(serialized)
+        let _ = FlatbuffersDeserializer::deserialize(serialized)
             .map_err(|e| format!("Deserialization error: {e}"))?;
         deserialize_count += 1;
     }
