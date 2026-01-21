@@ -28,11 +28,12 @@
 /// ```
 use arrow::array::{RecordBatch, StringArray, UInt32Array};
 use arrow::datatypes::{DataType, Field, Schema};
+use arrow::ipc::reader::StreamReader;
 use arrow::ipc::writer::StreamWriter;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::sync::Arc;
 
-use crate::formats::FormatWriter;
+use crate::formats::{FormatReader, FormatWriter};
 use crate::MarcError;
 use crate::Record;
 use crate::Result as MarcResult;
@@ -654,6 +655,159 @@ impl<W: Write + std::fmt::Debug> FormatWriter for ArrowWriter<W> {
     }
 }
 
+// ============================================================================
+// ArrowReader - FormatReader Implementation
+// ============================================================================
+
+/// Reader for streaming MARC records from Arrow IPC format.
+///
+/// `ArrowReader` implements the [`FormatReader`] trait, reading Arrow IPC stream data
+/// and returning MARC records one at a time. This enables integration with analytics
+/// tools like `DuckDB`, Polars, and `DataFusion`.
+///
+/// # Batch-to-Streaming Conversion
+///
+/// Arrow IPC stores data in batches. `ArrowReader` reads batches internally and
+/// buffers the converted records, returning them one at a time via `read_record()`.
+///
+/// # Usage
+///
+/// ```ignore
+/// use mrrc::arrow_impl::ArrowReader;
+/// use mrrc::formats::FormatReader;
+/// use std::io::Cursor;
+///
+/// let cursor = Cursor::new(arrow_ipc_data);
+/// let mut reader = ArrowReader::new(cursor)?;
+///
+/// while let Some(record) = reader.read_record()? {
+///     // process record
+/// }
+/// ```
+///
+/// # Input Format
+///
+/// The reader expects Arrow IPC stream format, which can be produced by:
+/// - `ArrowWriter` from this crate
+/// - Arrow IPC `StreamWriter` from any Arrow implementation
+/// - `DuckDB`'s `COPY ... TO ... (FORMAT arrow)`
+/// - Polars' `write_ipc` function
+#[derive(Debug)]
+pub struct ArrowReader<R: Read> {
+    stream_reader: StreamReader<R>,
+    /// Buffered records from current batch
+    record_buffer: Vec<Record>,
+    /// Current position in the record buffer
+    buffer_position: usize,
+    /// Total records read
+    records_read: usize,
+    /// Whether we've finished reading all batches
+    finished: bool,
+}
+
+impl<R: Read> ArrowReader<R> {
+    /// Create a new Arrow reader from an Arrow IPC stream.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - Any source implementing [`std::io::Read`] containing Arrow IPC data
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the stream is not valid Arrow IPC format.
+    pub fn new(reader: R) -> MarcResult<Self> {
+        let stream_reader = StreamReader::try_new(reader, None).map_err(|e| {
+            MarcError::ParseError(format!("Failed to create Arrow stream reader: {e}"))
+        })?;
+
+        Ok(Self {
+            stream_reader,
+            record_buffer: Vec::new(),
+            buffer_position: 0,
+            records_read: 0,
+            finished: false,
+        })
+    }
+
+    /// Read a single MARC record from the Arrow IPC stream.
+    ///
+    /// Returns `Ok(Some(record))` if a record was read, `Ok(None)` at EOF,
+    /// or `Err` if parsing fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data is malformed or I/O fails.
+    pub fn read_record(&mut self) -> MarcResult<Option<Record>> {
+        // Return from buffer if available
+        if self.buffer_position < self.record_buffer.len() {
+            let record = self.record_buffer[self.buffer_position].clone();
+            self.buffer_position += 1;
+            self.records_read += 1;
+            return Ok(Some(record));
+        }
+
+        // If we've finished reading batches, return None
+        if self.finished {
+            return Ok(None);
+        }
+
+        // Try to read next batch
+        loop {
+            match self.stream_reader.next() {
+                Some(Ok(batch)) => {
+                    // Convert batch to records
+                    let records = arrow_batch_to_records(&batch).map_err(|e| {
+                        MarcError::ParseError(format!("Failed to convert Arrow batch: {e}"))
+                    })?;
+
+                    if records.is_empty() {
+                        // Empty batch, try next one
+                        continue;
+                    }
+
+                    // Buffer records and return first one
+                    self.record_buffer = records;
+                    self.buffer_position = 1; // We'll return index 0
+                    self.records_read += 1;
+                    return Ok(Some(self.record_buffer[0].clone()));
+                },
+                Some(Err(e)) => {
+                    return Err(MarcError::ParseError(format!(
+                        "Error reading Arrow batch: {e}"
+                    )));
+                },
+                None => {
+                    // No more batches
+                    self.finished = true;
+                    return Ok(None);
+                },
+            }
+        }
+    }
+
+    /// Returns the number of records read so far.
+    #[must_use]
+    pub fn records_read(&self) -> usize {
+        self.records_read
+    }
+
+    /// Returns whether all batches have been read.
+    #[must_use]
+    pub fn is_finished(&self) -> bool {
+        self.finished
+    }
+}
+
+impl<R: Read + std::fmt::Debug> FormatReader for ArrowReader<R> {
+    fn read_record(&mut self) -> MarcResult<Option<Record>> {
+        ArrowReader::read_record(self)
+    }
+
+    fn records_read(&self) -> Option<usize> {
+        Some(self.records_read)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -897,5 +1051,190 @@ mod tests {
         let f245 = restored[0].get_field("245").unwrap();
         assert_eq!(f245.get_subfield('a'), Some("Roundtrip Test"));
         assert_eq!(f245.get_subfield('c'), Some("Test Author"));
+    }
+
+    // ========================================================================
+    // ArrowReader Tests
+    // ========================================================================
+
+    #[test]
+    fn test_arrow_reader_basic() {
+        use std::io::Cursor;
+
+        // Write records using ArrowWriter
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "reader001".to_string());
+        let mut field = crate::record::Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Reader Test".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            writer.write_record(&record).unwrap();
+            writer.finish().unwrap();
+        }
+
+        // Read back using ArrowReader
+        let cursor = Cursor::new(buffer);
+        let mut reader = ArrowReader::new(cursor).unwrap();
+
+        let read_record = reader.read_record().unwrap();
+        assert!(read_record.is_some());
+
+        let r = read_record.unwrap();
+        assert_eq!(r.get_control_field("001"), Some("reader001"));
+        let f245 = r.get_field("245").unwrap();
+        assert_eq!(f245.get_subfield('a'), Some("Reader Test"));
+
+        // Should return None on next read
+        assert!(reader.read_record().unwrap().is_none());
+        assert!(reader.is_finished());
+        assert_eq!(reader.records_read(), 1);
+    }
+
+    #[test]
+    fn test_arrow_reader_multiple_records() {
+        use std::io::Cursor;
+
+        // Write multiple records
+        let records: Vec<Record> = (0..5)
+            .map(|i| {
+                let mut r = Record::new(make_test_leader());
+                r.add_control_field("001".to_string(), format!("multi{i:03}"));
+                let mut f = crate::record::Field::new("245".to_string(), '1', '0');
+                f.add_subfield('a', format!("Title {i}"));
+                r.add_field(f);
+                r
+            })
+            .collect();
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            writer.write_batch(&records).unwrap();
+            writer.finish().unwrap();
+        }
+
+        // Read back using ArrowReader
+        let cursor = Cursor::new(buffer);
+        let mut reader = ArrowReader::new(cursor).unwrap();
+
+        let mut read_records = Vec::new();
+        while let Some(record) = reader.read_record().unwrap() {
+            read_records.push(record);
+        }
+
+        assert_eq!(read_records.len(), 5);
+        assert_eq!(reader.records_read(), 5);
+
+        // Verify content
+        for (i, r) in read_records.iter().enumerate() {
+            assert_eq!(
+                r.get_control_field("001"),
+                Some(format!("multi{i:03}").as_str())
+            );
+            let f = r.get_field("245").unwrap();
+            assert_eq!(f.get_subfield('a'), Some(format!("Title {i}").as_str()));
+        }
+    }
+
+    #[test]
+    fn test_arrow_reader_format_trait() {
+        use crate::formats::FormatReader;
+        use std::io::Cursor;
+
+        // Write records
+        let records: Vec<Record> = (0..3)
+            .map(|i| {
+                let mut r = Record::new(make_test_leader());
+                let mut f = crate::record::Field::new("245".to_string(), '1', '0');
+                f.add_subfield('a', format!("Trait Test {i}"));
+                r.add_field(f);
+                r
+            })
+            .collect();
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            writer.write_batch(&records).unwrap();
+            writer.finish().unwrap();
+        }
+
+        // Read using FormatReader trait
+        let cursor = Cursor::new(buffer);
+        let mut reader = ArrowReader::new(cursor).unwrap();
+
+        let read_records = FormatReader::read_all(&mut reader).unwrap();
+        assert_eq!(read_records.len(), 3);
+        assert_eq!(FormatReader::records_read(&reader), Some(3));
+    }
+
+    #[test]
+    fn test_arrow_reader_preserves_field_order() {
+        use std::io::Cursor;
+
+        // Create record with multiple fields in specific order
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "order001".to_string());
+        record.add_control_field("005".to_string(), "20260121120000.0".to_string());
+
+        // Add fields in specific order
+        for i in 1..=3 {
+            let mut f = crate::record::Field::new("650".to_string(), ' ', '0');
+            f.add_subfield('a', format!("Subject {i}"));
+            record.add_field(f);
+        }
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            writer.write_record(&record).unwrap();
+            writer.finish().unwrap();
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = ArrowReader::new(cursor).unwrap();
+        let restored = reader.read_record().unwrap().unwrap();
+
+        // Verify field order
+        assert_eq!(restored.get_control_field("001"), Some("order001"));
+        assert_eq!(restored.get_control_field("005"), Some("20260121120000.0"));
+
+        let subjects: Vec<_> = restored.fields_by_tag("650").collect();
+        assert_eq!(subjects.len(), 3);
+        assert_eq!(subjects[0].get_subfield('a'), Some("Subject 1"));
+        assert_eq!(subjects[1].get_subfield('a'), Some("Subject 2"));
+        assert_eq!(subjects[2].get_subfield('a'), Some("Subject 3"));
+    }
+
+    #[test]
+    fn test_arrow_reader_preserves_subfield_order() {
+        use std::io::Cursor;
+
+        // Create record with subfields in non-alphabetical order
+        let mut record = Record::new(make_test_leader());
+        let mut field = crate::record::Field::new("245".to_string(), '1', '0');
+        field.add_subfield('c', "Author First".to_string());
+        field.add_subfield('a', "Title Second".to_string());
+        field.add_subfield('b', "Subtitle Third".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            writer.write_record(&record).unwrap();
+            writer.finish().unwrap();
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = ArrowReader::new(cursor).unwrap();
+        let restored = reader.read_record().unwrap().unwrap();
+
+        // Verify subfield order preserved (c, a, b - not alphabetical)
+        let f = restored.get_field("245").unwrap();
+        let codes: Vec<char> = f.subfields.iter().map(|s| s.code).collect();
+        assert_eq!(codes, vec!['c', 'a', 'b']);
     }
 }

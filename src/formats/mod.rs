@@ -203,15 +203,13 @@ pub mod arrow {
     //! // buffer now contains Arrow IPC stream data
     //! ```
 
-    // Re-export ArrowWriter for columnar export
-    pub use crate::arrow_impl::ArrowWriter;
+    // Re-export ArrowReader and ArrowWriter for streaming I/O
+    pub use crate::arrow_impl::{ArrowReader, ArrowWriter};
 
     // Re-export helper functions for direct batch operations
     pub use crate::arrow_impl::{
         arrow_batch_to_records, create_arrow_schema, records_to_arrow_batch, ArrowMarcTable,
     };
-
-    // TODO: Implement ArrowReader with FormatReader trait conformance
 }
 
 /// FlatBuffers zero-copy format support.

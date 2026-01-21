@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bd ready:*)",
+      "Bash(bd stats:*)",
+      "Bash(bd update:*)",
+      "Bash(bash scripts/validate_fidelity_test.sh:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(bd close:*)",
+      "Bash(cargo run:*)",
+      "Bash(cargo bench:*)",
+      "Bash(bd show:*)",
+      "Bash(.cargo/check.sh)",
+      "Bash(cargo fmt:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "Bash(bd list:*)",
+      "Bash(python3:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(ls:*)",
+      "Bash(./.cargo/check.sh:*)"
+    ]
+  }
+}
