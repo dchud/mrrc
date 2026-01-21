@@ -161,6 +161,10 @@ harness = false
 name = "messagepack_benchmarks"
 harness = false
 
+[[bench]]
+name = "arrow_benchmarks"
+harness = false
+
 [profile.release]
 opt-level = 3
 
