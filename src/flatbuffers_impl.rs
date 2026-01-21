@@ -35,14 +35,14 @@
 //! # }
 //! ```
 
-use crate::formats::FormatWriter;
+use crate::formats::{FormatReader, FormatWriter};
 use crate::generated::{
     Field as FbField, FieldArgs, MarcRecord as FbMarcRecord, MarcRecordArgs,
     Subfield as FbSubfield, SubfieldArgs,
 };
 use crate::{Field as MarcField, MarcError, Record, Result};
 use flatbuffers::FlatBufferBuilder;
-use std::io::Write;
+use std::io::{Read, Write};
 
 /// Serializes a MARC record to `FlatBuffers` binary format.
 #[derive(Debug)]
@@ -416,6 +416,106 @@ impl<W: Write + std::fmt::Debug> FormatWriter for FlatbuffersWriter<W> {
 
     fn records_written(&self) -> Option<usize> {
         Some(self.records_written)
+    }
+}
+
+/// Reader for streaming MARC records from `FlatBuffers` format.
+///
+/// `FlatbuffersReader` implements the [`FormatReader`] trait, allowing it to be used
+/// interchangeably with other format readers. Records are read using size-prefixed
+/// encoding (each record is prefixed with its size as a 4-byte little-endian integer).
+///
+/// # Example
+///
+/// ```ignore
+/// use mrrc::flatbuffers_impl::FlatbuffersReader;
+/// use mrrc::formats::FormatReader;
+/// use std::fs::File;
+///
+/// let file = File::open("records.fb")?;
+/// let mut reader = FlatbuffersReader::new(file);
+///
+/// while let Some(record) = reader.read_record()? {
+///     println!("Record: {:?}", record);
+/// }
+/// ```
+#[derive(Debug)]
+pub struct FlatbuffersReader<R: Read> {
+    reader: R,
+    records_read: usize,
+}
+
+impl<R: Read> FlatbuffersReader<R> {
+    /// Create a new `FlatBuffers` reader.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - Any source implementing [`std::io::Read`]
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader,
+            records_read: 0,
+        }
+    }
+
+    /// Read a single MARC record from the `FlatBuffers` stream.
+    ///
+    /// Returns `Ok(Some(record))` if a record was read, `Ok(None)` at EOF,
+    /// or `Err` if parsing fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data is malformed or I/O fails.
+    pub fn read_record(&mut self) -> Result<Option<Record>> {
+        // Read the size prefix (4-byte little-endian u32)
+        let mut size_buf = [0u8; 4];
+        match self.reader.read_exact(&mut size_buf) {
+            Ok(()) => {},
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
+            Err(e) => return Err(MarcError::IoError(e)),
+        }
+
+        let size = u32::from_le_bytes(size_buf) as usize;
+
+        if size == 0 {
+            return Ok(None);
+        }
+
+        // Read the FlatBuffer data (size includes the 4-byte prefix in size-prefixed format)
+        // The actual data size is what we read, and the buffer starts after the size prefix
+        let mut buffer = vec![0u8; size + 4]; // Include size prefix in buffer
+        buffer[..4].copy_from_slice(&size_buf);
+
+        match self.reader.read_exact(&mut buffer[4..]) {
+            Ok(()) => {},
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                return Err(MarcError::TruncatedRecord(
+                    "Unexpected EOF while reading FlatBuffers record".to_string(),
+                ));
+            },
+            Err(e) => return Err(MarcError::IoError(e)),
+        }
+
+        // Deserialize using size-prefixed reader
+        let record = FlatbuffersDeserializer::deserialize_size_prefixed(&buffer)?;
+        self.records_read += 1;
+        Ok(Some(record))
+    }
+
+    /// Returns the number of records read so far.
+    #[must_use]
+    pub fn records_read(&self) -> usize {
+        self.records_read
+    }
+}
+
+impl<R: Read + std::fmt::Debug> FormatReader for FlatbuffersReader<R> {
+    fn read_record(&mut self) -> Result<Option<Record>> {
+        FlatbuffersReader::read_record(self)
+    }
+
+    fn records_read(&self) -> Option<usize> {
+        Some(self.records_read)
     }
 }
 
@@ -845,6 +945,322 @@ mod tests {
         }
 
         let restored = FlatbuffersDeserializer::deserialize_size_prefixed(&buffer)?;
+
+        let field_245 = restored.get_field("245").unwrap();
+        assert_eq!(field_245.indicator1, '1');
+        assert_eq!(field_245.indicator2, '4');
+
+        let field_650 = restored.get_field("650").unwrap();
+        assert_eq!(field_650.indicator1, ' ');
+        assert_eq!(field_650.indicator2, '0');
+
+        Ok(())
+    }
+
+    // ============================================================================
+    // Tests for FlatbuffersReader (streaming API with FormatReader)
+    // ============================================================================
+
+    #[test]
+    fn test_reader_read_single_record() -> Result<()> {
+        use std::io::Cursor;
+
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test001".to_string());
+
+        let mut field = MarcField::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test Title".to_string());
+        record.add_field(field);
+
+        // Write using FlatbuffersWriter
+        let mut buffer = Vec::new();
+        {
+            let mut writer = FlatbuffersWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        // Read using FlatbuffersReader
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+
+        let restored = reader.read_record()?.expect("Should read one record");
+        assert_eq!(reader.records_read(), 1);
+
+        // Verify content
+        assert_eq!(restored.get_control_field("001"), Some("test001"));
+        let field_245 = restored.get_field("245").expect("Should have 245");
+        assert_eq!(field_245.get_subfield('a'), Some("Test Title"));
+
+        // Should return None on second read
+        assert!(reader.read_record()?.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_reader_read_multiple_records() -> Result<()> {
+        use std::io::Cursor;
+
+        let records: Vec<Record> = (0..5)
+            .map(|i| {
+                let mut record = Record::new(make_test_leader());
+                record.add_control_field("001".to_string(), format!("rec{i:03}"));
+
+                let mut field = MarcField::new("245".to_string(), '1', '0');
+                field.add_subfield('a', format!("Title {i}"));
+                record.add_field(field);
+                record
+            })
+            .collect();
+
+        // Write all records
+        let mut buffer = Vec::new();
+        {
+            let mut writer = FlatbuffersWriter::new(&mut buffer);
+            for record in &records {
+                writer.write_record(record)?;
+            }
+            assert_eq!(writer.records_written(), 5);
+            writer.finish()?;
+        }
+
+        // Read all records back
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+
+        for i in 0..5 {
+            let record = reader.read_record()?.expect("Should have record");
+            assert_eq!(
+                record.get_control_field("001"),
+                Some(format!("rec{i:03}").as_str())
+            );
+            let field_245 = record.get_field("245").expect("Should have 245");
+            assert_eq!(
+                field_245.get_subfield('a'),
+                Some(format!("Title {i}").as_str())
+            );
+        }
+
+        assert_eq!(reader.records_read(), 5);
+        assert!(reader.read_record()?.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_reader_format_reader_trait() -> Result<()> {
+        use std::io::Cursor;
+
+        let records: Vec<Record> = (0..3)
+            .map(|i| {
+                let mut record = Record::new(make_test_leader());
+                let mut field = MarcField::new("245".to_string(), '1', '0');
+                field.add_subfield('a', format!("Title {i}"));
+                record.add_field(field);
+                record
+            })
+            .collect();
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = FlatbuffersWriter::new(&mut buffer);
+            for record in &records {
+                writer.write_record(record)?;
+            }
+            writer.finish()?;
+        }
+
+        // Read back using FormatReader trait
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+
+        let read_records = FormatReader::read_all(&mut reader)?;
+        assert_eq!(read_records.len(), 3);
+        assert_eq!(FormatReader::records_read(&reader), Some(3));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_reader_format_reader_iterator() -> Result<()> {
+        use crate::formats::FormatReaderExt;
+        use std::io::Cursor;
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = FlatbuffersWriter::new(&mut buffer);
+            for i in 0..4 {
+                let mut record = Record::new(make_test_leader());
+                let mut field = MarcField::new("245".to_string(), '1', '0');
+                field.add_subfield('a', format!("Title {i}"));
+                record.add_field(field);
+                writer.write_record(&record)?;
+            }
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+
+        let mut count = 0;
+        for result in reader.records() {
+            result?;
+            count += 1;
+        }
+        assert_eq!(count, 4);
+        assert_eq!(reader.records_read(), 4);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_reader_empty_file() -> Result<()> {
+        use std::io::Cursor;
+
+        let buffer: Vec<u8> = Vec::new();
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+
+        assert!(reader.read_record()?.is_none());
+        assert_eq!(reader.records_read(), 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_reader_preserves_field_order() -> Result<()> {
+        use std::io::Cursor;
+
+        let mut record = Record::new(make_test_leader());
+
+        // Add fields in specific order
+        record.add_control_field("001".to_string(), "test001".to_string());
+        record.add_control_field("005".to_string(), "20260120".to_string());
+
+        let mut field_100 = MarcField::new("100".to_string(), '1', ' ');
+        field_100.add_subfield('a', "Author".to_string());
+        record.add_field(field_100);
+
+        let mut field_245 = MarcField::new("245".to_string(), '1', '0');
+        field_245.add_subfield('a', "Title".to_string());
+        record.add_field(field_245);
+
+        // Add multiple 650 fields
+        for i in 1..=3 {
+            let mut field_650 = MarcField::new("650".to_string(), ' ', '0');
+            field_650.add_subfield('a', format!("Subject {i}"));
+            record.add_field(field_650);
+        }
+
+        // Write and read back
+        let mut buffer = Vec::new();
+        {
+            let mut writer = FlatbuffersWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
+
+        // Verify field ordering preserved
+        let subjects: Vec<_> = restored.fields_by_tag("650").collect();
+        assert_eq!(subjects.len(), 3);
+        assert_eq!(subjects[0].get_subfield('a'), Some("Subject 1"));
+        assert_eq!(subjects[1].get_subfield('a'), Some("Subject 2"));
+        assert_eq!(subjects[2].get_subfield('a'), Some("Subject 3"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_reader_preserves_subfield_order() -> Result<()> {
+        use std::io::Cursor;
+
+        let mut record = Record::new(make_test_leader());
+
+        let mut field = MarcField::new("245".to_string(), '1', '0');
+        // Add subfields in non-alphabetical order
+        field.add_subfield('c', "Author".to_string());
+        field.add_subfield('a', "Title".to_string());
+        field.add_subfield('b', "Subtitle".to_string());
+        record.add_field(field);
+
+        // Write and read back
+        let mut buffer = Vec::new();
+        {
+            let mut writer = FlatbuffersWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
+
+        // Verify subfield order preserved (c, a, b)
+        let field_245 = restored.get_field("245").unwrap();
+        let codes: Vec<char> = field_245.subfields.iter().map(|s| s.code).collect();
+        assert_eq!(codes, vec!['c', 'a', 'b']);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_reader_preserves_utf8() -> Result<()> {
+        use std::io::Cursor;
+
+        let mut record = Record::new(make_test_leader());
+
+        let mut field = MarcField::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test 测试 тест العربية 日本語".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = FlatbuffersWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
+
+        assert_eq!(
+            restored.get_field("245").unwrap().get_subfield('a'),
+            Some("Test 测试 тест العربية 日本語")
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_reader_preserves_indicators() -> Result<()> {
+        use std::io::Cursor;
+
+        let mut record = Record::new(make_test_leader());
+
+        let mut field = MarcField::new("245".to_string(), '1', '4');
+        field.add_subfield('a', "The Title".to_string());
+        record.add_field(field);
+
+        let mut field2 = MarcField::new("650".to_string(), ' ', '0');
+        field2.add_subfield('a', "Subject".to_string());
+        record.add_field(field2);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = FlatbuffersWriter::new(&mut buffer);
+            writer.write_record(&record)?;
+            writer.finish()?;
+        }
+
+        let cursor = Cursor::new(buffer);
+        let mut reader = FlatbuffersReader::new(cursor);
+        let restored = reader.read_record()?.unwrap();
 
         let field_245 = restored.get_field("245").unwrap();
         assert_eq!(field_245.indicator1, '1');
