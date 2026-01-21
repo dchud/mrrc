@@ -12,6 +12,7 @@ mod formats;
 mod holdings_readers;
 mod parse_error;
 mod producer_consumer_pipeline_wrapper;
+mod protobuf;
 mod query;
 mod rayon_parser_pool_wrapper;
 mod readers;
@@ -23,6 +24,7 @@ use authority_readers::PyAuthorityMARCReader;
 use boundary_scanner_wrapper::PyRecordBoundaryScanner;
 use holdings_readers::PyHoldingsMARCReader;
 use producer_consumer_pipeline_wrapper::PyProducerConsumerPipeline;
+use protobuf::{PyProtobufReader, PyProtobufWriter};
 use pyo3::prelude::*;
 use query::{PyFieldQuery, PySubfieldPatternQuery, PySubfieldValueQuery, PyTagRangeQuery};
 use rayon_parser_pool_wrapper::{parse_batch_parallel, parse_batch_parallel_limited};
@@ -46,6 +48,10 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyRecordBoundaryScanner>()?;
     m.add_class::<PyProducerConsumerPipeline>()?;
 
+    // Tier 1 format readers/writers (Protobuf)
+    m.add_class::<PyProtobufReader>()?;
+    m.add_class::<PyProtobufWriter>()?;
+
     // Query DSL classes
     m.add_class::<PyFieldQuery>()?;
     m.add_class::<PyTagRangeQuery>()?;
@@ -66,6 +72,10 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(formats::record_to_csv, m)?)?;
     m.add_function(wrap_pyfunction!(formats::records_to_csv, m)?)?;
     m.add_function(wrap_pyfunction!(formats::records_to_csv_filtered, m)?)?;
+
+    // Tier 1 format conversion functions (Protobuf)
+    m.add_function(wrap_pyfunction!(protobuf::record_to_protobuf, m)?)?;
+    m.add_function(wrap_pyfunction!(protobuf::protobuf_to_record, m)?)?;
 
     // Rayon parser pool functions
     m.add_function(wrap_pyfunction!(parse_batch_parallel, m)?)?;

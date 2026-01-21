@@ -39,6 +39,11 @@ from ._mrrc import (
     TagRangeQuery,
     SubfieldPatternQuery,
     SubfieldValueQuery,
+    # Tier 1 format support: Protobuf
+    ProtobufReader,
+    ProtobufWriter,
+    record_to_protobuf,
+    protobuf_to_record,
 )
 from typing import Optional, List, Union, Any, Tuple
 
@@ -1235,4 +1240,9 @@ __all__ = [
     "get_leader_valid_values",
     "get_leader_value_description",
     "get_leader_is_valid_value",
+    # Tier 1 format support: Protobuf
+    "ProtobufReader",
+    "ProtobufWriter",
+    "record_to_protobuf",
+    "protobuf_to_record",
 ]

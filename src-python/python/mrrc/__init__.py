@@ -8,12 +8,17 @@ The Python wrapper aims for API compatibility with pymarc.
 """
 
 from mrrc._mrrc import (
-    Field as _Field, 
-    Leader as _Leader, 
-    MARCReader as _MARCReader, 
-    MARCWriter as _MARCWriter, 
-    Record as _Record, 
-    Subfield
+    Field as _Field,
+    Leader as _Leader,
+    MARCReader as _MARCReader,
+    MARCWriter as _MARCWriter,
+    Record as _Record,
+    Subfield,
+    # Tier 1 format support: Protobuf
+    ProtobufReader,
+    ProtobufWriter,
+    record_to_protobuf,
+    protobuf_to_record,
 )
 from typing import Optional, List, Union, Any
 
@@ -540,5 +545,9 @@ def get_leader_value_description(position: int, value: str) -> Optional[str]:
 Leader.get_valid_values = staticmethod(get_leader_valid_values)
 Leader.describe_value = staticmethod(get_leader_value_description)
 
-__all__ = ["Leader", "Subfield", "Field", "Record", "MARCReader", "MARCWriter", 
-           "get_leader_valid_values", "get_leader_value_description"]
+__all__ = [
+    "Leader", "Subfield", "Field", "Record", "MARCReader", "MARCWriter",
+    "get_leader_valid_values", "get_leader_value_description",
+    # Tier 1 format support: Protobuf
+    "ProtobufReader", "ProtobufWriter", "record_to_protobuf", "protobuf_to_record",
+]
