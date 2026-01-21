@@ -28,9 +28,14 @@
 /// ```
 use arrow::array::{RecordBatch, StringArray, UInt32Array};
 use arrow::datatypes::{DataType, Field, Schema};
+use arrow::ipc::writer::StreamWriter;
+use std::io::Write;
 use std::sync::Arc;
 
+use crate::formats::FormatWriter;
+use crate::MarcError;
 use crate::Record;
+use crate::Result as MarcResult;
 
 /// Create error from string
 fn mk_error(msg: &str) -> std::io::Error {
@@ -457,6 +462,198 @@ impl ArrowMarcTable {
     }
 }
 
+// ============================================================================
+// ArrowWriter - FormatWriter Implementation
+// ============================================================================
+
+/// Writer for streaming MARC records to Arrow IPC format.
+///
+/// `ArrowWriter` implements the [`FormatWriter`] trait, buffering records in memory
+/// and writing them as Arrow `RecordBatch` on `finish()`. This enables efficient
+/// columnar export for analytics integration with tools like `DuckDB`, Polars, and `DataFusion`.
+///
+/// # Batch-Oriented Design
+///
+/// Unlike streaming formats (`MessagePack`, Protobuf), Arrow is inherently batch-oriented.
+/// Records are accumulated in memory and converted to columnar format when `finish()` is called.
+/// This design allows efficient columnar compression and optimal `RecordBatch` construction.
+///
+/// # Usage
+///
+/// ```ignore
+/// use mrrc::arrow_impl::ArrowWriter;
+/// use mrrc::formats::FormatWriter;
+/// use std::io::Cursor;
+///
+/// let mut buffer = Vec::new();
+/// let mut writer = ArrowWriter::new(&mut buffer);
+///
+/// for record in records {
+///     writer.write_record(&record)?;
+/// }
+/// writer.finish()?;
+///
+/// // buffer now contains Arrow IPC stream data
+/// ```
+///
+/// # Output Format
+///
+/// The writer produces Arrow IPC stream format, which can be read by:
+/// - Arrow IPC `StreamReader` (Rust, Python, etc.)
+/// - `DuckDB`'s `read_arrow` function
+/// - Polars' `read_ipc` function
+/// - Any Arrow-compatible analytics tool
+#[derive(Debug)]
+pub struct ArrowWriter<W: Write> {
+    writer: W,
+    records: Vec<Record>,
+    records_written: usize,
+    finished: bool,
+}
+
+impl<W: Write> ArrowWriter<W> {
+    /// Create a new Arrow writer.
+    ///
+    /// # Arguments
+    ///
+    /// * `writer` - Any destination implementing [`std::io::Write`]
+    pub fn new(writer: W) -> Self {
+        Self {
+            writer,
+            records: Vec::new(),
+            records_written: 0,
+            finished: false,
+        }
+    }
+
+    /// Write a single MARC record to the buffer.
+    ///
+    /// Records are buffered in memory until `finish()` is called.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the writer has already been finished.
+    pub fn write_record(&mut self, record: &Record) -> MarcResult<()> {
+        if self.finished {
+            return Err(MarcError::InvalidRecord(
+                "Cannot write to a finished writer".to_string(),
+            ));
+        }
+
+        self.records.push(record.clone());
+        self.records_written += 1;
+        Ok(())
+    }
+
+    /// Write multiple records efficiently.
+    ///
+    /// This is more efficient than calling `write_record` repeatedly
+    /// as it avoids multiple vector reallocations.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the writer has already been finished.
+    pub fn write_batch(&mut self, records: &[Record]) -> MarcResult<()> {
+        if self.finished {
+            return Err(MarcError::InvalidRecord(
+                "Cannot write to a finished writer".to_string(),
+            ));
+        }
+
+        self.records.extend(records.iter().cloned());
+        self.records_written += records.len();
+        Ok(())
+    }
+
+    /// Convert buffered records to Arrow format and write to output.
+    ///
+    /// This method MUST be called to ensure data is written. It:
+    /// 1. Converts all buffered records to an Arrow `RecordBatch`
+    /// 2. Writes the batch to Arrow IPC stream format
+    /// 3. Flushes the output
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No records have been written (empty batch)
+    /// - Arrow batch creation fails
+    /// - I/O errors occur during writing
+    pub fn finish(&mut self) -> MarcResult<()> {
+        if self.finished {
+            return Ok(()); // Already finished, no-op
+        }
+
+        if self.records.is_empty() {
+            self.finished = true;
+            return Ok(()); // Empty write is valid
+        }
+
+        // Convert records to Arrow RecordBatch
+        let batch = records_to_arrow_batch(&self.records).map_err(|e| {
+            MarcError::IoError(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Failed to create Arrow batch: {e}"),
+            ))
+        })?;
+
+        // Write to Arrow IPC stream format
+        let mut arrow_writer = StreamWriter::try_new(&mut self.writer, batch.schema().as_ref())
+            .map_err(|e| {
+                MarcError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to create Arrow writer: {e}"),
+                ))
+            })?;
+
+        arrow_writer.write(&batch).map_err(|e| {
+            MarcError::IoError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to write Arrow batch: {e}"),
+            ))
+        })?;
+
+        arrow_writer.finish().map_err(|e| {
+            MarcError::IoError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to finish Arrow writer: {e}"),
+            ))
+        })?;
+
+        self.finished = true;
+        Ok(())
+    }
+
+    /// Returns the number of records written so far.
+    #[must_use]
+    pub fn records_written(&self) -> usize {
+        self.records_written
+    }
+
+    /// Returns whether the writer has been finished.
+    #[must_use]
+    pub fn is_finished(&self) -> bool {
+        self.finished
+    }
+}
+
+impl<W: Write + std::fmt::Debug> FormatWriter for ArrowWriter<W> {
+    fn write_record(&mut self, record: &Record) -> MarcResult<()> {
+        ArrowWriter::write_record(self, record)
+    }
+
+    fn write_batch(&mut self, records: &[Record]) -> MarcResult<()> {
+        ArrowWriter::write_batch(self, records)
+    }
+
+    fn finish(&mut self) -> MarcResult<()> {
+        ArrowWriter::finish(self)
+    }
+
+    fn records_written(&self) -> Option<usize> {
+        Some(self.records_written)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -514,9 +711,9 @@ mod tests {
         let restored = arrow_batch_to_records(&batch).unwrap();
 
         assert_eq!(restored.len(), 3);
-        for i in 0..3 {
+        for (i, record) in restored.iter().enumerate() {
             assert_eq!(
-                restored[i].get_control_field("001"),
+                record.get_control_field("001"),
                 Some(format!("rec{i:03}").as_str())
             );
         }
@@ -561,5 +758,144 @@ mod tests {
         let f = restored[0].get_field("245").unwrap();
         let codes: Vec<char> = f.subfields.iter().map(|s| s.code).collect();
         assert_eq!(codes, vec!['c', 'a', 'b']);
+    }
+
+    // ========================================================================
+    // ArrowWriter Tests
+    // ========================================================================
+
+    #[test]
+    fn test_arrow_writer_basic() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test001".to_string());
+        let mut field = crate::record::Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Test Title".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            writer.write_record(&record).unwrap();
+            assert_eq!(writer.records_written(), 1);
+            writer.finish().unwrap();
+            assert!(writer.is_finished());
+        }
+
+        // Buffer should contain Arrow IPC data
+        assert!(!buffer.is_empty());
+        // Arrow IPC magic bytes "ARROW1"
+        assert!(buffer.starts_with(b"ARROW1") || buffer.len() > 100);
+    }
+
+    #[test]
+    fn test_arrow_writer_batch() {
+        let records: Vec<Record> = (0..5)
+            .map(|i| {
+                let mut r = Record::new(make_test_leader());
+                r.add_control_field("001".to_string(), format!("rec{i:03}"));
+                let mut f = crate::record::Field::new("245".to_string(), '1', '0');
+                f.add_subfield('a', format!("Title {i}"));
+                r.add_field(f);
+                r
+            })
+            .collect();
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            writer.write_batch(&records).unwrap();
+            assert_eq!(writer.records_written(), 5);
+            writer.finish().unwrap();
+        }
+
+        assert!(!buffer.is_empty());
+    }
+
+    #[test]
+    fn test_arrow_writer_cannot_write_after_finish() {
+        let record = Record::new(make_test_leader());
+        let mut buffer = Vec::new();
+        let mut writer = ArrowWriter::new(&mut buffer);
+
+        writer.write_record(&record).unwrap();
+        writer.finish().unwrap();
+
+        // Should error when writing after finish
+        let result = writer.write_record(&record);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_arrow_writer_empty_finish() {
+        let mut buffer = Vec::new();
+        let mut writer: ArrowWriter<&mut Vec<u8>> = ArrowWriter::new(&mut buffer);
+
+        // Empty finish should succeed
+        writer.finish().unwrap();
+        assert!(writer.is_finished());
+    }
+
+    #[test]
+    fn test_arrow_writer_format_trait() {
+        use crate::formats::FormatWriter;
+
+        let records: Vec<Record> = (0..3)
+            .map(|i| {
+                let mut r = Record::new(make_test_leader());
+                let mut f = crate::record::Field::new("245".to_string(), '1', '0');
+                f.add_subfield('a', format!("Title {i}"));
+                r.add_field(f);
+                r
+            })
+            .collect();
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            FormatWriter::write_batch(&mut writer, &records).unwrap();
+            assert_eq!(FormatWriter::records_written(&writer), Some(3));
+            FormatWriter::finish(&mut writer).unwrap();
+        }
+
+        assert!(!buffer.is_empty());
+    }
+
+    #[test]
+    fn test_arrow_writer_roundtrip_via_ipc() {
+        use arrow::ipc::reader::StreamReader;
+        use std::io::Cursor;
+
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "roundtrip001".to_string());
+        let mut field = crate::record::Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Roundtrip Test".to_string());
+        field.add_subfield('c', "Test Author".to_string());
+        record.add_field(field);
+
+        // Write via ArrowWriter
+        let mut buffer = Vec::new();
+        {
+            let mut writer = ArrowWriter::new(&mut buffer);
+            writer.write_record(&record).unwrap();
+            writer.finish().unwrap();
+        }
+
+        // Read back via StreamReader
+        let cursor = Cursor::new(buffer);
+        let reader = StreamReader::try_new(cursor, None).unwrap();
+
+        let mut batches = Vec::new();
+        for batch_result in reader {
+            batches.push(batch_result.unwrap());
+        }
+
+        assert_eq!(batches.len(), 1);
+        let restored = arrow_batch_to_records(&batches[0]).unwrap();
+
+        assert_eq!(restored.len(), 1);
+        assert_eq!(restored[0].get_control_field("001"), Some("roundtrip001"));
+        let f245 = restored[0].get_field("245").unwrap();
+        assert_eq!(f245.get_subfield('a'), Some("Roundtrip Test"));
+        assert_eq!(f245.get_subfield('c'), Some("Test Author"));
     }
 }

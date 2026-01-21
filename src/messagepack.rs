@@ -1,7 +1,7 @@
-//! MessagePack binary format support for MARC records.
+//! `MessagePack` binary format support for MARC records.
 //!
 //! This module provides serialization and deserialization of MARC records
-//! using MessagePack, a compact binary serialization format with broad
+//! using `MessagePack`, a compact binary serialization format with broad
 //! language support (50+ languages).
 //!
 //! ## Features
@@ -42,7 +42,7 @@ use std::io::{Read, Write};
 // Serialization Schema
 // ============================================================================
 
-/// MessagePack representation of a MARC record.
+/// `MessagePack` representation of a MARC record.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct MarcRecordMsgpack {
     /// 24-character leader string
@@ -53,14 +53,14 @@ struct MarcRecordMsgpack {
     fields: Vec<FieldMsgpack>,
 }
 
-/// MessagePack representation of a control field.
+/// `MessagePack` representation of a control field.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct ControlFieldMsgpack {
     tag: String,
     value: String,
 }
 
-/// MessagePack representation of a variable field.
+/// `MessagePack` representation of a variable field.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct FieldMsgpack {
     tag: String,
@@ -69,7 +69,7 @@ struct FieldMsgpack {
     subfields: Vec<SubfieldMsgpack>,
 }
 
-/// MessagePack representation of a subfield.
+/// `MessagePack` representation of a subfield.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct SubfieldMsgpack {
     code: char,
@@ -80,7 +80,7 @@ struct SubfieldMsgpack {
 // Conversion Functions
 // ============================================================================
 
-/// Convert a MARC Record to MessagePack representation.
+/// Convert a MARC Record to `MessagePack` representation.
 fn record_to_msgpack(record: &Record) -> Result<MarcRecordMsgpack> {
     let leader_bytes = record.leader.as_bytes()?;
     let leader = String::from_utf8(leader_bytes)
@@ -118,7 +118,7 @@ fn record_to_msgpack(record: &Record) -> Result<MarcRecordMsgpack> {
     })
 }
 
-/// Convert MessagePack representation to a MARC Record.
+/// Convert `MessagePack` representation to a MARC Record.
 fn msgpack_to_record(msgpack: MarcRecordMsgpack) -> Result<Record> {
     let leader = Leader::from_bytes(msgpack.leader.as_bytes())?;
     let mut record = Record::new(leader);
@@ -156,7 +156,7 @@ fn msgpack_to_record(msgpack: MarcRecordMsgpack) -> Result<Record> {
 // MessagePackWriter
 // ============================================================================
 
-/// Writer for streaming MARC records to MessagePack format.
+/// Writer for streaming MARC records to `MessagePack` format.
 ///
 /// `MessagePackWriter` implements the [`FormatWriter`] trait, allowing it to be used
 /// interchangeably with other format writers. Records are written using length-delimited
@@ -169,7 +169,7 @@ pub struct MessagePackWriter<W: Write> {
 }
 
 impl<W: Write> MessagePackWriter<W> {
-    /// Create a new MessagePack writer.
+    /// Create a new `MessagePack` writer.
     ///
     /// # Arguments
     ///
@@ -182,7 +182,7 @@ impl<W: Write> MessagePackWriter<W> {
         }
     }
 
-    /// Write a single MARC record to MessagePack format.
+    /// Write a single MARC record to `MessagePack` format.
     ///
     /// Records are written with length-delimited encoding for streaming support.
     ///
@@ -201,8 +201,9 @@ impl<W: Write> MessagePackWriter<W> {
             .map_err(|e| MarcError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
         // Write length prefix (4-byte big-endian)
-        let len = u32::try_from(bytes.len())
-            .map_err(|_| MarcError::InvalidRecord("Record too large for MessagePack".to_string()))?;
+        let len = u32::try_from(bytes.len()).map_err(|_| {
+            MarcError::InvalidRecord("Record too large for MessagePack".to_string())
+        })?;
         self.writer.write_all(&len.to_be_bytes())?;
         self.writer.write_all(&bytes)?;
 
@@ -246,7 +247,7 @@ impl<W: Write + std::fmt::Debug> FormatWriter for MessagePackWriter<W> {
 // MessagePackReader
 // ============================================================================
 
-/// Reader for streaming MARC records from MessagePack format.
+/// Reader for streaming MARC records from `MessagePack` format.
 ///
 /// `MessagePackReader` implements the [`FormatReader`] trait, allowing it to be used
 /// interchangeably with other format readers. Records are read using length-delimited
@@ -258,7 +259,7 @@ pub struct MessagePackReader<R: Read> {
 }
 
 impl<R: Read> MessagePackReader<R> {
-    /// Create a new MessagePack reader.
+    /// Create a new `MessagePack` reader.
     ///
     /// # Arguments
     ///
@@ -270,7 +271,7 @@ impl<R: Read> MessagePackReader<R> {
         }
     }
 
-    /// Read a single MARC record from the MessagePack stream.
+    /// Read a single MARC record from the `MessagePack` stream.
     ///
     /// Returns `Ok(Some(record))` if a record was read, `Ok(None)` at EOF,
     /// or `Err` if parsing fails.
@@ -282,7 +283,7 @@ impl<R: Read> MessagePackReader<R> {
         // Read length prefix (4-byte big-endian)
         let mut len_bytes = [0u8; 4];
         match self.reader.read_exact(&mut len_bytes) {
-            Ok(()) => {}
+            Ok(()) => {},
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
             Err(e) => return Err(MarcError::IoError(e)),
         }
@@ -295,12 +296,12 @@ impl<R: Read> MessagePackReader<R> {
         // Read the message bytes
         let mut buffer = vec![0u8; len];
         match self.reader.read_exact(&mut buffer) {
-            Ok(()) => {}
+            Ok(()) => {},
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
                 return Err(MarcError::TruncatedRecord(
                     "Unexpected EOF while reading MessagePack record".to_string(),
                 ));
-            }
+            },
             Err(e) => return Err(MarcError::IoError(e)),
         }
 
@@ -582,7 +583,7 @@ mod tests {
 
     #[test]
     fn test_format_traits() -> Result<()> {
-        use crate::formats::FormatWriter;
+        use crate::formats::{FormatReader, FormatWriter};
 
         let records: Vec<Record> = (0..3)
             .map(|i| {
@@ -602,7 +603,6 @@ mod tests {
             FormatWriter::finish(&mut writer)?;
         }
 
-        use crate::formats::FormatReader;
         let cursor = Cursor::new(buffer);
         let mut reader = MessagePackReader::new(cursor);
         let read_records = FormatReader::read_all(&mut reader)?;

@@ -354,12 +354,12 @@ impl<R: Read> ProtobufReader<R> {
         })?;
         let mut buffer = vec![0u8; len_usize];
         match self.reader.read_exact(&mut buffer) {
-            Ok(()) => {}
+            Ok(()) => {},
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
                 return Err(MarcError::TruncatedRecord(
                     "Unexpected EOF while reading protobuf record".to_string(),
                 ));
-            }
+            },
             Err(e) => return Err(MarcError::IoError(e)),
         }
 
@@ -722,9 +722,15 @@ mod tests {
 
         for i in 0..5 {
             let record = reader.read_record()?.expect("Should have record");
-            assert_eq!(record.get_control_field("001"), Some(format!("rec{i:03}").as_str()));
+            assert_eq!(
+                record.get_control_field("001"),
+                Some(format!("rec{i:03}").as_str())
+            );
             let field_245 = record.get_field("245").expect("Should have 245");
-            assert_eq!(field_245.get_subfield('a'), Some(format!("Title {i}").as_str()));
+            assert_eq!(
+                field_245.get_subfield('a'),
+                Some(format!("Title {i}").as_str())
+            );
         }
 
         assert_eq!(reader.records_read(), 5);
@@ -735,7 +741,7 @@ mod tests {
 
     #[test]
     fn test_streaming_format_writer_trait() -> Result<()> {
-        use crate::formats::FormatWriter;
+        use crate::formats::{FormatReader, FormatWriter};
 
         let records: Vec<Record> = (0..3)
             .map(|i| {
@@ -757,7 +763,6 @@ mod tests {
         }
 
         // Read back using FormatReader trait
-        use crate::formats::FormatReader;
         let cursor = Cursor::new(buffer);
         let mut reader = ProtobufReader::new(cursor);
 
@@ -952,7 +957,10 @@ mod tests {
         let restored = reader.read_record()?.unwrap();
 
         let field_245 = restored.get_field("245").unwrap();
-        assert_eq!(field_245.get_subfield('a'), Some("  Leading and trailing  "));
+        assert_eq!(
+            field_245.get_subfield('a'),
+            Some("  Leading and trailing  ")
+        );
         assert_eq!(field_245.get_subfield('b'), Some("\ttab\there\t"));
 
         Ok(())

@@ -186,8 +186,32 @@ pub mod arrow {
     //!
     //! - Read: ~865,000 records/second
     //! - Excellent compression (~96% size reduction)
+    //!
+    //! # Usage
+    //!
+    //! ```ignore
+    //! use mrrc::formats::arrow::ArrowWriter;
+    //! use mrrc::formats::FormatWriter;
+    //! use std::io::Cursor;
+    //!
+    //! let mut buffer = Vec::new();
+    //! let mut writer = ArrowWriter::new(&mut buffer);
+    //!
+    //! writer.write_record(&record)?;
+    //! writer.finish()?;
+    //!
+    //! // buffer now contains Arrow IPC stream data
+    //! ```
 
-    // TODO: Implement ArrowReader and ArrowWriter with trait conformance
+    // Re-export ArrowWriter for columnar export
+    pub use crate::arrow_impl::ArrowWriter;
+
+    // Re-export helper functions for direct batch operations
+    pub use crate::arrow_impl::{
+        arrow_batch_to_records, create_arrow_schema, records_to_arrow_batch, ArrowMarcTable,
+    };
+
+    // TODO: Implement ArrowReader with FormatReader trait conformance
 }
 
 /// FlatBuffers zero-copy format support.
@@ -215,9 +239,9 @@ pub mod flatbuffers {
     // TODO: Implement FlatBuffersReader and FlatBuffersWriter with trait conformance
 }
 
-/// MessagePack compact binary format support.
+/// `MessagePack` compact binary format support.
 ///
-/// MessagePack provides compact serialization with broad language support (50+ languages),
+/// `MessagePack` provides compact serialization with broad language support (50+ languages),
 /// making it ideal for REST APIs, IPC, and language-agnostic data exchange.
 ///
 /// # Use Cases

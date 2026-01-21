@@ -133,6 +133,10 @@ fn benchmark_read_throughput(serialized: &[u8], expected_count: usize) -> f64 {
 }
 
 fn benchmark_10k() -> Result<(), Box<dyn std::error::Error>> {
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+
     let data = fs::read(PERF_TEST_10K_PATH)?;
     let cursor = Cursor::new(&data);
     let mut reader = MarcReader::new(cursor);
@@ -185,10 +189,6 @@ fn benchmark_10k() -> Result<(), Box<dyn std::error::Error>> {
     let avg_read = read_throughputs.iter().sum::<f64>() / read_throughputs.len() as f64;
 
     // Compression stats
-    use flate2::write::GzEncoder;
-    use flate2::Compression;
-    use std::io::Write;
-
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(&serialized)?;
     let gzipped = encoder.finish()?;
@@ -197,25 +197,41 @@ fn benchmark_10k() -> Result<(), Box<dyn std::error::Error>> {
     println!("|--------|-------|");
     println!("| Write Throughput | {:.0} rec/sec |", avg_write);
     println!("| Read Throughput | {:.0} rec/sec |", avg_read);
-    println!("| Serialized Size | {} bytes ({:.2} KB/rec) |",
-             serialized.len(),
-             serialized.len() as f64 / records.len() as f64 / 1024.0);
-    println!("| Gzipped Size | {} bytes ({:.1}% compression) |",
-             gzipped.len(),
-             (1.0 - gzipped.len() as f64 / serialized.len() as f64) * 100.0);
+    println!(
+        "| Serialized Size | {} bytes ({:.2} KB/rec) |",
+        serialized.len(),
+        serialized.len() as f64 / records.len() as f64 / 1024.0
+    );
+    println!(
+        "| Gzipped Size | {} bytes ({:.1}% compression) |",
+        gzipped.len(),
+        (1.0 - gzipped.len() as f64 / serialized.len() as f64) * 100.0
+    );
     println!();
 
     // Check against target
     let target = 500_000.0;
     if avg_write >= target {
-        println!("**Write Target (500k rec/sec):** PASS ({:.0} >= {:.0})", avg_write, target);
+        println!(
+            "**Write Target (500k rec/sec):** PASS ({:.0} >= {:.0})",
+            avg_write, target
+        );
     } else {
-        println!("**Write Target (500k rec/sec):** Below target ({:.0} < {:.0})", avg_write, target);
+        println!(
+            "**Write Target (500k rec/sec):** Below target ({:.0} < {:.0})",
+            avg_write, target
+        );
     }
     if avg_read >= target {
-        println!("**Read Target (500k rec/sec):** PASS ({:.0} >= {:.0})", avg_read, target);
+        println!(
+            "**Read Target (500k rec/sec):** PASS ({:.0} >= {:.0})",
+            avg_read, target
+        );
     } else {
-        println!("**Read Target (500k rec/sec):** Below target ({:.0} < {:.0})", avg_read, target);
+        println!(
+            "**Read Target (500k rec/sec):** Below target ({:.0} < {:.0})",
+            avg_read, target
+        );
     }
     println!();
 
@@ -268,22 +284,36 @@ fn benchmark_100k() -> Result<(), Box<dyn std::error::Error>> {
     println!("|--------|-------|");
     println!("| Write Throughput | {:.0} rec/sec |", avg_write);
     println!("| Read Throughput | {:.0} rec/sec |", avg_read);
-    println!("| Serialized Size | {} bytes ({:.2} MB) |",
-             serialized.len(),
-             serialized.len() as f64 / 1024.0 / 1024.0);
+    println!(
+        "| Serialized Size | {} bytes ({:.2} MB) |",
+        serialized.len(),
+        serialized.len() as f64 / 1024.0 / 1024.0
+    );
     println!();
 
     // Check against target
     let target = 500_000.0;
     if avg_write >= target {
-        println!("**Write Target (500k rec/sec):** PASS ({:.0} >= {:.0})", avg_write, target);
+        println!(
+            "**Write Target (500k rec/sec):** PASS ({:.0} >= {:.0})",
+            avg_write, target
+        );
     } else {
-        println!("**Write Target (500k rec/sec):** Below target ({:.0} < {:.0})", avg_write, target);
+        println!(
+            "**Write Target (500k rec/sec):** Below target ({:.0} < {:.0})",
+            avg_write, target
+        );
     }
     if avg_read >= target {
-        println!("**Read Target (500k rec/sec):** PASS ({:.0} >= {:.0})", avg_read, target);
+        println!(
+            "**Read Target (500k rec/sec):** PASS ({:.0} >= {:.0})",
+            avg_read, target
+        );
     } else {
-        println!("**Read Target (500k rec/sec):** Below target ({:.0} < {:.0})", avg_read, target);
+        println!(
+            "**Read Target (500k rec/sec):** Below target ({:.0} < {:.0})",
+            avg_read, target
+        );
     }
     println!();
 

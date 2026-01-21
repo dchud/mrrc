@@ -4,7 +4,7 @@
     clippy::cast_possible_truncation,
     clippy::cast_lossless
 )]
-//! MessagePack benchmarks for MARC record serialization.
+//! `MessagePack` benchmarks for MARC record serialization.
 //!
 //! Target: 750k records/second for both read and write operations.
 
@@ -118,6 +118,10 @@ fn benchmark_read_throughput(serialized: &[u8], expected_count: usize) -> f64 {
 }
 
 fn benchmark_10k() -> Result<(), Box<dyn std::error::Error>> {
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+
     let data = fs::read(PERF_TEST_10K_PATH)?;
     let cursor = Cursor::new(&data);
     let mut reader = MarcReader::new(cursor);
@@ -169,18 +173,14 @@ fn benchmark_10k() -> Result<(), Box<dyn std::error::Error>> {
     let avg_read = read_throughputs.iter().sum::<f64>() / read_throughputs.len() as f64;
 
     // Compression
-    use flate2::write::GzEncoder;
-    use flate2::Compression;
-    use std::io::Write;
-
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(&serialized)?;
     let gzipped = encoder.finish()?;
 
     println!("| Metric | Value |");
     println!("|--------|-------|");
-    println!("| Write Throughput | {:.0} rec/sec |", avg_write);
-    println!("| Read Throughput | {:.0} rec/sec |", avg_read);
+    println!("| Write Throughput | {avg_write:.0} rec/sec |");
+    println!("| Read Throughput | {avg_read:.0} rec/sec |");
     println!(
         "| Serialized Size | {} bytes ({:.2} KB/rec) |",
         serialized.len(),
@@ -196,14 +196,22 @@ fn benchmark_10k() -> Result<(), Box<dyn std::error::Error>> {
     let target = 750_000.0;
     println!(
         "**Write Target (750k rec/sec):** {} ({:.0} {} {:.0})",
-        if avg_write >= target { "PASS" } else { "Below target" },
+        if avg_write >= target {
+            "PASS"
+        } else {
+            "Below target"
+        },
         avg_write,
         if avg_write >= target { ">=" } else { "<" },
         target
     );
     println!(
         "**Read Target (750k rec/sec):** {} ({:.0} {} {:.0})",
-        if avg_read >= target { "PASS" } else { "Below target" },
+        if avg_read >= target {
+            "PASS"
+        } else {
+            "Below target"
+        },
         avg_read,
         if avg_read >= target { ">=" } else { "<" },
         target
@@ -254,8 +262,8 @@ fn benchmark_100k() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("| Metric | Value |");
     println!("|--------|-------|");
-    println!("| Write Throughput | {:.0} rec/sec |", avg_write);
-    println!("| Read Throughput | {:.0} rec/sec |", avg_read);
+    println!("| Write Throughput | {avg_write:.0} rec/sec |");
+    println!("| Read Throughput | {avg_read:.0} rec/sec |");
     println!(
         "| Serialized Size | {} bytes ({:.2} MB) |",
         serialized.len(),
@@ -266,14 +274,22 @@ fn benchmark_100k() -> Result<(), Box<dyn std::error::Error>> {
     let target = 750_000.0;
     println!(
         "**Write Target (750k rec/sec):** {} ({:.0} {} {:.0})",
-        if avg_write >= target { "PASS" } else { "Below target" },
+        if avg_write >= target {
+            "PASS"
+        } else {
+            "Below target"
+        },
         avg_write,
         if avg_write >= target { ">=" } else { "<" },
         target
     );
     println!(
         "**Read Target (750k rec/sec):** {} ({:.0} {} {:.0})",
-        if avg_read >= target { "PASS" } else { "Below target" },
+        if avg_read >= target {
+            "PASS"
+        } else {
+            "Below target"
+        },
         avg_read,
         if avg_read >= target { ">=" } else { "<" },
         target
