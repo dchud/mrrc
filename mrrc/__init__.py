@@ -1301,6 +1301,123 @@ def read(path: Union[str, Any], format: Optional[str] = None):
         )
 
 
+def write(records, path: Union[str, Any], format: Optional[str] = None) -> int:
+    """Write MARC records to a file, auto-detecting format from extension.
+
+    Args:
+        records: An iterable of Record objects to write.
+        path: File path (str or pathlib.Path) to write to.
+        format: Optional format override. If not specified, format is inferred
+            from the file extension. Supported values:
+            - "marc" or "mrc": ISO 2709 binary MARC
+            - "protobuf" or "pb": Protocol Buffers
+            - "arrow": Apache Arrow IPC
+            - "flatbuffers" or "fb": FlatBuffers
+            - "messagepack" or "msgpack": MessagePack
+
+    Returns:
+        The number of records written.
+
+    Raises:
+        ValueError: If format cannot be determined or is unsupported.
+
+    Example:
+        >>> records = list(mrrc.read("input.mrc"))
+        >>> mrrc.write(records, "output.pb")
+        100
+
+        >>> mrrc.write(records, "output.dat", format="protobuf")
+        100
+    """
+    import os
+
+    # Convert pathlib.Path to string if needed
+    if hasattr(path, '__fspath__'):
+        path = os.fspath(path)
+
+    # Determine format from extension if not specified
+    if format is None:
+        _, ext = os.path.splitext(path)
+        ext = ext.lower().lstrip('.')
+
+        extension_map = {
+            'mrc': 'marc',
+            'marc': 'marc',
+            'pb': 'protobuf',
+            'protobuf': 'protobuf',
+            'arrow': 'arrow',
+            'fb': 'flatbuffers',
+            'flatbuffers': 'flatbuffers',
+            'msgpack': 'messagepack',
+            'messagepack': 'messagepack',
+        }
+
+        format = extension_map.get(ext)
+        if format is None:
+            raise ValueError(
+                f"Cannot determine format from extension '.{ext}'. "
+                f"Supported extensions: {', '.join(sorted(extension_map.keys()))}. "
+                f"Use format= parameter to specify explicitly."
+            )
+
+    # Normalize format aliases
+    format = format.lower()
+    format_aliases = {
+        'mrc': 'marc',
+        'pb': 'protobuf',
+        'fb': 'flatbuffers',
+        'msgpack': 'messagepack',
+    }
+    format = format_aliases.get(format, format)
+
+    # Helper to get inner record (handles both wrapped and raw records)
+    def get_inner(record):
+        if hasattr(record, '_inner'):
+            return record._inner
+        return record
+
+    # Write using appropriate writer
+    count = 0
+    if format == 'marc':
+        with open(path, 'wb') as f:
+            writer = MARCWriter(f)
+            for record in records:
+                writer.write(record)
+                count += 1
+            writer.close()
+    elif format == 'protobuf':
+        writer = ProtobufWriter(path)
+        for record in records:
+            writer.write_record(get_inner(record))
+            count += 1
+        writer.close()
+    elif format == 'arrow':
+        writer = ArrowWriter(path)
+        for record in records:
+            writer.write_record(get_inner(record))
+            count += 1
+        writer.close()
+    elif format == 'flatbuffers':
+        writer = FlatbuffersWriter(path)
+        for record in records:
+            writer.write_record(get_inner(record))
+            count += 1
+        writer.close()
+    elif format == 'messagepack':
+        writer = MessagePackWriter(path)
+        for record in records:
+            writer.write_record(get_inner(record))
+            count += 1
+        writer.close()
+    else:
+        supported = ['marc', 'protobuf', 'arrow', 'flatbuffers', 'messagepack']
+        raise ValueError(
+            f"Unsupported format '{format}'. Supported formats: {', '.join(supported)}"
+        )
+
+    return count
+
+
 __all__ = [
     # Core classes
     "AuthorityMARCReader",
@@ -1356,6 +1473,7 @@ __all__ = [
     "flatbuffers_to_record",
     "record_to_messagepack",
     "messagepack_to_record",
-    # Format-agnostic helper
+    # Format-agnostic helpers
     "read",
+    "write",
 ]
