@@ -135,15 +135,15 @@ impl PyProtobufReader {
         let result = match &mut self.backend {
             Some(ProtobufReaderBackend::Bytes(reader)) => {
                 reader.read_record().map_err(marc_error_to_py_err)?
-            }
+            },
             Some(ProtobufReaderBackend::File(reader)) => {
                 reader.read_record().map_err(marc_error_to_py_err)?
-            }
+            },
             None => {
                 return Err(pyo3::exceptions::PyRuntimeError::new_err(
                     "Reader has been consumed",
                 ))
-            }
+            },
         };
 
         Ok(result.map(|inner| PyRecord { inner }))
@@ -166,13 +166,13 @@ impl PyProtobufReader {
         let result = match &mut slf.backend {
             Some(ProtobufReaderBackend::Bytes(reader)) => {
                 reader.read_record().map_err(marc_error_to_py_err)?
-            }
+            },
             Some(ProtobufReaderBackend::File(reader)) => {
                 reader.read_record().map_err(marc_error_to_py_err)?
-            }
+            },
             None => {
                 return Err(pyo3::exceptions::PyStopIteration::new_err(()));
-            }
+            },
         };
 
         match result {
@@ -180,7 +180,7 @@ impl PyProtobufReader {
             None => {
                 slf.backend = None;
                 Err(pyo3::exceptions::PyStopIteration::new_err(()))
-            }
+            },
         }
     }
 
@@ -188,10 +188,10 @@ impl PyProtobufReader {
         match &self.backend {
             Some(ProtobufReaderBackend::Bytes(reader)) => {
                 format!("<ProtobufReader records_read={}>", reader.records_read())
-            }
+            },
             Some(ProtobufReaderBackend::File(reader)) => {
                 format!("<ProtobufReader records_read={}>", reader.records_read())
-            }
+            },
             None => "<ProtobufReader consumed>".to_string(),
         }
     }
@@ -264,7 +264,7 @@ impl PyProtobufWriter {
                     }),
                     closed: false,
                 })
-            }
+            },
             Some(path_obj) => {
                 // Try as string path
                 if let Ok(path_str) = path_obj.extract::<String>() {
@@ -307,7 +307,7 @@ impl PyProtobufWriter {
                 Err(pyo3::exceptions::PyTypeError::new_err(
                     "ProtobufWriter() path argument must be a file path (str/Path) or None",
                 ))
-            }
+            },
         }
     }
 
@@ -344,7 +344,7 @@ impl PyProtobufWriter {
                 })?;
                 *records_written += 1;
                 Ok(())
-            }
+            },
             Some(ProtobufWriterBackend::File(writer)) => writer
                 .write_record(&record.inner)
                 .map_err(marc_error_to_py_err),
@@ -398,7 +398,7 @@ impl PyProtobufWriter {
             Some(ProtobufWriterBackend::Buffer { buffer, .. }) => {
                 self.closed = true;
                 Ok(PyBytes::new(py, &buffer))
-            }
+            },
             Some(ProtobufWriterBackend::File(_)) => Err(pyo3::exceptions::PyRuntimeError::new_err(
                 "get_bytes() is only available for memory buffer writers (created without a path)",
             )),
@@ -417,11 +417,11 @@ impl PyProtobufWriter {
             match &mut self.backend {
                 Some(ProtobufWriterBackend::Buffer { .. }) => {
                     // Buffer is already complete, nothing to flush
-                }
+                },
                 Some(ProtobufWriterBackend::File(writer)) => {
                     writer.finish().map_err(marc_error_to_py_err)?;
-                }
-                None => {}
+                },
+                None => {},
             }
             self.closed = true;
         }
@@ -451,14 +451,17 @@ impl PyProtobufWriter {
                 Some(ProtobufWriterBackend::Buffer {
                     records_written, ..
                 }) => {
-                    format!("<ProtobufWriter memory records_written={}>", records_written)
-                }
+                    format!(
+                        "<ProtobufWriter memory records_written={}>",
+                        records_written
+                    )
+                },
                 Some(ProtobufWriterBackend::File(writer)) => {
                     format!(
                         "<ProtobufWriter file records_written={}>",
                         writer.records_written()
                     )
-                }
+                },
                 None => "<ProtobufWriter uninitialized>".to_string(),
             }
         }
@@ -498,7 +501,10 @@ fn write_length_delimited<W: Write>(writer: &mut W, data: &[u8]) -> std::io::Res
 /// protobuf_bytes = mrrc.record_to_protobuf(record)
 /// ```
 #[pyfunction]
-pub fn record_to_protobuf<'py>(py: Python<'py>, record: &PyRecord) -> PyResult<Bound<'py, PyBytes>> {
+pub fn record_to_protobuf<'py>(
+    py: Python<'py>,
+    record: &PyRecord,
+) -> PyResult<Bound<'py, PyBytes>> {
     let bytes = ProtobufSerializer::serialize(&record.inner).map_err(marc_error_to_py_err)?;
     Ok(PyBytes::new(py, &bytes))
 }

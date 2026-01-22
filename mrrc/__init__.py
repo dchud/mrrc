@@ -44,6 +44,17 @@ from ._mrrc import (
     ProtobufWriter,
     record_to_protobuf,
     protobuf_to_record,
+    # Tier 2 format support: Arrow, FlatBuffers, MessagePack
+    ArrowReader,
+    ArrowWriter,
+    FlatbuffersReader,
+    FlatbuffersWriter,
+    MessagePackReader,
+    MessagePackWriter,
+    record_to_flatbuffers,
+    flatbuffers_to_record,
+    record_to_messagepack,
+    messagepack_to_record,
 )
 from typing import Optional, List, Union, Any, Tuple
 
@@ -1245,4 +1256,15 @@ __all__ = [
     "ProtobufWriter",
     "record_to_protobuf",
     "protobuf_to_record",
+    # Tier 2 format support: Arrow, FlatBuffers, MessagePack
+    "ArrowReader",
+    "ArrowWriter",
+    "FlatbuffersReader",
+    "FlatbuffersWriter",
+    "MessagePackReader",
+    "MessagePackWriter",
+    "record_to_flatbuffers",
+    "flatbuffers_to_record",
+    "record_to_messagepack",
+    "messagepack_to_record",
 ]
