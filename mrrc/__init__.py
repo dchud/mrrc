@@ -1212,6 +1212,95 @@ Leader.describe_value = staticmethod(get_leader_value_description)
 Leader.is_valid_value = staticmethod(get_leader_is_valid_value)
 Leader.get_value_description = staticmethod(get_leader_value_description)
 
+
+# Format-agnostic reader helper
+def read(path: Union[str, Any], format: Optional[str] = None):
+    """Read MARC records from a file, auto-detecting format from extension.
+
+    Args:
+        path: File path (str or pathlib.Path) to read from.
+        format: Optional format override. If not specified, format is inferred
+            from the file extension. Supported values:
+            - "marc" or "mrc": ISO 2709 binary MARC
+            - "protobuf" or "pb": Protocol Buffers
+            - "arrow": Apache Arrow IPC
+            - "flatbuffers" or "fb": FlatBuffers
+            - "messagepack" or "msgpack": MessagePack
+
+    Returns:
+        An iterator over Record objects from the file.
+
+    Raises:
+        ValueError: If format cannot be determined or is unsupported.
+        FileNotFoundError: If the file does not exist.
+
+    Example:
+        >>> for record in mrrc.read("data.mrc"):
+        ...     print(record.title())
+
+        >>> for record in mrrc.read("data.pb", format="protobuf"):
+        ...     print(record.title())
+    """
+    import os
+
+    # Convert pathlib.Path to string if needed
+    if hasattr(path, '__fspath__'):
+        path = os.fspath(path)
+
+    # Determine format from extension if not specified
+    if format is None:
+        _, ext = os.path.splitext(path)
+        ext = ext.lower().lstrip('.')
+
+        extension_map = {
+            'mrc': 'marc',
+            'marc': 'marc',
+            'pb': 'protobuf',
+            'protobuf': 'protobuf',
+            'arrow': 'arrow',
+            'fb': 'flatbuffers',
+            'flatbuffers': 'flatbuffers',
+            'msgpack': 'messagepack',
+            'messagepack': 'messagepack',
+        }
+
+        format = extension_map.get(ext)
+        if format is None:
+            raise ValueError(
+                f"Cannot determine format from extension '.{ext}'. "
+                f"Supported extensions: {', '.join(sorted(extension_map.keys()))}. "
+                f"Use format= parameter to specify explicitly."
+            )
+
+    # Normalize format aliases
+    format = format.lower()
+    format_aliases = {
+        'mrc': 'marc',
+        'pb': 'protobuf',
+        'fb': 'flatbuffers',
+        'msgpack': 'messagepack',
+    }
+    format = format_aliases.get(format, format)
+
+    # Return appropriate reader
+    if format == 'marc':
+        f = open(path, 'rb')
+        return MARCReader(f)
+    elif format == 'protobuf':
+        return ProtobufReader(path)
+    elif format == 'arrow':
+        return ArrowReader(path)
+    elif format == 'flatbuffers':
+        return FlatbuffersReader(path)
+    elif format == 'messagepack':
+        return MessagePackReader(path)
+    else:
+        supported = ['marc', 'protobuf', 'arrow', 'flatbuffers', 'messagepack']
+        raise ValueError(
+            f"Unsupported format '{format}'. Supported formats: {', '.join(supported)}"
+        )
+
+
 __all__ = [
     # Core classes
     "AuthorityMARCReader",
@@ -1267,4 +1356,6 @@ __all__ = [
     "flatbuffers_to_record",
     "record_to_messagepack",
     "messagepack_to_record",
+    # Format-agnostic helper
+    "read",
 ]
