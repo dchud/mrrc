@@ -143,10 +143,6 @@ name = "parquet_benchmarks"
 harness = false
 
 [[bench]]
-name = "eval_messagepack"
-harness = false
-
-[[bench]]
 name = "eval_cbor"
 harness = false
 
