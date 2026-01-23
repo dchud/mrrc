@@ -17,7 +17,11 @@ fn main() -> Result<()> {
                 .status()
                 .expect("Failed to execute flatc");
 
-            if !status.success() {
+            if status.success() {
+                // Format the generated FlatBuffers code to pass rustfmt check
+                let generated_file = "src/generated/marc_generated.rs";
+                let _ = Command::new("rustfmt").arg(generated_file).status();
+            } else {
                 println!("cargo:warning=flatc failed to generate FlatBuffers code");
             }
         }

@@ -28,6 +28,9 @@ if [ -f "venv/bin/activate" ]; then
 fi
 
 echo "=== Rustfmt check ==="
+# Format generated FlatBuffers code first (flatc output doesn't match rustfmt style)
+# This is a no-op if already formatted, but ensures CI passes after code generation
+rustfmt src/generated/marc_generated.rs 2>/dev/null || true
 cargo fmt --all -- --check
 
 echo ""
