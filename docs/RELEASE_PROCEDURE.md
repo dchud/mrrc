@@ -193,7 +193,7 @@ Before making any changes, verify that the codebase is in a releasable state.
 ### 1.1 Run Full Test Suite
 
 ```bash
-cd /Users/dchud/Documents/projects/mrrc
+cd "$REPO_ROOT"
 .cargo/check.sh
 ```
 
@@ -604,6 +604,17 @@ All checks must pass before proceeding to git operations.
 2. Re-run checks above
 3. Do **NOT** proceed until all pass
 
+### 6.1 Clean Up Backup Files
+
+Remove the `.bak` files created by sed during version updates:
+
+```bash
+rm -f Cargo.toml.bak src-python/Cargo.toml.bak pyproject.toml.bak CHANGELOG.md.bak
+```
+
+**Checklist**:
+- [ ] No `.bak` files remain in repository root or src-python/
+
 ---
 
 ## Git Operations
@@ -780,7 +791,7 @@ The crates.io publication is **manual** (requires crates.io API token).
 **Local publication** (if CI doesn't do it):
 
 ```bash
-cd /Users/dchud/Documents/projects/mrrc
+cd "$REPO_ROOT"
 cargo publish --dry-run
 ```
 
@@ -833,7 +844,7 @@ Should see your new release with:
 
 ## Post-Release Verification
 
-### 8.1 Test Installation from PyPI (Python)
+### 9.1 Test Installation from PyPI (Python)
 
 On a fresh machine or in a new virtual environment:
 
@@ -851,7 +862,7 @@ Should print the new version (if `__version__` is exposed; if not, just verify i
 - [ ] Package imports correctly
 - [ ] Version matches expected
 
-### 8.2 Test Installation from crates.io (Rust)
+### 9.2 Test Installation from crates.io (Rust)
 
 In a test Rust project:
 
@@ -867,7 +878,7 @@ cargo check
 - [ ] Compilation succeeds
 - [ ] Dependency resolution is correct
 
-### 8.3 Verify docs.rs Documentation
+### 9.3 Verify docs.rs Documentation
 
 Go to: https://docs.rs/mrrc/latest/mrrc/
 
@@ -883,7 +894,7 @@ Docs should be built and available. If not, they build automatically within a fe
 
 ## Post-Release Setup
 
-### 9.1 Verify Sync and Beads
+### 10.1 Verify Sync and Beads
 
 Sync any issue tracking changes:
 
@@ -894,7 +905,7 @@ git status
 
 No changes should be required unless you manually updated issue statuses.
 
-### 9.2 Create Post-Release Issue (Optional)
+### 10.2 Create Post-Release Issue (Optional)
 
 If there are known issues or follow-up work:
 
@@ -912,7 +923,7 @@ Link to release: https://github.com/dchud/mrrc/releases/tag/vX.Y.Z" \
   --json
 ```
 
-### 9.3 Begin Next Development Cycle
+### 10.3 Begin Next Development Cycle
 
 After release, update the [Unreleased] section to reflect the next development direction.
 
@@ -952,7 +963,7 @@ Example workflow:
 - [ ] Issue tracker (beads) reflects the development roadmap
 - [ ] README or docs reflect high-level roadmap if needed
 
-### 9.4 Commit Post-Release Changes (if any)
+### 10.4 Commit Post-Release Changes (if any)
 
 Only commit if you made changelog changes:
 
@@ -974,7 +985,7 @@ git push origin main
 
 Use these procedures only if critical issues are discovered after release.
 
-### 10.1 Immediate: Yank on crates.io (Rust)
+### 11.1 Immediate: Yank on crates.io (Rust)
 
 If a critical security or correctness issue exists:
 
@@ -990,7 +1001,7 @@ This marks the version as "yanked" (not recommended), but does not delete it. Us
 - Email if applicable
 - Issue tracker
 
-### 10.2 Immediate: Delete Release on PyPI (Python)
+### 11.2 Immediate: Delete Release on PyPI (Python)
 
 If the release is newer and hasn't been heavily downloaded:
 
@@ -1004,7 +1015,7 @@ If the release is newer and hasn't been heavily downloaded:
 
 **Announcement**: Same as above.
 
-### 10.3 Revert Git Tag
+### 11.3 Revert Git Tag
 
 If pushing the wrong tag:
 
@@ -1020,7 +1031,7 @@ git tag -a vX.Y.Z -m "Release version X.Y.Z (re-release)"
 git push origin vX.Y.Z
 ```
 
-### 10.4 Fix and Re-release
+### 11.4 Fix and Re-release
 
 For issues discovered immediately:
 
@@ -1072,7 +1083,7 @@ twine upload dist/mrrc-*.whl
 1. Ensure you have crates.io API token
 2. Publish manually:
    ```bash
-   cd /Users/dchud/Documents/projects/mrrc
+   cd "$REPO_ROOT"
    cargo publish
    ```
 3. If auth fails: `cargo login` and paste token
