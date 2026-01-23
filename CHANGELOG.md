@@ -471,7 +471,6 @@ None known at this time. The following have been resolved:
   - Arrow/Parquet columnar analysis for analytics use cases
 
 ### Planned for 0.5.0 (Priority 2+, Features & Polish)
-- **Calendar Versioning Decision** (mrrc-vmk): Evaluate and implement calver scheme (proposal complete, awaiting decision)
 - **API Compatibility Review** (mrrc-5mn): Identify additional pymarc API parity opportunities
 - **Concurrency Documentation** (mrrc-9wc): Add comprehensive Rust concurrency guidance alongside Python patterns
 - **Example Code Review** (mrrc-s8h): Expand and improve examples for all recommended usage modes

@@ -302,6 +302,20 @@ Comprehensive evaluation of serialization formats for MARC record interchange.
 
 ---
 
-**Last Updated**: 2026-01-22
+## 📅 Versioning Evaluation (January 2026)
+
+Evaluation of calendar versioning (CalVer) vs semantic versioning (SemVer) for the project.
+
+- **[CALENDAR_VERSIONING_PROPOSAL.md](./CALENDAR_VERSIONING_PROPOSAL.md)** - Comprehensive CalVer evaluation
+  - Compared YYYY.MM.PATCH CalVer against SemVer (current)
+  - Analyzed release cadence, ecosystem fit, and user expectations
+  - Evaluated migration paths and implementation requirements
+  - Risk assessment for both approaches
+
+**Decision**: Stay with Semantic Versioning. SemVer better fits Rust ecosystem norms, provides clear API stability signaling, and aligns with crates.io expectations.
+
+---
+
+**Last Updated**: 2026-01-23
 **Archive Period**: September 2025 - January 2026
 **Status**: Project in active maintenance, all major features complete
