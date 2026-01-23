@@ -23,23 +23,21 @@ MRRC is a high-performance Rust port of [pymarc](https://gitlab.com/pymarc/pymar
 
 ## Format Support Matrix
 
-MRRC supports multiple serialization formats organized by tier:
+MRRC supports multiple serialization formats:
 
-| Format | Tier | Extension | Read | Write | Use Case |
-|--------|------|-----------|------|-------|----------|
-| **ISO 2709** | Core | `.mrc` | Yes | Yes | Standard MARC interchange |
-| **Protobuf** | Core | `.pb` | Yes | Yes | APIs, cross-language IPC |
-| **JSON** | Core | `.json` | Yes | Yes | Human-readable interchange |
-| **MARCJSON** | Core | `.json` | Yes | Yes | LOC standard JSON-LD |
-| **XML** | Core | `.xml` | Yes | Yes | MARCXML standard |
-| **CSV** | Core | `.csv` | — | Yes | Spreadsheet export |
-| **Arrow** | Tier 2 | `.arrow` | Yes | Yes | Analytics (`DuckDB`, Polars) |
-| **`MessagePack`** | Tier 2 | `.msgpack` | Yes | Yes | Compact binary, 50+ languages |
-| **`FlatBuffers`** | Tier 2 | `.fb` | Yes | Yes | Zero-copy, memory-efficient |
-| **CBOR** | Tier 3 | `.cbor` | Yes | Yes | RFC 7049 archival |
-| **Avro** | Tier 3 | `.avro` | Yes | Yes | Kafka/data lake integration |
+| Format | Extension | Read | Write | Use Case |
+|--------|-----------|------|-------|----------|
+| **ISO 2709** | `.mrc` | Yes | Yes | Standard MARC interchange |
+| **Protobuf** | `.pb` | Yes | Yes | APIs, cross-language IPC |
+| **JSON** | `.json` | Yes | Yes | Human-readable interchange |
+| **MARCJSON** | `.json` | Yes | Yes | LOC standard JSON-LD |
+| **XML** | `.xml` | Yes | Yes | MARCXML standard |
+| **CSV** | `.csv` | — | Yes | Spreadsheet export |
+| **Arrow** ᶠ | `.arrow` | Yes | Yes | Analytics (`DuckDB`, Polars) |
+| **MessagePack** ᶠ | `.msgpack` | Yes | Yes | Compact binary, 50+ languages |
+| **FlatBuffers** ᶠ | `.fb` | Yes | Yes | Zero-copy, memory-efficient |
 
-**Tier 2/3 formats** require feature flags in Rust (`format-arrow`, `format-messagepack`, etc.) or optional dependencies in Python.
+ᶠ Feature-gated formats require feature flags in Rust (`format-arrow`, `format-messagepack`, etc.) or optional dependencies in Python.
 
 See [FORMAT_SELECTION_GUIDE.md](docs/FORMAT_SELECTION_GUIDE.md) for help choosing formats.
 

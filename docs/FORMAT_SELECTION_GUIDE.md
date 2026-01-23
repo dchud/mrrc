@@ -42,20 +42,15 @@ What's your primary goal?
 | **XML** | Slow | Very Large | Universal | MARCXML systems |
 | **CSV** | Fast | Medium | Universal | Spreadsheets, simple tools |
 
-### Tier 2 Formats (Feature-Gated)
+### Feature-Gated Formats
+
+These formats require feature flags in Rust or optional dependencies in Python.
 
 | Format | Speed | Size | Compatibility | Best For |
 |--------|-------|------|---------------|----------|
 | **Arrow** | Very Fast | Very Compact | Growing | Analytics, data science |
 | **MessagePack** | Very Fast | Compact | 50+ languages | REST APIs, IPC |
 | **FlatBuffers** | Fastest | Compact | Good | Mobile, embedded, streaming |
-
-### Tier 3 Formats (Specialized)
-
-| Format | Speed | Size | Compatibility | Best For |
-|--------|-------|------|---------------|----------|
-| **CBOR** | Fast | Compact | IETF Standard | Government archival |
-| **Avro** | Fast | Compact | Kafka ecosystem | Data lakes, streaming |
 
 ## Detailed Format Profiles
 

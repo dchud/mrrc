@@ -94,7 +94,7 @@ mrrc = "0.4"
 
 MRRC uses feature flags for optional format support. Core formats (ISO 2709, Protobuf, JSON, XML, CSV) are always available.
 
-#### Tier 2 Formats (High-Value)
+#### Optional Formats
 
 ```toml
 [dependencies]
@@ -106,17 +106,6 @@ mrrc = { version = "0.4", features = ["format-flatbuffers"] }
 
 # MessagePack compact binary format
 mrrc = { version = "0.4", features = ["format-messagepack"] }
-```
-
-#### Tier 3 Formats (Specialized)
-
-```toml
-[dependencies]
-# CBOR (RFC 7049) for archival
-mrrc = { version = "0.4", features = ["format-cbor"] }
-
-# Apache Avro for Kafka/data lakes
-mrrc = { version = "0.4", features = ["format-avro"] }
 ```
 
 #### Multiple Features

@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - All evaluations converted to Rust-native implementations (removed Python dependencies)
 - **Format Support Strategy Document** (docs/design/format-research/FORMAT_SUPPORT_STRATEGY.md):
    - Decisiveness-focused analysis: clear recommendations vs exploratory notes
-   - Tiered support approach: Tier 1 (ISO 2709, Protobuf), Tier 2 (Arrow, FlatBuffers, MessagePack), Tier 3 (CBOR, Avro - deferred)
+   - Format support strategy: Core formats (ISO 2709, Protobuf) plus feature-gated formats (Arrow, FlatBuffers, MessagePack)
    - Integration guidance for Arrow columnar analytics tier
    - Performance targets and trade-off analysis for each tier
 - **Research Documentation**:
