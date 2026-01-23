@@ -269,6 +269,39 @@ Integration of the project with Beads issue tracking system.
 
 ---
 
-**Last Updated**: 2026-01-06  
-**Archive Period**: September 2025 - December 2025  
+---
+
+## 📦 Format Research & Evaluation (January 2026)
+
+Comprehensive evaluation of serialization formats for MARC record interchange.
+
+### Overview
+- **[format-research/README.md](./format-research/README.md)** - Overview of format evaluation project
+- **[format-research/EVALUATION_FRAMEWORK.md](./format-research/EVALUATION_FRAMEWORK.md)** - Evaluation methodology
+- **[format-research/COMPARISON_MATRIX.md](./format-research/COMPARISON_MATRIX.md)** - Side-by-side format comparison
+- **[format-research/FORMAT_SUPPORT_STRATEGY.md](./format-research/FORMAT_SUPPORT_STRATEGY.md)** - Final implementation strategy
+
+### Baseline
+- **[format-research/BASELINE_ISO2709.md](./format-research/BASELINE_ISO2709.md)** - ISO 2709 baseline measurements
+
+### Format Evaluations
+- **[format-research/EVALUATION_PROTOBUF.md](./format-research/EVALUATION_PROTOBUF.md)** - Protocol Buffers (Tier 1)
+- **[format-research/EVALUATION_ARROW.md](./format-research/EVALUATION_ARROW.md)** - Apache Arrow (Tier 2)
+- **[format-research/EVALUATION_FLATBUFFERS.md](./format-research/EVALUATION_FLATBUFFERS.md)** - FlatBuffers (Tier 2)
+- **[format-research/EVALUATION_MESSAGEPACK.md](./format-research/EVALUATION_MESSAGEPACK.md)** - MessagePack (Tier 2)
+- **[format-research/EVALUATION_CBOR.md](./format-research/EVALUATION_CBOR.md)** - CBOR (Tier 3)
+- **[format-research/EVALUATION_AVRO.md](./format-research/EVALUATION_AVRO.md)** - Apache Avro (Tier 3)
+- **[format-research/EVALUATION_PARQUET.md](./format-research/EVALUATION_PARQUET.md)** - Parquet analysis
+- **[format-research/EVALUATION_POLARS_ARROW_DUCKDB.md](./format-research/EVALUATION_POLARS_ARROW_DUCKDB.md)** - Analytics integration
+
+### Supporting Documents
+- **[format-research/FIDELITY_TEST_SET.md](./format-research/FIDELITY_TEST_SET.md)** - Test data for round-trip validation
+- **[format-research/TEMPLATE_evaluation.md](./format-research/TEMPLATE_evaluation.md)** - Template for future evaluations
+
+**Status**: ✅ Completed. Implemented Tier 1 (ISO 2709, Protobuf), Tier 2 (Arrow, FlatBuffers, MessagePack), and framework for Tier 3 (CBOR, Avro).
+
+---
+
+**Last Updated**: 2026-01-22
+**Archive Period**: September 2025 - January 2026
 **Status**: Project in active maintenance, all major features complete

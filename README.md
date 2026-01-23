@@ -15,20 +15,69 @@ MRRC is a high-performance Rust port of [pymarc](https://gitlab.com/pymarc/pymar
 
 **Key Features:**
 
-- **Full pymarc API Compatibility** ✅ - Drop-in replacement for existing pymarc code (read the [migration guide](docs/MIGRATION_GUIDE.md))
-- **ISO 2709 Binary Format Support**: Read and write MARC records in the standard binary interchange format
-- **Multiple Serialization Formats**: Convert records to/from JSON, XML, and MARCJSON
-- **Flexible API**: Rust-friendly patterns including iterators, builders, and direct field access
-- **Encoding Support**: Handle MARC-8 and UTF-8 encoded records with automatic detection
+- **Full pymarc API Compatibility** - Drop-in replacement for existing pymarc code (see [migration guide](docs/MIGRATION_GUIDE.md))
+- **Multi-Format Support** - 10+ serialization formats for interchange, analytics, and archival
+- **High Performance** - ~900k records/sec read, 7.5x faster than pymarc in Python
+- **Encoding Support** - MARC-8 and UTF-8 with automatic detection
+- **Flexible API** - Rust-friendly patterns with iterators, builders, and direct field access
+
+## Format Support Matrix
+
+MRRC supports multiple serialization formats organized by tier:
+
+| Format | Tier | Extension | Read | Write | Use Case |
+|--------|------|-----------|------|-------|----------|
+| **ISO 2709** | Core | `.mrc` | Yes | Yes | Standard MARC interchange |
+| **Protobuf** | Core | `.pb` | Yes | Yes | APIs, cross-language IPC |
+| **JSON** | Core | `.json` | Yes | Yes | Human-readable interchange |
+| **MARCJSON** | Core | `.json` | Yes | Yes | LOC standard JSON-LD |
+| **XML** | Core | `.xml` | Yes | Yes | MARCXML standard |
+| **CSV** | Core | `.csv` | — | Yes | Spreadsheet export |
+| **Arrow** | Tier 2 | `.arrow` | Yes | Yes | Analytics (DuckDB, Polars) |
+| **MessagePack** | Tier 2 | `.msgpack` | Yes | Yes | Compact binary, 50+ languages |
+| **FlatBuffers** | Tier 2 | `.fb` | Yes | Yes | Zero-copy, memory-efficient |
+| **CBOR** | Tier 3 | `.cbor` | Yes | Yes | RFC 7049 archival |
+| **Avro** | Tier 3 | `.avro` | Yes | Yes | Kafka/data lake integration |
+
+**Tier 2/3 formats** require feature flags in Rust (`format-arrow`, `format-messagepack`, etc.) or optional dependencies in Python.
+
+See [FORMAT_SELECTION_GUIDE.md](docs/FORMAT_SELECTION_GUIDE.md) for help choosing formats.
 
 ## Installation
+
+### Rust
 
 Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mrrc = "0.3"
+mrrc = "0.4"
 ```
+
+**With optional format support:**
+
+```toml
+[dependencies]
+mrrc = { version = "0.4", features = ["format-arrow", "format-messagepack"] }
+
+# Or enable all formats:
+mrrc = { version = "0.4", features = ["all-formats"] }
+```
+
+### Python
+
+```bash
+pip install mrrc
+```
+
+**With optional analytics support:**
+
+```bash
+pip install mrrc[analytics]   # Adds DuckDB, Polars integration
+pip install mrrc[all]         # All optional dependencies
+```
+
+Supported: Python 3.9+ on Linux, macOS, Windows (x86_64, arm64)
 
 ## Quick Start
 

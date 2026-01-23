@@ -6,10 +6,21 @@ Welcome to the MRRC (MARC Rust Crate) documentation. This directory contains com
 
 ### 📚 User Guides & Tutorials
 
-- **[Query DSL Guide](./QUERY_DSL.md)** - Advanced field searching with indicators, tag ranges, and pattern matching
-- **[Performance Guide](./PERFORMANCE.md)** - Detailed performance analysis, GIL release details, and optimization guidance
-- **[Threading Documentation](./THREADING.md)** - Thread safety, multi-threaded usage patterns, and best practices
-- **[Architecture](./ARCHITECTURE.md)** - System design, GIL management, record types, and implementation details
+**Getting Started:**
+- **[Migration Guide](./MIGRATION_GUIDE.md)** - Migrate from pymarc to mrrc (drop-in replacement)
+- **[Installation Guide](./INSTALLATION_GUIDE.md)** - Feature flags, optional dependencies, platform support
+- **[Format Selection Guide](./FORMAT_SELECTION_GUIDE.md)** - Decision tree for choosing serialization formats
+
+**Language Tutorials:**
+- **[Python Tutorial](./PYTHON_TUTORIAL.md)** - Read, write, and convert MARC records in Python
+- **[Rust Tutorial](./RUST_TUTORIAL.md)** - Reader/Writer traits, custom implementations
+
+**Advanced Topics:**
+- **[Streaming Guide](./STREAMING_GUIDE.md)** - Large file handling and memory optimization
+- **[Query DSL Guide](./QUERY_DSL.md)** - Advanced field searching with indicators and patterns
+- **[Performance Guide](./PERFORMANCE.md)** - GIL release, optimization, and tuning
+- **[Threading Documentation](./THREADING.md)** - Thread safety and multi-threaded patterns
+- **[Architecture](./ARCHITECTURE.md)** - System design, GIL management, and implementation details
 
 ### 📊 Benchmarking Results
 
@@ -46,8 +57,15 @@ Welcome to the MRRC (MARC Rust Crate) documentation. This directory contains com
 docs/
 ├── README.md                       # This file (documentation index)
 ├── ARCHITECTURE.md                 # System architecture and design
+├── MIGRATION_GUIDE.md              # pymarc → mrrc migration
+├── INSTALLATION_GUIDE.md           # Feature flags and dependencies
+├── FORMAT_SELECTION_GUIDE.md       # Choosing serialization formats
+├── PYTHON_TUTORIAL.md              # Python read/write/convert examples
+├── RUST_TUTORIAL.md                # Rust Reader/Writer trait usage
+├── STREAMING_GUIDE.md              # Large file and memory optimization
 ├── PERFORMANCE.md                  # Performance analysis and optimization
 ├── THREADING.md                    # Thread safety and patterns
+├── QUERY_DSL.md                    # Advanced field searching
 │
 ├── design/                         # Active design documents
 │   └── ...
@@ -90,12 +108,28 @@ docs/
 
 ## Key Documentation Areas
 
+### Getting Started
+
+| Document | Type | Purpose |
+|----------|------|---------|
+| [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) | Guide | Migrate from pymarc to mrrc |
+| [INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md) | Guide | Feature flags, optional dependencies |
+| [FORMAT_SELECTION_GUIDE.md](./FORMAT_SELECTION_GUIDE.md) | Guide | Decision tree for format selection |
+
+### Language Tutorials
+
+| Document | Type | Purpose |
+|----------|------|---------|
+| [PYTHON_TUTORIAL.md](./PYTHON_TUTORIAL.md) | Tutorial | Python read/write/convert examples |
+| [RUST_TUTORIAL.md](./RUST_TUTORIAL.md) | Tutorial | Rust Reader/Writer trait usage |
+
 ### Architecture & Performance
 
 | Document | Type | Purpose |
 |----------|------|---------|
-| [QUERY_DSL.md](./QUERY_DSL.md) | Guide | Advanced field searching with Query DSL |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Reference | System design, components, GIL management |
+| [STREAMING_GUIDE.md](./STREAMING_GUIDE.md) | Guide | Large file handling, memory optimization |
+| [QUERY_DSL.md](./QUERY_DSL.md) | Guide | Advanced field searching with Query DSL |
 | [PERFORMANCE.md](./PERFORMANCE.md) | Guide | Performance analysis, tuning, backend strategy |
 | [THREADING.md](./THREADING.md) | Guide | Thread safety, patterns, and debugging |
 
@@ -204,5 +238,5 @@ When adding new documentation:
 
 ---
 
-**Last Updated**: 2026-01-11  
+**Last Updated**: 2026-01-22
 **Next Review**: When major features complete or architectural changes occur
