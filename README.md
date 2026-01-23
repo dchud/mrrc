@@ -34,8 +34,8 @@ MRRC supports multiple serialization formats:
 | **XML** | `.xml` | Yes | Yes | MARCXML standard |
 | **CSV** | `.csv` | — | Yes | Spreadsheet export |
 | **Arrow** ᶠ | `.arrow` | Yes | Yes | Analytics (`DuckDB`, Polars) |
-| **MessagePack** ᶠ | `.msgpack` | Yes | Yes | Compact binary, 50+ languages |
-| **FlatBuffers** ᶠ | `.fb` | Yes | Yes | Zero-copy, memory-efficient |
+| **`MessagePack`** ᶠ | `.msgpack` | Yes | Yes | Compact binary, 50+ languages |
+| **`FlatBuffers`** ᶠ | `.fb` | Yes | Yes | Zero-copy, memory-efficient |
 
 ᶠ Feature-gated formats require feature flags in Rust (`format-arrow`, `format-messagepack`, etc.) or optional dependencies in Python.
 
