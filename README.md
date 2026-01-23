@@ -33,9 +33,9 @@ MRRC supports multiple serialization formats organized by tier:
 | **MARCJSON** | Core | `.json` | Yes | Yes | LOC standard JSON-LD |
 | **XML** | Core | `.xml` | Yes | Yes | MARCXML standard |
 | **CSV** | Core | `.csv` | — | Yes | Spreadsheet export |
-| **Arrow** | Tier 2 | `.arrow` | Yes | Yes | Analytics (DuckDB, Polars) |
-| **MessagePack** | Tier 2 | `.msgpack` | Yes | Yes | Compact binary, 50+ languages |
-| **FlatBuffers** | Tier 2 | `.fb` | Yes | Yes | Zero-copy, memory-efficient |
+| **Arrow** | Tier 2 | `.arrow` | Yes | Yes | Analytics (`DuckDB`, Polars) |
+| **`MessagePack`** | Tier 2 | `.msgpack` | Yes | Yes | Compact binary, 50+ languages |
+| **`FlatBuffers`** | Tier 2 | `.fb` | Yes | Yes | Zero-copy, memory-efficient |
 | **CBOR** | Tier 3 | `.cbor` | Yes | Yes | RFC 7049 archival |
 | **Avro** | Tier 3 | `.avro` | Yes | Yes | Kafka/data lake integration |
 
@@ -77,7 +77,7 @@ pip install mrrc[analytics]   # Adds DuckDB, Polars integration
 pip install mrrc[all]         # All optional dependencies
 ```
 
-Supported: Python 3.9+ on Linux, macOS, Windows (x86_64, arm64)
+Supported: Python 3.9+ on Linux, macOS, Windows (`x86_64`, `arm64`)
 
 ## Quick Start
 
