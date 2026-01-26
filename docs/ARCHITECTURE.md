@@ -107,7 +107,7 @@ Result: Threads parse in parallel (3.74x on 4 cores)
 
 The key insight: parsing is CPU-intensive but doesn't need Python objects, so releasing the GIL enables true parallelism.
 
-**Single-threaded benefit:** Even without multiple threads, Rust parsing is simply faster (7.5x vs pymarc).
+**Single-threaded benefit:** Even without multiple threads, Rust parsing is simply faster (~4x vs pymarc).
 
 **Multi-threaded benefit:** With explicit `ThreadPoolExecutor`, the GIL release enables concurrent parsing across threads (additional 3.74x speedup on 4 cores).
 
@@ -225,17 +225,17 @@ for record in reader:
 ```
 
 **Performance:**
-- ✅ Single-threaded: **7.5x faster than pymarc**
+- ✅ Single-threaded: **~4x faster than pymarc**
 - ❌ Multi-threaded: **0.85x slowdown** (GIL contention)
 - **Use when:** Sequential processing or single-file reads
 
 #### ProducerConsumerPipeline (High-Performance Single-File Multi-Threading)
 
 ```python
-from mrrc import ProducerConsumerPipeline, PipelineConfig
+from mrrc import ProducerConsumerPipeline
 
 # Background producer thread reads file and parses with Rayon
-pipeline = ProducerConsumerPipeline.from_file('large_file.mrc', PipelineConfig())
+pipeline = ProducerConsumerPipeline.from_file('large_file.mrc')
 
 for record in pipeline.into_iter():
     process(record)

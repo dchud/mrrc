@@ -200,9 +200,9 @@ Integration of the project with Beads issue tracking system.
 
 ### Performance Achievements
 
-- **Single-threaded**: 549,500 rec/s (7.5x faster than pymarc)
-- **Multi-threaded (2)**: 2.0x speedup (linear on 2 cores)
-- **Multi-threaded (4)**: 3.74x speedup (excellent scaling on 4 cores)
+- **Single-threaded**: ~300,000 rec/s (~4x faster than pymarc)
+- **Multi-threaded (2)**: ~2x speedup (linear on 2 cores)
+- **Multi-threaded (4)**: ~3-4x speedup (good scaling on 4 cores)
 - **Memory**: ~4 KB per record, proper streaming support
 
 ### Key Decisions Made

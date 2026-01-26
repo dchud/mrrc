@@ -168,11 +168,11 @@ From earlier benchmarking (docs/benchmarks/RESULTS.md):
 
 | Implementation | 1k Read | 10k Read | Speedup vs pymarc |
 |----------------|---------|----------|------------------|
-| Pure Rust (mrrc) | ~1.06M rec/s | ~1.06M rec/s | N/A (baseline) |
-| Python wrapper (pymrrc) | N/A | ~535k rec/s | 7.5x faster |
-| Pure Python (pymarc) | N/A | ~71k rec/s | baseline |
+| Pure Rust (mrrc) | ~1M rec/s | ~1M rec/s | N/A (baseline) |
+| Python wrapper (pymrrc) | N/A | ~300k rec/s | ~4x faster |
+| Pure Python (pymarc) | N/A | ~70k rec/s | baseline |
 
-**Interpretation:** Rust is ~2x faster than Python wrapper (50% throughput). Python wrapper is 7.5x faster than pymarc. Gap is due to PyO3 FFI overhead and GIL release cost, not Rust algorithm weakness.
+**Interpretation:** Rust is ~3x faster than Python wrapper (~30% throughput). Python wrapper is ~4x faster than pymarc. Gap is due to PyO3 FFI overhead and GIL release cost, not Rust algorithm weakness.
 
 ---
 

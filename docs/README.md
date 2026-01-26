@@ -200,16 +200,16 @@ Covers:
 From `benchmarks/RESULTS.md`:
 
 **Single-Threaded Performance**:
-- Rust (mrrc): 1,065,700 rec/s
-- Python (pymrrc): 534,600 rec/s (7.5x faster than pymarc)
-- Pure Python (pymarc): 72,700 rec/s
+- Rust (mrrc): ~1,000,000 rec/s
+- Python (pymrrc): ~300,000 rec/s (~4x faster than pymarc)
+- Pure Python (pymarc): ~70,000 rec/s
 
 **Multi-Threaded Performance**:
-- 2 threads: 2.0x speedup
-- 4 threads: 3.74x speedup
+- 2 threads: ~2x speedup
+- 4 threads: ~3-4x speedup
 - Linear scaling with CPU core count
 
-**vs pymarc**: 7.5x faster across all operations
+**vs pymarc**: ~4x faster for single-threaded operations
 
 ## Reference Documentation
 

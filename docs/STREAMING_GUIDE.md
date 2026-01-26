@@ -85,30 +85,27 @@ For maximum throughput when processing a single large file, use the `ProducerCon
 ### Basic Usage
 
 ```python
-from mrrc import ProducerConsumerPipeline, PipelineConfig
+from mrrc import ProducerConsumerPipeline
 
 # Create pipeline with default config
-pipeline = ProducerConsumerPipeline.from_file(
-    'large_file.mrc',
-    PipelineConfig()
-)
+pipeline = ProducerConsumerPipeline.from_file('large_file.mrc')
 
 # Process records as they become available
-for record in pipeline.into_iter():
+while record := pipeline.next():
     process(record)
 ```
 
 ### Configuration Options
 
 ```python
-from mrrc import PipelineConfig
+from mrrc import ProducerConsumerPipeline
 
-config = PipelineConfig()
-config.buffer_size = 1000      # Records to buffer (default: 1000)
-config.chunk_size = 512 * 1024 # Read chunk size in bytes (default: 512KB)
-config.num_workers = 4         # Parallel parsing workers (default: CPU count)
-
-pipeline = ProducerConsumerPipeline.from_file('large_file.mrc', config)
+# Custom configuration via from_file parameters
+pipeline = ProducerConsumerPipeline.from_file(
+    'large_file.mrc',
+    buffer_size=1024*1024,    # File I/O buffer size (default: 512 KB)
+    channel_capacity=500       # Channel capacity in records (default: 1000)
+)
 ```
 
 ### Performance Characteristics
@@ -124,13 +121,15 @@ Pipeline benefits increase with file size due to reduced I/O wait time.
 ### Memory Considerations
 
 ```python
-# Memory usage = buffer_size * avg_record_size + chunk_size
-# For 1000 records @ 2KB each + 512KB chunk = ~2.5MB
+# Memory usage = channel_capacity * avg_record_size + buffer_size
+# For 1000 records @ 2KB each + 512KB buffer = ~2.5MB
 
 # Reduce memory for constrained environments
-config = PipelineConfig()
-config.buffer_size = 100   # Smaller buffer
-config.chunk_size = 64 * 1024  # 64KB chunks
+pipeline = ProducerConsumerPipeline.from_file(
+    'large_file.mrc',
+    buffer_size=64*1024,     # 64KB I/O buffer
+    channel_capacity=100      # Smaller channel
+)
 ```
 
 ## Batch Processing
@@ -403,7 +402,7 @@ If peak memory grows with record count, check for:
 
 - Ensure processing is the bottleneck (not I/O)
 - Check CPU utilization during processing
-- Verify num_workers matches available cores
+- Try adjusting `buffer_size` and `channel_capacity` parameters
 - For I/O-bound work, pipeline may not help
 
 ## Next Steps

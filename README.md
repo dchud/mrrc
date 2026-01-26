@@ -17,7 +17,7 @@ MRRC is a high-performance Rust port of [pymarc](https://gitlab.com/pymarc/pymar
 
 - **Full pymarc API Compatibility** - Drop-in replacement for existing pymarc code (see [migration guide](docs/MIGRATION_GUIDE.md))
 - **Multi-Format Support** - 10+ serialization formats for interchange, analytics, and archival
-- **High Performance** - ~900k records/sec read, 7.5x faster than pymarc in Python
+- **High Performance** - ~1M records/sec read (Rust), ~4x faster than pymarc in Python
 - **Encoding Support** - MARC-8 and UTF-8 with automatic detection
 - **Flexible API** - Rust-friendly patterns with iterators, builders, and direct field access
 
@@ -528,21 +528,21 @@ with open("output.mrc", "wb") as f:
 The Python wrapper achieves exceptional performance through Rust implementation with automatic GIL release:
 
 #### Speed Comparison (Single-Threaded, Default, After Warm-Up)
-- **Reading 1k records**: 3.3 ms (300,000+ rec/s)
-- **Reading 10k records**: 39.1 ms (255,600 rec/s after warm-up)
+- **Reading 1k records**: ~3 ms (~300,000 rec/s)
+- **Reading 10k records**: ~33 ms (~300,000 rec/s after warm-up)
 - **vs pymarc**: **~4x faster** (same API, dramatically better performance)
-- **vs Rust library**: ~25-30% of pure Rust speed with Python convenience
+- **vs Rust library**: ~30% of pure Rust speed with Python convenience
 - **GIL release**: Automatic during record parsing, no code changes needed
 - **Note**: Warm-up times are from pytest-benchmark; cold-start is ~20% slower
 
 #### Multi-Threaded Parallelism (Explicit, Opt-In)
-- **2-thread speedup**: 2.0x vs sequential processing (on 2-core systems)
-- **4-thread speedup**: 3.74x vs sequential processing (on 4-core systems)
+- **2-thread speedup**: ~2x vs sequential processing (on 2-core systems)
+- **4-thread speedup**: ~3-4x vs sequential processing (on 4-core systems)
 - **How**: Use `concurrent.futures.ThreadPoolExecutor` with separate reader per thread
 - **GIL behavior**: Released during parsing in each thread, enabling true parallelism
 - **Use case**: Processing multiple files concurrently
 
-**Key Point:** Default single-threaded mode automatically benefits from GIL release (7.5x faster than pymarc). Add threading explicitly only when processing multiple files.
+**Key Point:** Default single-threaded mode automatically benefits from GIL release (~4x faster than pymarc). Add threading explicitly only when processing multiple files.
 
 See [docs/benchmarks/](docs/benchmarks/) for detailed performance analysis, [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for threading guidance, and [docs/THREADING.md](docs/THREADING.md) for usage patterns.
 
@@ -554,8 +554,8 @@ MRRC's I/O operations automatically release the Python GIL during record parsing
 - **Multi-threaded (explicit):** Use `ThreadPoolExecutor` to process multiple files concurrently
 
 **Concrete Results from Benchmarking (Multi-File Processing):**
-- 2 threads: **2.0x speedup** vs sequential processing
-- 4 threads: **3.74x speedup** vs sequential processing
+- 2 threads: **~2x speedup** vs sequential processing
+- 4 threads: **~3-4x speedup** vs sequential processing
 - Each thread needs its own reader instance (not shared)
 - Optimal thread count: CPU core count
 

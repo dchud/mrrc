@@ -6,11 +6,11 @@ This document provides comprehensive performance analysis of the MRRC library an
 
 MRRC achieves exceptional performance through Rust implementation with automatic GIL release:
 
-- **Single-thread reading (default)**: 255,600 records/second (39.1 ms for 10k records)
-  - **vs pymarc**: **~7.5x faster** with same API
+- **Single-thread reading (default)**: ~300,000 records/second (~33 ms for 10k records)
+  - **vs pymarc**: **~4x faster** with same API
   - GIL released automatically during parsing (no code changes needed)
-  
-- **Multi-thread parallelism (opt-in)**: 2.0x (2 threads), 3.74x (4 threads)
+
+- **Multi-thread parallelism (opt-in)**: ~2x (2 threads), ~3-4x (4 threads)
   - **ProducerConsumerPipeline**: Single-file high-throughput processing (recommended for large files)
   - **ThreadPoolExecutor**: Multi-file concurrent processing (standard Python pattern)
   - GIL released during parsing in each thread simultaneously
@@ -19,10 +19,10 @@ MRRC achieves exceptional performance through Rust implementation with automatic
 
 | Metric | Value |
 |--------|-------|
-| Read 10k records | 39.1 ms |
-| Records/second | 255,600 rec/s |
+| Read 10k records | ~33 ms |
+| Records/second | ~300,000 rec/s |
 | Throughput | Consistent across all sizes |
-| vs pymarc | **~7.5x faster** |
+| vs pymarc | **~4x faster** |
 
 ## Multi-Thread Performance (Opt-In: Choose Your Pattern)
 
@@ -189,7 +189,7 @@ No additional memory accumulation from threading.
 |---|---|---|
 | 2-thread speedup | 2.0x | 1.0x (GIL blocks) |
 | 4-thread speedup | 3.74x | 1.0x (GIL blocks) |
-| Single-thread vs pymarc | 7.6x faster | baseline |
+| Single-thread vs pymarc | ~4x faster | baseline |
 
 pymrrc enables true parallelism through GIL release. pymarc cannot benefit from threading.
 
@@ -332,7 +332,7 @@ print(f"Speedup: {speedup:.2f}x")
 1. **GIL Release Works**: 2.0x speedup on 2 threads validates GIL release implementation
 2. **Scales to 4 cores**: 3.74x speedup on 4 threads shows continued multi-core benefit
 3. **Backend matters**: File paths use zero-GIL I/O, file objects still acquire GIL for `.read()`
-4. **7.5x faster than pymarc**: Massive performance advantage even on single thread
+4. **~4x faster than pymarc**: Significant performance advantage even on single thread
 
 ---
 

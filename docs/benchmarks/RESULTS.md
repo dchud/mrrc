@@ -1,6 +1,6 @@
 # MRRC Benchmarking Results
 
-**Last Updated:** 2026-01-19  
+**Last Updated:** 2026-01-26
 **Test Environment:** macOS 15.7.2 (arm64), Python 3.12.8, Rust 1.71+  
 **Data:** Actual measured benchmarks (Criterion.rs for Rust, pytest-benchmark for Python with warm-up, direct comparison for pymarc)
 **Important:** Python benchmarks use pytest-benchmark which automatically warms up over multiple iterations. Cold-start performance is ~20% slower due to JIT/caching effects. Warm-up numbers (~300k rec/s) are what matter for real workloads.
@@ -9,8 +9,8 @@
 
 MRRC offers a **three-tier performance spectrum** for MARC processing:
 
-1. ✅ **Rust (mrrc)**: Maximum performance — 1.06M records/second
-2. ✅ **Python (pymrrc)**: Production-ready — 7.5x faster than pymarc single-threaded; up to 3.74x faster with multi-threaded file processing
+1. ✅ **Rust (mrrc)**: Maximum performance — ~1M records/second
+2. ✅ **Python (pymrrc)**: Production-ready — ~4x faster than pymarc single-threaded; up to 3.74x faster with multi-threaded file processing
 3. ✅ **Pure Python (pymarc)**: Legacy baseline — for pure Python environments only
 
 **Key Findings:**
@@ -30,8 +30,8 @@ All single-threaded results use default behavior (no explicit concurrency):
 | Implementation | Read Throughput | vs pymarc | vs mrrc | Multi-Core Support | Use Case |
 |---|---|---|---|---|---|
 | **Rust (mrrc) single** | ~1,000,000 rec/s | ~14x faster | 1.0x (baseline) | Native (rayon, explicit) | Maximum performance, embedded systems, batch at scale |
-| **Python (pymrrc) single** | ~255,600 rec/s | ~7.5x faster | 0.26x | ✅ Yes (via GIL release) | 7.5x faster than pymarc, productive Python API, opt-in threading |
-| **Pure Python (pymarc)** | ~72,700 rec/s | 1.0x (baseline) | 0.07x | ❌ No (GIL blocks) | Legacy systems, pure Python requirement only |
+| **Python (pymrrc) single** | ~300,000 rec/s | ~4x faster | 0.30x | ✅ Yes (via GIL release) | ~4x faster than pymarc, productive Python API, opt-in threading |
+| **Pure Python (pymarc)** | ~70,000 rec/s | 1.0x (baseline) | 0.07x | ❌ No (GIL blocks) | Legacy systems, pure Python requirement only |
 
 **Note:** Multi-threaded performance (when explicitly enabled) is shown in separate sections below.
 
@@ -183,17 +183,17 @@ For multi-file processing, **ThreadPoolExecutor** achieves **3-4x speedup** on 4
 
 | Implementation | Sequential (1 thread) | Parallel (4 threads) | Speedup vs Sequential | vs pymarc |
 |---|---|---|---|---|
-| **pymarc** | 274.8 ms | 274.8 ms | 1.0x | 1.0x |
-| **pymrrc (default)** | 36.6 ms | 36.6 ms | 1.0x | 7.5x |
-| **pymrrc (ThreadPoolExecutor)** | 36.6 ms | **9.8 ms** | **3.74x** | **28x** |
-| **mrrc (Rust single)** | 37.6 ms | 37.6 ms | 1.0x | 14.6x |
-| **mrrc (Rust rayon)** | 37.6 ms | **14.9 ms** | **2.52x** | **37x** |
+| **pymarc** | 580 ms | 580 ms | 1.0x | 1.0x |
+| **pymrrc (default)** | 154 ms | 154 ms | 1.0x | ~4x |
+| **pymrrc (ThreadPoolExecutor)** | 154 ms | **~50 ms** | **~3x** | **~12x** |
+| **mrrc (Rust single)** | 40 ms | 40 ms | 1.0x | ~14x |
+| **mrrc (Rust rayon)** | 40 ms | **~16 ms** | **~2.5x** | **~36x** |
 
 **Measured Results:**
 - **pymarc:** Threading provides no parallelism speedup (GIL serializes execution)
-- **pymrrc single-threaded:** 7.5x faster than pymarc automatically
-- **pymrrc with ThreadPoolExecutor (4 threads):** 3.74x speedup on 4 cores for multi-file processing
-- **pymrrc with ProducerConsumerPipeline (4 cores):** 3.74x speedup for single-file processing
+- **pymrrc single-threaded:** ~4x faster than pymarc automatically
+- **pymrrc with ThreadPoolExecutor (4 threads):** ~3x speedup on 4 cores for multi-file processing
+- **pymrrc with ProducerConsumerPipeline (4 cores):** ~3.7x speedup for single-file processing
 
 ### Why GIL Release Enables Parallelism
 
@@ -231,14 +231,14 @@ Comparison of all implementations and configurations relative to pymarc single-t
 
 | Scenario | pymarc | pymrrc single | mrrc single | pymrrc multi (4 threads) | mrrc multi (4 threads) |
 |---|---|---|---|---|---|
-| **Read 1k** | 1.0x | 7.35x | 14.66x | ~14.4x | ~35.8x |
-| **Read 10k** | 1.0x | 7.57x | 14.66x | ~28.3x | ~35.8x |
-| **Extract 1k** | 1.0x | 7.50x | 15.02x | ~14.1x | ~36.4x |
-| **Extract 10k** | 1.0x | 7.44x | 14.84x | ~27.8x | ~36.3x |
-| **Round-trip 1k** | 1.0x | 6.39x | 10.90x | ~12.0x | ~26.6x |
-| **Round-trip 10k** | 1.0x | 6.07x | 10.91x | ~11.4x | ~26.7x |
-| **Multi-file (4×10k)** | 1.0x | 7.51x | 7.31x | 28.04x | 18.45x |
-| **Baseline throughput** | **73k rec/s** | **535k rec/s** | **1.06M rec/s** | **~2.0M rec/s** | **~2.6M rec/s** |
+| **Read 1k** | 1.0x | 3.7x | 13.4x | ~7.4x | ~26.8x |
+| **Read 10k** | 1.0x | 3.5x | 13.8x | ~7.0x | ~27.6x |
+| **Extract 1k** | 1.0x | 4.2x | 13.4x | ~8.4x | ~26.8x |
+| **Extract 10k** | 1.0x | 4.2x | 13.8x | ~8.4x | ~27.6x |
+| **Round-trip 1k** | 1.0x | 4.0x | 10.8x | ~8.0x | ~21.6x |
+| **Round-trip 10k** | 1.0x | 6.3x | 10.8x | ~12.6x | ~21.6x |
+| **Multi-file (4×10k)** | 1.0x | 3.8x | 14.0x | ~7.6x | ~28.0x |
+| **Baseline throughput** | **70k rec/s** | **300k rec/s** | **1M rec/s** | **~600k rec/s** | **~2M rec/s** |
 
 ---
 
@@ -248,21 +248,21 @@ Comparison of all implementations and configurations relative to pymarc single-t
 
 | Implementation | Time | Speedup vs pymarc |
 |---|---|---|
-| **Python (pymarc)** | 13.76 seconds | 1.0x |
-| **Python (pymrrc)** | 1.87 seconds | **7.36x** |
-| **Rust (mrrc)** | 0.94 seconds | **14.6x** |
+| **Python (pymarc)** | 14.3 seconds | 1.0x |
+| **Python (pymrrc)** | 3.3 seconds | **~4x** |
+| **Rust (mrrc)** | 1.0 seconds | **~14x** |
 
-**Upgrade impact:** Switching from pymarc to pymrrc saves **11.89 seconds per million records**
+**Upgrade impact:** Switching from pymarc to pymrrc saves **~11 seconds per million records**
 
 ### Scenario 2: Process 100,000 Records (Single-Threaded)
 
 | Implementation | Time | Speedup vs pymarc |
 |---|---|---|
-| Python (pymarc) | 1,376 ms | 1.0x |
-| Python (pymrrc) | 186 ms | **7.4x** |
-| Rust (mrrc) | 94 ms | **14.6x** |
+| Python (pymarc) | 1,430 ms | 1.0x |
+| Python (pymrrc) | 330 ms | **~4x** |
+| Rust (mrrc) | 100 ms | **~14x** |
 
-**Upgrade impact:** Switching from pymarc to pymrrc saves **1.19 seconds per 100k records**
+**Upgrade impact:** Switching from pymarc to pymrrc saves **~1.1 seconds per 100k records**
 
 ### Scenario 3: Batch Processing Multiple Files (Multi-Threaded)
 
@@ -270,31 +270,31 @@ Processing 100 MARC files × 10k records each (1M total) with **4 concurrent thr
 
 | Implementation | Single-Threaded | Multi-Threaded | Speedup vs pymarc |
 |---|---|---|---|
-| **pymarc** | 1,376 ms | 1,376 ms | 1.0x |
-| **pymrrc (single-threaded)** | 187 ms | 187 ms | **7.36x** |
-| **pymrrc (4 threads)** | 187 ms | 50 ms | **27.5x** |
-| **mrrc Rust (single)** | 94 ms | 94 ms | **14.6x** |
-| **mrrc Rust (rayon)** | 94 ms | 37 ms | **37x** |
+| **pymarc** | 1,430 ms | 1,430 ms | 1.0x |
+| **pymrrc (single-threaded)** | 330 ms | 330 ms | **~4x** |
+| **pymrrc (4 threads)** | 330 ms | 110 ms | **~13x** |
+| **mrrc Rust (single)** | 100 ms | 100 ms | **~14x** |
+| **mrrc Rust (rayon)** | 100 ms | 40 ms | **~36x** |
 
-**Upgrade path:** Single-threaded pymrrc provides 7.36x speedup immediately. With threading, reach 27.5x speedup.
+**Upgrade path:** Single-threaded pymrrc provides ~4x speedup immediately. With threading, reach ~13x speedup.
 
 For daily batch jobs processing 10 × 1M records:
-- **pymarc**: 13.76 seconds/job
-- **pymrrc (single-threaded)**: 1.87 seconds/job
-- **pymrrc (4 threads)**: 0.50 seconds/job
-- **Daily time saved with pymrrc**: ~13.7 seconds per job
+- **pymarc**: 14.3 seconds/job
+- **pymrrc (single-threaded)**: 3.3 seconds/job
+- **pymrrc (4 threads)**: 1.1 seconds/job
+- **Daily time saved with pymrrc**: ~11 seconds per job
 
 ### Scenario 4: 24/7 Service Processing 10M Records/Day
 
 | Implementation | Time per 10M | Speedup vs pymarc | Time saved per job |
 |---|---|---|---|
-| **pymarc** | 137.4 seconds | 1.0x | — |
-| **pymrrc (single-threaded)** | 18.7 seconds | **7.35x** | 118.7 seconds |
-| **pymrrc (4 threads)** | 5.0 seconds | **27.5x** | 132.4 seconds |
-| **Rust (mrrc) single** | 9.4 seconds | **14.6x** | 128.0 seconds |
-| **Rust (mrrc) rayon** | 3.7 seconds | **37x** | 133.7 seconds |
+| **pymarc** | 143 seconds | 1.0x | — |
+| **pymrrc (single-threaded)** | 33 seconds | **~4x** | 110 seconds |
+| **pymrrc (4 threads)** | 11 seconds | **~13x** | 132 seconds |
+| **Rust (mrrc) single** | 10 seconds | **~14x** | 133 seconds |
+| **Rust (mrrc) rayon** | 4 seconds | **~36x** | 139 seconds |
 
-**Annual savings (pymrrc 4-thread vs pymarc): ~43 hours of CPU time per year**
+**Annual savings (pymrrc 4-thread vs pymarc): ~36 hours of CPU time per year**
 
 ---
 
@@ -324,12 +324,12 @@ pymrrc uses **less memory** than pymarc due to more efficient parsing.
 
 ## Key Findings
 
-### 1. pymrrc is 7.5x Faster Than pymarc (Single-Threaded)
+### 1. pymrrc is ~4x Faster Than pymarc (Single-Threaded)
 
 This is a **major finding** that changes the upgrade path:
-- **7.3x–7.6x speedup** across all workloads (reading, extraction, round-trip)
+- **3.5x–4.5x speedup** across all workloads (reading, extraction, round-trip)
 - **Consistent advantage** regardless of file size or operation type
-- **Expected**: Typical Rust-to-Python overhead is 2-3x. pymrrc's 7.5x advantage shows the Python wrapper is highly optimized.
+- **Expected**: pymrrc's ~4x advantage shows the Python wrapper efficiently leverages Rust performance.
 
 ### 2. Rust Library is Production-Ready
 
@@ -342,8 +342,8 @@ mrrc's Rust core achieves 1.06M records/second:
 ### 3. Linear Scaling Confirmed
 
 All implementations maintain consistent throughput:
-- **1k records**: Rust 1.06M, pymrrc 535k, pymarc 73k rec/s
-- **10k records**: Rust 1.06M, pymrrc 550k, pymarc 73k rec/s
+- **1k records**: Rust ~1M, pymrrc ~300k, pymarc ~70k rec/s
+- **10k records**: Rust ~1M, pymrrc ~300k, pymarc ~70k rec/s
 - **100k records**: Stable (confirmed via extrapolation)
 
 No hidden O(n²) behavior or memory cliffs.
@@ -353,7 +353,7 @@ No hidden O(n²) behavior or memory cliffs.
 pymrrc offers two threading strategies with different performance characteristics:
 
 **Single-threaded (default MARCReader):**
-- 7.5x faster than pymarc
+- ~4x faster than pymarc
 - GIL release during record parsing enables automatic speedup
 
 **Multi-threaded (ProducerConsumerPipeline):**
@@ -390,7 +390,7 @@ mrrc's Rust implementation with rayon parallel iteration achieves:
 - Are using Python and want the best performance available
 - Need multi-core parallelism: use `ProducerConsumerPipeline` for 3.74x speedup on 4 cores
 - Want a Python API similar to pymarc (but faster)
-- Are upgrading from pymarc (7.5x speedup with minimal changes)
+- Are upgrading from pymarc (~4x speedup with minimal changes)
 - Prefer purpose-built multi-threading (ProducerConsumerPipeline) over manual ThreadPoolExecutor
 
 ### Use **Pure Python (pymarc)** only if you:
@@ -398,7 +398,7 @@ mrrc's Rust implementation with rayon parallel iteration achieves:
 - Have deeply legacy code integrated with pymarc
 - Specifically require pure Python (no C extensions)
 
-**Recommendation:** If you're currently using pymarc, **upgrade to pymrrc**. It's a ~7.5x speedup with minimal code changes, better memory safety, and transparent opt-in threading support.
+**Recommendation:** If you're currently using pymarc, **upgrade to pymrrc**. It's a ~4x speedup with minimal code changes, better memory safety, and transparent opt-in threading support.
 
 ---
 

@@ -3,22 +3,22 @@
 ## Quick Questions
 
 ### Q: Is pymrrc faster than pymarc?
-**A:** Yes. **7.5x faster** in single-threaded mode, with **no code changes needed**. Just install pymrrc and use it like pymarc.
+**A:** Yes. **~4x faster** in single-threaded mode, with **no code changes needed**. Just install pymrrc and use it like pymarc.
 
 ### Q: Does pymrrc automatically use my multi-core processor?
-**A:** Not in single-threaded mode. By default, pymrrc runs on one thread (like pymarc). But each record parses **much faster** in Rust, so you get 7.5x speedup automatically.
+**A:** Not in single-threaded mode. By default, pymrrc runs on one thread (like pymarc). But each record parses **much faster** in Rust, so you get ~4x speedup automatically.
 
-To use multiple cores, use `ProducerConsumerPipeline` for single-file high-throughput processing (3.74x speedup on 4 cores) or `ThreadPoolExecutor` to process **multiple files** in parallel (3-4x speedup).
+To use multiple cores, use `ProducerConsumerPipeline` for single-file high-throughput processing (~3.7x speedup on 4 cores) or `ThreadPoolExecutor` to process **multiple files** in parallel (~3-4x speedup).
 
-### Q: Why is there a difference between "7.5x faster" and "2.0x-3.74x faster"?
+### Q: Why is there a difference between "~4x faster" and "~3-4x faster (multi-threaded)"?
 **A:**
-- **7.5x** = how much faster pymrrc is than pymarc in single-threaded mode
-- **2.0x-3.74x** = how much faster your program runs when you explicitly use multiple threads with `ThreadPoolExecutor`
+- **~4x** = how much faster pymrrc is than pymarc in single-threaded mode
+- **~3-4x** = how much faster your program runs when you explicitly use multiple threads with `ThreadPoolExecutor`
 
-These are different things! The 7.5x is automatic (default behavior), the 2-3.74x requires explicit threading code.
+These are different things! The ~4x is automatic (default behavior), the ~3-4x requires explicit threading code.
 
-### Q: Do I need to change my code to get the 7.5x speedup?
-**A:** No. If you're upgrading from pymarc, just install pymrrc and your code is automatically 7.5x faster.
+### Q: Do I need to change my code to get the ~4x speedup?
+**A:** No. If you're upgrading from pymarc, just install pymrrc and your code is automatically ~4x faster.
 
 ### Q: Do I need to change my code to get multi-threading benefits?
 **A:** Yes. For single-file multi-threaded processing, use `ProducerConsumerPipeline`. For multi-file processing, use `ThreadPoolExecutor`. See [../THREADING.md](../THREADING.md) for examples.
@@ -30,12 +30,12 @@ These are different things! The 7.5x is automatic (default behavior), the 2-3.74
 
 ## Understanding the Speedups
 
-### Single-Threaded Speedup (7.5x)
+### Single-Threaded Speedup (~4x)
 
 ```python
 from mrrc import MARCReader
 
-# This code gets 7.5x faster automatically vs pymarc
+# This code gets ~4x faster automatically vs pymarc
 # No changes needed!
 with open("records.mrc", "rb") as f:
     reader = MARCReader(f)
@@ -47,9 +47,9 @@ with open("records.mrc", "rb") as f:
 **Why so fast?** Rust parsing is much more efficient than Python. The GIL release helps with I/O operations, but the main benefit is that the parsing itself is faster.
 
 **Speedup breakdown:**
-- Pure Rust implementation: ~50x faster than pure Python (but you pay the Python API cost)
-- Python wrapper overhead: ~2x slower than pure Rust
-- Net: ~25x faster than pure Python (measured empirically: 7.5x)
+- Pure Rust implementation: ~14x faster than pymarc
+- Python wrapper overhead: ~3x slower than pure Rust
+- Net: ~4x faster than pymarc (measured empirically)
 
 ### Multi-Threaded Speedup (2.0x-3.74x)
 
@@ -87,23 +87,23 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 
 | Approach | Time | Notes |
 |----------|------|-------|
-| pymarc (1 thread) | 13.8 seconds | Baseline |
-| pymrrc (1 thread, automatic) | 1.87 seconds | 7.4x faster |
-| pymrrc (4 threads, opt-in) | 0.50 seconds | 27x faster |
-| Rust mrrc (4 threads, explicit) | 0.37 seconds | 37x faster |
+| pymarc (1 thread) | 14.3 seconds | Baseline |
+| pymrrc (1 thread, automatic) | 3.3 seconds | ~4x faster |
+| pymrrc (4 threads, opt-in) | 1.1 seconds | ~13x faster |
+| Rust mrrc (4 threads, explicit) | 0.25 seconds | ~57x faster |
 
 **Cost/benefit:**
-- Upgrade to pymrrc: 7x faster, zero code changes
-- Add threading: 27x faster, need `ThreadPoolExecutor`
-- Use Rust: 37x faster, need to rewrite in Rust
+- Upgrade to pymrrc: ~4x faster, zero code changes
+- Add threading: ~13x faster, need `ThreadPoolExecutor`
+- Use Rust: ~57x faster, need to rewrite in Rust
 
 ### Scenario: Process 100 MARC Files (100k records each)
 
 | Approach | Time | Notes |
 |----------|------|-------|
-| pymarc (sequential) | ~23 minutes | 1.3 MB/s throughput |
-| pymrrc (sequential) | ~3 minutes | 10 MB/s throughput (7.6x faster) |
-| pymrrc (4 threads) | ~50 seconds | 60 MB/s throughput (27x faster) |
+| pymarc (sequential) | ~24 minutes | 1.2 MB/s throughput |
+| pymrrc (sequential) | ~6 minutes | 5 MB/s throughput (~4x faster) |
+| pymrrc (4 threads) | ~2 minutes | 15 MB/s throughput (~12x faster) |
 
 ---
 
@@ -131,8 +131,8 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 
 ### Q: Why are the benchmarks in two sections?
 **A:** Because there are two different usage patterns:
-1. **Single-threaded (Tests 1-8):** Default behavior, no changes needed, 7.5x faster
-2. **Multi-threaded (Tests 9-10):** Explicit threading, requires `ThreadPoolExecutor`, 2-3.74x faster vs sequential
+1. **Single-threaded (Tests 1-8):** Default behavior, no changes needed, ~4x faster
+2. **Multi-threaded (Tests 9-10):** Explicit threading, requires `ThreadPoolExecutor`, ~3-4x faster vs sequential
 
 ### Q: Which benchmark should I care about?
 **A:** Start with single-threaded (Test 1-8). If you're processing multiple files, also look at multi-threaded (Test 9-10).
@@ -146,9 +146,9 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 ### Q: What does "rec/s" mean?
 **A:** Records per second. Higher is better.
 
-- Rust: 1,065,000 rec/s = processes 1 million records in less than 1 second
-- pymrrc: 534,600 rec/s = processes 1 million records in ~1.87 seconds
-- pymarc: 72,700 rec/s = processes 1 million records in ~13.8 seconds
+- Rust: ~1,000,000 rec/s = processes 1 million records in ~1 second
+- pymrrc: ~300,000 rec/s = processes 1 million records in ~3.3 seconds
+- pymarc: ~70,000 rec/s = processes 1 million records in ~14.3 seconds
 
 ---
 

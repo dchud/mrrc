@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `remove_fields_by_tag()` now uses `shift_remove()` to preserve order of remaining fields
 - **Performance impact**: ~17-22% regression in record parsing benchmarks (acceptable trade-off for round-trip fidelity)
   - Baseline: 9.5ms for 10k records → After: 11.3ms for 10k records
-  - Still significantly faster than pymarc (7.5x+ improvement maintained)
+  - Still significantly faster than pymarc (~4x improvement maintained)
 
 #### Performance Optimizations (2026-01-19)
 - **SmallVec for Subfield Storage**:

@@ -25,14 +25,14 @@ MRRC's performance is evaluated across three implementations:
 **1. Python wrapper is ~4x faster than pymarc (single-threaded, default behavior, after warm-up):**
 - Rust: ~1,000,000 rec/s (baseline)
 - Python wrapper (pymrrc): ~300,000 rec/s (after warm-up; ~30% of Rust, ~4x faster than pymarc)
-- Pure Python (pymarc): ~72,700 rec/s
+- Pure Python (pymarc): ~70,000 rec/s
 - **GIL is released automatically during record parsing** — no code changes needed
 - **Cold-start:** ~20% slower due to JIT/caching, but warms up automatically in real workloads
 
 **2. Multi-threaded parallelism with explicit concurrency (opt-in):**
 - Requires: Use `concurrent.futures.ThreadPoolExecutor` to spawn threads
-- 2-thread speedup: ~2.0x vs sequential processing
-- 4-thread speedup: ~3.74x vs sequential processing
+- 2-thread speedup: ~2x vs sequential processing
+- 4-thread speedup: ~3-4x vs sequential processing
 - Each thread needs its own `MARCReader` instance
 - GIL released during parsing in each thread simultaneously
 
