@@ -23,23 +23,37 @@
 
 ## BIBFRAME 2.0 Model
 
-### Core Classes (Hierarchy)
+### Namespace Prefixes
+
+```turtle
+@prefix bf:      <http://id.loc.gov/ontologies/bibframe/> .
+@prefix bflc:    <http://id.loc.gov/ontologies/bflc/> .
+@prefix madsrdf: <http://www.loc.gov/mads/rdf/v1#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+```
+
+### Core Classes
 
 ```
 bf:Work (intellectual content)
-  └─ bf:Hub (expression/version grouping)
-     └─ bf:Instance (physical/digital manifestation)
-        └─ bf:Item (specific copy)
+  ├── bf:Instance (physical/digital manifestation)
+  │     └── bf:Item (specific copy)
+  │
+  └── bf:Hub (optional: groups expressions/translations)
+        └── bf:Instance (instances of this expression)
 ```
+
+**Note**: Hub is optional and used for expression-level grouping (e.g., "the French translation of Work X"). Most simple records go directly Work → Instance.
 
 ### Class Definitions
 
-| Class | Definition | MARC Analog |
-|-------|------------|-------------|
-| **Work** | Conceptual essence: authors, languages, subjects | Implied by record |
-| **Hub** | Groups related expressions (translations, versions) | Uniform titles (130, 240) |
-| **Instance** | Material embodiment: publisher, date, format | Most descriptive fields |
-| **Item** | Actual copy: location, barcode, condition | Holdings (852, 876-878) |
+| Class | Definition | MARC Analog | When Created |
+|-------|------------|-------------|--------------|
+| **Work** | Conceptual essence: authors, languages, subjects | Implied by record | Always (one per record) |
+| **Instance** | Material embodiment: publisher, date, format | Most descriptive fields | Always (one per record) |
+| **Item** | Actual copy: location, barcode, condition | Holdings (852, 876-878) | When holdings present |
+| **Hub** | Groups related expressions (translations, versions) | Uniform titles (130, 240) | Only when 240 present |
 
 ### Key Relationships
 
@@ -61,9 +75,9 @@ The specs are organized into 17 Excel/Word documents:
 | 006, 008 | Fixed fields | Work/Instance type, dates, language |
 | 010-048 | Numbers | LC control #, ISBN, ISSN, music numbers |
 | 050-088 | Classification | LC/Dewey call numbers |
-| 1XX, 7XX, 8XX | Names | Agents with roles |
-| 200-247 | Titles | Main/variant titles |
-| 240, X30 | Uniform titles | Hub creation |
+| 1XX, 7XX, 8XX | Names | Agents with roles (1XX=primary, 7XX=added) |
+| 210-247 | Titles | Main title (245), variant titles (246), etc. |
+| 240, X30 | Uniform titles | Hub creation (expression grouping) |
 | 250-270 | Edition/Imprint | ProvisionActivity |
 | 3XX | Physical | Extent, dimensions, media |
 | 490, 510 | Series/Links | Series statements |
@@ -92,20 +106,27 @@ Example from specs:
 
 ### 1. Leader/008 → Type Determination
 
-The Leader and 008 determine Work and Instance types:
+The Leader positions 06 (type of record) and 07 (bibliographic level) determine Work and Instance types:
 
-| Leader/06 | Leader/07 | Work Type | Instance Type |
-|-----------|-----------|-----------|---------------|
-| a (text) | m (mono) | bf:Text | bf:Instance |
-| a (text) | s (serial) | bf:Text | bf:Serial |
-| c/d (music) | * | bf:NotatedMusic | bf:Instance |
-| e/f (carto) | * | bf:Cartography | bf:Instance |
-| g (proj) | * | bf:MovingImage | bf:Instance |
-| i (sound) | * | bf:Audio | bf:Instance |
-| j (music rec) | * | bf:MusicAudio | bf:Instance |
-| k (2D) | * | bf:StillImage | bf:Instance |
-| m (computer) | * | bf:Multimedia | bf:Electronic |
-| o/p (kit) | * | bf:MixedMaterial | bf:Instance |
+| Leader/06 | Description | Leader/07 | Work Type | Instance Type |
+|-----------|-------------|-----------|-----------|---------------|
+| a | Language material | m (mono) | bf:Text | bf:Instance |
+| a | Language material | s (serial) | bf:Text | bf:Serial |
+| t | Manuscript | m/s | bf:Text | bf:Manuscript |
+| c | Notated music | * | bf:NotatedMusic | bf:Instance |
+| d | Manuscript music | * | bf:NotatedMusic | bf:Manuscript |
+| e | Cartographic | * | bf:Cartography | bf:Instance |
+| f | Manuscript carto | * | bf:Cartography | bf:Manuscript |
+| g | Projected medium | * | bf:MovingImage | bf:Instance |
+| i | Nonmusical sound | * | bf:Audio | bf:Instance |
+| j | Musical sound | * | bf:MusicAudio | bf:Instance |
+| k | 2D nonprojectable | * | bf:StillImage | bf:Instance |
+| m | Computer file | * | bf:Multimedia | bf:Electronic |
+| o | Kit | * | bf:Kit | bf:Instance |
+| p | Mixed materials | * | bf:MixedMaterial | bf:Instance |
+| r | 3D artifact | * | bf:Object | bf:Instance |
+
+**Note**: Leader/07 values: m=monograph, s=serial, a=component part, c=collection, i=integrating resource
 
 ### 2. Names → Agents with Contributions
 
@@ -148,6 +169,16 @@ Work
 
 ### 5. Provision Activity (260/264)
 
+The 264 field's second indicator determines the activity type:
+
+| 264 ind2 | Activity Type | BIBFRAME Class |
+|----------|---------------|----------------|
+| 0 | Production | bf:Production |
+| 1 | Publication | bf:Publication |
+| 2 | Distribution | bf:Distribution |
+| 3 | Manufacture | bf:Manufacture |
+| 4 | Copyright notice | bf:copyrightDate (property, not activity) |
+
 ```
 264 _1 $a New York : $b Publisher, $c 2020
     ↓
@@ -159,36 +190,65 @@ Instance
               └── bf:date "2020"
 ```
 
+**Note**: Field 260 (older format) maps similarly but lacks the indicator-based type distinction; defaults to bf:Publication.
+
 ## BIBFRAME→MARC Conversion Notes
+
+### Reverse Conversion Process
+
+The BIBFRAME→MARC conversion must:
+1. Identify the Work, Instance(s), and Item(s) in the graph
+2. Reconstruct Leader and 008 from bf:content, bf:media, bf:carrier types
+3. Map properties back to appropriate MARC fields
+4. Handle multiple Instances (may produce multiple MARC records)
 
 ### URI Preservation
 From specs: "URIs in the BIBFRAME description are preserved in the MARC $0 and $1 fields"
 
-- `$0` = URI of the entity
-- `$1` = Real World Object URI
+- `$0` = URI of the entity (authority record link)
+- `$1` = Real World Object URI (the thing itself, not the description)
+
+### AdminMetadata → MARC Control Fields
+
+bf:AdminMetadata properties map back to Leader and control fields:
+
+| BIBFRAME Property | MARC Location |
+|-------------------|---------------|
+| bf:creationDate | 008/00-05 |
+| bf:changeDate | 005 |
+| bflc:encodingLevel | Leader/17 |
+| bf:descriptionConventions | 040 $e |
+| bf:descriptionLanguage | 040 $b |
+| bf:source | 040 $a, $c, $d |
 
 ### Known Data Loss (BF→MARC)
 
-| BIBFRAME Property | MARC Handling |
-|-------------------|---------------|
-| bf:awards | No standard field (possibly 586) |
-| Multiple bf:title | First only, or concatenate |
-| bf:relation (generic) | Best-effort to specific 76X-78X |
-| Complex subject URIs | URI excluded from subdivided headings |
+| BIBFRAME Property | MARC Handling | Notes |
+|-------------------|---------------|-------|
+| bf:awards | 586 (best effort) | May lose structured data |
+| Multiple bf:title types | First or concatenate | MARC has limited title repetition |
+| bf:relation (generic) | Best-effort 76X-78X | May lose relationship specificity |
+| Complex subject URIs | URI excluded | Subdivided headings lose $0 |
+| bf:summary (long) | 520 truncation | MARC field length limits |
+| Multiple bf:Instance | Separate records | One MARC record per Instance |
 
 ## BFLC Extensions Required
 
-These extensions are necessary for full LOC compatibility:
+BFLC (BIBFRAME Library of Congress) extensions fill gaps where core BIBFRAME lacks concepts needed for MARC round-trip fidelity:
 
-| Extension | Purpose |
-|-----------|---------|
-| bflc:aap | Authorized access point (text form) |
-| bflc:PrimaryContribution | Distinguishes 1XX from 7XX |
-| bflc:encodingLevel | MARC Leader/17 equivalent |
-| bflc:simplePlace/Date/Agent | Transcribed provision data |
-| bflc:marcKey | Round-trip MARC data preservation |
-| bflc:SeriesTreatment | Series encoding specifications |
-| bflc:applicableInstitution | Institution-specific data |
+| Extension | Purpose | MARC Equivalent |
+|-----------|---------|-----------------|
+| bflc:aap | Authorized access point (text form) | 1XX/7XX concatenated |
+| bflc:PrimaryContribution | Distinguishes 1XX from 7XX | 1XX = primary, 7XX = added |
+| bflc:encodingLevel | Cataloging completeness level | Leader/17 |
+| bflc:simplePlace | Transcribed place (not parsed) | 260/264 $a as-is |
+| bflc:simpleDate | Transcribed date (not parsed) | 260/264 $c as-is |
+| bflc:simpleAgent | Transcribed agent (not parsed) | 260/264 $b as-is |
+| bflc:marcKey | Raw MARC for round-trip | Preserves original encoding |
+| bflc:SeriesTreatment | Series tracing decisions | 490/8XX relationship |
+| bflc:applicableInstitution | Institution-specific data | Holdings context |
+
+**Why bflc:simple* properties?** Core BIBFRAME parses provision statements into structured bf:Place/bf:Agent entities. The bflc:simple* properties preserve the original transcribed text for display and round-trip fidelity.
 
 ## Edge Cases and Ambiguities
 
@@ -224,15 +284,33 @@ Invalid MARC but exists in wild data:
 
 ## Decisions for Implementation
 
-Based on this research, recommend these decisions for mrrc:
+Based on this research, recommended decisions for mrrc:
+
+### Entity Creation
 
 | Question | Decision | Rationale |
 |----------|----------|-----------|
-| Hub creation | Only when 240 present | Matches LOC behavior |
-| Default relator | id.loc.gov URIs when code known | Standard practice |
-| Unknown relators | Preserve $e text in bf:role | Don't lose data |
-| Local fields (9XX) | Skip with warning | Not in spec |
-| Invalid MARC | Best-effort, log warnings | Robustness |
+| Hub creation | Only when 240 present | Matches LOC converter behavior |
+| Item creation | Only when 852/876-878 present | Don't create empty Items |
+| Multiple Instances | One per MARC record | MARC doesn't distinguish editions well |
+
+### Data Handling
+
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| Relator codes ($4) | Map to id.loc.gov URIs | Standard LOC practice |
+| Relator terms ($e) | Try match, else preserve text | Don't lose data |
+| Local fields (9XX) | Skip with info log | Not in spec, institution-specific |
+| Invalid MARC | Best-effort, log warnings | Real-world data is messy |
+| Missing 245 | Create Instance anyway, log error | Record may still be useful |
+
+### Round-Trip Fidelity
+
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| Use bflc:marcKey | Optional (config flag) | Enables perfect round-trip but verbose |
+| Use bflc:simple* | Yes | Preserves transcribed text for display |
+| AdminMetadata | Always include | Needed for Leader/008 reconstruction |
 
 ## Next Steps
 
