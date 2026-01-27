@@ -66,7 +66,7 @@ python3 scripts/criterion_extractor.py
 CI=1 python3 scripts/benchmark_comparison.py
 ```
 
-## Key Features (New in 2025-12-31)
+## Key Features
 
 ### ✅ Fast Caching
 - Criterion.rs results parsed from `target/criterion/` (~100ms, no recompilation)

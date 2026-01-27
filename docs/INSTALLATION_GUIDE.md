@@ -106,6 +106,12 @@ mrrc = { version = "0.4", features = ["format-flatbuffers"] }
 
 # MessagePack compact binary format
 mrrc = { version = "0.4", features = ["format-messagepack"] }
+
+# CBOR binary format
+mrrc = { version = "0.4", features = ["format-cbor"] }
+
+# Apache Avro format
+mrrc = { version = "0.4", features = ["format-avro"] }
 ```
 
 #### Multiple Features

@@ -68,13 +68,6 @@ mrrc = { version = "0.4", features = ["all-formats"] }
 pip install mrrc
 ```
 
-**With optional analytics support:**
-
-```bash
-pip install mrrc[analytics]   # Adds DuckDB, Polars integration
-pip install mrrc[all]         # All optional dependencies
-```
-
 Supported: Python 3.9+ on Linux, macOS, Windows (`x86_64`, `arm64`)
 
 ## Quick Start
@@ -442,7 +435,7 @@ use mrrc::{AuthorityMarcReader, AuthorityMarcWriter, HoldingsMarcReader, Holding
 let file = File::open("authorities.mrc")?;
 let mut reader = AuthorityMarcReader::new(file);
 while let Some(record) = reader.read_record()? {
-    println!("Authority type: {}", record.holdings_type());
+    println!("Authority type: {}", record.heading_type());
 }
 
 // Read Holdings records
