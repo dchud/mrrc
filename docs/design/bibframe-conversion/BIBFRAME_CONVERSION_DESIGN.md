@@ -8,6 +8,15 @@
 
 This document outlines the design for bidirectional MARC ↔ BIBFRAME conversion in mrrc, enabling data interchange with BIBFRAME-native systems.
 
+### What is BIBFRAME?
+
+BIBFRAME (Bibliographic Framework) is the Library of Congress's linked data model for bibliographic description, designed as a modern replacement for MARC. Key differences:
+
+- **MARC**: Flat records with tagged fields and subfields (1970s design)
+- **BIBFRAME**: RDF graph with distinct Work, Instance, and Item entities (linked data)
+
+A single MARC record typically becomes multiple BIBFRAME entities linked by relationships.
+
 ## Scope Decisions
 
 | Decision | Choice | Rationale |
@@ -16,7 +25,7 @@ This document outlines the design for bidirectional MARC ↔ BIBFRAME conversion
 | **Direction** | Bidirectional | MARC → BIBFRAME and BIBFRAME → MARC |
 | **Fidelity** | Full LOC spec compliance | Industry standard, well-documented |
 | **Record types** | Bibliographic first | Most common use case; authority/holdings follow-on |
-| **BFLC extensions** | Include | Required for practical LOC compatibility |
+| **BFLC extensions** | Include | BFLC (BIBFRAME LOC) extensions required for practical LOC compatibility |
 
 ### Record Type Scope
 
@@ -39,9 +48,64 @@ This document outlines the design for bidirectional MARC ↔ BIBFRAME conversion
 ### Data Flow
 
 ```
-MARC Record ←→ Internal Representation ←→ BIBFRAME RDF Graph
-     ↓                                           ↓
-  .mrc/.xml                              RDF/XML, JSON-LD, Turtle
+mrrc::Record ←────────────────────────→ BibframeGraph
+     ↓                                        ↓
+  .mrc/.xml                          RDF/XML, JSON-LD, Turtle
+(ISO 2709, MARCXML)                  (Serialized RDF formats)
+```
+
+**Conversion functions:**
+```rust
+// MARC to BIBFRAME
+fn marc_to_bibframe(record: &Record, config: &BibframeConfig) -> Result<BibframeGraph>;
+
+// BIBFRAME to MARC
+fn bibframe_to_marc(graph: &BibframeGraph) -> Result<Record>;
+```
+
+**BibframeGraph** is an RDF graph containing:
+- One `bf:Work` entity (the intellectual content)
+- One or more `bf:Instance` entities (physical/digital manifestations)
+- Zero or more `bf:Item` entities (specific copies)
+- Related entities: Agents, Subjects, Identifiers, etc.
+
+### Conversion Example
+
+**MARC input (simplified):**
+```
+001    123456
+100 1_ $a Smith, John, $d 1950-
+245 10 $a Introduction to cataloging / $c John Smith.
+260 __ $a New York : $b Publisher, $c 2020.
+```
+
+**BIBFRAME output (simplified JSON-LD):**
+```json
+{
+  "@graph": [
+    {
+      "@id": "_:work1",
+      "@type": "bf:Text",
+      "bf:contribution": { "@id": "_:agent1" },
+      "bf:hasInstance": { "@id": "_:instance1" }
+    },
+    {
+      "@id": "_:instance1",
+      "@type": "bf:Instance",
+      "bf:title": { "bf:mainTitle": "Introduction to cataloging" },
+      "bf:provisionActivity": {
+        "bf:place": "New York",
+        "bf:agent": "Publisher",
+        "bf:date": "2020"
+      }
+    },
+    {
+      "@id": "_:agent1",
+      "@type": "bf:Person",
+      "rdfs:label": "Smith, John, 1950-"
+    }
+  ]
+}
 ```
 
 ### Key Components
@@ -67,23 +131,28 @@ MARC Record ←→ Internal Representation ←→ BIBFRAME RDF Graph
 
 ### URI Generation Strategy
 
-BIBFRAME entities require URIs. Strategy:
+BIBFRAME entities require URIs (or blank nodes). The strategy depends on configuration:
+
+**When `base_uri` is set** (e.g., `http://example.org/`):
 
 | Entity Type | URI Pattern | Example |
 |-------------|-------------|---------|
 | Work | `{base}/work/{control-number}` | `http://example.org/work/123456` |
 | Instance | `{base}/instance/{control-number}` | `http://example.org/instance/123456` |
 | Item | `{base}/item/{control-number}-{seq}` | `http://example.org/item/123456-1` |
-| Agent | Blank node or `{base}/agent/{hash}` | `_:agent1` or linked URI |
-| Subject | Blank node or linked URI | Link to id.loc.gov when available |
+| Agent | `{base}/agent/{hash}` | `http://example.org/agent/a1b2c3` |
 
-**Configuration options:**
-- `base_uri`: Base URI for generated resources (default: blank nodes)
-- `use_control_number`: Use MARC 001 in URIs (default: true)
-- `link_authorities`: Link to external authority URIs when identifiable (default: false)
+**When `base_uri` is None** (default):
 
-**Blank node fallback:** When no suitable identifier exists, use blank nodes.
-This is valid RDF and simplifies interchange without requiring URI minting infrastructure.
+All entities use blank nodes (`_:work1`, `_:instance1`, etc.). This is valid RDF and simplifies interchange without requiring URI minting infrastructure.
+
+**When `link_authorities` is true**:
+
+Agents and subjects with identifiable authority control numbers link to external URIs:
+- `http://id.loc.gov/authorities/names/n12345678` (LC Names)
+- `http://id.loc.gov/authorities/subjects/sh12345678` (LCSH)
+
+Otherwise, use blank nodes or minted URIs based on `base_uri` setting.
 
 ## Implementation Phases
 
@@ -200,24 +269,72 @@ Decision criteria: Performance, API ergonomics, format support, maintenance stat
 
 ```rust
 pub struct BibframeConfig {
-    /// Base URI for generated resources (None = blank nodes)
+    // === URI Generation ===
+    /// Base URI for generated resources (None = use blank nodes)
     pub base_uri: Option<String>,
+    /// Use MARC 001 control number in generated URIs
+    pub use_control_number: bool,  // default: true
+    /// Link to external authority URIs (id.loc.gov, etc.) when identifiable
+    pub link_authorities: bool,    // default: false
 
-    /// Include BFLC extensions (default: true)
-    pub include_bflc: bool,
-
+    // === Output Control ===
     /// Output format for RDF serialization
-    pub output_format: RdfFormat, // RdfXml, JsonLd, Turtle
+    pub output_format: RdfFormat,  // RdfXml, JsonLd, Turtle
+    /// Include BFLC (BIBFRAME Library of Congress) extensions
+    pub include_bflc: bool,        // default: true
+    /// Include source MARC in bf:AdminMetadata (for debugging/provenance)
+    pub include_source: bool,      // default: false
 
-    /// Link to external authority URIs when identifiable
-    pub link_authorities: bool,
-
-    /// Strictness level for validation
-    pub strict: bool,
-
-    /// Include source MARC in AdminMetadata (for debugging)
-    pub include_source: bool,
+    // === Error Handling ===
+    /// Stop on first conversion error vs. continue and collect errors
+    pub fail_fast: bool,           // default: false
+    /// Strict validation (reject questionable data) vs. lenient (best-effort)
+    pub strict: bool,              // default: false
 }
+
+pub enum RdfFormat {
+    RdfXml,   // application/rdf+xml - Most compatible
+    JsonLd,   // application/ld+json - Modern, readable
+    Turtle,   // text/turtle - Compact, human-friendly
+}
+```
+
+**Default configuration** uses blank nodes, includes BFLC extensions, outputs JSON-LD, and continues on errors with lenient validation.
+
+### API Usage Examples
+
+**Rust:**
+```rust
+use mrrc::{Reader, bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat}};
+
+// Basic conversion with defaults
+let reader = Reader::from_path("records.mrc")?;
+for record in reader {
+    let graph = marc_to_bibframe(&record?, &BibframeConfig::default())?;
+    println!("{}", graph.to_jsonld()?);
+}
+
+// Custom configuration
+let config = BibframeConfig {
+    base_uri: Some("http://example.org/".into()),
+    output_format: RdfFormat::Turtle,
+    ..Default::default()
+};
+let graph = marc_to_bibframe(&record, &config)?;
+```
+
+**Python (pymrrc):**
+```python
+import pymrrc
+
+# Basic conversion
+for record in pymrrc.Reader("records.mrc"):
+    graph = pymrrc.marc_to_bibframe(record)
+    print(graph.to_jsonld())
+
+# With configuration
+config = pymrrc.BibframeConfig(base_uri="http://example.org/")
+graph = pymrrc.marc_to_bibframe(record, config)
 ```
 
 ## Performance Considerations
@@ -328,7 +445,7 @@ Build from:
 
 - MARC-8 → UTF-8 conversion before BIBFRAME (already handled by mrrc)
 - Non-Latin scripts: Preserve in RDF literals with `@lang` tags
-- Combining characters: Normalize to NFC
+- Combining characters: Normalize to NFC (Unicode Normalization Form C)
 
 ### Identifier Complexity
 
