@@ -312,13 +312,82 @@ Based on this research, recommended decisions for mrrc:
 | Use bflc:simple* | Yes | Preserves transcribed text for display |
 | AdminMetadata | Always include | Needed for Leader/008 reconstruction |
 
+## Tool Setup (mrrc-uab.2)
+
+### Prerequisites
+
+- `xsltproc` (libxslt) - typically pre-installed on macOS/Linux
+- Git for cloning repositories
+
+### Installation
+
+Both LOC converters are installed in `tools/` (gitignored):
+
+```bash
+mkdir -p tools && cd tools
+git clone --depth 1 https://github.com/lcnetdev/marc2bibframe2.git
+git clone --depth 1 https://github.com/lcnetdev/bibframe2marc.git
+
+# Build bibframe2marc (compiles rules into XSLT)
+cd bibframe2marc && make
+```
+
+### Usage
+
+**MARC → BIBFRAME:**
+```bash
+xsltproc --stringparam baseuri http://example.org/ \
+  tools/marc2bibframe2/xsl/marc2bibframe2.xsl \
+  input.xml > output-bibframe.xml
+```
+
+**BIBFRAME → MARC:**
+```bash
+xsltproc tools/bibframe2marc/bibframe2marc.xsl \
+  input-bibframe.xml > output-marc.xml
+```
+
+### Key Parameters
+
+| Tool | Parameter | Default | Purpose |
+|------|-----------|---------|---------|
+| marc2bibframe2 | `baseuri` | `http://example.org/` | URI stem for entities |
+| marc2bibframe2 | `idfield` | `001` | Field for record ID |
+| marc2bibframe2 | `idsource` | (none) | URI for source institution |
+| marc2bibframe2 | `serialization` | `rdfxml` | Output format (only rdfxml supported) |
+| bibframe2marc | `pRecordId` | (auto) | Override record ID |
+| bibframe2marc | `pCatScript` | `Latn` | Default cataloging script |
+
+### Verified Working
+
+- **marc2bibframe2 v3.0.0** (December 2025)
+- **bibframe2marc v3.0.0** (December 2025)
+- **Round-trip tested**: MARC → BIBFRAME → MARC preserves core data
+
+### Known Tool Limitations
+
+1. **Output format**: marc2bibframe2 only outputs RDF/XML (no JSON-LD/Turtle)
+2. **Duplicate 264**: Round-trip may create duplicate provision activity fields
+3. **880 linking**: Alternate script fields don't link back to source tags
+4. **Item deduplication**: Multiple Items may represent same copy, need manual collapsing
+
+### Test Data Location
+
+LOC provides comprehensive test data:
+```
+tools/marc2bibframe2/test/data/           # Sample MARC XML files
+tools/marc2bibframe2/test/data/ConvSpec-*/  # Field-specific test cases
+tools/marc2bibframe2/test/data/ConvSpec-880/  # Alternate script tests
+```
+
 ## Next Steps
 
-1. **uab.2**: Set up marc2bibframe2 to generate baseline conversions
-2. **uab.3**: Create test corpus covering all mapping document areas
-3. **uab.4.1**: Select RDF library based on format support needs
+1. ~~**uab.1**: Research LOC specifications~~ ✓
+2. ~~**uab.2**: Set up LOC conversion tools~~ ✓
+3. **uab.3**: Create test corpus and baseline conversions
+4. **uab.4.1**: Select RDF library based on format support needs
 
 ---
 
-*Research task: mrrc-uab.1*
-*Status: Complete*
+*Research task: mrrc-uab.1 - Complete*
+*Tool setup task: mrrc-uab.2 - Complete*

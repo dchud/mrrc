@@ -60,3 +60,6 @@ build/
 
 # Agent skills and configuration
 .agents/
+
+# External tools (LOC converters, etc.)
+tools/
