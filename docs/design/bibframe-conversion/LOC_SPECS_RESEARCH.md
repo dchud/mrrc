@@ -371,6 +371,16 @@ xsltproc tools/bibframe2marc/bibframe2marc.xsl \
 3. **880 linking**: Alternate script fields don't link back to source tags
 4. **Item deduplication**: Multiple Items may represent same copy, need manual collapsing
 
+### Baseline Generation Issues (mrrc-uab.3)
+
+Issues discovered while generating baseline conversions:
+
+1. **Incomplete 008 fields cause failures**: Records with minimal 008 fields (e.g., only country code) cause XPath errors in the converter. Real-world data should have complete 008 fields.
+
+2. **Missing `idsource` warning**: The converter emits warnings when `idsource` parameter is not provided. This is informational only and doesn't affect output.
+
+3. **Test data location**: Baseline conversions stored in `tests/data/bibframe-baselines/` with 12 test cases covering all major MARC field categories.
+
 ### Test Data Location
 
 LOC provides comprehensive test data:
