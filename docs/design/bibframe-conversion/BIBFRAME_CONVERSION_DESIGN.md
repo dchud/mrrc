@@ -1,5 +1,9 @@
 # BIBFRAME Conversion Design (mrrc-uab)
 
+> **Documentation Directory**: All design documents, research notes, and specifications
+> for this epic live in `docs/design/bibframe-conversion/`. Upon completion, this folder
+> will be migrated to `docs/history/bibframe-conversion/`.
+
 ## Overview
 
 This document outlines the design for bidirectional MARC ↔ BIBFRAME conversion in mrrc, enabling data interchange with BIBFRAME-native systems.
@@ -61,6 +65,10 @@ MARC Record ←→ Internal Representation ←→ BIBFRAME RDF Graph
 ### Phase 4: Testing
 - **mrrc-uab.5**: Comprehensive comparison tests
 
+### Phase 5: Documentation & Completion
+- **mrrc-uab.6**: Update documentation and examples (Rust and Python)
+- **mrrc-uab.7**: Migrate design docs to history (final step)
+
 ## Dependency Graph
 
 ```
@@ -72,6 +80,10 @@ uab.2 (tools)  ──┘                                              ↓
                                                            uab.4.4 (edge)
                                                               ↓
                                                            uab.5 (tests)
+                                                              ↓
+                                                           uab.6 (docs)
+                                                              ↓
+                                                           uab.7 (migrate)
 ```
 
 ## Key Resources
