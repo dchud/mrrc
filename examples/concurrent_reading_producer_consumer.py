@@ -42,7 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    from mrrc import ProducerConsumerPipeline, PipelineConfig
+    from mrrc import ProducerConsumerPipeline
 except ImportError:
     print("Error: mrrc not installed")
     print("Install with: pip install mrrc")
@@ -117,13 +117,11 @@ def main():
     author_count_pc = 0
     
     try:
-        pipeline = ProducerConsumerPipeline.from_file(
-            str(marc_file),
-            PipelineConfig()  # Default config
-        )
-        
+        # Create pipeline with default config (512 KB buffer, 1000-record channel)
+        pipeline = ProducerConsumerPipeline.from_file(str(marc_file))
+
         # Iterate over records from pipeline
-        for record in pipeline.into_iter():
+        for record in pipeline:
             record_count_pc += 1
             if record.title():
                 title_count_pc += 1
@@ -194,15 +192,18 @@ ADVANTAGES:
 ✓ Maximizes CPU core utilization
 ✓ Overlaps disk I/O with parallel parsing
 ✓ Automatic backpressure handling
-✓ Simple async-like API (.into_iter())
+✓ Simple Pythonic iteration (for record in pipeline)
 
 CONFIGURATION:
-config = PipelineConfig(
-    buffer_size=1000,      # Records in channel
-    batch_size=100,        # Records parsed per batch
-    chunk_size=512 * 1024  # Bytes read from disk
+# Default configuration
+pipeline = ProducerConsumerPipeline.from_file(filename)
+
+# Custom configuration
+pipeline = ProducerConsumerPipeline.from_file(
+    filename,
+    buffer_size=1024*1024,  # 1 MB I/O buffer (default: 512 KB)
+    channel_capacity=500    # Records in channel (default: 1000)
 )
-pipeline = ProducerConsumerPipeline.from_file(filename, config)
     """)
     
     print()

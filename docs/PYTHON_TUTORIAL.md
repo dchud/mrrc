@@ -426,15 +426,12 @@ print(f"Total: {sum(results)}")
 ### High-Throughput Single File
 
 ```python
-from mrrc import ProducerConsumerPipeline, PipelineConfig
+from mrrc import ProducerConsumerPipeline
 
-# For large files, use the pipeline
-pipeline = ProducerConsumerPipeline.from_file(
-    'large_file.mrc',
-    PipelineConfig()
-)
+# For large files, use the pipeline (3.74x speedup on 4 cores)
+pipeline = ProducerConsumerPipeline.from_file('large_file.mrc')
 
-for record in pipeline.into_iter():
+for record in pipeline:
     process(record)
 ```
 

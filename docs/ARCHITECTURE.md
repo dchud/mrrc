@@ -237,7 +237,7 @@ from mrrc import ProducerConsumerPipeline
 # Background producer thread reads file and parses with Rayon
 pipeline = ProducerConsumerPipeline.from_file('large_file.mrc')
 
-for record in pipeline.into_iter():
+for record in pipeline:
     process(record)
 ```
 

@@ -117,15 +117,12 @@ Python's GIL limits parallelism, but MRRC releases the GIL during parsing and I/
 Purpose-built for maximum throughput from a single file:
 
 ```python
-from mrrc import ProducerConsumerPipeline, PipelineConfig
+from mrrc import ProducerConsumerPipeline
 
-pipeline = ProducerConsumerPipeline.from_file(
-    'large_file.mrc',
-    PipelineConfig()
-)
+pipeline = ProducerConsumerPipeline.from_file('large_file.mrc')
 
 record_count = 0
-for record in pipeline.into_iter():
+for record in pipeline:
     title = record.title()
     record_count += 1
 
@@ -142,14 +139,11 @@ print(f"Processed {record_count} records")
 
 **Configuration:**
 ```python
-from mrrc import PipelineConfig
-
-config = PipelineConfig(
-    buffer_size=1024 * 1024,      # 1 MB chunks
-    channel_capacity=500,          # Queue size
-    batch_size=50,                 # Parsing batch size
+pipeline = ProducerConsumerPipeline.from_file(
+    'file.mrc',
+    buffer_size=1024 * 1024,  # 1 MB chunks (default: 512 KB)
+    channel_capacity=500       # Queue size (default: 1000)
 )
-pipeline = ProducerConsumerPipeline.from_file('file.mrc', config)
 ```
 
 ### Pattern 2: ThreadPoolExecutor (Multiple Files)
