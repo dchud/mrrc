@@ -1,0 +1,134 @@
+<collection xmlns="http://www.loc.gov/MARC21/slim">
+  <record>
+    <controlfield tag="001">1</controlfield>
+    <datafield tag="130" ind1="4" ind2=" ">
+      <subfield code="a">The Encyclopedia of Latin American history and culture.</subfield>
+      <subfield code="d">(1952).</subfield>
+      <subfield code="f">[between 1775 and 1800].</subfield>
+      <subfield code="g">Manuscripts, Latin.</subfield>
+      <subfield code="h">Sound recording.</subfield>
+      <subfield code="m">violin, viola,</subfield>
+      <subfield code="r">D major.</subfield>
+      <subfield code="o">arr.</subfield>
+      <subfield code="p">O.T.</subfield>
+      <subfield code="n">Book 4.</subfield>
+      <subfield code="k">Selections.</subfield>
+      <subfield code="0">(ID)0001</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="0">
+      <subfield code="a">Latin American lives :</subfield>
+      <subfield code="b">selected biographies from the five-volume Encyclopedia of Latin American history and culture.</subfield>
+    </datafield>
+    <datafield tag="630" ind1="0" ind2="7">
+      <subfield code="a">Ukrainian weekly</subfield>
+      <subfield code="e">depicted.</subfield>
+      <subfield code="v">Indexes</subfield>
+      <subfield code="v">Periodicals</subfield>
+      <subfield code="0">(uri)http://example.org/9999#Work</subfield>
+      <subfield code="2">example</subfield>
+    </datafield>
+    <datafield tag="700" ind1="1" ind2="2">
+      <subfield code="a">Cendrars, Blaise, 1887-1961.</subfield>
+      <subfield code="t">Selections.</subfield>
+      <subfield code="f">1987.</subfield>
+    </datafield>
+  </record>
+  <record>
+    <controlfield tag="001">2</controlfield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Cendrars, Blaise, 1887-1961.</subfield>
+      <subfield code="t">Selections.</subfield>
+      <subfield code="f">1987.</subfield>
+    </datafield>
+    <datafield ind1="1" ind2="0" tag="245">
+      <subfield code="a">Tarjamat al-Zabūr al-sharīf.</subfield>
+    </datafield>
+    <datafield ind1="0" ind2="2" tag="730">
+      <subfield code="3">1980:</subfield>
+      <subfield code="a">Bible.</subfield>
+      <subfield code="p">O.T.</subfield>
+      <subfield code="p">Psalms.</subfield>
+      <subfield code="s">Codex Sinaiticus.</subfield>
+    </datafield>
+    <datafield tag="384" ind1=" " ind2=" ">
+      <subfield code="a">B-flat minor</subfield>
+    </datafield>
+    <datafield tag="730" ind1="0" ind2="2">
+      <subfield code="i">Parody of (work):</subfield>
+      <subfield code="a">[Motets].</subfield>
+      <subfield code="r">E minor</subfield>
+      <subfield code="h">Sound recording</subfield>
+      <subfield code="x">1234-5678</subfield>
+      <subfield code="5">DLC</subfield>
+    </datafield>
+    <!-- MTA Hub examples -->
+    <datafield ind1="0" ind2="4" tag="730">
+      <subfield code="a">Apocrypha</subfield>
+    </datafield>
+    <datafield tag="730" ind1=" " ind2=" ">
+      <subfield code="i">is arrangement of</subfield>
+      <subfield code="a">Partita,</subfield>
+      <subfield code="m">clarinets (2), bassoon,</subfield>
+      <subfield code="r">E♭ major;</subfield>
+    </datafield>
+    <datafield tag="730" ind1=" " ind2=" ">
+      <subfield code="i">is translation of</subfield>
+      <subfield code="a">Etrusques et lEurope.</subfield>
+    </datafield>
+  </record>
+  <record>
+    <controlfield tag="001">3</controlfield>
+    <datafield ind1="1" ind2="0" tag="245">
+      <subfield code="a">Tōkaidō panorama chizu.</subfield>
+    </datafield>
+    <datafield ind1=" " ind2="0" tag="830">
+      <subfield code="7">ab</subfield>
+      <subfield code="a">Nihon zenkoku panorama chizu ;</subfield>
+      <subfield code="v">1.</subfield>
+    </datafield>
+  </record>
+  <record>
+    <controlfield tag="001">4</controlfield>
+    <datafield tag="041" ind1="1" ind2=" ">
+      <subfield code="a">eng</subfield>
+      <subfield code="h">epo</subfield>
+    </datafield>
+    <datafield tag="130" ind1="0" ind2=" ">
+      <subfield code="a">Jara raporto de la Ministro de Supply kaj Servo Kanado sub la Korporacioj kaj Labor Unions Returns Akto.</subfield>
+      <subfield code="l">English.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="0" ind2="0">
+      <subfield code="a">Annual report of the Minister of Supply and Service Canada under the Corporations and Labour Unions Returns Act.</subfield>
+    </datafield>
+  </record>
+  <record>
+    <controlfield tag="001">5</controlfield>
+    <controlfield tag="008">160412r20152013nyu           000 1 eng  </controlfield>
+    <datafield tag="041" ind1="1" ind2=" ">
+      <subfield code="a">eng</subfield>
+      <subfield code="h">ita</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Ferrante, Elena,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="240" ind1="1" ind2="0">
+      <subfield code="a">Storia del nuovo cognome.</subfield>
+      <subfield code="l">English</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="4">
+      <subfield code="a">The story of a new name /</subfield>
+      <subfield code="c">Elena Ferrante ; translated from the Italian by Ann Goldstein.</subfield>
+    </datafield>
+  </record>
+  <record>
+    <controlfield tag="001">6</controlfield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Nefwich, Harvey.</subfield>
+    </datafield>
+    <datafield tag="240" ind1="1" ind2="0">
+      <subfield code="a">Sonata for kazoo.</subfield>
+      <subfield code="o">arr.</subfield>
+    </datafield>
+  </record>
+</collection>

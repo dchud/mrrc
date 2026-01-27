@@ -1,0 +1,178 @@
+<collection xmlns="http://www.loc.gov/MARC21/slim">
+  <record>
+    <controlfield tag="001">1</controlfield>
+    <datafield tag="245" ind1="0" ind2="0">
+      <subfield code="a">College English.</subfield>
+    </datafield>
+    <datafield tag="760" ind1="0" ind2=" ">
+      <subfield code="a">United States. Geological Survey.</subfield>
+      <subfield code="t">Water supply papers</subfield>
+    </datafield>
+    <datafield tag="762" ind1="0" ind2=" ">
+      <subfield code="t">Quality of surface waters of the United States</subfield>
+    </datafield>
+    <datafield tag="765" ind1="0" ind2=" ">
+      <subfield code="c">Original</subfield>
+      <subfield code="t">Astrofizicheskie issledovaniíà</subfield>
+      <subfield code="w">(DLC)   78648457 </subfield>
+      <subfield code="w">(OCoLC)4798581</subfield>
+    </datafield>
+    <datafield tag="767" ind1="0" ind2=" ">
+      <subfield code="t">Astrofizicheskie issledovaniíà. English. Bulletin of the Special Astrophysical Observatory (North Caucasus)</subfield>
+      <subfield code="x">0190-2709</subfield>
+      <subfield code="w">(DLC)   86649325 </subfield>
+      <subfield code="w">(OCoLC)4698159</subfield>
+    </datafield>
+    <datafield tag="770" ind1="0" ind2=" ">
+      <subfield code="r">APA 3011</subfield>
+      <subfield code="x">0733-1959</subfield>
+    </datafield>
+    <datafield tag="772" ind1="1" ind2=" ">
+      <subfield code="t">Statistiques pour l'économie normande</subfield>
+      <subfield code="g">1979-</subfield>
+      <subfield code="w">(OCoLC)6260766</subfield>
+    </datafield>
+    <datafield tag="773" ind1="0" ind2=" ">
+      <subfield code="3">Pamphlet</subfield>
+      <subfield code="t">Entomologists' monthly magazine</subfield>
+      <subfield code="p">ENTOMOL MON MAG</subfield>
+      <subfield code="k">Wonders of man series.</subfield>
+      <subfield code="d">Wallingford : Gem Publishing Company</subfield>
+      <subfield code="q">24:B:9&lt;235</subfield>
+      <subfield code="x">0013-8908</subfield>
+      <subfield code="y">FNMMA</subfield>
+    </datafield>
+    <datafield tag="774" ind1="0" ind2=" ">
+      <subfield code="o">NYDA.1993.010.00132.</subfield>
+      <subfield code="n">[DIAPimage]</subfield>
+      <subfield code="h">file on disc</subfield>
+      <subfield code="m">240 x 760px</subfield>
+      <subfield code="t">View SE from Mill Brook Houses on rooftop on Cypress Ave. Between 136th St. and 137th St.,</subfield>
+      <subfield code="d">93/05</subfield>
+    </datafield>
+    <datafield tag="775" ind1="0" ind2=" ">
+      <subfield code="t">Cuba economic news</subfield>
+      <subfield code="b">Havana ed.</subfield>
+      <subfield code="f">cu</subfield>
+      <subfield code="x">0590-2932</subfield>
+      <subfield code="e">eng</subfield>
+      <subfield code="w">(OCoLC)2259984</subfield>
+    </datafield>
+    <datafield tag="776" ind1="0" ind2=" ">
+      <subfield code="i">Additional physical form:</subfield>
+      <subfield code="x">0010-0994</subfield>
+      <subfield code="w">(DLC)sc#84007753#</subfield>
+      <subfield code="w">(OCoLC)3546316</subfield>
+    </datafield>
+    <datafield tag="777" ind1="0" ind2=" ">
+      <subfield code="t">Mythprint</subfield>
+      <subfield code="x">0146-9347</subfield>
+    </datafield>
+    <datafield tag="780" ind1="0" ind2="5">
+      <subfield code="a">American Society of International Law.</subfield>
+      <subfield code="s">Publications.</subfield>
+      <subfield code="t">Proceedings</subfield>
+      <subfield code="g">1971</subfield>
+      <subfield code="u">MPC-387</subfield>
+      <subfield code="z">0491001304</subfield>
+    </datafield>
+    <datafield tag="785" ind1="0" ind2="4">
+      <subfield code="t">Business week</subfield>
+      <subfield code="g">Oct. 1940</subfield>
+      <subfield code="x">0007-7135</subfield>
+      <subfield code="w">(DLC)   31006225 </subfield>
+      <subfield code="4">http://rdaregistry.info/Elements/w/P10145</subfield>
+    </datafield>
+    <datafield tag="786" ind1="0" ind2=" ">
+      <subfield code="a">United States. Defense Mapping Agency.</subfield>
+      <subfield code="j">19181111</subfield>
+      <subfield code="t">Reno, NV-CA west digital terrain elevation data</subfield>
+      <subfield code="v">Data for reformatting to DEM format</subfield>
+    </datafield>
+    <datafield tag="787" ind1="1" ind2="8">
+      <subfield code="i">Related source work</subfield>
+      <subfield code="o">(istc)0A3200912B4A1057</subfield>
+    </datafield>
+  </record>
+  
+  <record>
+    <leader>03818cas a2200697 a 4500</leader>
+    <controlfield tag="001">2</controlfield>
+    <controlfield tag="008">911104d19uu1952pl uu p      f0    0pol  </controlfield>
+    <datafield tag="580" ind1=" " ind2=" ">
+      <subfield code="a">Split into eight sections with the common title: Roczniki nauk rolniczych; Seria A, Roślinna; Seria B, Zootechniczna; Seria C, Mechanizacji; Seria D, Monografie; Seria E, Ochrona roślin; Seria F, Melioracji i użytków zielonych; Seria G, Ekonomiki rolnictwa; and: Seria H, Rybactwo.</subfield>
+    </datafield>
+    <datafield tag="710" ind1="2" ind2=" ">
+      <subfield code="a">Centralny Instytut Rolniczy (Poland)</subfield>
+    </datafield>
+    <datafield tag="780" ind1="0" ind2="0">
+      <subfield code="t">Roczniki nauk rolniczych i leśnych</subfield>
+      <subfield code="w">(DLC)   91656663</subfield>
+      <subfield code="w">(OCoLC)24650058</subfield>
+    </datafield>
+    <datafield tag="785" ind1="1" ind2="6">
+      <subfield code="t">Roczniki nauk rolniczych. Seria A, Roślinna</subfield>
+      <subfield code="w">(DLC)   68040708</subfield>
+      <subfield code="w">(OCoLC)20278833</subfield>
+    </datafield>
+    <datafield tag="785" ind1="1" ind2="6">
+      <subfield code="t">Roczniki nauk rolniczych. Seria B, Zootechniczna</subfield>
+      <subfield code="x">0080-3669</subfield>
+      <subfield code="w">(DLC)sn 85005500</subfield>
+      <subfield code="w">(OCoLC)2482294</subfield>
+    </datafield>
+    <datafield tag="785" ind1="1" ind2="6">
+      <subfield code="t">Roczniki nauk rolniczych. Seria C, Mechanizacji</subfield>
+      <subfield code="x">0080-3677</subfield>
+      <subfield code="w">(OCoLC)4362035</subfield>
+    </datafield>
+    <datafield tag="785" ind1="1" ind2="6">
+      <subfield code="t">Roczniki nauk rolniczych. Seria D, Monografie</subfield>
+      <subfield code="x">0080-3685</subfield>
+      <subfield code="w">(DLC)   68040707</subfield>
+      <subfield code="w">(OCoLC)2510810</subfield>
+    </datafield>
+    <datafield tag="785" ind1="1" ind2="6">
+      <subfield code="t">Roczniki nauk rolniczych. Seria E, Ochrona roślin</subfield>
+      <subfield code="x">0080-3693</subfield>
+      <subfield code="w">(DLC)   73646266</subfield>
+      <subfield code="w">(OCoLC)1788681</subfield>
+    </datafield>
+    <datafield tag="785" ind1="1" ind2="6">
+      <subfield code="t">Roczniki nauk rolniczych. Seria F, Melioracji i użytków zielonych</subfield>
+      <subfield code="x">0080-3707</subfield>
+      <subfield code="w">(DLC)   68040710</subfield>
+      <subfield code="w">(OCoLC)2516165</subfield>
+    </datafield>
+    <datafield tag="785" ind1="1" ind2="6">
+      <subfield code="t">Roczniki nauk rolniczych. Seria G, Ekonomiki rolnictwa</subfield>
+      <subfield code="x">0080-3715</subfield>
+      <subfield code="w">(DLC)sn 85008633</subfield>
+      <subfield code="w">(OCoLC)2505513</subfield>
+    </datafield>
+    <datafield tag="785" ind1="1" ind2="6">
+      <subfield code="t">Roczniki nauk rolniczych. Seria H, Rybactwo</subfield>
+      <subfield code="x">0376-2173</subfield>
+      <subfield code="w">(DLC)sf 98086144</subfield>
+      <subfield code="w">(OCoLC)2515449</subfield>
+    </datafield>
+  </record>
+  
+  <record>
+    <leader>02521cai a2200505 a 4500</leader>
+    <controlfield tag="001">3</controlfield>
+    <controlfield tag="008">930819d19902001ne uu l       0   a2eng d</controlfield>
+    <datafield tag="580" ind1=" " ind2=" ">
+      <subfield code="a">Continued by a print serial publication with the same title, and also as part of the annually issued CD-ROM: International business law library.</subfield>
+    </datafield>
+    <datafield tag="785" ind1="0" ind2="0">
+      <subfield code="t">Legal aspects of doing business in Europe (Yorkhill Law Publishing)</subfield>
+      <subfield code="w">(DLC)  2007247005</subfield>
+      <subfield code="w">(OCoLC)80016886</subfield>
+    </datafield>
+    <datafield tag="787" ind1="1" ind2=" ">
+      <subfield code="t">International business law library</subfield>
+      <subfield code="w">(OCoLC)59758257</subfield>
+    </datafield>
+  </record>
+</collection>

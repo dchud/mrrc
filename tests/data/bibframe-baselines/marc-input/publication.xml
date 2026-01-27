@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<collection xmlns="http://www.loc.gov/MARC21/slim">
+    <record>
+        <controlfield tag="001">7334561</controlfield>
+        <controlfield tag="008">821208s1927    nyuh          000 0 eng  </controlfield>
+        <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">New York,</subfield>
+            <subfield code="b">The Macmillan company;</subfield>
+            <subfield code="a">London,</subfield>
+            <subfield code="b">Macmillan and company,</subfield>
+            <subfield code="c">1927.</subfield>
+        </datafield>
+    </record>
+    <record>
+        <controlfield tag="001">5295609</controlfield>
+        <controlfield tag="008">970908s1987    ja       b    000 0 jpn  </controlfield>
+        <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="6">880-02</subfield>
+            <subfield code="a">[S.l. :</subfield>
+            <subfield code="b">s.n.,</subfield>
+            <subfield code="c">Shōwa 62 i.e. 1987]</subfield>
+        </datafield>
+        <datafield tag="880" ind1=" " ind2=" ">
+            <subfield code="6">260-02/$1</subfield>
+            <subfield code="a">[S.l. :</subfield>
+            <subfield code="b">s.n.,</subfield>
+            <subfield code="c">昭和 62 i.e. 1987]</subfield>
+        </datafield>
+    </record>
+    <record>
+        <controlfield tag="001">20621601</controlfield>
+        <leader>03732cam a2200421 i 4500</leader>
+        <controlfield tag="008">180709t20192019enka     b    001 0 eng c</controlfield>
+        <datafield tag="264" ind1=" " ind2="1">
+            <subfield code="a">London ;</subfield>
+            <subfield code="a">New York, NY :</subfield>
+            <subfield code="b">Routledge/Taylor &amp; Francis Group,</subfield>
+            <subfield code="c">2019.</subfield>
+        </datafield>
+        <datafield tag="264" ind1=" " ind2="4">
+            <subfield code="c">©2019</subfield>
+        </datafield>
+    </record>
+    <record>
+        <controlfield tag="001">1972268</controlfield>
+        <controlfield tag="008">880804s1983    ndua          000 0deng  </controlfield>
+        <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">[Milnor, N.D. :</subfield>
+            <subfield code="b">Milnor Centennial Corp.,</subfield>
+            <subfield code="c">1983?]</subfield>
+            <subfield code="e">(Gwiner, N.D. :</subfield>
+            <subfield code="f">J &amp; M Print.)</subfield>
+        </datafield>
+    </record>
+    <record>
+        <controlfield tag="001">11457859</controlfield>
+        <leader>05014cas a2201093 i 4500</leader>
+        <controlfield tag="008">920430c19929999caubr p       0   a0eng c</controlfield>
+        <datafield ind1=" " ind2="1" tag="264">
+            <subfield code="a">New York, NY :</subfield>
+            <subfield code="b">Out Publishing, Inc.,</subfield>
+            <subfield code="c">[1992]-</subfield>
+        </datafield>
+        <datafield ind1="2" ind2="1" tag="264">
+            <subfield code="3">&lt;February 2010-&gt;:</subfield>
+            <subfield code="a">Los Angeles, CA :</subfield>
+            <subfield code="b">Here Publishing, Inc.</subfield>
+        </datafield>
+        <datafield ind1="3" ind2="1" tag="264">
+            <subfield code="3">&lt;November 2019-&gt;:</subfield>
+            <subfield code="a">Los Angeles, CA :</subfield>
+            <subfield code="b">Pride Publishing Inc.</subfield>
+        </datafield>
+    </record>
+    <record>
+        <controlfield tag="001">21009588</controlfield>
+        <controlfield tag="008">190607p19981996mnucyn|           | eng d</controlfield>
+        <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Minneapolis, MN :</subfield>
+            <subfield code="b">Dominion :</subfield>
+            <subfield code="b">Manufactured and distributed in the U.S. by K-tel International,</subfield>
+            <subfield code="c">[1998?], ℗1997.</subfield>
+        </datafield>
+    </record>
+    <record>
+        <leader>01541cas a22003615a 4500</leader>
+        <controlfield tag="001">15387794</controlfield>
+        <controlfield tag="008">080729c20089999ncumx p       0   a0eng c</controlfield>
+        <datafield ind1=" " ind2=" " tag="260">
+            <subfield code="a">Charlotte, NC :</subfield>
+            <subfield code="b">Hearst Communications, Inc.</subfield>
+        </datafield>
+    </record>
+    <record>
+        <leader>01914cas a2200457 i 4500</leader>
+        <controlfield tag="001">12027497</controlfield>
+        <controlfield tag="008">000601c19829999iduqn p       0   a0eng  </controlfield>
+        <datafield ind1=" " ind2="1" tag="264">
+            <subfield code="a">Seattle, Wash. :</subfield>
+            <subfield code="b">Avalanche Review</subfield>
+        </datafield>
+        <datafield ind1="2" ind2="1" tag="264">
+            <subfield code="3">&lt;2002-&gt;:</subfield>
+            <subfield code="a">Whitefish, Montana :</subfield>
+            <subfield code="b">American Avalanche Association</subfield>
+        </datafield>
+        <datafield ind1="3" ind2="1" tag="264">
+            <subfield code="3">&lt;2005-&gt;:</subfield>
+            <subfield code="a">Driggs, Idaho :</subfield>
+            <subfield code="b">American Avalanche Association</subfield>
+        </datafield>
+    </record>
+    <record>
+        <leader>14358cas a2202257 i 4500</leader>
+        <controlfield tag="001">18825600</controlfield>
+        <controlfield tag="005">20231011082528.0</controlfield>
+        <controlfield tag="006">m     o  d        </controlfield>
+        <controlfield tag="007">cr bn||||||abp</controlfield>
+        <controlfield tag="007">cr bn||||||ada</controlfield>
+        <controlfield tag="008">100318d18771920gw uu p o b   0   b0ger  </controlfield>
+        <datafield ind1=" " ind2="1" tag="264">
+            <subfield code="a">Berlin, Germany :</subfield>
+            <subfield code="b">De Gruyter</subfield>
+        </datafield>
+    </record>
+</collection>

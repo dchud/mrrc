@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="http://id.loc.gov/ontologies/bibframe/" xmlns:bflc="http://id.loc.gov/ontologies/bflc/" xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <bf:Work rdf:about="http://example.org/1#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19  -  -  </bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>1</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:title>
+      <bf:KeyTitle>
+        <bf:mainTitle>東海道五十三次絵卷.</bf:mainTitle>
+      </bf:KeyTitle>
+    </bf:title>
+    <bf:title>
+      <bf:CollectiveTitle>
+        <bf:mainTitle>東海道五十三次絵卷</bf:mainTitle>
+      </bf:CollectiveTitle>
+    </bf:title>
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>東海道五十三次絵卷</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:title>
+      <bf:ParallelTitle>
+        <bf:mainTitle>東海道五十三次絵卷</bf:mainTitle>
+      </bf:ParallelTitle>
+    </bf:title>
+    <bf:title>
+      <bf:VariantTitle>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/vartitletype/for"/>
+        <bf:mainTitle>東海道五十三次絵卷</bf:mainTitle>
+      </bf:VariantTitle>
+    </bf:title>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship>
+          <bf:Relationship rdf:about="http://id.loc.gov/vocabulary/relationship/series">
+            <rdfs:label>series</rdfs:label>
+          </bf:Relationship>
+        </bf:relationship>
+        <bf:associatedResource>
+          <bf:Series>
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+            <bf:status>
+              <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/t">
+                <rdfs:label>transcribed</rdfs:label>
+              </bf:Status>
+            </bf:status>
+            <bf:status>
+              <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/tr">
+                <rdfs:label>traced</rdfs:label>
+              </bf:Status>
+            </bf:status>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Книги пеликан</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>1234-5678</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+          </bf:Series>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship>
+          <bf:Relationship rdf:about="http://id.loc.gov/vocabulary/relationship/series">
+            <rdfs:label>series</rdfs:label>
+          </bf:Relationship>
+        </bf:relationship>
+        <bf:associatedResource>
+          <bf:Series>
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+            <bf:status>
+              <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/t">
+                <rdfs:label>transcribed</rdfs:label>
+              </bf:Status>
+            </bf:status>
+            <bf:status>
+              <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/tr">
+                <rdfs:label>traced</rdfs:label>
+              </bf:Status>
+            </bf:status>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Книги пеликан</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>1234-5678</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+          </bf:Series>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:dissertation>
+      <bf:Dissertation>
+        <rdfs:label>тезис Карла Шмидта (докторская) - Людвиг-Максимилиана Universität, Munich, 1965.</rdfs:label>
+      </bf:Dissertation>
+    </bf:dissertation>
+    <bf:tableOfContents>
+      <bf:TableOfContents>
+        <rdfs:label>Как были обнаружены эти записи - Краткий очерк Талмудов - письмо Константина.</rdfs:label>
+      </bf:TableOfContents>
+    </bf:tableOfContents>
+    <bf:scale>
+      <bf:Scale>
+        <rdfs:label>Перспектива карта не в масштабе.</rdfs:label>
+      </bf:Scale>
+    </bf:scale>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/credits"/>
+        <rdfs:label>Музыка, Майкл Фишбейн; камера, Джордж Mo.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/indexedin"/>
+        <bf:associatedResource>
+          <bf:Work>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>химический рефераты</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0009-0058</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/participants"/>
+        <rdfs:label>Джеки Гланвилл.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:capture>
+      <bf:Capture>
+        <rdfs:label>Работы по звуковым сопровождением диск записан 1955-1963 в различных местах.</rdfs:label>
+      </bf:Capture>
+    </bf:capture>
+    <bf:summary>
+      <bf:Summary>
+        <rdfs:label>Иллюстрированный сборник потешек на музыку.</rdfs:label>
+      </bf:Summary>
+    </bf:summary>
+    <bf:intendedAudience>
+      <bf:IntendedAudience>
+        <rdfs:label>Умеренно мотивировано.</rdfs:label>
+      </bf:IntendedAudience>
+    </bf:intendedAudience>
+    <bf:geographicCoverage>
+      <bf:GeographicCoverage>
+        <rdfs:label>Канада.</rdfs:label>
+      </bf:GeographicCoverage>
+    </bf:geographicCoverage>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/suppl"/>
+        <rdfs:label>Имеет многочисленные добавки.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/lang"/>
+        <rdfs:label>На французском.</rdfs:label>
+        <rdfs:label>На французском.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/relnote"/>
+        <rdfs:label>Формы часть Frances Benjamin Johnston Collection.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/award"/>
+        <rdfs:label>Национальная книжная премия, 1981</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/relatedwork"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work880-56">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+            <bf:title>
+              <bf:Title>
+                <bflc:nonSortNum>0</bflc:nonSortNum>
+                <bf:mainTitle>Руководство гадалки</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/absorptionof"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work880-57">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Графические уведомления и дополнительные данные</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance880-57">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Графические уведомления и дополнительные данные</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>4276671</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work880-57"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/1#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/1#Instance">
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>Лондон</bflc:simplePlace>
+        <bflc:simpleAgent>Совет искусств Великобритании</bflc:simpleAgent>
+        <bflc:simpleDate>1981</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Лондон: Совет искусств Великобритании, 1981</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/xxk"/>
+        <bflc:simplePlace>Лондон</bflc:simplePlace>
+        <bflc:simpleAgent>Совет искусств Великобритании</bflc:simpleAgent>
+        <bflc:simpleDate>1981</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Лондон: Совет искусств Великобритании, 1981</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Distribution"/>
+        <bflc:simplePlace>Сиэтл</bflc:simplePlace>
+        <bflc:simpleAgent>Айверсон компании</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:distributionStatement>Сиэтл: Айверсон компании</bf:distributionStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Distribution"/>
+        <bflc:simplePlace>Сиэтл</bflc:simplePlace>
+        <bflc:simpleAgent>Айверсон компании</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:distributionStatement>Сиэтл: Айверсон компании</bf:distributionStatement>
+    <bf:title>
+      <bf:AbbreviatedTitle>
+        <bf:mainTitle>東海道五十三次絵卷.</bf:mainTitle>
+      </bf:AbbreviatedTitle>
+    </bf:title>
+    <bf:title>
+      <bf:VariantTitle>
+        <bf:variantType>translated</bf:variantType>
+        <bf:mainTitle>東海道五十三次絵卷</bf:mainTitle>
+      </bf:VariantTitle>
+    </bf:title>
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>東海道五十三次絵卷</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:editionStatement>Третий проект / под редакцией Пола Уотсона</bf:editionStatement>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Из работ семьи Chase.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>С: реформированная школа / John Дьюри. Лондон: Печатный для Р. Wasnothe, [1850]</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/with"/>
+      </bf:Note>
+    </bf:note>
+    <bf:usageAndAccessPolicy>
+      <bf:AccessPolicy>
+        <rdfs:label>Классифицированная информация.</rdfs:label>
+      </bf:AccessPolicy>
+    </bf:usageAndAccessPolicy>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Ежеквартальный отчет технический прогресс; Январь-апрель 1, 1977.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/report"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Выпущенные в частях.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/issuance"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Компьютерные программы.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/computer"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Доступно на микрофиши.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/addphys"/>
+      </bf:Note>
+    </bf:note>
+    <bf:contentAccessibility>
+      <bf:ContentAccessibility>
+        <rdfs:label>Субтитры на английском языке</rdfs:label>
+      </bf:ContentAccessibility>
+    </bf:contentAccessibility>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Микрофильмов.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/repro"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Нью-Йорк: Garland, 1987.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/orig"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Первоначально опубликовано</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>При поддержке Всемирной организации здравоохранения</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/fundinfo"/>
+      </bf:Note>
+    </bf:note>
+    <bf:systemRequirement>
+      <bf:SystemRequirement>
+        <rdfs:label>Режим доступа: Интернет.</rdfs:label>
+      </bf:SystemRequirement>
+    </bf:systemRequirement>
+    <bf:usageAndAccessPolicy>
+      <bf:UsePolicy>
+        <rdfs:label>Литературные права Carrie Chapman Кэтт были посвящены общественности.</rdfs:label>
+      </bf:UsePolicy>
+    </bf:usageAndAccessPolicy>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Департамент здравоохранения Fonds, Услуги здравоохранения Отдел файлов.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/related"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Автор и реформатор.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/biogdata"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Издание меняется: 1916, Нью-Йорк издания.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Орган клуба Потомак на стороне естествоиспытателей.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/issuing"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Совокупный индекс с учетом включенных в каждом томе, -V. 29.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/index"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>BASIC ссылка. 3-е изд. Бока-Ратон, штат Флорида. : IBM, c1984. (Персональный компьютер аппаратные справочная библиотека); 6361132.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/doc"/>
+      </bf:Note>
+    </bf:note>
+    <bf:custodialHistory>На постоянной основе из коллекции Пола Меллона.</bf:custodialHistory>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/binding"/>
+        <rdfs:label>Центральный переплет конца XVI века с потайной тиснением, темно-коричневый теленок.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Инвентаризация американской скульптуры: ксерокопия. 1982.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/related"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/action"/>
+        <rdfs:label>пониженный</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Выставлены: "Видения City &amp; Country: эстампов и фотографий девятнадцатом веке во Франции", организованной Ворчестер художественного музея и Американской федерации искусств, 1982.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/exhibit"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Том 2.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/descsource"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/biblio"/>
+        <rdfs:label>"Литература цитируется": стр. 67-68.</rdfs:label>
+        <rdfs:label>"Литература цитируется": стр. 67-68.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/citeas"/>
+        <rdfs:label>Джеймс Хейзена Hyde Papers, 1891-1941, Нью-Йорк Историческое Общество.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:instanceOf rdf:resource="http://example.org/1#Work"/>
+    <bf:hasItem>
+      <bf:Item rdf:about="http://example.org/1#Item">
+        <bf:heldBy rdf:resource="http://id.loc.gov/vocabulary/organizations/dlc"/>
+        <bf:immediateAcquisition>
+          <bf:ImmediateAcquisition>
+            <rdfs:label>Источник неизвестен.</rdfs:label>
+          </bf:ImmediateAcquisition>
+        </bf:immediateAcquisition>
+        <bf:itemOf rdf:resource="http://example.org/1#Instance"/>
+      </bf:Item>
+    </bf:hasItem>
+    <bf:immediateAcquisition>
+      <bf:ImmediateAcquisition>
+        <rdfs:label>Источник неизвестен.</rdfs:label>
+      </bf:ImmediateAcquisition>
+    </bf:immediateAcquisition>
+  </bf:Instance>
+</rdf:RDF>

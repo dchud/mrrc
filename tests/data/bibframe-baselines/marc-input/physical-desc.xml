@@ -1,0 +1,312 @@
+<collection xmlns="http://www.loc.gov/MARC21/slim">
+
+  <record>
+    <leader>02829ccm a2200589 i 4500</leader>
+    <controlfield tag="001">1</controlfield>
+    <controlfield tag="008">240313t20232023moumud|  ehi   n  |     d</controlfield>
+    <datafield tag="300" ind1=" " ind2=" ">
+      <subfield code="3">records</subfield>
+      <subfield code="a">1</subfield>
+      <subfield code="f">box</subfield>
+      <subfield code="g">2 x 4 x 3 1/2 ft.</subfield>
+    </datafield>
+    <datafield tag="300" ind1=" " ind2=" ">
+      <subfield code="a">271 p. :</subfield>
+      <subfield code="b">ill. ;</subfield>
+      <subfield code="c">21 cm. +</subfield>
+      <subfield code="e">1 answer book</subfield>
+    </datafield>
+    <datafield tag="306" ind1=" " ind2=" ">
+      <subfield code="a">002016</subfield>
+      <subfield code="a">014500</subfield>
+    </datafield>    
+    <datafield tag="310" ind1=" " ind2=" ">
+      <subfield code="a">Annual,</subfield>
+      <subfield code="b">1983-</subfield>
+      <subfield code="2">freq</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/frequencies/anl</subfield>
+    </datafield>    
+    <datafield tag="321" ind1=" " ind2=" ">
+      <subfield code="a">Semiannual,</subfield>
+      <subfield code="b">1981-1982</subfield>
+      <subfield code="2">freq</subfield>
+      <subfield code="0">(DLC)sma</subfield>
+    </datafield> 
+    <datafield tag="334" ind1=" " ind2=" ">
+      <subfield code="a">single unit</subfield>
+      <subfield code="b">mono</subfield>      
+    </datafield>
+    <datafield tag="336" ind1=" " ind2=" ">
+      <subfield code="a">performed music</subfield>
+      <subfield code="b">prm</subfield>
+      <subfield code="0">(uri)http://id.loc.gov/vocabulary/contentTypes/prm</subfield>
+      <subfield code="2">rdacontent</subfield>
+      <subfield code="3">record</subfield>
+    </datafield>
+    <datafield tag="337" ind1=" " ind2=" ">
+      <subfield code="a">audio</subfield>
+      <subfield code="b">s</subfield>
+      <subfield code="0">(uri)http://id.loc.gov/vocabulary/mediaTypes/s</subfield>
+      <subfield code="2">rdamedia</subfield>
+      <subfield code="3">soundtrack</subfield>
+    </datafield>
+    <datafield tag="338" ind1=" " ind2=" ">
+      <subfield code="a">audio disc</subfield>
+      <subfield code="b">sd</subfield>
+      <subfield code="0">(uri)http://id.loc.gov/vocabulary/carriers/sd</subfield>
+      <subfield code="2">rdacarrier</subfield>
+      <subfield code="3">soundtrack</subfield>
+    </datafield>
+    <datafield tag="340" ind1=" " ind2=" ">
+      <subfield code="3">self-portrait</subfield>
+      <subfield code="a">rice paper</subfield>
+      <subfield code="b">7" x 9"</subfield>
+      <subfield code="c">colored inks</subfield>
+      <subfield code="e">none</subfield>      
+      <subfield code="g">color</subfield>
+      <subfield code="0">(lnl)123456</subfield>
+      <subfield code="p">illustrations</subfield>
+      <subfield code="h">between entry for April 7 and April 19, 1843.</subfield>
+    </datafield>
+    <datafield tag="340" ind1=" " ind2=" ">
+      <subfield code="3">case files</subfield>
+      <subfield code="a">aperture cards</subfield>
+      <subfield code="b">9 x 19 cm.</subfield>
+      <subfield code="d">microfilm</subfield>
+      <subfield code="f">48x</subfield>
+      <subfield code="i">Ibord Model 74 tape reader.</subfield>      
+      <subfield code="q">high reduction</subfield>
+    </datafield>
+    <datafield tag="340" ind1=" " ind2=" ">
+      <subfield code="j">original</subfield>
+      <subfield code="k">double-sided</subfield>
+      <subfield code="l">saddle stitch binding</subfield>
+      <subfield code="m">folio</subfield>
+      <subfield code="n">giant print (36 point)</subfield>
+      <subfield code="0">http://rdaregistry.info/termList/fontSize/1001</subfield>
+      <subfield code="o">positive</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+    <datafield tag="341" ind1="1" ind2=" ">
+      <subfield code="a">auditory</subfield>
+      <subfield code="b">transcript</subfield>
+      <subfield code="2">termList</subfield>
+      <subfield code="3">accompanying audio CD</subfield>
+    </datafield>
+    <datafield tag="341" ind1="0" ind2=" ">
+      <subfield code="a">auditory</subfield>
+      <subfield code="c">signLanguage</subfield>
+    </datafield>
+    <datafield tag="341" ind1="0" ind2=" ">
+      <subfield code="a">visual</subfield>
+      <subfield code="d">audioDescription</subfield>
+    </datafield>
+    <datafield tag="341" ind1="1" ind2=" ">
+      <subfield code="a">textual</subfield>
+      <subfield code="e">braille</subfield>
+    </datafield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="3">audio disc</subfield>
+      <subfield code="a">digital</subfield>
+      <subfield code="b">optical</subfield>
+      <subfield code="g">surround</subfield>
+      <subfield code="h">Dolby</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mspecplayback/dolby</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="3">record</subfield>
+      <subfield code="a">analog</subfield>
+      <subfield code="c">78 rpm</subfield>
+      <subfield code="d">coarse groove</subfield>
+      <subfield code="i">sound</subfield>
+    </datafield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="3">audio tape</subfield>
+      <subfield code="a">analog</subfield>
+      <subfield code="e">edge track</subfield>
+      <subfield code="f">12 track</subfield>
+    </datafield>
+    <datafield tag="345" ind1=" " ind2=" ">
+      <subfield code="3">filmstrip</subfield>
+      <subfield code="a">Cinerama</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mpresformat/ciner</subfield>
+      <subfield code="b">24 fps</subfield>
+      <subfield code="c">16:9</subfield>
+      <subfield code="d">wide screen</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+    <datafield tag="346" ind1=" " ind2=" ">
+      <subfield code="3">videotape</subfield>
+      <subfield code="a">Betamax</subfield>
+      <subfield code="b">PAL</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mbroadstd/pal</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+    <datafield tag="347" ind1=" " ind2=" ">
+      <subfield code="3">computer disc</subfield>
+      <subfield code="a">image file</subfield>
+      <subfield code="b">Blu-ray</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mencformat/bluray</subfield>
+      <subfield code="c">182 KB</subfield>
+      <subfield code="d">3.1 megapixels</subfield>
+      <subfield code="e">region 4</subfield>
+      <subfield code="f">32 kbps</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+    <datafield tag="348" ind1=" " ind2=" ">
+      <subfield code="3">enclosed score</subfield>
+      <subfield code="a">vocal score</subfield>
+      <subfield code="0">(foo)12345</subfield>
+      <subfield code="b">voc</subfield>
+      <subfield code="c">staff notation</subfield>
+      <subfield code="2">foo</subfield>
+    </datafield>
+    <datafield tag="350" ind1=" " ind2=" ">
+      <subfield code="a">$20.00</subfield>
+    </datafield>
+    <datafield tag="351" ind1=" " ind2=" ">
+      <subfield code="3">Records</subfield>
+      <subfield code="c">Series;</subfield>
+      <subfield code="a">Hierarchical;</subfield>
+      <subfield code="b">Arranged by form of material.</subfield>
+    </datafield>
+    <datafield tag="352" ind1=" " ind2=" ">
+      <subfield code="a">Vector :</subfield>
+      <subfield code="b">Point</subfield>
+      <subfield code="c">(13671),</subfield>
+      <subfield code="b">string</subfield>
+      <subfield code="c">(20171) ;</subfield>
+      <subfield code="q">ARC/INFO export.</subfield>
+    </datafield>
+    <datafield tag="353" ind1=" " ind2=" ">
+      <subfield code="3">Bio supplement</subfield>
+      <subfield code="a">biography of creator</subfield>
+      <subfield code="b">creatorbio</subfield>
+      <subfield code="0">http://example.com/bio</subfield>
+      <subfield code="2">msupplcont</subfield>
+    </datafield>
+    <datafield tag="362" ind1="0" ind2=" ">
+      <subfield code="a">Vol. 1, no. 1 (Apr. 1983)-v. 1, no. 3 (June 1983)</subfield>
+    </datafield>
+    <datafield tag="362" ind1="1" ind2=" ">
+      <subfield code="a">3 issues in vol. 1, ceased with 3 (1983)</subfield>
+    </datafield>
+    <datafield tag="370" ind1=" " ind2=" ">
+      <subfield code="c">Latvia</subfield>
+      <subfield code="2">lcsh</subfield>
+      <subfield code="g">Riga, Latvia</subfield>
+      <subfield code="0">http://id.loc.gov/authorities/subjects/sh2007010623</subfield>
+    </datafield>
+    <datafield tag="377" ind1=" " ind2=" ">
+      <subfield code="3">Lecture</subfield>
+      <subfield code="a">eng</subfield>
+      <subfield code="a">ger</subfield>
+    </datafield>
+    <datafield tag="377" ind1=" " ind2="7">
+      <subfield code="a">foo</subfield>
+      <subfield code="l">foobar</subfield>
+      <subfield code="0">http://example.org/languages/foo</subfield>
+      <subfield code="2">bazz</subfield>
+    </datafield>
+    <datafield tag="380" ind1=" " ind2=" ">
+      <subfield code="a">Play</subfield>
+      <subfield code="2">lcgft</subfield>
+    </datafield>
+    <datafield tag="382" ind1="1" ind2=" ">
+      <subfield code="3">Nach Bach</subfield>
+      <subfield code="a">piano</subfield>
+      <subfield code="n">1</subfield>
+      <subfield code="v">played on altered piano</subfield>
+      <subfield code="d">synthesizer</subfield>
+      <subfield code="n">1</subfield>
+      <subfield code="a">baritone horn</subfield>
+      <subfield code="n">1</subfield>
+      <subfield code="s">2</subfield>
+      <subfield code="v">piano is prominent, but not all other instruments are not identified</subfield>
+      <subfield code="2">lcmpt</subfield>
+    </datafield>
+    <datafield tag="383" ind1=" " ind2=" ">
+      <subfield code="a">no. 1</subfield>
+      <subfield code="b">op. 27</subfield>
+      <subfield code="e">J. André</subfield>
+    </datafield>
+    <datafield tag="383" ind1=" " ind2=" ">
+      <subfield code="c">F. I, 22-25</subfield>
+      <subfield code="d">Fanna</subfield>
+      <subfield code="2">mlati</subfield>
+    </datafield>
+    <datafield tag="384" ind1=" " ind2=" ">
+      <subfield code="3">Shostakovich sonata no. 2</subfield>
+      <subfield code="a">B minor</subfield>
+    </datafield>
+    <datafield tag="385" ind1=" " ind2=" ">
+      <subfield code="3">Nonsense</subfield>
+      <subfield code="m">Age group</subfield>
+      <subfield code="n">age</subfield>
+      <subfield code="a">Children</subfield>
+      <subfield code="b">kid</subfield>
+      <subfield code="2">ws</subfield>
+    </datafield>
+    <datafield tag="385" ind1=" " ind2=" ">
+      <subfield code="a">Youngsters</subfield>
+      <subfield code="b">aaa</subfield>
+      <subfield code="0">(DLC)dg2015060010</subfield>
+    </datafield>
+    <datafield tag="385" ind1=" " ind2=" ">
+      <subfield code="n">occ</subfield>
+    </datafield>
+    <datafield tag="385" ind1=" " ind2=" ">
+      <subfield code="m">occupations</subfield>
+      <subfield code="n">occ</subfield>
+    </datafield>
+    <datafield tag="386" ind1=" " ind2=" ">
+      <subfield code="3">Other stuff</subfield>
+      <subfield code="m">Gender group</subfield>
+      <subfield code="n">gen</subfield>
+      <subfield code="a">Females</subfield>
+      <subfield code="b">f</subfield>
+      <subfield code="2">ericd</subfield>
+    </datafield>
+    <datafield tag="386" ind1=" " ind2=" ">
+      <subfield code="a">Youngsters</subfield>
+      <subfield code="b">aaa</subfield>
+      <subfield code="0">(DLC)dg2015060010</subfield>
+    </datafield>
+    <datafield tag="347" ind1=" " ind2=" ">
+      <subfield code="b">cD audoi</subfield>
+      <subfield code="b">MP3</subfield>
+    </datafield>
+  </record>
+  <record>
+    <controlfield tag="001">2</controlfield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="b">optical</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mrecmedium/opt</subfield>
+    </datafield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="g">mono</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mplayback/mon</subfield>
+    </datafield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="a">digital</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mrectype/digital</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="b">optical</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mrecmedium/opt</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="g">mono</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mplayback/mon</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+    <datafield tag="344" ind1=" " ind2=" ">
+      <subfield code="h">Dolby</subfield>
+      <subfield code="0">http://id.loc.gov/vocabulary/mspecplayback/dolby</subfield>
+      <subfield code="2">rda</subfield>
+    </datafield>
+  </record>
+</collection>
