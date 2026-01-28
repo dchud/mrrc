@@ -232,12 +232,25 @@ Strategy: Preserve essential bibliographic data; document known lossy conversion
 
 ### RDF Library Selection
 
-Options to evaluate:
-- **rio**: Fast, minimal, good for parsing/serializing
-- **sophia**: Full-featured RDF library with SPARQL
-- **oxrdf**: Part of oxigraph, well-maintained
+**Decision: oxrdfio** (v0.2.2, January 2026)
 
-Decision criteria: Performance, API ergonomics, format support, maintenance status.
+| Criteria | oxrdfio | sophia |
+|----------|---------|--------|
+| Version | 0.2.2 (Jan 2026) | 0.9.0 (Nov 2024) |
+| RDF/XML | ✓ | ✓ (optional) |
+| JSON-LD | ✓ (1.0) | ✓ (optional) |
+| Turtle/N3/TriG | ✓ | ✓ |
+| License | MIT/Apache 2.0 | CECILL-B |
+| Scope | Focused parser/serializer | Full toolkit with SPARQL |
+
+**Rationale:**
+- More recent release with active maintenance (Oxigraph project)
+- Focused scope (parsing/serialization only) matches our needs
+- MIT/Apache 2.0 license aligns with mrrc licensing
+- Part of Oxigraph ecosystem (oxrdf, oxttl, oxrdfxml, oxjsonld)
+- Rio (deprecated) replaced by these Oxigraph crates
+
+**Note**: Rio was considered but is deprecated in favor of oxttl/oxrdfxml which oxrdfio unifies.
 
 ## Error Handling Strategy
 
@@ -409,13 +422,13 @@ Build from:
 | BIBFRAME 2.1? | Not initially | Spec not finalized; design for extensibility |
 | Streaming? | Yes, for output | Memory efficiency for large batches |
 
-### To Decide During Research (uab.1, uab.2)
+### To Decide During Implementation
 
-| Question | Options | Decision Point |
-|----------|---------|----------------|
-| RDF library | rio, sophia, oxrdf | Evaluate during uab.4.1 based on benchmarks |
-| Default URI strategy | Blank nodes vs minted | Based on common use cases discovered |
-| 880 field handling | Parallel properties vs notes | Per LOC spec interpretation |
+| Question | Options | Decision |
+|----------|---------|----------|
+| RDF library | rio, sophia, oxrdfio | **oxrdfio** (decided uab.4.1) |
+| Default URI strategy | Blank nodes vs minted | Blank nodes (per design doc) |
+| 880 field handling | Parallel properties vs notes | Parallel literals with @lang (per LOC spec) |
 
 ## Edge Cases Reference (uab.4.4)
 

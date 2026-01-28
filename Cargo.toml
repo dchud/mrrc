@@ -28,6 +28,7 @@ format-messagepack = []    # MessagePack compact binary format
 # Tier 3: Specialized formats (feature-gated, on-demand)
 format-cbor = []           # CBOR (RFC 7049) for archival
 format-avro = []           # Apache Avro for Kafka/data lakes
+format-bibframe = ["dep:oxrdfio", "dep:oxrdf"]  # BIBFRAME (LOC linked data format)
 
 # Bundle features
 all-formats = ["format-arrow", "format-flatbuffers", "format-messagepack", "format-cbor", "format-avro"]
@@ -79,6 +80,10 @@ parquet = { version = "57", features = ["arrow"] }
 
 # Avro for schema-based serialization
 apache-avro = "0.17"
+
+# RDF serialization for BIBFRAME support (optional)
+oxrdfio = { version = "0.2", optional = true }
+oxrdf = { version = "0.3", optional = true }
 
 
 
