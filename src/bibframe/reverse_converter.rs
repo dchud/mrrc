@@ -124,6 +124,10 @@ impl<'a> BibframeToMarcConverter<'a> {
         self.extract_physical_description(&mut record);
         self.extract_notes(&mut record);
 
+        // Edge case handling (uab.4.4)
+        self.extract_series(&mut record);
+        self.extract_linking_entries(&mut record);
+
         record
     }
 
@@ -791,6 +795,195 @@ impl<'a> BibframeToMarcConverter<'a> {
             }
         }
     }
+
+    // ========================================================================
+    // Edge Case Extraction (mrrc-uab.4.4)
+    // ========================================================================
+
+    /// Extracts series to 490 and 8XX fields.
+    fn extract_series(&mut self, record: &mut Record) {
+        if let Some(ref work_key) = self.work_node {
+            let has_series_prop = format!("{BF}hasSeries");
+
+            if let Some(props) = self.subject_index.get(work_key) {
+                for (pred, obj) in props.clone() {
+                    if pred == has_series_prop {
+                        let series_key = node_to_key(&obj);
+                        if let Some(series_props) = self.subject_index.get(&series_key) {
+                            // Extract series title
+                            let mut title = String::new();
+                            for (series_pred, series_obj) in series_props {
+                                // Check for title property
+                                if series_pred.ends_with("title") {
+                                    let title_key = node_to_key(series_obj);
+                                    if let Some(title_props) = self.subject_index.get(&title_key) {
+                                        for (t_pred, t_obj) in title_props {
+                                            if t_pred.ends_with("mainTitle") {
+                                                if let RdfNode::Literal { value, .. } = t_obj {
+                                                    title = value.clone();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                // Also check for rdfs:label
+                                if series_pred == &format!("{RDFS}label") {
+                                    if let RdfNode::Literal { value, .. } = series_obj {
+                                        if title.is_empty() {
+                                            title = value.clone();
+                                        }
+                                    }
+                                }
+                            }
+
+                            if !title.is_empty() {
+                                // Create 830 field (traced series)
+                                let mut field = Field::new("830".to_string(), ' ', '0');
+                                field.add_subfield('a', title);
+                                record.add_field(field);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also extract series statements from Instance
+        if let Some(ref instance_key) = self.instance_node {
+            let series_stmt_prop = format!("{BF}seriesStatement");
+            let series_enum_prop = format!("{BF}seriesEnumeration");
+
+            if let Some(props) = self.subject_index.get(instance_key) {
+                let mut series_statement = None;
+                let mut enumeration = None;
+
+                for (pred, obj) in props {
+                    if pred == &series_stmt_prop {
+                        if let RdfNode::Literal { value, .. } = obj {
+                            series_statement = Some(value.clone());
+                        }
+                    }
+                    if pred == &series_enum_prop {
+                        if let RdfNode::Literal { value, .. } = obj {
+                            enumeration = Some(value.clone());
+                        }
+                    }
+                }
+
+                // Create 490 field if we have a series statement
+                if let Some(stmt) = series_statement {
+                    let mut field = Field::new("490".to_string(), '0', ' ');
+                    field.add_subfield('a', stmt);
+                    if let Some(vol) = enumeration {
+                        field.add_subfield('v', vol);
+                    }
+                    record.add_field(field);
+                }
+            }
+        }
+    }
+
+    /// Extracts linking entries to 76X-78X fields.
+    fn extract_linking_entries(&mut self, record: &mut Record) {
+        if let Some(ref instance_key) = self.instance_node {
+            // Map of BIBFRAME relationship properties to MARC tags
+            let relationship_map = [
+                ("precededBy", "780"),
+                ("succeededBy", "785"),
+                ("partOf", "773"),
+                ("hasPart", "774"),
+                ("otherPhysicalFormat", "776"),
+                ("relatedTo", "787"),
+                ("hasSeries", "760"),
+                ("supplement", "770"),
+                ("supplementTo", "772"),
+                ("otherEdition", "775"),
+                ("issuedWith", "777"),
+            ];
+
+            if let Some(props) = self.subject_index.get(instance_key) {
+                for (rel_name, tag) in relationship_map {
+                    let rel_prop = format!("{BF}{rel_name}");
+
+                    for (pred, obj) in props.clone() {
+                        if pred == rel_prop {
+                            let related_key = node_to_key(&obj);
+                            if let Some(field) = self.create_linking_field(tag, &related_key) {
+                                record.add_field(field);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Creates a linking entry field (76X-78X) from a related entity.
+    fn create_linking_field(&self, tag: &str, related_key: &str) -> Option<Field> {
+        let related_props = self.subject_index.get(related_key)?;
+
+        let mut field = Field::new(tag.to_string(), '0', ' ');
+
+        // Extract title
+        for (pred, obj) in related_props {
+            if pred.ends_with("title") {
+                let title_key = node_to_key(obj);
+                if let Some(title_props) = self.subject_index.get(&title_key) {
+                    for (t_pred, t_obj) in title_props {
+                        if t_pred.ends_with("mainTitle") {
+                            if let RdfNode::Literal { value, .. } = t_obj {
+                                field.add_subfield('t', value.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Extract identifiers
+        let identified_by_prop = format!("{BF}{}", properties::IDENTIFIED_BY);
+        for (pred, obj) in related_props {
+            if pred == &identified_by_prop {
+                let id_key = node_to_key(obj);
+                if let Some(id_props) = self.subject_index.get(&id_key) {
+                    let mut id_type = "Local";
+                    let mut id_value = None;
+
+                    for (id_pred, id_obj) in id_props {
+                        if id_pred == &format!("{RDF}type") {
+                            if let RdfNode::Uri(type_uri) = id_obj {
+                                if type_uri.ends_with("Issn") {
+                                    id_type = "Issn";
+                                } else if type_uri.ends_with("Isbn") {
+                                    id_type = "Isbn";
+                                }
+                            }
+                        }
+                        if id_pred == &format!("{RDF}value") {
+                            if let RdfNode::Literal { value, .. } = id_obj {
+                                id_value = Some(value.clone());
+                            }
+                        }
+                    }
+
+                    if let Some(val) = id_value {
+                        match id_type {
+                            "Issn" => field.add_subfield('x', val),
+                            "Isbn" => field.add_subfield('z', val),
+                            _ => field.add_subfield('w', val),
+                        }
+                    }
+                }
+            }
+        }
+
+        // Only return if we have at least one subfield
+        if field.subfields.is_empty() {
+            None
+        } else {
+            Some(field)
+        }
+    }
 }
 
 /// Converts an `RdfNode` to a string key for indexing.
@@ -1048,5 +1241,72 @@ mod tests {
 
         // Should preserve the musical type
         assert_eq!(result.leader.record_type, 'j');
+    }
+
+    // ========================================================================
+    // Edge Case Round-Trip Tests (mrrc-uab.4.4)
+    // ========================================================================
+
+    #[test]
+    fn test_series_roundtrip() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "series_test".to_string());
+
+        // Add 830 - Series added entry
+        let mut field_830 = Field::new("830".to_string(), ' ', '0');
+        field_830.add_subfield('a', "Computer science series".to_string());
+        record.add_field(field_830);
+
+        let config = BibframeConfig::default();
+        let graph = marc_to_bibframe(&record, &config);
+        let result = convert_bibframe_to_marc(&graph).unwrap();
+
+        // Should have series field
+        assert!(result.fields.contains_key("830"));
+        let series = result.fields.get("830").unwrap();
+        assert!(series[0].subfields.iter().any(|s| s.value.contains("Computer science")));
+    }
+
+    #[test]
+    fn test_linking_entry_roundtrip() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "linking_test".to_string());
+
+        // Add 780 - Preceding entry
+        let mut field_780 = Field::new("780".to_string(), '0', '0');
+        field_780.add_subfield('t', "Previous Title".to_string());
+        field_780.add_subfield('x', "1234-5678".to_string());
+        record.add_field(field_780);
+
+        let config = BibframeConfig::default();
+        let graph = marc_to_bibframe(&record, &config);
+        let result = convert_bibframe_to_marc(&graph).unwrap();
+
+        // Should have linking entry
+        assert!(result.fields.contains_key("780"));
+        let linking = result.fields.get("780").unwrap();
+        assert!(linking[0].subfields.iter().any(|s| s.code == 't' && s.value.contains("Previous Title")));
+        assert!(linking[0].subfields.iter().any(|s| s.code == 'x' && s.value.contains("1234-5678")));
+    }
+
+    #[test]
+    fn test_series_statement_roundtrip() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "series490_test".to_string());
+
+        // Add 490 - Series statement
+        let mut field_490 = Field::new("490".to_string(), '0', ' ');
+        field_490.add_subfield('a', "Library science series".to_string());
+        field_490.add_subfield('v', "vol. 5".to_string());
+        record.add_field(field_490);
+
+        let config = BibframeConfig::default();
+        let graph = marc_to_bibframe(&record, &config);
+        let result = convert_bibframe_to_marc(&graph).unwrap();
+
+        // Should have series statement
+        assert!(result.fields.contains_key("490"));
+        let series = result.fields.get("490").unwrap();
+        assert!(series[0].subfields.iter().any(|s| s.value.contains("Library science")));
     }
 }

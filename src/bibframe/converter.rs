@@ -58,6 +58,12 @@ impl<'a> MarcToBibframeConverter<'a> {
         self.process_physical_description();
         self.process_notes();
 
+        // Edge case handling (uab.4.4)
+        self.process_880_linked_fields();
+        self.process_linking_entries();
+        self.process_series();
+        self.process_format_specific_fields();
+
         // Add admin metadata if configured
         if self.config.include_bflc {
             self.add_admin_metadata();
@@ -525,45 +531,417 @@ impl<'a> MarcToBibframeConverter<'a> {
             }
         }
 
-        // 020 - ISBN
+        // 020 - ISBN (with qualifier handling)
         if let Some(fields) = self.record.fields.get("020") {
             for field in fields {
-                self.add_identifier(&instance, field, classes::ISBN);
+                self.add_isbn(&instance, field);
             }
         }
 
-        // 022 - ISSN
+        // 022 - ISSN (with linking ISSN handling)
         if let Some(fields) = self.record.fields.get("022") {
             for field in fields {
-                self.add_identifier(&instance, field, classes::ISSN);
+                self.add_issn(&instance, field);
             }
         }
 
         // 024 - Other standard identifier
         if let Some(fields) = self.record.fields.get("024") {
             for field in fields {
-                // Type depends on first indicator
-                // Note: ind1='7' means source specified in $2, but we use generic Identifier
-                let id_type = match field.indicator1 {
-                    '0' => "Isrc",
-                    '1' => "Upc",
-                    '2' => "Ismn",
-                    '3' => "Ean",
-                    _ => "Identifier",
-                };
-                self.add_identifier(&instance, field, id_type);
+                self.add_other_identifier(&instance, field);
             }
         }
 
-        // 035 - System control number
+        // 035 - System control number (with prefix parsing)
         if let Some(fields) = self.record.fields.get("035") {
             for field in fields {
-                self.add_identifier(&instance, field, classes::LOCAL);
+                self.add_system_control_number(&instance, field);
             }
         }
     }
 
-    /// Adds an identifier to the instance.
+    /// Adds an ISBN identifier with qualifier handling.
+    fn add_isbn(&mut self, instance: &RdfNode, field: &Field) {
+        // $a contains the ISBN
+        if let Some(isbn_subfield) = field.subfields.iter().find(|s| s.code == 'a') {
+            let id_node = self.graph.new_blank_node();
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::ISBN),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&isbn_subfield.value),
+            );
+
+            // $q contains qualifier (e.g., "hardcover", "pbk.")
+            if let Some(qualifier) = field.subfields.iter().find(|s| s.code == 'q') {
+                self.graph.add(
+                    id_node.clone(),
+                    format!("{BF}qualifier"),
+                    RdfNode::literal(&qualifier.value),
+                );
+            }
+
+            // $c contains terms of availability (price, etc.)
+            if let Some(terms) = field.subfields.iter().find(|s| s.code == 'c') {
+                self.graph.add(
+                    id_node.clone(),
+                    format!("{BF}acquisitionTerms"),
+                    RdfNode::literal(&terms.value),
+                );
+            }
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                id_node,
+            );
+        }
+
+        // $z contains canceled/invalid ISBN
+        for invalid in field.subfields.iter().filter(|s| s.code == 'z') {
+            let id_node = self.graph.new_blank_node();
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::ISBN),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&invalid.value),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{BF}status"),
+                RdfNode::literal("invalid"),
+            );
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                id_node,
+            );
+        }
+    }
+
+    /// Adds an ISSN identifier with linking ISSN handling.
+    fn add_issn(&mut self, instance: &RdfNode, field: &Field) {
+        // $a contains the ISSN
+        if let Some(issn_subfield) = field.subfields.iter().find(|s| s.code == 'a') {
+            let id_node = self.graph.new_blank_node();
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::ISSN),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&issn_subfield.value),
+            );
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                id_node,
+            );
+        }
+
+        // $l contains linking ISSN (ISSN-L)
+        if let Some(linking) = field.subfields.iter().find(|s| s.code == 'l') {
+            let id_node = self.graph.new_blank_node();
+
+            // Use BFLC:IssnL if BFLC is enabled, otherwise generic ISSN with note
+            if self.config.include_bflc {
+                self.graph.add(
+                    id_node.clone(),
+                    format!("{RDF}type"),
+                    RdfNode::uri(format!("{BFLC}IssnL")),
+                );
+            } else {
+                self.graph.add(
+                    id_node.clone(),
+                    format!("{RDF}type"),
+                    RdfNode::bf_class(classes::ISSN),
+                );
+                self.graph.add(
+                    id_node.clone(),
+                    format!("{BF}{}", properties::NOTE),
+                    RdfNode::literal("Linking ISSN"),
+                );
+            }
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&linking.value),
+            );
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                id_node,
+            );
+        }
+
+        // $y contains incorrect ISSN
+        for incorrect in field.subfields.iter().filter(|s| s.code == 'y') {
+            let id_node = self.graph.new_blank_node();
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::ISSN),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&incorrect.value),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{BF}status"),
+                RdfNode::literal("incorrect"),
+            );
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                id_node,
+            );
+        }
+
+        // $z contains canceled ISSN
+        for canceled in field.subfields.iter().filter(|s| s.code == 'z') {
+            let id_node = self.graph.new_blank_node();
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::ISSN),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&canceled.value),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{BF}status"),
+                RdfNode::literal("canceled"),
+            );
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                id_node,
+            );
+        }
+    }
+
+    /// Adds other standard identifiers (024 field) with source handling.
+    fn add_other_identifier(&mut self, instance: &RdfNode, field: &Field) {
+        let id_node = self.graph.new_blank_node();
+
+        // Determine type from first indicator
+        let id_type = match field.indicator1 {
+            '0' => "Isrc",   // International Standard Recording Code
+            '1' => "Upc",    // Universal Product Code
+            '2' => "Ismn",   // International Standard Music Number
+            '3' => "Ean",    // International Article Number
+            '4' => "Sici",   // Serial Item and Contribution Identifier
+            '7' => {
+                // Source specified in $2
+                field
+                    .subfields
+                    .iter()
+                    .find(|s| s.code == '2')
+                    .map(|s| s.value.as_str())
+                    .unwrap_or("Identifier")
+            }
+            '8' => "Identifier", // Unspecified type
+            _ => "Identifier",
+        };
+
+        // For well-known types, use bf:class; otherwise use literal type
+        match id_type {
+            "Isrc" | "Upc" | "Ismn" | "Ean" | "Sici" => {
+                self.graph.add(
+                    id_node.clone(),
+                    format!("{RDF}type"),
+                    RdfNode::bf_class(id_type),
+                );
+            }
+            _ => {
+                self.graph.add(
+                    id_node.clone(),
+                    format!("{RDF}type"),
+                    RdfNode::bf_class("Identifier"),
+                );
+                // Add source as separate property
+                if field.indicator1 == '7' {
+                    if let Some(source) = field.subfields.iter().find(|s| s.code == '2') {
+                        self.graph.add(
+                            id_node.clone(),
+                            format!("{BF}source"),
+                            RdfNode::literal(&source.value),
+                        );
+                    }
+                }
+            }
+        }
+
+        // $a contains the identifier value
+        if let Some(value) = field.subfields.iter().find(|s| s.code == 'a') {
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&value.value),
+            );
+        }
+
+        // $c contains terms of availability
+        if let Some(terms) = field.subfields.iter().find(|s| s.code == 'c') {
+            self.graph.add(
+                id_node.clone(),
+                format!("{BF}acquisitionTerms"),
+                RdfNode::literal(&terms.value),
+            );
+        }
+
+        // $d contains additional codes
+        for code in field.subfields.iter().filter(|s| s.code == 'd') {
+            self.graph.add(
+                id_node.clone(),
+                format!("{BF}qualifier"),
+                RdfNode::literal(&code.value),
+            );
+        }
+
+        // $z contains canceled/invalid identifier
+        for invalid in field.subfields.iter().filter(|s| s.code == 'z') {
+            let inv_node = self.graph.new_blank_node();
+            self.graph.add(
+                inv_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class("Identifier"),
+            );
+            self.graph.add(
+                inv_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&invalid.value),
+            );
+            self.graph.add(
+                inv_node.clone(),
+                format!("{BF}status"),
+                RdfNode::literal("invalid"),
+            );
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                inv_node,
+            );
+        }
+
+        self.graph.add(
+            instance.clone(),
+            format!("{BF}{}", properties::IDENTIFIED_BY),
+            id_node,
+        );
+    }
+
+    /// Adds system control number (035 field) with prefix parsing.
+    fn add_system_control_number(&mut self, instance: &RdfNode, field: &Field) {
+        if let Some(value) = field.subfields.iter().find(|s| s.code == 'a') {
+            let id_node = self.graph.new_blank_node();
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::LOCAL),
+            );
+
+            // Parse prefix in parentheses, e.g., "(OCoLC)12345678"
+            let (source, number) = if value.value.starts_with('(') {
+                if let Some(close_paren) = value.value.find(')') {
+                    let source = &value.value[1..close_paren];
+                    let number = &value.value[close_paren + 1..];
+                    (Some(source), number)
+                } else {
+                    (None, value.value.as_str())
+                }
+            } else {
+                (None, value.value.as_str())
+            };
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(number),
+            );
+
+            // Add source if prefix was found
+            if let Some(src) = source {
+                self.graph.add(
+                    id_node.clone(),
+                    format!("{BF}source"),
+                    RdfNode::literal(src),
+                );
+            }
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                id_node,
+            );
+        }
+
+        // $z contains canceled/invalid control number
+        for canceled in field.subfields.iter().filter(|s| s.code == 'z') {
+            let id_node = self.graph.new_blank_node();
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::LOCAL),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{RDF}value"),
+                RdfNode::literal(&canceled.value),
+            );
+
+            self.graph.add(
+                id_node.clone(),
+                format!("{BF}status"),
+                RdfNode::literal("canceled"),
+            );
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::IDENTIFIED_BY),
+                id_node,
+            );
+        }
+    }
+
+    /// Adds a basic identifier to the instance (used for LCCN and other simple cases).
     fn add_identifier(&mut self, instance: &RdfNode, field: &Field, id_type: &str) {
         let id_node = self.graph.new_blank_node();
 
@@ -863,6 +1241,988 @@ impl<'a> MarcToBibframeConverter<'a> {
             admin_node,
         );
     }
+
+    // ========================================================================
+    // Edge Case Handling (mrrc-uab.4.4)
+    // ========================================================================
+
+    /// Processes 880 linked fields (alternate script representations).
+    ///
+    /// 880 fields contain the same data as their linked field, but in an alternate
+    /// script (e.g., Japanese, Cyrillic). The $6 subfield links to the original
+    /// field with format: "TAG-occurrence/script".
+    fn process_880_linked_fields(&mut self) {
+        let instance = match &self.instance_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+        let work = match &self.work_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+
+        if let Some(fields) = self.record.fields.get("880") {
+            for field in fields {
+                // Extract the linked tag from $6 (format: "TAG-occurrence/script")
+                let linked_tag = field
+                    .subfields
+                    .iter()
+                    .find(|s| s.code == '6')
+                    .map(|s| &s.value[..3.min(s.value.len())])
+                    .unwrap_or("");
+
+                // Determine language tag from script code if present
+                let lang_tag = self.extract_language_from_880(field);
+
+                match linked_tag {
+                    // Title fields
+                    "245" | "246" | "247" => {
+                        self.add_880_title(&instance, field, lang_tag.as_deref());
+                    }
+                    // Edition statement
+                    "250" => {
+                        if let Some(subfield_a) = field.subfields.iter().find(|s| s.code == 'a') {
+                            let node = if let Some(lang) = lang_tag {
+                                RdfNode::literal_with_lang(&subfield_a.value, lang)
+                            } else {
+                                RdfNode::literal(&subfield_a.value)
+                            };
+                            self.graph.add(
+                                instance.clone(),
+                                format!("{BF}{}", properties::EDITION_STATEMENT),
+                                node,
+                            );
+                        }
+                    }
+                    // Publication fields
+                    "260" | "264" => {
+                        self.add_880_provision(&instance, field, lang_tag.as_deref());
+                    }
+                    // Series statement
+                    "490" => {
+                        self.add_880_series(&instance, field, lang_tag.as_deref());
+                    }
+                    // Note fields (5XX)
+                    tag if tag.starts_with('5') => {
+                        self.add_880_note(&instance, field, lang_tag.as_deref());
+                    }
+                    // Subject fields (6XX) - link to Work
+                    tag if tag.starts_with('6') => {
+                        self.add_880_subject(&work, field, lang_tag.as_deref());
+                    }
+                    // Added entry fields (7XX)
+                    "740" => {
+                        self.add_880_related_title(&instance, field, lang_tag.as_deref());
+                    }
+                    // Linking fields (78X)
+                    "780" | "785" | "787" => {
+                        self.add_880_linking(&instance, field, linked_tag, lang_tag.as_deref());
+                    }
+                    _ => {
+                        // For unhandled linked fields, just skip with no action
+                    }
+                }
+            }
+        }
+    }
+
+    /// Extracts language tag from 880 field's $6 subfield.
+    fn extract_language_from_880(&self, field: &Field) -> Option<String> {
+        field
+            .subfields
+            .iter()
+            .find(|s| s.code == '6')
+            .and_then(|s| {
+                // Format: "TAG-occurrence/script" or "TAG-occurrence"
+                if let Some(slash_pos) = s.value.find('/') {
+                    let script = &s.value[slash_pos + 1..];
+                    // Map MARC-8 script codes to language tags
+                    match script {
+                        "(3" | "arab" => Some("ar".to_string()),
+                        "(B" | "latn" => None, // Latin is default, no tag needed
+                        "(N" | "cyrl" => Some("ru".to_string()), // Cyrillic -> Russian (could be others)
+                        "hang" => Some("ko".to_string()),        // Korean Hangul
+                        "hani" => Some("zh".to_string()),        // CJK ideographs -> Chinese
+                        "jpan" => Some("ja".to_string()),        // Japanese
+                        "$1" => None, // CJK - detect from content instead
+                        "(2" | "hebr" => Some("he".to_string()),
+                        "(S" | "grek" => Some("el".to_string()),
+                        _ => None,
+                    }
+                    .or_else(|| self.detect_script_from_content(field))
+                } else {
+                    // Try to detect script from content
+                    self.detect_script_from_content(field)
+                }
+            })
+    }
+
+    /// Attempts to detect script from field content.
+    fn detect_script_from_content(&self, field: &Field) -> Option<String> {
+        let text: String = field
+            .subfields
+            .iter()
+            .filter(|s| s.code != '6') // Skip the linking subfield
+            .map(|s| &s.value[..])
+            .collect();
+
+        // Simple heuristic based on Unicode ranges
+        for ch in text.chars() {
+            match ch {
+                '\u{3040}'..='\u{309F}' | '\u{30A0}'..='\u{30FF}' => return Some("ja".to_string()), // Hiragana/Katakana
+                '\u{AC00}'..='\u{D7AF}' => return Some("ko".to_string()), // Hangul
+                '\u{4E00}'..='\u{9FFF}' => return Some("zh".to_string()), // CJK (default to Chinese)
+                '\u{0400}'..='\u{04FF}' => return Some("ru".to_string()), // Cyrillic
+                '\u{0590}'..='\u{05FF}' => return Some("he".to_string()), // Hebrew
+                '\u{0600}'..='\u{06FF}' => return Some("ar".to_string()), // Arabic
+                '\u{0370}'..='\u{03FF}' => return Some("el".to_string()), // Greek
+                _ => continue,
+            }
+        }
+        None
+    }
+
+    /// Adds an 880 title variant.
+    fn add_880_title(&mut self, instance: &RdfNode, field: &Field, lang: Option<&str>) {
+        let title_node = self.graph.new_blank_node();
+
+        self.graph.add(
+            title_node.clone(),
+            format!("{RDF}type"),
+            RdfNode::bf_class(classes::TITLE),
+        );
+
+        for subfield in &field.subfields {
+            if subfield.code == '6' {
+                continue; // Skip linking subfield
+            }
+
+            let node = if let Some(l) = lang {
+                RdfNode::literal_with_lang(&subfield.value, l)
+            } else {
+                RdfNode::literal(&subfield.value)
+            };
+
+            match subfield.code {
+                'a' => {
+                    self.graph.add(
+                        title_node.clone(),
+                        format!("{BF}{}", properties::MAIN_TITLE),
+                        node,
+                    );
+                }
+                'b' => {
+                    self.graph.add(
+                        title_node.clone(),
+                        format!("{BF}{}", properties::SUBTITLE),
+                        node,
+                    );
+                }
+                _ => {}
+            }
+        }
+
+        self.graph.add(
+            instance.clone(),
+            format!("{BF}{}", properties::TITLE),
+            title_node,
+        );
+    }
+
+    /// Adds an 880 provision activity (publication info in alternate script).
+    fn add_880_provision(&mut self, instance: &RdfNode, field: &Field, lang: Option<&str>) {
+        let activity_node = self.graph.new_blank_node();
+
+        self.graph.add(
+            activity_node.clone(),
+            format!("{RDF}type"),
+            RdfNode::bf_class(classes::PUBLICATION),
+        );
+
+        for subfield in &field.subfields {
+            if subfield.code == '6' {
+                continue;
+            }
+
+            let node = if let Some(l) = lang {
+                RdfNode::literal_with_lang(&subfield.value, l)
+            } else {
+                RdfNode::literal(&subfield.value)
+            };
+
+            match subfield.code {
+                'a' => {
+                    if self.config.include_bflc {
+                        self.graph.add(
+                            activity_node.clone(),
+                            format!("{BFLC}simplePlace"),
+                            node,
+                        );
+                    }
+                }
+                'b' => {
+                    if self.config.include_bflc {
+                        self.graph.add(
+                            activity_node.clone(),
+                            format!("{BFLC}simpleAgent"),
+                            node,
+                        );
+                    }
+                }
+                'c' => {
+                    if self.config.include_bflc {
+                        self.graph.add(
+                            activity_node.clone(),
+                            format!("{BFLC}simpleDate"),
+                            node,
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        self.graph.add(
+            instance.clone(),
+            format!("{BF}{}", properties::PROVISION_ACTIVITY),
+            activity_node,
+        );
+    }
+
+    /// Adds an 880 series statement.
+    fn add_880_series(&mut self, instance: &RdfNode, field: &Field, lang: Option<&str>) {
+        if let Some(subfield_a) = field.subfields.iter().find(|s| s.code == 'a') {
+            let node = if let Some(l) = lang {
+                RdfNode::literal_with_lang(&subfield_a.value, l)
+            } else {
+                RdfNode::literal(&subfield_a.value)
+            };
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}seriesStatement"),
+                node,
+            );
+        }
+    }
+
+    /// Adds an 880 note.
+    fn add_880_note(&mut self, instance: &RdfNode, field: &Field, lang: Option<&str>) {
+        if let Some(subfield_a) = field.subfields.iter().find(|s| s.code == 'a') {
+            let node = if let Some(l) = lang {
+                RdfNode::literal_with_lang(&subfield_a.value, l)
+            } else {
+                RdfNode::literal(&subfield_a.value)
+            };
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::NOTE),
+                node,
+            );
+        }
+    }
+
+    /// Adds an 880 subject.
+    fn add_880_subject(&mut self, work: &RdfNode, field: &Field, lang: Option<&str>) {
+        let subject_node = self.graph.new_blank_node();
+
+        self.graph.add(
+            subject_node.clone(),
+            format!("{RDF}type"),
+            RdfNode::bf_class(classes::TOPIC),
+        );
+
+        // Build label from subfields
+        let mut label_parts = Vec::new();
+        for subfield in &field.subfields {
+            if subfield.code != '6' && subfield.code != '0' && subfield.code != '1' {
+                label_parts.push(subfield.value.clone());
+            }
+        }
+
+        if !label_parts.is_empty() {
+            let label = label_parts.join(" ");
+            let node = if let Some(l) = lang {
+                RdfNode::literal_with_lang(&label, l)
+            } else {
+                RdfNode::literal(&label)
+            };
+            self.graph.add(
+                subject_node.clone(),
+                format!("{RDFS}label"),
+                node,
+            );
+        }
+
+        self.graph.add(
+            work.clone(),
+            format!("{BF}{}", properties::SUBJECT),
+            subject_node,
+        );
+    }
+
+    /// Adds an 880 related title (740 field).
+    fn add_880_related_title(&mut self, instance: &RdfNode, field: &Field, lang: Option<&str>) {
+        if let Some(subfield_a) = field.subfields.iter().find(|s| s.code == 'a') {
+            let title_node = self.graph.new_blank_node();
+
+            self.graph.add(
+                title_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::TITLE),
+            );
+
+            let node = if let Some(l) = lang {
+                RdfNode::literal_with_lang(&subfield_a.value, l)
+            } else {
+                RdfNode::literal(&subfield_a.value)
+            };
+
+            self.graph.add(
+                title_node.clone(),
+                format!("{BF}{}", properties::MAIN_TITLE),
+                node,
+            );
+
+            self.graph.add(
+                instance.clone(),
+                format!("{BF}{}", properties::TITLE),
+                title_node,
+            );
+        }
+    }
+
+    /// Adds an 880 linking entry (780/785/787 in alternate script).
+    fn add_880_linking(
+        &mut self,
+        instance: &RdfNode,
+        field: &Field,
+        linked_tag: &str,
+        lang: Option<&str>,
+    ) {
+        let related_node = self.graph.new_blank_node();
+
+        self.graph.add(
+            related_node.clone(),
+            format!("{RDF}type"),
+            RdfNode::bf_class(classes::INSTANCE),
+        );
+
+        // Add title from $t
+        if let Some(subfield_t) = field.subfields.iter().find(|s| s.code == 't') {
+            let title_node = self.graph.new_blank_node();
+            self.graph.add(
+                title_node.clone(),
+                format!("{RDF}type"),
+                RdfNode::bf_class(classes::TITLE),
+            );
+
+            let node = if let Some(l) = lang {
+                RdfNode::literal_with_lang(&subfield_t.value, l)
+            } else {
+                RdfNode::literal(&subfield_t.value)
+            };
+
+            self.graph.add(
+                title_node.clone(),
+                format!("{BF}{}", properties::MAIN_TITLE),
+                node,
+            );
+            self.graph.add(
+                related_node.clone(),
+                format!("{BF}{}", properties::TITLE),
+                title_node,
+            );
+        }
+
+        // Determine relationship type
+        let relationship = match linked_tag {
+            "780" => "precededBy",
+            "785" => "succeededBy",
+            _ => "relatedTo",
+        };
+
+        self.graph.add(
+            instance.clone(),
+            format!("{BF}{relationship}"),
+            related_node,
+        );
+    }
+
+    /// Processes 76X-78X linking entry fields.
+    ///
+    /// These fields describe relationships between bibliographic entities:
+    /// - 760: Main series entry
+    /// - 762: Subseries entry
+    /// - 765: Original language entry
+    /// - 767: Translation entry
+    /// - 770: Supplement/special issue entry
+    /// - 772: Parent record entry
+    /// - 773: Host item entry (part of)
+    /// - 774: Constituent unit entry
+    /// - 775: Other edition entry
+    /// - 776: Additional physical form entry
+    /// - 777: Issued with entry
+    /// - 780: Preceding entry
+    /// - 785: Succeeding entry
+    /// - 786: Data source entry
+    /// - 787: Nonspecific relationship entry
+    fn process_linking_entries(&mut self) {
+        let instance = match &self.instance_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+        let work = match &self.work_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+
+        let linking_tags = [
+            ("760", "hasSeries", true),        // Main series
+            ("762", "hasSubseries", true),     // Subseries
+            ("765", "translationOf", false),   // Original language
+            ("767", "hasTranslation", false),  // Translation
+            ("770", "supplement", true),       // Supplement
+            ("772", "supplementTo", true),     // Parent (supplement to)
+            ("773", "partOf", true),           // Host item
+            ("774", "hasPart", true),          // Constituent unit
+            ("775", "otherEdition", true),     // Other edition
+            ("776", "otherPhysicalFormat", true), // Additional physical form
+            ("777", "issuedWith", true),       // Issued with
+            ("780", "precededBy", true),       // Preceding
+            ("785", "succeededBy", true),      // Succeeding
+            ("786", "dataSource", false),      // Data source
+            ("787", "relatedTo", false),       // Nonspecific
+        ];
+
+        for (tag, relationship, is_instance_rel) in linking_tags {
+            if let Some(fields) = self.record.fields.get(tag) {
+                for field in fields {
+                    let related_node = self.graph.new_blank_node();
+
+                    // Determine if linking to Work or Instance
+                    let related_type = if is_instance_rel {
+                        classes::INSTANCE
+                    } else {
+                        classes::WORK
+                    };
+
+                    self.graph.add(
+                        related_node.clone(),
+                        format!("{RDF}type"),
+                        RdfNode::bf_class(related_type),
+                    );
+
+                    // Add title from $t
+                    if let Some(title) = field.subfields.iter().find(|s| s.code == 't') {
+                        let title_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            title_node.clone(),
+                            format!("{RDF}type"),
+                            RdfNode::bf_class(classes::TITLE),
+                        );
+                        self.graph.add(
+                            title_node.clone(),
+                            format!("{BF}{}", properties::MAIN_TITLE),
+                            RdfNode::literal(&title.value),
+                        );
+                        self.graph.add(
+                            related_node.clone(),
+                            format!("{BF}{}", properties::TITLE),
+                            title_node,
+                        );
+                    }
+
+                    // Add creator/contributor from $a
+                    if let Some(agent) = field.subfields.iter().find(|s| s.code == 'a') {
+                        let agent_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            agent_node.clone(),
+                            format!("{RDFS}label"),
+                            RdfNode::literal(&agent.value),
+                        );
+                        self.graph.add(
+                            related_node.clone(),
+                            format!("{BF}{}", properties::CONTRIBUTION),
+                            agent_node,
+                        );
+                    }
+
+                    // Add identifiers
+                    // $x = ISSN
+                    if let Some(issn) = field.subfields.iter().find(|s| s.code == 'x') {
+                        let id_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            id_node.clone(),
+                            format!("{RDF}type"),
+                            RdfNode::bf_class(classes::ISSN),
+                        );
+                        self.graph.add(
+                            id_node.clone(),
+                            format!("{RDF}value"),
+                            RdfNode::literal(&issn.value),
+                        );
+                        self.graph.add(
+                            related_node.clone(),
+                            format!("{BF}{}", properties::IDENTIFIED_BY),
+                            id_node,
+                        );
+                    }
+
+                    // $z = ISBN
+                    if let Some(isbn) = field.subfields.iter().find(|s| s.code == 'z') {
+                        let id_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            id_node.clone(),
+                            format!("{RDF}type"),
+                            RdfNode::bf_class(classes::ISBN),
+                        );
+                        self.graph.add(
+                            id_node.clone(),
+                            format!("{RDF}value"),
+                            RdfNode::literal(&isbn.value),
+                        );
+                        self.graph.add(
+                            related_node.clone(),
+                            format!("{BF}{}", properties::IDENTIFIED_BY),
+                            id_node,
+                        );
+                    }
+
+                    // $w = Record control number (other system IDs)
+                    for ctrl in field.subfields.iter().filter(|s| s.code == 'w') {
+                        let id_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            id_node.clone(),
+                            format!("{RDF}type"),
+                            RdfNode::bf_class(classes::LOCAL),
+                        );
+                        self.graph.add(
+                            id_node.clone(),
+                            format!("{RDF}value"),
+                            RdfNode::literal(&ctrl.value),
+                        );
+                        self.graph.add(
+                            related_node.clone(),
+                            format!("{BF}{}", properties::IDENTIFIED_BY),
+                            id_node,
+                        );
+                    }
+
+                    // Add relationship note from $i (relationship info)
+                    if let Some(rel_info) = field.subfields.iter().find(|s| s.code == 'i') {
+                        self.graph.add(
+                            related_node.clone(),
+                            format!("{BF}{}", properties::NOTE),
+                            RdfNode::literal(&rel_info.value),
+                        );
+                    }
+
+                    // Link from source entity
+                    let source = if is_instance_rel { &instance } else { &work };
+                    self.graph.add(
+                        source.clone(),
+                        format!("{BF}{relationship}"),
+                        related_node,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Processes series fields (490 and 8XX).
+    ///
+    /// - 490: Series statement (transcribed)
+    /// - 800: Series added entry - Personal name
+    /// - 810: Series added entry - Corporate name
+    /// - 811: Series added entry - Meeting name
+    /// - 830: Series added entry - Uniform title
+    fn process_series(&mut self) {
+        let instance = match &self.instance_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+        let work = match &self.work_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+
+        // 490 - Series Statement (transcribed form)
+        if let Some(fields) = self.record.fields.get("490") {
+            for field in fields {
+                // Check first indicator: 0 = not traced, 1 = traced
+                let is_traced = field.indicator1 == '1';
+
+                if let Some(subfield_a) = field.subfields.iter().find(|s| s.code == 'a') {
+                    // Always add series statement to Instance
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}seriesStatement"),
+                        RdfNode::literal(&subfield_a.value),
+                    );
+
+                    // If not traced (490 0_), also add as simple series
+                    if !is_traced {
+                        let series_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            series_node.clone(),
+                            format!("{RDF}type"),
+                            RdfNode::bf_class(classes::WORK),
+                        );
+                        self.graph.add(
+                            series_node.clone(),
+                            format!("{RDFS}label"),
+                            RdfNode::literal(&subfield_a.value),
+                        );
+                        self.graph.add(
+                            work.clone(),
+                            format!("{BF}hasSeries"),
+                            series_node,
+                        );
+                    }
+                }
+
+                // Add ISSN from $x if present
+                if let Some(issn) = field.subfields.iter().find(|s| s.code == 'x') {
+                    let id_node = self.graph.new_blank_node();
+                    self.graph.add(
+                        id_node.clone(),
+                        format!("{RDF}type"),
+                        RdfNode::bf_class(classes::ISSN),
+                    );
+                    self.graph.add(
+                        id_node.clone(),
+                        format!("{RDF}value"),
+                        RdfNode::literal(&issn.value),
+                    );
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}seriesEnumeration"),
+                        id_node,
+                    );
+                }
+
+                // Add volume number from $v
+                if let Some(vol) = field.subfields.iter().find(|s| s.code == 'v') {
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}seriesEnumeration"),
+                        RdfNode::literal(&vol.value),
+                    );
+                }
+            }
+        }
+
+        // 8XX - Series added entries (traced series)
+        let series_tags = [
+            ("800", classes::PERSON),       // Personal name
+            ("810", classes::ORGANIZATION), // Corporate name
+            ("811", classes::MEETING),      // Meeting name
+            ("830", classes::WORK),         // Uniform title
+        ];
+
+        for (tag, agent_type) in series_tags {
+            if let Some(fields) = self.record.fields.get(tag) {
+                for field in fields {
+                    let series_node = self.graph.new_blank_node();
+
+                    // Series is a Work
+                    self.graph.add(
+                        series_node.clone(),
+                        format!("{RDF}type"),
+                        RdfNode::bf_class(classes::WORK),
+                    );
+
+                    // Build series title from $a and $t
+                    let mut title_parts = Vec::new();
+                    for subfield in &field.subfields {
+                        match subfield.code {
+                            'a' | 't' => title_parts.push(subfield.value.clone()),
+                            _ => {}
+                        }
+                    }
+
+                    if !title_parts.is_empty() {
+                        let title_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            title_node.clone(),
+                            format!("{RDF}type"),
+                            RdfNode::bf_class(classes::TITLE),
+                        );
+                        self.graph.add(
+                            title_node.clone(),
+                            format!("{BF}{}", properties::MAIN_TITLE),
+                            RdfNode::literal(&title_parts.join(". ")),
+                        );
+                        self.graph.add(
+                            series_node.clone(),
+                            format!("{BF}{}", properties::TITLE),
+                            title_node,
+                        );
+                    }
+
+                    // For 800/810/811, add the agent (series is "by" this agent)
+                    if tag != "830" {
+                        let agent_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            agent_node.clone(),
+                            format!("{RDF}type"),
+                            RdfNode::bf_class(agent_type),
+                        );
+
+                        if let Some(name) = field.subfields.iter().find(|s| s.code == 'a') {
+                            self.graph.add(
+                                agent_node.clone(),
+                                format!("{RDFS}label"),
+                                RdfNode::literal(&name.value),
+                            );
+                        }
+
+                        // Link as contribution
+                        let contrib_node = self.graph.new_blank_node();
+                        self.graph.add(
+                            contrib_node.clone(),
+                            format!("{RDF}type"),
+                            RdfNode::bf_class(classes::CONTRIBUTION),
+                        );
+                        self.graph.add(
+                            contrib_node.clone(),
+                            format!("{BF}{}", properties::AGENT),
+                            agent_node,
+                        );
+                        self.graph.add(
+                            series_node.clone(),
+                            format!("{BF}{}", properties::CONTRIBUTION),
+                            contrib_node,
+                        );
+                    }
+
+                    // Add volume/numbering from $v
+                    if let Some(vol) = field.subfields.iter().find(|s| s.code == 'v') {
+                        self.graph.add(
+                            instance.clone(),
+                            format!("{BF}seriesEnumeration"),
+                            RdfNode::literal(&vol.value),
+                        );
+                    }
+
+                    // Link Work to series
+                    self.graph.add(
+                        work.clone(),
+                        format!("{BF}hasSeries"),
+                        series_node,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Processes format-specific fields for music, maps, serials, etc.
+    fn process_format_specific_fields(&mut self) {
+        let work = match &self.work_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+        let instance = match &self.instance_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+
+        // Determine format from Leader position 06
+        match self.record.leader.record_type {
+            'c' | 'd' | 'j' => self.process_music_fields(&work, &instance),
+            'e' | 'f' => self.process_cartographic_fields(&work, &instance),
+            _ => {}
+        }
+
+        // Serials (bibliographic level 's' or 'i')
+        if matches!(self.record.leader.bibliographic_level, 's' | 'i') {
+            self.process_serial_fields(&instance);
+        }
+    }
+
+    /// Processes music-specific fields.
+    fn process_music_fields(&mut self, work: &RdfNode, instance: &RdfNode) {
+        // 382 - Medium of Performance
+        if let Some(fields) = self.record.fields.get("382") {
+            for field in fields {
+                let medium_node = self.graph.new_blank_node();
+                self.graph.add(
+                    medium_node.clone(),
+                    format!("{RDF}type"),
+                    RdfNode::uri(format!("{BF}MusicMedium")),
+                );
+
+                // $a = Medium of performance
+                for subfield in field.subfields.iter().filter(|s| s.code == 'a') {
+                    self.graph.add(
+                        medium_node.clone(),
+                        format!("{RDFS}label"),
+                        RdfNode::literal(&subfield.value),
+                    );
+                }
+
+                // $n = Number of performers
+                if let Some(count) = field.subfields.iter().find(|s| s.code == 'n') {
+                    self.graph.add(
+                        medium_node.clone(),
+                        format!("{BF}count"),
+                        RdfNode::literal(&count.value),
+                    );
+                }
+
+                self.graph.add(
+                    work.clone(),
+                    format!("{BF}musicMedium"),
+                    medium_node,
+                );
+            }
+        }
+
+        // 384 - Key
+        if let Some(fields) = self.record.fields.get("384") {
+            for field in fields {
+                if let Some(key) = field.subfields.iter().find(|s| s.code == 'a') {
+                    self.graph.add(
+                        work.clone(),
+                        format!("{BF}musicKey"),
+                        RdfNode::literal(&key.value),
+                    );
+                }
+            }
+        }
+
+        // 348 - Format of Notated Music
+        if let Some(fields) = self.record.fields.get("348") {
+            for field in fields {
+                if let Some(format) = field.subfields.iter().find(|s| s.code == 'a') {
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}musicFormat"),
+                        RdfNode::literal(&format.value),
+                    );
+                }
+            }
+        }
+    }
+
+    /// Processes cartographic (map) fields.
+    fn process_cartographic_fields(&mut self, work: &RdfNode, instance: &RdfNode) {
+        // 255 - Cartographic Mathematical Data
+        if let Some(fields) = self.record.fields.get("255") {
+            for field in fields {
+                let carto_node = self.graph.new_blank_node();
+                self.graph.add(
+                    carto_node.clone(),
+                    format!("{RDF}type"),
+                    RdfNode::uri(format!("{BF}Cartographic")),
+                );
+
+                // $a = Scale statement
+                if let Some(scale) = field.subfields.iter().find(|s| s.code == 'a') {
+                    self.graph.add(
+                        carto_node.clone(),
+                        format!("{BF}scale"),
+                        RdfNode::literal(&scale.value),
+                    );
+                }
+
+                // $b = Projection
+                if let Some(proj) = field.subfields.iter().find(|s| s.code == 'b') {
+                    self.graph.add(
+                        carto_node.clone(),
+                        format!("{BF}projection"),
+                        RdfNode::literal(&proj.value),
+                    );
+                }
+
+                // $c = Coordinates
+                if let Some(coords) = field.subfields.iter().find(|s| s.code == 'c') {
+                    self.graph.add(
+                        carto_node.clone(),
+                        format!("{BF}coordinates"),
+                        RdfNode::literal(&coords.value),
+                    );
+                }
+
+                self.graph.add(
+                    work.clone(),
+                    format!("{BF}cartographicAttributes"),
+                    carto_node,
+                );
+            }
+        }
+
+        // 342 - Geospatial Reference Data
+        if let Some(fields) = self.record.fields.get("342") {
+            for field in fields {
+                if let Some(name) = field.subfields.iter().find(|s| s.code == 'a') {
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}geographicCoverage"),
+                        RdfNode::literal(&name.value),
+                    );
+                }
+            }
+        }
+    }
+
+    /// Processes serial-specific fields.
+    fn process_serial_fields(&mut self, instance: &RdfNode) {
+        // 310 - Current Publication Frequency
+        if let Some(fields) = self.record.fields.get("310") {
+            for field in fields {
+                if let Some(freq) = field.subfields.iter().find(|s| s.code == 'a') {
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}frequency"),
+                        RdfNode::literal(&freq.value),
+                    );
+                }
+            }
+        }
+
+        // 321 - Former Publication Frequency
+        if let Some(fields) = self.record.fields.get("321") {
+            for field in fields {
+                if let Some(freq) = field.subfields.iter().find(|s| s.code == 'a') {
+                    let freq_node = self.graph.new_blank_node();
+                    self.graph.add(
+                        freq_node.clone(),
+                        format!("{RDFS}label"),
+                        RdfNode::literal(&freq.value),
+                    );
+
+                    // Add date range if present
+                    if let Some(dates) = field.subfields.iter().find(|s| s.code == 'b') {
+                        self.graph.add(
+                            freq_node.clone(),
+                            format!("{BF}{}", properties::DATE),
+                            RdfNode::literal(&dates.value),
+                        );
+                    }
+
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}frequency"),
+                        freq_node,
+                    );
+                }
+            }
+        }
+
+        // 362 - Dates of Publication
+        if let Some(fields) = self.record.fields.get("362") {
+            for field in fields {
+                if let Some(dates) = field.subfields.iter().find(|s| s.code == 'a') {
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}firstIssue"),
+                        RdfNode::literal(&dates.value),
+                    );
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1037,5 +2397,288 @@ mod tests {
         let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
         assert!(serialized.contains("http://example.org/work/rec123"));
         assert!(serialized.contains("http://example.org/instance/rec123"));
+    }
+
+    // ========================================================================
+    // Edge Case Tests (mrrc-uab.4.4)
+    // ========================================================================
+
+    #[test]
+    fn test_880_alternate_script_title() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test880".to_string());
+
+        // Add 245 in Latin script
+        let mut field_245 = Field::new("245".to_string(), '0', '0');
+        field_245.add_subfield('a', "Test Title".to_string());
+        record.add_field(field_245);
+
+        // Add 880 with Japanese alternate
+        let mut field_880 = Field::new("880".to_string(), '0', '0');
+        field_880.add_subfield('6', "245-00".to_string());
+        field_880.add_subfield('a', "東海道五十三次".to_string());
+        record.add_field(field_880);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        // Should have both titles
+        assert!(serialized.contains("Test Title"));
+        assert!(serialized.contains("東海道五十三次"));
+    }
+
+    #[test]
+    fn test_linking_entry_780_preceding() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test780".to_string());
+
+        // Add 780 - Preceding entry
+        let mut field_780 = Field::new("780".to_string(), '0', '0');
+        field_780.add_subfield('t', "Earlier Journal Title".to_string());
+        field_780.add_subfield('x', "1234-5678".to_string());
+        record.add_field(field_780);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("precededBy"));
+        assert!(serialized.contains("Earlier Journal Title"));
+        assert!(serialized.contains("1234-5678"));
+    }
+
+    #[test]
+    fn test_linking_entry_785_succeeding() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test785".to_string());
+
+        // Add 785 - Succeeding entry
+        let mut field_785 = Field::new("785".to_string(), '0', '0');
+        field_785.add_subfield('t', "Later Journal Title".to_string());
+        field_785.add_subfield('w', "(OCoLC)12345678".to_string());
+        record.add_field(field_785);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("succeededBy"));
+        assert!(serialized.contains("Later Journal Title"));
+    }
+
+    #[test]
+    fn test_series_490_untraced() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test490".to_string());
+
+        // Add 490 - Series statement (untraced)
+        let mut field_490 = Field::new("490".to_string(), '0', ' ');
+        field_490.add_subfield('a', "Library science series".to_string());
+        field_490.add_subfield('v', "vol. 5".to_string());
+        record.add_field(field_490);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("seriesStatement"));
+        assert!(serialized.contains("Library science series"));
+        assert!(serialized.contains("seriesEnumeration"));
+    }
+
+    #[test]
+    fn test_series_830_traced() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test830".to_string());
+
+        // Add 830 - Series added entry
+        let mut field_830 = Field::new("830".to_string(), ' ', '0');
+        field_830.add_subfield('a', "ACM monograph series".to_string());
+        field_830.add_subfield('v', "no. 42".to_string());
+        record.add_field(field_830);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("hasSeries"));
+        assert!(serialized.contains("ACM monograph series"));
+    }
+
+    #[test]
+    fn test_isbn_with_qualifier() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test020q".to_string());
+
+        // Add 020 with qualifier
+        let mut field_020 = Field::new("020".to_string(), ' ', ' ');
+        field_020.add_subfield('a', "9780123456789".to_string());
+        field_020.add_subfield('q', "hardcover".to_string());
+        record.add_field(field_020);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("Isbn"));
+        assert!(serialized.contains("9780123456789"));
+        assert!(serialized.contains("qualifier"));
+        assert!(serialized.contains("hardcover"));
+    }
+
+    #[test]
+    fn test_isbn_invalid() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test020z".to_string());
+
+        // Add 020 with invalid ISBN
+        let mut field_020 = Field::new("020".to_string(), ' ', ' ');
+        field_020.add_subfield('z', "9780000000000".to_string());
+        record.add_field(field_020);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("9780000000000"));
+        assert!(serialized.contains("invalid"));
+    }
+
+    #[test]
+    fn test_issn_with_linking() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test022l".to_string());
+
+        // Add 022 with linking ISSN
+        let mut field_022 = Field::new("022".to_string(), ' ', ' ');
+        field_022.add_subfield('a', "1234-5678".to_string());
+        field_022.add_subfield('l', "1111-2222".to_string());
+        record.add_field(field_022);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("1234-5678"));
+        assert!(serialized.contains("1111-2222"));
+        // With BFLC enabled, should have IssnL type
+        assert!(serialized.contains("IssnL"));
+    }
+
+    #[test]
+    fn test_035_with_prefix() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test035".to_string());
+
+        // Add 035 with OCLC prefix
+        let mut field_035 = Field::new("035".to_string(), ' ', ' ');
+        field_035.add_subfield('a', "(OCoLC)12345678".to_string());
+        record.add_field(field_035);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        // Should parse the prefix
+        assert!(serialized.contains("12345678"));
+        assert!(serialized.contains("OCoLC"));
+    }
+
+    #[test]
+    fn test_music_format_fields() {
+        let mut leader = make_test_leader();
+        leader.record_type = 'c'; // Notated music
+        let mut record = Record::new(leader);
+        record.add_control_field("001".to_string(), "testmusic".to_string());
+
+        // Add 382 - Medium of Performance
+        let mut field_382 = Field::new("382".to_string(), ' ', ' ');
+        field_382.add_subfield('a', "piano".to_string());
+        field_382.add_subfield('n', "1".to_string());
+        record.add_field(field_382);
+
+        // Add 384 - Key
+        let mut field_384 = Field::new("384".to_string(), ' ', ' ');
+        field_384.add_subfield('a', "C major".to_string());
+        record.add_field(field_384);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("musicMedium"));
+        assert!(serialized.contains("piano"));
+        assert!(serialized.contains("musicKey"));
+        assert!(serialized.contains("C major"));
+    }
+
+    #[test]
+    fn test_cartographic_fields() {
+        let mut leader = make_test_leader();
+        leader.record_type = 'e'; // Cartographic
+        let mut record = Record::new(leader);
+        record.add_control_field("001".to_string(), "testmap".to_string());
+
+        // Add 255 - Cartographic Mathematical Data
+        let mut field_255 = Field::new("255".to_string(), ' ', ' ');
+        field_255.add_subfield('a', "Scale 1:24,000".to_string());
+        field_255.add_subfield('b', "Mercator proj.".to_string());
+        record.add_field(field_255);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("Cartographic"));
+        assert!(serialized.contains("scale"));
+        assert!(serialized.contains("1:24,000"));
+        assert!(serialized.contains("projection"));
+    }
+
+    #[test]
+    fn test_serial_frequency_fields() {
+        let mut leader = make_test_leader();
+        leader.bibliographic_level = 's'; // Serial
+        let mut record = Record::new(leader);
+        record.add_control_field("001".to_string(), "testserial".to_string());
+
+        // Add 310 - Current Publication Frequency
+        let mut field_310 = Field::new("310".to_string(), ' ', ' ');
+        field_310.add_subfield('a', "Monthly".to_string());
+        record.add_field(field_310);
+
+        // Add 362 - Dates of Publication
+        let mut field_362 = Field::new("362".to_string(), '0', ' ');
+        field_362.add_subfield('a', "Vol. 1, no. 1 (Jan. 1990)-".to_string());
+        record.add_field(field_362);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("Serial"));
+        assert!(serialized.contains("frequency"));
+        assert!(serialized.contains("Monthly"));
+        assert!(serialized.contains("firstIssue"));
+    }
+
+    #[test]
+    fn test_024_with_source() {
+        let mut record = Record::new(make_test_leader());
+        record.add_control_field("001".to_string(), "test024".to_string());
+
+        // Add 024 with ind1=7 (source in $2)
+        let mut field_024 = Field::new("024".to_string(), '7', ' ');
+        field_024.add_subfield('a', "10.1000/xyz123".to_string());
+        field_024.add_subfield('2', "doi".to_string());
+        record.add_field(field_024);
+
+        let config = BibframeConfig::default();
+        let graph = convert_marc_to_bibframe(&record, &config);
+
+        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        assert!(serialized.contains("10.1000/xyz123"));
+        assert!(serialized.contains("doi"));
     }
 }

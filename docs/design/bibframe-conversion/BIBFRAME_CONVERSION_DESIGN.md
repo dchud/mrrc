@@ -471,5 +471,65 @@ Build from:
 
 ---
 
-*Last updated: 2026-01-27*
+## Implementation Status
+
+### Completed Tasks
+
+| Task | Status | Notes |
+|------|--------|-------|
+| mrrc-uab.1 | ✓ Complete | LOC specification research |
+| mrrc-uab.2 | ✓ Complete | LOC tool setup (marc2bibframe2, bibframe2marc) |
+| mrrc-uab.3 | ✓ Complete | Baseline generation with 12 test categories |
+| mrrc-uab.4.1 | ✓ Complete | RDF library selection (oxrdfio) |
+| mrrc-uab.4.2 | ✓ Complete | Core MARC→BIBFRAME conversion |
+| mrrc-uab.4.3 | ✓ Complete | Core BIBFRAME→MARC conversion |
+| mrrc-uab.4.4 | ✓ Complete | Edge case and complex field handling |
+
+### Edge Case Coverage (mrrc-uab.4.4)
+
+**Implemented edge cases:**
+
+1. **880 Linked Fields** - Alternate script representations
+   - Extracts linked tag from $6 subfield
+   - Detects script from Unicode ranges (Japanese, Korean, Chinese, Cyrillic, Hebrew, Arabic, Greek)
+   - Creates parallel literals with appropriate `@lang` tags
+
+2. **Linking Fields (76X-78X)** - Related work references
+   - All 15 linking entry types supported (760-787)
+   - Maps to appropriate BIBFRAME relationships (precededBy, succeededBy, partOf, etc.)
+   - Extracts identifiers ($x=ISSN, $z=ISBN, $w=control numbers)
+
+3. **Series Fields (490/8XX)** - Series treatment
+   - 490 untraced → bf:seriesStatement
+   - 490 traced → links to 8XX entries
+   - 800/810/811/830 → bf:hasSeries with agent contributions
+
+4. **Identifier Enhancements**
+   - ISBN qualifiers ($q) → bf:qualifier
+   - ISBN invalid ($z) → bf:status "invalid"
+   - ISSN linking ($l) → bflc:IssnL
+   - ISSN incorrect/canceled ($y/$z) → bf:status
+   - 024 source ($2) → bf:source
+   - 035 prefix parsing → bf:source
+
+5. **Format-Specific Fields**
+   - Music: 382 (medium of performance), 384 (key), 348 (notation format)
+   - Cartographic: 255 (scale, projection, coordinates), 342 (geospatial)
+   - Serials: 310/321 (frequency), 362 (dates of publication)
+
+6. **Round-Trip Support**
+   - Series fields (490/830) preserved through MARC→BIBFRAME→MARC
+   - Linking entries (780/785) preserved through round-trip
+   - Enhanced identifiers preserve qualifiers and status
+
+### Test Coverage
+
+- 48 BIBFRAME-specific unit tests
+- All edge cases have dedicated tests
+- Round-trip tests verify bidirectional conversion
+- 474 total library tests passing
+
+---
+
+*Last updated: 2026-01-28*
 *Epic: mrrc-uab*
