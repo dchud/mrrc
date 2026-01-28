@@ -201,12 +201,18 @@ impl RdfGraph {
         for triple in &self.triples {
             let ox_triple = to_oxrdf_triple(triple)?;
             serializer.serialize_triple(&ox_triple).map_err(|e| {
-                MarcError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+                MarcError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
             })?;
         }
 
         serializer.finish().map_err(|e| {
-            MarcError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+            MarcError::IoError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ))
         })?;
 
         Ok(())
@@ -260,26 +266,28 @@ fn to_oxrdf_triple(triple: &RdfTriple) -> Result<Triple> {
         RdfNode::Uri(uri) => NamedOrBlankNode::NamedNode(
             NamedNode::new(uri).map_err(|e| MarcError::ParseError(format!("Invalid URI: {e}")))?,
         ),
-        RdfNode::BlankNode(id) => NamedOrBlankNode::BlankNode(BlankNode::new(id).map_err(|e| {
-            MarcError::ParseError(format!("Invalid blank node ID: {e}"))
-        })?),
+        RdfNode::BlankNode(id) => NamedOrBlankNode::BlankNode(
+            BlankNode::new(id)
+                .map_err(|e| MarcError::ParseError(format!("Invalid blank node ID: {e}")))?,
+        ),
         RdfNode::Literal { .. } => {
             return Err(MarcError::ParseError(
                 "Literals cannot be triple subjects".into(),
             ));
-        }
+        },
     };
 
-    let predicate =
-        NamedNode::new(&triple.predicate).map_err(|e| MarcError::ParseError(format!("Invalid predicate URI: {e}")))?;
+    let predicate = NamedNode::new(&triple.predicate)
+        .map_err(|e| MarcError::ParseError(format!("Invalid predicate URI: {e}")))?;
 
     let object = match &triple.object {
         RdfNode::Uri(uri) => Term::NamedNode(
             NamedNode::new(uri).map_err(|e| MarcError::ParseError(format!("Invalid URI: {e}")))?,
         ),
-        RdfNode::BlankNode(id) => Term::BlankNode(BlankNode::new(id).map_err(|e| {
-            MarcError::ParseError(format!("Invalid blank node ID: {e}"))
-        })?),
+        RdfNode::BlankNode(id) => Term::BlankNode(
+            BlankNode::new(id)
+                .map_err(|e| MarcError::ParseError(format!("Invalid blank node ID: {e}")))?,
+        ),
         RdfNode::Literal {
             value,
             language,
@@ -296,7 +304,7 @@ fn to_oxrdf_triple(triple: &RdfTriple) -> Result<Triple> {
                 Literal::new_simple_literal(value)
             };
             Term::Literal(lit)
-        }
+        },
     };
 
     Ok(Triple::new(subject, predicate, object))
@@ -310,7 +318,7 @@ fn from_oxrdf_quad(quad: &Quad) -> Result<RdfTriple> {
         #[allow(unreachable_patterns)]
         _ => {
             return Err(MarcError::ParseError("Unsupported subject type".into()));
-        }
+        },
     };
 
     let predicate = quad.predicate.as_str().to_string();
@@ -331,11 +339,11 @@ fn from_oxrdf_quad(quad: &Quad) -> Result<RdfTriple> {
                 language,
                 datatype,
             }
-        }
+        },
         #[allow(unreachable_patterns)]
         _ => {
             return Err(MarcError::ParseError("Unsupported object type".into()));
-        }
+        },
     };
 
     Ok(RdfTriple::new(subject, predicate, object))
@@ -405,7 +413,9 @@ mod tests {
             RdfNode::literal("Test"),
         );
 
-        let nt = graph.serialize(RdfFormat::NTriples).expect("serialization failed");
+        let nt = graph
+            .serialize(RdfFormat::NTriples)
+            .expect("serialization failed");
         assert!(nt.contains("<http://example.org/work1>"));
         assert!(nt.contains("bibframe/Work"));
         assert!(nt.contains("\"Test\""));
@@ -421,7 +431,9 @@ mod tests {
             RdfNode::bf_class("Work"),
         );
 
-        let nt = graph.serialize(RdfFormat::NTriples).expect("serialization failed");
+        let nt = graph
+            .serialize(RdfFormat::NTriples)
+            .expect("serialization failed");
         let parsed = RdfGraph::parse(&nt, RdfFormat::NTriples).expect("parsing failed");
 
         assert_eq!(parsed.len(), graph.len());

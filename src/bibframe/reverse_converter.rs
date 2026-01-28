@@ -134,7 +134,7 @@ impl<'a> BibframeToMarcConverter<'a> {
     /// Creates a Leader based on Work and Instance types.
     fn create_leader(&self) -> Leader {
         let mut record_type = 'a'; // Default: language material
-        let mut bib_level = 'm';   // Default: monograph
+        let mut bib_level = 'm'; // Default: monograph
 
         // Determine record type from Work type
         if let Some(ref work_key) = self.work_node {
@@ -247,7 +247,9 @@ impl<'a> BibframeToMarcConverter<'a> {
         field.push('s');
 
         // Date 1 (extract from provision activity if available)
-        let date1 = self.extract_publication_date().unwrap_or_else(|| "    ".to_string());
+        let date1 = self
+            .extract_publication_date()
+            .unwrap_or_else(|| "    ".to_string());
         let date1_truncated = &date1[..date1.len().min(4)];
         for c in date1_truncated.chars() {
             field.push(c);
@@ -322,7 +324,8 @@ impl<'a> BibframeToMarcConverter<'a> {
                                 if act_pred == &format!("{BF}{}", properties::DATE) {
                                     if let RdfNode::Literal { value, .. } = act_obj {
                                         // Extract 4-digit year
-                                        let year: String = value.chars()
+                                        let year: String = value
+                                            .chars()
                                             .filter(char::is_ascii_digit)
                                             .take(4)
                                             .collect();
@@ -462,7 +465,8 @@ impl<'a> BibframeToMarcConverter<'a> {
 
         // Find the agent
         let agent_prop = format!("{BF}{}", properties::AGENT);
-        let agent_key = contrib_props.iter()
+        let agent_key = contrib_props
+            .iter()
             .find(|(p, _)| p == &agent_prop)
             .map(|(_, o)| node_to_key(o))?;
 
@@ -516,11 +520,11 @@ impl<'a> BibframeToMarcConverter<'a> {
                                 field.add_subfield('4', code.to_string());
                             }
                         }
-                    }
+                    },
                     RdfNode::Literal { value, .. } => {
                         field.add_subfield('e', value.clone());
-                    }
-                    RdfNode::BlankNode(_) => {}
+                    },
+                    RdfNode::BlankNode(_) => {},
                 }
             }
         }
@@ -998,8 +1002,17 @@ fn node_to_key(node: &RdfNode) -> String {
 /// Checks if a type URI is a Work subtype.
 fn is_work_subtype(type_uri: &str) -> bool {
     let subtypes = [
-        "Text", "NotatedMusic", "Cartography", "MovingImage", "StillImage",
-        "Audio", "MusicAudio", "Multimedia", "MixedMaterial", "Object", "Kit",
+        "Text",
+        "NotatedMusic",
+        "Cartography",
+        "MovingImage",
+        "StillImage",
+        "Audio",
+        "MusicAudio",
+        "Multimedia",
+        "MixedMaterial",
+        "Object",
+        "Kit",
     ];
     subtypes.iter().any(|t| type_uri.ends_with(t))
 }
@@ -1079,8 +1092,11 @@ fn identifier_type_to_tag(type_uri: &str) -> &'static str {
         "020"
     } else if type_uri.ends_with("Issn") {
         "022"
-    } else if type_uri.ends_with("Isrc") || type_uri.ends_with("Upc")
-        || type_uri.ends_with("Ismn") || type_uri.ends_with("Ean") {
+    } else if type_uri.ends_with("Isrc")
+        || type_uri.ends_with("Upc")
+        || type_uri.ends_with("Ismn")
+        || type_uri.ends_with("Ean")
+    {
         "024"
     } else {
         "035" // Default: system control number
@@ -1147,7 +1163,10 @@ mod tests {
         assert!(result.fields.contains_key("245"));
         let titles = result.fields.get("245").unwrap();
         assert!(!titles.is_empty());
-        assert!(titles[0].subfields.iter().any(|s| s.code == 'a' && s.value.contains("Test Title")));
+        assert!(titles[0]
+            .subfields
+            .iter()
+            .any(|s| s.code == 'a' && s.value.contains("Test Title")));
     }
 
     #[test]
@@ -1199,7 +1218,10 @@ mod tests {
 
         assert!(result.fields.contains_key("020"));
         let isbns = result.fields.get("020").unwrap();
-        assert!(isbns[0].subfields.iter().any(|s| s.value.contains("9780123456789")));
+        assert!(isbns[0]
+            .subfields
+            .iter()
+            .any(|s| s.value.contains("9780123456789")));
     }
 
     #[test]
@@ -1264,7 +1286,10 @@ mod tests {
         // Should have series field
         assert!(result.fields.contains_key("830"));
         let series = result.fields.get("830").unwrap();
-        assert!(series[0].subfields.iter().any(|s| s.value.contains("Computer science")));
+        assert!(series[0]
+            .subfields
+            .iter()
+            .any(|s| s.value.contains("Computer science")));
     }
 
     #[test]
@@ -1285,8 +1310,14 @@ mod tests {
         // Should have linking entry
         assert!(result.fields.contains_key("780"));
         let linking = result.fields.get("780").unwrap();
-        assert!(linking[0].subfields.iter().any(|s| s.code == 't' && s.value.contains("Previous Title")));
-        assert!(linking[0].subfields.iter().any(|s| s.code == 'x' && s.value.contains("1234-5678")));
+        assert!(linking[0]
+            .subfields
+            .iter()
+            .any(|s| s.code == 't' && s.value.contains("Previous Title")));
+        assert!(linking[0]
+            .subfields
+            .iter()
+            .any(|s| s.code == 'x' && s.value.contains("1234-5678")));
     }
 
     #[test]
@@ -1307,6 +1338,9 @@ mod tests {
         // Should have series statement
         assert!(result.fields.contains_key("490"));
         let series = result.fields.get("490").unwrap();
-        assert!(series[0].subfields.iter().any(|s| s.value.contains("Library science")));
+        assert!(series[0]
+            .subfields
+            .iter()
+            .any(|s| s.value.contains("Library science")));
     }
 }

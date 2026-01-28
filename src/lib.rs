@@ -106,12 +106,12 @@
 //! - **Character Encodings** — MARC-8 and UTF-8 with automatic detection
 
 pub mod arrow_impl;
-#[cfg(feature = "format-bibframe")]
-pub mod bibframe;
 pub mod authority_queries;
 pub mod authority_reader;
 pub mod authority_record;
 pub mod authority_writer;
+#[cfg(feature = "format-bibframe")]
+pub mod bibframe;
 pub mod bibliographic_helpers;
 pub mod boundary_scanner;
 pub mod csv;

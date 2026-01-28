@@ -6,6 +6,8 @@
 //! Since the MARCXML formats differ slightly between LOC baselines and mrrc's parser,
 //! we create equivalent records programmatically and compare the structural output.
 
+#![cfg(feature = "format-bibframe")]
+
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -13,27 +15,6 @@ use std::path::Path;
 use mrrc::bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat};
 use mrrc::leader::Leader;
 use mrrc::record::{Field, Record};
-
-/// Represents a simplified triple for comparison purposes.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct SimpleTriple {
-    /// Subject (normalized - blank nodes become "_:blank")
-    subject_type: String,
-    /// Predicate (local name only)
-    predicate: String,
-    /// Object type and value
-    object: ObjectValue,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum ObjectValue {
-    /// URI (local name only for comparison)
-    Uri(String),
-    /// Literal value
-    Literal(String),
-    /// Blank node (just marks it as blank)
-    BlankNode,
-}
 
 /// Extracts key structural elements from RDF/XML for comparison.
 /// Returns a set of simplified "facts" about the graph.
@@ -76,7 +57,10 @@ fn extract_structural_facts(rdf_xml: &str) -> HashSet<String> {
 
     for (local, prefixed) in classes {
         // Check for both bf:Class and <Class xmlns="...">
-        if rdf_xml.contains(prefixed) || rdf_xml.contains(&format!("<{} ", local)) || rdf_xml.contains(&format!("<{}/>", local)) {
+        if rdf_xml.contains(prefixed)
+            || rdf_xml.contains(&format!("<{} ", local))
+            || rdf_xml.contains(&format!("<{}/>", local))
+        {
             facts.insert(format!("has_class:{}", prefixed));
         }
     }
@@ -104,7 +88,10 @@ fn extract_structural_facts(rdf_xml: &str) -> HashSet<String> {
 
     for (local, prefixed) in properties {
         // Check for both bf:prop and <prop xmlns="...">
-        if rdf_xml.contains(prefixed) || rdf_xml.contains(&format!("<{} ", local)) || rdf_xml.contains(&format!("<{}>", local)) {
+        if rdf_xml.contains(prefixed)
+            || rdf_xml.contains(&format!("<{} ", local))
+            || rdf_xml.contains(&format!("<{}>", local))
+        {
             facts.insert(format!("has_property:{}", prefixed));
         }
     }
@@ -201,7 +188,10 @@ fn compare_baseline_with_record(
         .serialize(RdfFormat::RdfXml)
         .expect("Failed to serialize");
 
-    eprintln!("=== DEBUG: mrrc RDF output ({} bytes) ===", mrrc_output.len());
+    eprintln!(
+        "=== DEBUG: mrrc RDF output ({} bytes) ===",
+        mrrc_output.len()
+    );
     if mrrc_output.len() < 2000 {
         eprintln!("{}", mrrc_output);
     } else {

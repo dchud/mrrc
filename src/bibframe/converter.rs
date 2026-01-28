@@ -78,11 +78,8 @@ impl<'a> MarcToBibframeConverter<'a> {
         self.work_node = Some(node.clone());
 
         // Add rdf:type
-        self.graph.add(
-            node,
-            format!("{RDF}type"),
-            RdfNode::bf_class(classes::WORK),
-        );
+        self.graph
+            .add(node, format!("{RDF}type"), RdfNode::bf_class(classes::WORK));
     }
 
     /// Creates the Instance node with appropriate URI or blank node.
@@ -92,11 +89,8 @@ impl<'a> MarcToBibframeConverter<'a> {
 
         // Add rdf:type - determine from Leader if possible
         let instance_type = self.determine_instance_type();
-        self.graph.add(
-            node,
-            format!("{RDF}type"),
-            RdfNode::bf_class(instance_type),
-        );
+        self.graph
+            .add(node, format!("{RDF}type"), RdfNode::bf_class(instance_type));
     }
 
     /// Links Work and Instance with hasInstance/instanceOf.
@@ -218,29 +212,29 @@ impl<'a> MarcToBibframeConverter<'a> {
                         format!("{BF}{}", properties::MAIN_TITLE),
                         RdfNode::literal(&subfield.value),
                     );
-                }
+                },
                 'b' => {
                     self.graph.add(
                         title_node.clone(),
                         format!("{BF}{}", properties::SUBTITLE),
                         RdfNode::literal(&subfield.value),
                     );
-                }
+                },
                 'n' => {
                     self.graph.add(
                         title_node.clone(),
                         format!("{BF}{}", properties::PART_NUMBER),
                         RdfNode::literal(&subfield.value),
                     );
-                }
+                },
                 'p' => {
                     self.graph.add(
                         title_node.clone(),
                         format!("{BF}{}", properties::PART_NAME),
                         RdfNode::literal(&subfield.value),
                     );
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -360,7 +354,7 @@ impl<'a> MarcToBibframeConverter<'a> {
         for subfield in &field.subfields {
             match subfield.code {
                 'a' | 'b' | 'c' | 'd' | 'q' => name_parts.push(subfield.value.clone()),
-                _ => {}
+                _ => {},
             }
         }
 
@@ -405,7 +399,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                             RdfNode::uri(format!("{RELATORS}{code}")),
                         );
                     }
-                }
+                },
                 'e' => {
                     // Relator term - use as literal if no $4
                     if !field.subfields.iter().any(|s| s.code == '4') {
@@ -415,8 +409,8 @@ impl<'a> MarcToBibframeConverter<'a> {
                             RdfNode::literal(&subfield.value),
                         );
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
     }
@@ -495,8 +489,8 @@ impl<'a> MarcToBibframeConverter<'a> {
             match subfield.code {
                 'a' | 'b' | 'c' | 'd' | 'v' | 'x' | 'y' | 'z' => {
                     label_parts.push(subfield.value.clone());
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -760,11 +754,11 @@ impl<'a> MarcToBibframeConverter<'a> {
 
         // Determine type from first indicator
         let id_type = match field.indicator1 {
-            '0' => "Isrc",   // International Standard Recording Code
-            '1' => "Upc",    // Universal Product Code
-            '2' => "Ismn",   // International Standard Music Number
-            '3' => "Ean",    // International Article Number
-            '4' => "Sici",   // Serial Item and Contribution Identifier
+            '0' => "Isrc", // International Standard Recording Code
+            '1' => "Upc",  // Universal Product Code
+            '2' => "Ismn", // International Standard Music Number
+            '3' => "Ean",  // International Article Number
+            '4' => "Sici", // Serial Item and Contribution Identifier
             '7' => {
                 // Source specified in $2
                 field
@@ -773,7 +767,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                     .find(|s| s.code == '2')
                     .map(|s| s.value.as_str())
                     .unwrap_or("Identifier")
-            }
+            },
             '8' => "Identifier", // Unspecified type
             _ => "Identifier",
         };
@@ -786,7 +780,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                     format!("{RDF}type"),
                     RdfNode::bf_class(id_type),
                 );
-            }
+            },
             _ => {
                 self.graph.add(
                     id_node.clone(),
@@ -803,7 +797,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                         );
                     }
                 }
-            }
+            },
         }
 
         // $a contains the identifier value
@@ -997,7 +991,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                         // Copyright date - handle specially
                         self.add_copyright_date(&instance, field);
                         continue;
-                    }
+                    },
                     _ => classes::PUBLICATION, // Default: ind2='1' or blank
                 };
                 self.add_provision_activity(&instance, field, activity_type);
@@ -1046,7 +1040,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                             RdfNode::literal(&subfield.value),
                         );
                     }
-                }
+                },
                 'b' => {
                     // Agent (publisher/producer/etc.)
                     let agent_node = self.graph.new_blank_node();
@@ -1069,7 +1063,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                             RdfNode::literal(&subfield.value),
                         );
                     }
-                }
+                },
                 'c' => {
                     // Date
                     self.graph.add(
@@ -1086,8 +1080,8 @@ impl<'a> MarcToBibframeConverter<'a> {
                             RdfNode::literal(&subfield.value),
                         );
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -1130,7 +1124,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                                 format!("{BF}{}", properties::EXTENT),
                                 RdfNode::literal(&subfield.value),
                             );
-                        }
+                        },
                         'c' => {
                             // Dimensions
                             self.graph.add(
@@ -1138,8 +1132,8 @@ impl<'a> MarcToBibframeConverter<'a> {
                                 format!("{BF}{}", properties::DIMENSIONS),
                                 RdfNode::literal(&subfield.value),
                             );
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 }
             }
@@ -1278,7 +1272,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                     // Title fields
                     "245" | "246" | "247" => {
                         self.add_880_title(&instance, field, lang_tag.as_deref());
-                    }
+                    },
                     // Edition statement
                     "250" => {
                         if let Some(subfield_a) = field.subfields.iter().find(|s| s.code == 'a') {
@@ -1293,34 +1287,34 @@ impl<'a> MarcToBibframeConverter<'a> {
                                 node,
                             );
                         }
-                    }
+                    },
                     // Publication fields
                     "260" | "264" => {
                         self.add_880_provision(&instance, field, lang_tag.as_deref());
-                    }
+                    },
                     // Series statement
                     "490" => {
                         self.add_880_series(&instance, field, lang_tag.as_deref());
-                    }
+                    },
                     // Note fields (5XX)
                     tag if tag.starts_with('5') => {
                         self.add_880_note(&instance, field, lang_tag.as_deref());
-                    }
+                    },
                     // Subject fields (6XX) - link to Work
                     tag if tag.starts_with('6') => {
                         self.add_880_subject(&work, field, lang_tag.as_deref());
-                    }
+                    },
                     // Added entry fields (7XX)
                     "740" => {
                         self.add_880_related_title(&instance, field, lang_tag.as_deref());
-                    }
+                    },
                     // Linking fields (78X)
                     "780" | "785" | "787" => {
                         self.add_880_linking(&instance, field, linked_tag, lang_tag.as_deref());
-                    }
+                    },
                     _ => {
                         // For unhandled linked fields, just skip with no action
-                    }
+                    },
                 }
             }
         }
@@ -1410,15 +1404,15 @@ impl<'a> MarcToBibframeConverter<'a> {
                         format!("{BF}{}", properties::MAIN_TITLE),
                         node,
                     );
-                }
+                },
                 'b' => {
                     self.graph.add(
                         title_node.clone(),
                         format!("{BF}{}", properties::SUBTITLE),
                         node,
                     );
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -1453,32 +1447,23 @@ impl<'a> MarcToBibframeConverter<'a> {
             match subfield.code {
                 'a' => {
                     if self.config.include_bflc {
-                        self.graph.add(
-                            activity_node.clone(),
-                            format!("{BFLC}simplePlace"),
-                            node,
-                        );
+                        self.graph
+                            .add(activity_node.clone(), format!("{BFLC}simplePlace"), node);
                     }
-                }
+                },
                 'b' => {
                     if self.config.include_bflc {
-                        self.graph.add(
-                            activity_node.clone(),
-                            format!("{BFLC}simpleAgent"),
-                            node,
-                        );
+                        self.graph
+                            .add(activity_node.clone(), format!("{BFLC}simpleAgent"), node);
                     }
-                }
+                },
                 'c' => {
                     if self.config.include_bflc {
-                        self.graph.add(
-                            activity_node.clone(),
-                            format!("{BFLC}simpleDate"),
-                            node,
-                        );
+                        self.graph
+                            .add(activity_node.clone(), format!("{BFLC}simpleDate"), node);
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -1497,11 +1482,8 @@ impl<'a> MarcToBibframeConverter<'a> {
             } else {
                 RdfNode::literal(&subfield_a.value)
             };
-            self.graph.add(
-                instance.clone(),
-                format!("{BF}seriesStatement"),
-                node,
-            );
+            self.graph
+                .add(instance.clone(), format!("{BF}seriesStatement"), node);
         }
     }
 
@@ -1513,11 +1495,8 @@ impl<'a> MarcToBibframeConverter<'a> {
             } else {
                 RdfNode::literal(&subfield_a.value)
             };
-            self.graph.add(
-                instance.clone(),
-                format!("{BF}{}", properties::NOTE),
-                node,
-            );
+            self.graph
+                .add(instance.clone(), format!("{BF}{}", properties::NOTE), node);
         }
     }
 
@@ -1546,11 +1525,8 @@ impl<'a> MarcToBibframeConverter<'a> {
             } else {
                 RdfNode::literal(&label)
             };
-            self.graph.add(
-                subject_node.clone(),
-                format!("{RDFS}label"),
-                node,
-            );
+            self.graph
+                .add(subject_node.clone(), format!("{RDFS}label"), node);
         }
 
         self.graph.add(
@@ -1677,21 +1653,21 @@ impl<'a> MarcToBibframeConverter<'a> {
         };
 
         let linking_tags = [
-            ("760", "hasSeries", true),        // Main series
-            ("762", "hasSubseries", true),     // Subseries
-            ("765", "translationOf", false),   // Original language
-            ("767", "hasTranslation", false),  // Translation
-            ("770", "supplement", true),       // Supplement
-            ("772", "supplementTo", true),     // Parent (supplement to)
-            ("773", "partOf", true),           // Host item
-            ("774", "hasPart", true),          // Constituent unit
-            ("775", "otherEdition", true),     // Other edition
+            ("760", "hasSeries", true),           // Main series
+            ("762", "hasSubseries", true),        // Subseries
+            ("765", "translationOf", false),      // Original language
+            ("767", "hasTranslation", false),     // Translation
+            ("770", "supplement", true),          // Supplement
+            ("772", "supplementTo", true),        // Parent (supplement to)
+            ("773", "partOf", true),              // Host item
+            ("774", "hasPart", true),             // Constituent unit
+            ("775", "otherEdition", true),        // Other edition
             ("776", "otherPhysicalFormat", true), // Additional physical form
-            ("777", "issuedWith", true),       // Issued with
-            ("780", "precededBy", true),       // Preceding
-            ("785", "succeededBy", true),      // Succeeding
-            ("786", "dataSource", false),      // Data source
-            ("787", "relatedTo", false),       // Nonspecific
+            ("777", "issuedWith", true),          // Issued with
+            ("780", "precededBy", true),          // Preceding
+            ("785", "succeededBy", true),         // Succeeding
+            ("786", "dataSource", false),         // Data source
+            ("787", "relatedTo", false),          // Nonspecific
         ];
 
         for (tag, relationship, is_instance_rel) in linking_tags {
@@ -1819,11 +1795,8 @@ impl<'a> MarcToBibframeConverter<'a> {
 
                     // Link from source entity
                     let source = if is_instance_rel { &instance } else { &work };
-                    self.graph.add(
-                        source.clone(),
-                        format!("{BF}{relationship}"),
-                        related_node,
-                    );
+                    self.graph
+                        .add(source.clone(), format!("{BF}{relationship}"), related_node);
                 }
             }
         }
@@ -1873,11 +1846,8 @@ impl<'a> MarcToBibframeConverter<'a> {
                             format!("{RDFS}label"),
                             RdfNode::literal(&subfield_a.value),
                         );
-                        self.graph.add(
-                            work.clone(),
-                            format!("{BF}hasSeries"),
-                            series_node,
-                        );
+                        self.graph
+                            .add(work.clone(), format!("{BF}hasSeries"), series_node);
                     }
                 }
 
@@ -1894,11 +1864,8 @@ impl<'a> MarcToBibframeConverter<'a> {
                         format!("{RDF}value"),
                         RdfNode::literal(&issn.value),
                     );
-                    self.graph.add(
-                        instance.clone(),
-                        format!("{BF}seriesEnumeration"),
-                        id_node,
-                    );
+                    self.graph
+                        .add(instance.clone(), format!("{BF}seriesEnumeration"), id_node);
                 }
 
                 // Add volume number from $v
@@ -1937,7 +1904,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                     for subfield in &field.subfields {
                         match subfield.code {
                             'a' | 't' => title_parts.push(subfield.value.clone()),
-                            _ => {}
+                            _ => {},
                         }
                     }
 
@@ -2006,11 +1973,8 @@ impl<'a> MarcToBibframeConverter<'a> {
                     }
 
                     // Link Work to series
-                    self.graph.add(
-                        work.clone(),
-                        format!("{BF}hasSeries"),
-                        series_node,
-                    );
+                    self.graph
+                        .add(work.clone(), format!("{BF}hasSeries"), series_node);
                 }
             }
         }
@@ -2031,7 +1995,7 @@ impl<'a> MarcToBibframeConverter<'a> {
         match self.record.leader.record_type {
             'c' | 'd' | 'j' => self.process_music_fields(&work, &instance),
             'e' | 'f' => self.process_cartographic_fields(&work, &instance),
-            _ => {}
+            _ => {},
         }
 
         // Serials (bibliographic level 's' or 'i')
@@ -2070,11 +2034,8 @@ impl<'a> MarcToBibframeConverter<'a> {
                     );
                 }
 
-                self.graph.add(
-                    work.clone(),
-                    format!("{BF}musicMedium"),
-                    medium_node,
-                );
+                self.graph
+                    .add(work.clone(), format!("{BF}musicMedium"), medium_node);
             }
         }
 
@@ -2201,11 +2162,8 @@ impl<'a> MarcToBibframeConverter<'a> {
                         );
                     }
 
-                    self.graph.add(
-                        instance.clone(),
-                        format!("{BF}frequency"),
-                        freq_node,
-                    );
+                    self.graph
+                        .add(instance.clone(), format!("{BF}frequency"), freq_node);
                 }
             }
         }
@@ -2275,7 +2233,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("mainTitle"));
         assert!(serialized.contains("Test Title"));
         assert!(serialized.contains("subtitle"));
@@ -2296,7 +2256,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("Contribution"));
         assert!(serialized.contains("Person"));
         assert!(serialized.contains("Smith, John"));
@@ -2316,7 +2278,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("Topic"));
         assert!(serialized.contains("Computer science"));
     }
@@ -2333,7 +2297,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("Isbn"));
         assert!(serialized.contains("9780123456789"));
     }
@@ -2352,7 +2318,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("Publication"));
         assert!(serialized.contains("New York"));
         assert!(serialized.contains("Publisher"));
@@ -2369,7 +2337,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("NotatedMusic"));
     }
 
@@ -2382,7 +2352,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("Serial"));
     }
 
@@ -2394,7 +2366,9 @@ mod tests {
         let config = BibframeConfig::new().with_base_uri("http://example.org/");
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("http://example.org/work/rec123"));
         assert!(serialized.contains("http://example.org/instance/rec123"));
     }
@@ -2422,7 +2396,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         // Should have both titles
         assert!(serialized.contains("Test Title"));
         assert!(serialized.contains("東海道五十三次"));
@@ -2442,7 +2418,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("precededBy"));
         assert!(serialized.contains("Earlier Journal Title"));
         assert!(serialized.contains("1234-5678"));
@@ -2462,7 +2440,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("succeededBy"));
         assert!(serialized.contains("Later Journal Title"));
     }
@@ -2481,7 +2461,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("seriesStatement"));
         assert!(serialized.contains("Library science series"));
         assert!(serialized.contains("seriesEnumeration"));
@@ -2501,7 +2483,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("hasSeries"));
         assert!(serialized.contains("ACM monograph series"));
     }
@@ -2520,7 +2504,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("Isbn"));
         assert!(serialized.contains("9780123456789"));
         assert!(serialized.contains("qualifier"));
@@ -2540,7 +2526,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("9780000000000"));
         assert!(serialized.contains("invalid"));
     }
@@ -2559,7 +2547,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("1234-5678"));
         assert!(serialized.contains("1111-2222"));
         // With BFLC enabled, should have IssnL type
@@ -2579,7 +2569,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         // Should parse the prefix
         assert!(serialized.contains("12345678"));
         assert!(serialized.contains("OCoLC"));
@@ -2606,7 +2598,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("musicMedium"));
         assert!(serialized.contains("piano"));
         assert!(serialized.contains("musicKey"));
@@ -2629,7 +2623,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("Cartographic"));
         assert!(serialized.contains("scale"));
         assert!(serialized.contains("1:24,000"));
@@ -2656,7 +2652,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("Serial"));
         assert!(serialized.contains("frequency"));
         assert!(serialized.contains("Monthly"));
@@ -2677,7 +2675,9 @@ mod tests {
         let config = BibframeConfig::default();
         let graph = convert_marc_to_bibframe(&record, &config);
 
-        let serialized = graph.serialize(super::super::config::RdfFormat::NTriples).unwrap();
+        let serialized = graph
+            .serialize(super::super::config::RdfFormat::NTriples)
+            .unwrap();
         assert!(serialized.contains("10.1000/xyz123"));
         assert!(serialized.contains("doi"));
     }
