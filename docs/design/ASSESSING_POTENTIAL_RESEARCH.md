@@ -43,6 +43,14 @@ MARC achieves remarkable expressiveness through hierarchical tagging:
 
 These three-level distinctions allow a single tag (245) to express complex bibliographic relationships.
 
+**Discovery system strength**: This semantic richness enables sophisticated discovery features. Indicators and subfield codes allow discovery systems to:
+- Distinguish title vs. variant title (245 indicators)
+- Distinguish primary vs. added authors (subfield codes in 1XX/7XX)
+- Distinguish subject vs. genre vs. geographic heading (650 vs. 655 vs. 651)
+- Distinguish confidence in authority control ($0 presence/absence)
+
+Without this structure, all metadata would be flat text, making ranking, faceting, and disambiguation impossible. MARC's structure is what makes it suitable for library discovery at all—far better than raw, unstructured HTML metadata from book publishers.
+
 ### 1.3 Compactness & Bandwidth Efficiency
 
 At ~500 bytes average, a MARC record is compact for its information density. ISO 2709 binary format adds minimal overhead, making it efficient for:
@@ -62,7 +70,15 @@ MARC's field structure enables elegant linking to authority records, a feature c
 
 **Cataloger strength**: Catalogers understand and regularly use authority records to ensure consistency and discoverability. MARC's parallel structure (authority-controlled heading in the bibliographic record, matching record in the Authority File) works well for their daily tasks of validating headings, making cross-references, and maintaining controlled vocabularies. Many catalogers spend significant time on authority control—both copy cataloging (verifying and sometimes correcting authority links) and original cataloging (creating correct, authorized headings).
 
-**Area for improvement**: While MARC supports authority linking, the subfield syntax ($a for heading, $0 for authority ID) is implicit. A cataloger must know that "245 $a Title" requires subject headings to come from field 650/651/655, and that the $0 subfield contains an authoritative identifier. Tools could make this more discoverable and enforceable through validation profiles.
+**Discovery system strength**: Authority control enables serendipitous discovery. When a user searches for "Mark Twain," discovery systems can:
+- Find all works by that author (via authority-controlled 1XX/700)
+- Find works *about* that author (via authority-controlled 600)
+- Cluster variant name forms (aliases, pseudonyms)
+- Link to related authorities (co-authors, subjects, places)
+
+This makes MARC a better platform for discovery than uncontrolled metadata.
+
+**Area for improvement**: While MARC supports authority linking, the subfield syntax ($a for heading, $0 for authority ID) is implicit. Discovery systems must extract and parse these structures separately from the display values. A cataloger must know that "245 $a Title" requires subject headings to come from field 650/651/655, and that the $0 subfield contains an authoritative identifier. Tools could make this more discoverable and enforceable through validation profiles. Discovery systems could also benefit from explicit field type declarations for more sophisticated faceting and ranking.
 
 ---
 
@@ -169,7 +185,39 @@ Better approach (JSON/RDF):
 
 MARC repeats entire fields; modern formats nest arrays. This denormalization makes updates inefficient and loses structural clarity.
 
-### 2.6 Catalog Maintenance & Batch Operations
+### 2.6 Search & Discovery System Challenges
+
+**Problem**: Building effective discovery systems on top of MARC requires significant engineering effort to translate implicit structure into discoverable, queryable metadata:
+
+**Search indexing pain points:**
+- **Field extraction**: Systems must extract and normalize fields separately (title from 245, authors from 1XX/700, subjects from 6XX)
+- **Indicator interpretation**: Search relevance depends on understanding indicators (is this a displayed title or a variant? is this subject primary or supplementary?)
+- **Authority ID handling**: Discovering that $0 contains an authority ID requires field-level parsing; systems then use these IDs to link to authority files or external URIs
+- **Format-specific field patterns**: Different content types (books, serials, maps, music, archives) use MARC differently, requiring complex conditional logic
+
+**Discovery UX pain points:**
+- **Faceting limitations**: Creating useful facets (language, format, publication date, content type) requires parsing and interpreting 008 field positions, indicators, and field combinations
+- **Relevance ranking**: Ranking search results requires understanding whether a term appears in title (245) vs. notes (500) vs. subject (650), which requires field awareness
+- **Deduplication**: Finding duplicate records or variant editions requires parsing 1XX/245/776-787 linking fields and 880 fields for multilingual variants
+- **Cross-system search**: Linking records across multiple library systems requires control numbers (001/035) and authority ID matching ($0 subfields), which must be explicitly extracted
+
+**User experience impact**: End-users don't see MARC structure, but experience its effects:
+- Search results may show duplicate records (system can't deduplicate due to missing/incorrect linking)
+- Facets may be incomplete or inconsistent (system can't reliably extract metadata from implicit field structure)
+- Author searches may miss works (authority-controlled names require linking via $0, which systems may not fully index)
+- Related resources are hard to find (no explicit relationship type declarations in MARC; 76X-78X linking fields require manual interpretation)
+
+**System impact**: Discovery platforms (Elasticsearch, Solr, proprietary ILS search engines) must spend engineering effort reimplementing MARC knowledge that could be declarative. Common solutions include:
+- Custom indexing profiles per record type
+- Separate authority index that must be kept in sync
+- Heuristic matching for deduplication and cross-system linking
+- Complex facet queries that parse 008 positions and indicator combinations
+
+These workarounds are brittle—changes to cataloging rules or institutional practices require updating both MARC creation and search indexing logic separately.
+
+---
+
+### 2.7 Catalog Maintenance & Batch Operations
 
 **Problem**: MARC's field-based structure makes bulk updates and validation difficult. Catalogers and catalog maintenance teams frequently need to:
 
@@ -193,7 +241,7 @@ Current approaches require custom scripts or manual review. A structured format 
 
 These must be encoded in separate validation schemas, duplicating knowledge.
 
-### 2.7 Encoding Declaration Only at Record Level
+### 2.8 Encoding Declaration Only at Record Level
 
 **Problem**: Character encoding (MARC-8 vs. UTF-8) is declared once per record in leader position 9, not per field:
 
@@ -480,6 +528,96 @@ struct MarcSemanticRecord {
 - Update 10,000+ authority headings in <5 minutes
 - Validation catches 95%+ of profile violations
 - Cataloger satisfaction on usability (reduce manual work by 80%)
+
+---
+
+### Research Track α: Discovery System Optimization
+
+**RES-α.1: Declarative Index Schema for MARC**
+
+**Objective**: Create a machine-readable schema that tells discovery systems how to index MARC fields for search, faceting, and ranking.
+
+**Problem it solves**: Today, every search system (Elasticsearch, Solr, ILS) reimplements MARC knowledge separately. When cataloging practices change, both catalog creation AND search indexing must update in sync.
+
+**Approach**:
+```yaml
+fields:
+  245:  # Title Statement
+    label: "Title"
+    index:
+      - name: "title"
+        type: "text"
+        analyzer: "standard_analyzer"
+        boost: 2.0  # boost relevance
+        facet: false
+      - name: "title_sort"
+        type: "keyword"
+        extract: "nonfiling"  # handle indicator 2 (nonfiling chars)
+  650:  # Subject Heading
+    label: "Subject"
+    index:
+      - name: "subject"
+        type: "text"
+        facet: true
+        link_authority: true  # follow $0 to authority file
+        link_type: "lcsh"    # identify which authority
+  008:
+    label: "Fixed Fields"
+    position_fields:
+      6:   # Type of date
+        label: "Date Type"
+        type: "keyword"
+        facet: true
+      7-10: # Date (extract as year for range queries)
+        label: "Publication Year"
+        type: "date"
+        facet: true
+```
+
+**Benefits**:
+- Discovery systems follow a single schema instead of reimplementing rules
+- Changing cataloging practices updates one file, not dozens of systems
+- New discovery platforms can index correctly without MARC expertise
+- Enables federation across libraries (shared schema)
+- Makes authority linking explicit (systems know to follow $0 subfield)
+
+**Estimated scope**: 5-7 weeks (schema design + validation + test with real search systems)
+**Deliverable**: YAML/JSON schema specification + validation tools + examples + Elasticsearch/Solr plugins
+**Success metrics**:
+- Schema describes 200+ common indexing patterns
+- Enables facet generation automatically (no custom code needed)
+- Reduces code duplication in 3+ discovery platforms
+- Authority linking works correctly without custom heuristics
+
+---
+
+**RES-α.2: Record Deduplication & Linking**
+
+**Objective**: Provide explicit tools for discovering duplicate records, variant editions, and related manifestations.
+
+**Problem it solves**: Discovery systems struggle to deduplicate records and find variants. Missing or incomplete 001/035/776-787 linking causes:
+- Duplicate search results (same book appears twice)
+- Users missing related editions or manifestations
+- Inefficient memory use in search indices
+
+**Approach**:
+- Declarative rules for identifier matching (ISBN, ISSN, control numbers)
+- Clustering algorithms for title/author similarity
+- Explicit linking field extraction (776-787 linking fields)
+- Cross-system deduplication (matching records across multiple library catalogs)
+
+**Challenges**:
+- ISBN/ISSN may differ between editions (which to match on?)
+- Authority IDs vary by system (VIAF vs. LC Names vs. local)
+- Some records intentionally appear separately (different editions in different languages)
+
+**Estimated scope**: 4-6 weeks implementation
+**Deliverable**: Rust module + Python bindings + clustering configuration
+**Success metrics**:
+- Identify 95%+ of true duplicates in test corpus
+- <1% false positives (records wrongly marked as duplicates)
+- Handle cross-system deduplication (find same book in 2+ library systems)
+- Support configurable rules (institutions choose what counts as duplicate)
 
 ---
 
@@ -813,26 +951,28 @@ extensions:
 
 ### What to Prioritize
 
-**Immediate Impact (Serves Catalogers & Systems Teams):**
-1. **RES-0.1** (Catalog Maintenance Toolkit) — Directly addresses pain points in daily catalog work; high user satisfaction potential
-2. **RES-A.2** (Field-Level Semantic Schema) — Foundational for all other tracks; enables self-documenting MARC and better training tools
+**Immediate Impact (Serves Multiple Stakeholders):**
+1. **RES-0.1** (Catalog Maintenance Toolkit) — Directly addresses pain points in daily catalog work; high cataloger satisfaction
+2. **RES-α.1** (Declarative Index Schema for MARC) — Reduces duplicate effort across discovery platforms; serves discovery system builders and affects end-user experience
+3. **RES-A.2** (Field-Level Semantic Schema) — Foundational for all other tracks; enables self-documenting MARC, better training tools, and discovery system configuration
 
 **High Impact, Medium Effort (Unlocks New Capabilities):**
-3. **RES-B.1** (Columnar MARC) — Direct analytics value; aligns with data science use cases; enables ad-hoc queries on catalog
-4. **RES-B.2** (SQL-Like DSL) — High usability for institutional research; bridges gap between MARC experts and data scientists
+4. **RES-B.1** (Columnar MARC) — Direct analytics value; aligns with data science use cases; enables ad-hoc queries on catalog
+5. **RES-B.2** (SQL-Like DSL) — High usability for institutional research; bridges gap between MARC experts and data scientists
+6. **RES-α.2** (Record Deduplication & Linking) — Improves search results quality for end-users; reduces effort for discovery system teams
 
 **High Impact, Lower Risk (Community Value):**
-5. **RES-C.1** (MARC Exchange Format) — Proof-of-concept design; potential community standard for interoperability
-6. **RES-D.1** (Streaming Columnar) — Performance work; de-risks scaling to petabyte archives
+7. **RES-C.1** (MARC Exchange Format) — Proof-of-concept design; potential community standard for interoperability
+8. **RES-D.1** (Streaming Columnar) — Performance work; de-risks scaling to petabyte archives
 
-**Exploratory (Medium-term, Catalog-Specific):**
-7. **RES-A.1** (Semantic IR) — Complex design; validate feasibility with RES-A.2 first; supports both catalogers and systems
-8. **RES-E.2** (Authority Linking via ML) — Reduces manual authority work; significant NLP effort; high cataloger value
+**Exploratory (Medium-term, Cross-Functional):**
+9. **RES-A.1** (Semantic IR) — Complex design; validate feasibility with RES-A.2 first; supports catalogers, discovery builders, and analytics
+10. **RES-E.2** (Authority Linking via ML) — Reduces manual authority work; significant NLP effort; high cataloger value; supports discovery systems
 
 **Lower Priority (Systems/Tools Focus):**
-9. **RES-E.1** (Anomaly Detection) — Valuable for QA, but less urgent than cataloger-facing tools
-10. **RES-C.2** (Profile Registry) — Community governance challenge; nice-to-have for standardization
-11. **RES-D.2** (Parallel Extraction) — Incremental performance; parallelism already achieved via Rayon
+11. **RES-E.1** (Anomaly Detection) — Valuable for QA, but less urgent than cataloger-facing tools
+12. **RES-C.2** (Profile Registry) — Community governance challenge; nice-to-have for standardization
+13. **RES-D.2** (Parallel Extraction) — Incremental performance; parallelism already achieved via Rayon
 
 ### How MRRC Fits Into This Research
 
@@ -845,16 +985,19 @@ MRRC is a **platform** for experimentation:
 **Suggested research roadmap for MRRC:**
 
 ```
-Phase 1 (Q1 2026): Cataloger & Foundation
+Phase 1 (Q1 2026): Catalog & Discovery Foundation
 ├─ RES-0.1: Catalog Maintenance Toolkit (early release)
 ├─ RES-A.2: Field-Level Semantic Schema
+├─ RES-α.1: Declarative Index Schema for MARC (specification)
 ├─ Add schema-based validation to mrrc
-└─ Publish schema + tools
+└─ Publish all schemas + tools
 
-Phase 2 (Q2 2026): Analytics & Data Quality
+Phase 2 (Q2 2026): Analytics, Discovery & Data Quality
 ├─ RES-B.1: Columnar MARC representation
 ├─ RES-B.2: SQL-Like DSL (basic version)
+├─ RES-α.2: Deduplication & linking tools
 ├─ Integrate RES-0.1 toolkit with validation (for data quality)
+├─ Elasticsearch/Solr plugins for RES-α.1 schema
 └─ DuckDB integration examples
 
 Phase 3 (Q3 2026): Interoperability & Authority
@@ -865,15 +1008,18 @@ Phase 3 (Q3 2026): Interoperability & Authority
 Phase 4 (Q4 2026): Production Ready
 ├─ Performance tuning (RES-D.1 if needed)
 ├─ Cataloger feedback integration (from Phase 1-3)
+├─ Discovery platform validation (feedback from library systems)
 ├─ Authority Linking ML refinement (if promising)
 └─ Stable API documentation & training resources
 ```
 
-**Cataloger Engagement Strategy:**
-- Early alpha access to RES-0.1 for feedback
-- Regular check-ins on schema usability (RES-A.2)
-- Pilot validation profiles at 2-3 early adopter institutions
-- Authority linking (RES-E.2) tested with copy catalogers who spend time on authority work
+**Cataloger & Discovery System Engagement Strategy:**
+- Early alpha access to RES-0.1 for cataloger feedback
+- RES-α.1 schema piloted with 2-3 discovery system teams (ILS vendors, open source projects)
+- Regular check-ins on schema usability (RES-A.2, RES-α.1)
+- Pilot validation profiles at 2-3 early adopter institutions (RES-0.1, RES-A.2)
+- RES-α.2 deduplication tested on real cross-system data (federated catalogs)
+- Authority linking (RES-E.2) tested with copy catalogers and authority system teams
 
 ---
 
@@ -909,6 +1055,16 @@ MARC 21 is a remarkable achievement: 50+ years of standardization, deep institut
 - **Authority management**: Updates to LCSH or other controlled vocabularies require tedious manual work
 - **Batch operations**: Fixing systematic errors or migrating records needs better tooling
 
+**For discovery system builders**: MARC's semantic richness is valuable (it supports sophisticated search, faceting, and ranking), but the implicit structure creates engineering challenges:
+- **Custom indexing**: Each search platform reimplements MARC knowledge separately (Elasticsearch, Solr, proprietary ILS systems)
+- **Changing practices**: When cataloging rules change, both catalog creation AND search indexing must update in parallel
+- **Authority linking**: Systems must parse $0 subfields separately to link to authority records; this knowledge should be declarative
+- **Deduplication**: Finding duplicate records or variant editions requires complex heuristics because linking information is implicit
+
+**For end-users**: They experience the impact of both:
+- **Better discovery**: MARC's authority control enables serendipitous discovery (finding variant titles, related authors, subjects)
+- **Worse search**: Duplicate results (system can't deduplicate), incomplete facets, missed connections due to implicit relationships
+
 **For systems**: MARC's 1970s-era design shows strain in modern contexts:
 - **Semantic implicitness** makes automation complex (requires reimplementing domain knowledge in every tool)
 - **Flat structure** hides hierarchical relationships (systems must infer Work/Instance/Item from field patterns)
@@ -917,19 +1073,25 @@ MARC 21 is a remarkable achievement: 50+ years of standardization, deep institut
 
 Rather than abandoning MARC, we should **build better on top of it**:
 1. **Serve catalogers first** (RES-0.1: maintenance toolkit, better training tools from RES-A.2)
-2. **Create explicit semantic layers** (RES-A.1/A.2: Semantic IR, schema registry)
-3. **Enable modern use cases** (RES-B.1/B.2: columnar analytics, query DSLs)
-4. **Improve interoperability** (RES-C.1: MARC Exchange Format with semantic annotations)
-5. **Preserve compatibility** with 50 years of data
+2. **Serve discovery system builders** (RES-α.1/α.2: declarative index schema, deduplication tools)
+3. **Improve end-user experience** (through better search results, deduplication, faceting)
+4. **Create explicit semantic layers** (RES-A.1/A.2: Semantic IR, schema registry)
+5. **Enable modern use cases** (RES-B.1/B.2: columnar analytics, query DSLs)
+6. **Improve interoperability** (RES-C.1: MARC Exchange Format with semantic annotations)
+7. **Preserve compatibility** with 50 years of data
 
 **MRRC is positioned to lead this research** because it combines:
 - Deep MARC expertise (full pymarc compatibility, extensive test suite)
 - Understanding of cataloger workflows (through domain analysis)
+- Understanding of discovery system needs (analysis in this document)
+- Understanding of end-user experience (via discovery system builders)
 - Performance (Rust implementation enabling efficient transformations)
 - Format flexibility (10+ serialization formats, BIBFRAME support)
 - Modern tooling (Parquet/Arrow/DuckDB integration)
 
-The opportunities identified here are not theoretical—they address real pain points in both library cataloging and data management. **Starting immediately with RES-0.1 (catalog toolkit) and RES-A.2 (semantic schema)** would unlock value for catalogers while building foundation for longer-term interoperability goals. **Phase 1 engagement with early adopter catalogers** will validate these priorities and guide implementation.
+The opportunities identified here are not theoretical—they address real pain points across the entire library value chain: **catalogers** creating metadata, **discovery system builders** implementing search, **end-users** searching and discovering. 
+
+**Starting immediately with Phase 1** (RES-0.1, RES-A.2, RES-α.1) would unlock value across all stakeholders: catalogers get better tools, discovery systems get declarative schema, and users get better search results. **Engagement with early adopter communities** (catalogers, system builders, libraries) will validate priorities and guide implementation toward maximum impact.
 
 ---
 
