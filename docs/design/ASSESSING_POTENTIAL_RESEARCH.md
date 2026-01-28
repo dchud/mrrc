@@ -54,13 +54,15 @@ At ~500 bytes average, a MARC record is compact for its information density. ISO
 
 ### 1.4 Authority Control Integration
 
-MARC's field structure enables elegant linking to authority records:
-- **1XX fields**: Personal/corporate authors with authority control numbers
-- **6XX fields**: Subject headings with authority links
-- **7XX fields**: Added entries with identifiers
-- **001/035 fields**: Control numbers for external linking
+MARC's field structure enables elegant linking to authority records, a feature critical to cataloger workflows:
+- **1XX/7XX fields**: Personal/corporate authors with authority control numbers ($0, $1 subfields for identifiers)
+- **6XX fields**: Subject headings with authority links (LCSH, local vocabularies, etc.)
+- **001/035 fields**: Control numbers for system-to-system linking
+- **$2 subfields**: Vocabulary source indicators (identify which authority list is used)
 
-When properly coded, a MARC record can be a node in a larger authority graph—a proto-linked-data structure.
+**Cataloger strength**: Catalogers understand and regularly use authority records to ensure consistency and discoverability. MARC's parallel structure (authority-controlled heading in the bibliographic record, matching record in the Authority File) works well for their daily tasks of validating headings, making cross-references, and maintaining controlled vocabularies. Many catalogers spend significant time on authority control—both copy cataloging (verifying and sometimes correcting authority links) and original cataloging (creating correct, authorized headings).
+
+**Area for improvement**: While MARC supports authority linking, the subfield syntax ($a for heading, $0 for authority ID) is implicit. A cataloger must know that "245 $a Title" requires subject headings to come from field 650/651/655, and that the $0 subfield contains an authoritative identifier. Tools could make this more discoverable and enforceable through validation profiles.
 
 ---
 
@@ -68,51 +70,64 @@ When properly coded, a MARC record can be a node in a larger authority graph—a
 
 ### 2.1 Flat Structure vs. Hierarchical Reality
 
-**Problem**: MARC represents hierarchical bibliographic relationships in a flat field structure. This creates mismatch pain:
+**Problem**: MARC's flat field structure obscures hierarchical relationships that exist in the real world. Catalogers understand this hierarchy intuitively (245 is THE title, 260/264 is publication info, 300 is physical description), but systems struggle to infer it:
 
-| Reality | MARC Representation | Cost |
-|---------|---------------------|------|
-| Work → Instance → Item | All mixed in one 350-byte record | Unclear entity boundaries |
-| Series relationships | Implicit in 490/8XX field pattern | Requires external linking knowledge |
-| Complex linking | Encoded in $w (control #) in 76X-78X fields | Manual relationship parsing |
+| Real-World Structure | MARC Representation | Cataloger Experience | System Experience |
+|---------------------|---------------------|---------------------|-------------------|
+| Work → Instance → Item | All mixed in one 350-byte record | Obvious from context | Requires inference rules |
+| Series relationships | Implicit in 490/8XX field pattern | Clear convention | Requires cross-referencing |
+| Complex linking | $w (control #) in 76X-78X fields | Uses relator codes ($e/$4) | Must parse $w to find relationships |
 
-Example: A MARC record doesn't distinguish *what* a series is at the structural level—you must parse field 490 indicators and cross-reference 8XX tags.
+**Cataloger perspective**: Catalogers navigate this structure effectively through training and experience. RDA (Resource Description and Access) training explicitly teaches Work/Instance/Item concepts, making MARC's implicit structure less problematic for human catalogers than for machines.
 
-**Impact on MRRC**: BIBFRAME conversion must infer entity structure, introducing complexity and potential data loss. The library includes 48 BIBFRAME-specific tests documenting these transformation challenges.
+**System perspective**: Automating tasks (format conversion, entity extraction, batch validation, integration with linked-data systems) becomes difficult because relationships are encoded implicitly rather than explicitly.
+
+**Impact on MRRC**: BIBFRAME conversion must infer entity structure, introducing complexity and potential data loss. The library includes 48 BIBFRAME-specific tests documenting these transformation challenges. Original catalogers might find BIBFRAME helpful for **creating** records with explicit entity structure, while MARC remains easier for **displaying** records in traditional ILS systems.
 
 ### 2.2 Implicit Semantics Through Indicator Conventions
 
-**Problem**: Indicator meanings vary by field, requiring deep MARC21 knowledge to parse:
+**Problem**: Indicator meanings vary by field, requiring MARC21 expertise to understand and apply correctly. The same position means different things in different fields:
 
 ```
-008/06 (Type of date): 
-  'c' = Creation/publication
-  'd' = Difference
-  'e' = Detailed date
-  'i' = Inclusive
-  'k' = Copyright
-  'm' = Modified
-  'p' = Production/release
-  'r' = Reissue/release
-  's' = Single known date
-  't' = Publication and copyright
+Examples of field-specific indicators:
+─────────────────────────────────────
+245 Indicator 1 = "Added entry indicator"  (0=no added entry, 1=added entry)
+490 Indicator 1 = "Series traceable"       (0=not traceable, 1=traceable)
+008 Position 6  = "Type of date"           (c,d,e,i,k,m,p,r,s,t each = different meaning)
+
+These conventions are not machine-discoverable. A system might correctly extract
+"245 ind1 = 1" but miss that it means "this title needs an added entry."
 ```
 
-These conventions are not machine-discoverable. An unknowing parser might correctly extract "008/06 = 'c'" but miss its semantic meaning.
+**Cataloger perspective**: Experienced catalogers have internalized these conventions and apply them correctly during original cataloging. However, catalogers transitioning from AACR2 to RDA rules sometimes encounter updated indicator meanings, and new catalogers require extensive training on indicator semantics. Validation and copy editing tools that make indicator rules explicit help catch errors early.
 
-**Consequence**: Building robust tooling requires encoding domain knowledge. pymarc and mrrc must maintain extensive helper methods (`is_book()`, `title()`, etc.) as translations of implicit semantics.
+**Training challenge**: Teaching new catalogers requires memorizing field-specific rules. A self-documenting format (where indicator meanings are explicit) could reduce training time and improve consistency.
+
+**System impact**: Building robust tooling requires encoding domain knowledge. Tools like mrrc must maintain extensive helper methods (`is_book()`, `title()`, indicator validation functions) as translations of implicit semantics. Every system reimplements this knowledge separately.
 
 ### 2.3 Character Encoding Complexity
 
 **Problem**: MARC-8 encoding (used in ISO 2709) is a custom, library-specific character set that predates Unicode:
 
 - Multi-byte sequences for diacritics and special characters
-- Language-specific escape sequences for non-Latin scripts
-- Lossy conversion between MARC-8 and Unicode
+- Language-specific escape sequences for non-Latin scripts ($6 linkage fields, escape codes for Cyrillic/CJK/Arabic/Hebrew)
+- Lossy conversion between MARC-8 and Unicode (some composed vs. decomposed characters)
 
-**Example**: A Russian title in MARC-8 requires escape sequences; in modern systems, UTF-8 is cleaner. But existing data uses MARC-8, and the standard still permits it.
+**Cataloger experience**: Catalogers working with multilingual catalogs (e.g., a university library with materials in 20+ languages) regularly deal with complex script issues:
+- Creating 880 (alternate graphic representation) field pairs for non-Latin titles
+- Verifying character display in both original and romanized forms
+- Troubleshooting display problems when ILS systems misinterpret encoding
+- Copying records from international sources (which may use different character sets)
 
-**mrrc impact**: We invested significantly in MARC-8 encoding support (see `marc8_tables.rs`). This is necessary for compatibility but introduces non-trivial decoding overhead compared to native UTF-8 parsing.
+**Example**: A Russian title in original Cyrillic requires:
+```
+245 10 $a Война и мир / (romanized as displayed)
+880 10 $a Voyna i mir / (MARC-8 encoded with escape sequences)
+```
+
+The $6 subfield links these, but catalogers must manually create this pairing, and any encoding mismatch breaks the relationship.
+
+**System impact**: We invested significantly in MARC-8 encoding support (see `marc8_tables.rs`). This is necessary for compatibility but introduces non-trivial decoding overhead. UTF-8 would simplify this, but conversion of 50+ years of MARC-8 data is impractical, and new records still use MARC-8 by default in many legacy systems.
 
 ### 2.4 Control Field Structure Limits Analysis
 
@@ -154,7 +169,31 @@ Better approach (JSON/RDF):
 
 MARC repeats entire fields; modern formats nest arrays. This denormalization makes updates inefficient and loses structural clarity.
 
-### 2.6 Encoding Declaration Only at Record Level
+### 2.6 Catalog Maintenance & Batch Operations
+
+**Problem**: MARC's field-based structure makes bulk updates and validation difficult. Catalogers and catalog maintenance teams frequently need to:
+
+- Update authority headings across thousands of records (e.g., when an LC authority record changes)
+- Batch validate conformance to institutional standards
+- Migrate records between systems (applying local MARC profiles)
+- Identify and fix quality issues (missing required fields, incorrect indicators)
+
+**Cataloger pain point**: When a subject heading changes in LCSH (e.g., "Homosexuality" → "LGBTQ+ Studies"), catalogers need tools to:
+1. Identify all affected records (by $0 authority ID)
+2. Validate that the new heading follows institutional rules
+3. Update related fields (like summary fields that might reference the old terminology)
+4. Generate reports for quality review
+
+Current approaches require custom scripts or manual review. A structured format (with explicit field types, cardinality rules, and dependency declarations) would make this routine.
+
+**System impact**: MARC's positional encoding and field-based structure provide no built-in way to:
+- Declare field dependencies ("if 245 indicator 1 = 1, then 700 must exist")
+- Express cardinality constraints ("exactly one 020 field required")
+- Define conditional validation ("if 008/06 = 's', then 260 must contain $c with a single year")
+
+These must be encoded in separate validation schemas, duplicating knowledge.
+
+### 2.7 Encoding Declaration Only at Record Level
 
 **Problem**: Character encoding (MARC-8 vs. UTF-8) is declared once per record in leader position 9, not per field:
 
@@ -171,15 +210,26 @@ MARC repeats entire fields; modern formats nest arrays. This denormalization mak
 ### 3.1 BIBFRAME: Semantic Clarity Through Linked Data
 
 **What BIBFRAME did well:**
-- **Explicit entities**: Work vs. Instance vs. Item are distinct RDF resources (not implicit)
-- **Relationship semantics**: `bf:creator`, `bf:publisher`, `bf:hasInstance` are explicit predicates
-- **Authority linking**: Built-in support for external URIs to authority records
-- **Extensibility**: New properties can be added as linked data properties without restructuring
+- **Explicit entities**: Work vs. Instance vs. Item are distinct RDF resources (matching RDA conceptual model)
+- **Relationship semantics**: `bf:creator`, `bf:publisher`, `bf:hasInstance` are explicit predicates (vs. MARC field numbers)
+- **Authority linking**: Built-in support for external URIs to authority records (LC Names, VIAF, etc.)
+- **Extensibility**: New properties can be added as linked data properties without restructuring the schema
+
+**Cataloger perspective**: RDA training emphasizes the Work/Instance/Item model, and catalogers already think in these terms. BIBFRAME's explicit structure aligns with how catalogers conceptualize bibliographic data. However:
+- **Tools immature**: Most ILS systems don't yet support BIBFRAME creation/editing
+- **MARC still required**: Even BIBFRAME-capable systems often export back to MARC for interchange
+- **Learning curve**: BIBFRAME uses RDF/linked-data concepts that are new to most catalogers
+- **Authority control gap**: BIBFRAME improves linking to external authorities, but tools for managing these links during original cataloging are still developing
+
+**System perspective**: BIBFRAME's explicit structure makes automation easier:
+- Entity boundaries are clear (no inference needed)
+- Relationships are explicit predicates (not field patterns)
+- Batch operations (like authority updates) are more straightforward in RDF graphs
 
 **Takeaway for future MARC work**: 
-BIBFRAME showed that moving from implicit field/indicator semantics to explicit entity relationships clarifies meaning. Our BIBFRAME implementation demonstrates this works, though conversion is complex because of MARC's flat structure.
+BIBFRAME showed that moving from implicit field/indicator semantics to explicit entity relationships clarifies meaning—both for humans and machines. Our BIBFRAME implementation demonstrates this works, though conversion is complex because MARC's flat structure requires inferring what BIBFRAME expresses explicitly.
 
-**Research opportunity**: Could an intermediate representation (a "semantic MARC" IR) ease bidirectional conversion and improve clarity?
+**Research opportunity**: Could a hybrid format allow catalogers to author in BIBFRAME-like explicit structure while maintaining MARC compatibility for legacy systems? Or could better tooling make original BIBFRAME cataloging practical?
 
 ### 3.2 Arrow/Analytics Formats: Columnar Thinking
 
@@ -400,6 +450,38 @@ struct MarcSemanticRecord {
 ---
 
 ## Part 6: Research Priorities & Opportunities
+
+### Research Track 0: Cataloger-Facing Tooling (Foundational)
+
+**RES-0.1: Catalog Maintenance Toolkit**
+
+**Objective**: Build tools that make common catalog maintenance tasks easier and more reliable.
+
+**Pain points addressed:**
+- Bulk authority heading updates (when LCSH changes a term)
+- Quality validation against institutional MARC profiles
+- Batch field corrections (fixing consistent errors across records)
+- Cross-field dependency checking (e.g., "245 ind1 = 1" requires 700 field)
+
+**Approach**:
+- Query DSL for identifying records needing updates
+- Rule-based batch operations with preview/confirm workflow
+- Detailed audit reports showing what changed and why
+- Integration with institutional MARC profiles (from RES-A.2)
+
+**Challenges**:
+- Different institutions have different maintenance needs
+- Authority updates may affect related fields (not just headings)
+- Validation rules are complex (field-specific, sometimes contradictory)
+
+**Estimated scope**: 4-6 weeks implementation
+**Deliverable**: Rust library + Python CLI tool + documentation
+**Success metrics**:
+- Update 10,000+ authority headings in <5 minutes
+- Validation catches 95%+ of profile violations
+- Cataloger satisfaction on usability (reduce manual work by 80%)
+
+---
 
 ### Research Track A: MARC Data Modeling
 
@@ -731,23 +813,26 @@ extensions:
 
 ### What to Prioritize
 
-**High Impact, Medium Effort:**
-1. **RES-A.2** (Field-Level Semantic Schema) — Foundational for multiple follow-on research tracks; enables self-documenting MARC
-2. **RES-B.1** (Columnar MARC) — Direct analytics value; aligns with data science use cases
-3. **RES-B.2** (SQL-Like DSL) — High usability; bridges gap between MARC experts and data scientists
+**Immediate Impact (Serves Catalogers & Systems Teams):**
+1. **RES-0.1** (Catalog Maintenance Toolkit) — Directly addresses pain points in daily catalog work; high user satisfaction potential
+2. **RES-A.2** (Field-Level Semantic Schema) — Foundational for all other tracks; enables self-documenting MARC and better training tools
 
-**High Impact, Lower Risk:**
-4. **RES-C.1** (MARC Exchange Format) — Proof-of-concept design; potential community standard
-5. **RES-D.1** (Streaming Columnar) — Performance work; de-risks scaling to petabyte archives
+**High Impact, Medium Effort (Unlocks New Capabilities):**
+3. **RES-B.1** (Columnar MARC) — Direct analytics value; aligns with data science use cases; enables ad-hoc queries on catalog
+4. **RES-B.2** (SQL-Like DSL) — High usability for institutional research; bridges gap between MARC experts and data scientists
 
-**Exploratory (Medium-term):**
-6. **RES-A.1** (Semantic IR) — Complex design; validate with RES-A.2 first
-7. **RES-E.1** (Anomaly Detection) — Lower priority for MRRC, but valuable for library operations
-8. **RES-E.2** (Authority Linking) — Requires significant NLP work; consider partnership with library domain experts
+**High Impact, Lower Risk (Community Value):**
+5. **RES-C.1** (MARC Exchange Format) — Proof-of-concept design; potential community standard for interoperability
+6. **RES-D.1** (Streaming Columnar) — Performance work; de-risks scaling to petabyte archives
 
-**Low Priority (Nice-to-Have):**
-9. **RES-C.2** (Profile Registry) — Community governance challenge; lower technical urgency
-10. **RES-D.2** (Parallel Extraction) — Incremental performance; parallelism already achieved via Rayon
+**Exploratory (Medium-term, Catalog-Specific):**
+7. **RES-A.1** (Semantic IR) — Complex design; validate feasibility with RES-A.2 first; supports both catalogers and systems
+8. **RES-E.2** (Authority Linking via ML) — Reduces manual authority work; significant NLP effort; high cataloger value
+
+**Lower Priority (Systems/Tools Focus):**
+9. **RES-E.1** (Anomaly Detection) — Valuable for QA, but less urgent than cataloger-facing tools
+10. **RES-C.2** (Profile Registry) — Community governance challenge; nice-to-have for standardization
+11. **RES-D.2** (Parallel Extraction) — Incremental performance; parallelism already achieved via Rayon
 
 ### How MRRC Fits Into This Research
 
@@ -760,25 +845,35 @@ MRRC is a **platform** for experimentation:
 **Suggested research roadmap for MRRC:**
 
 ```
-Phase 1 (Q1 2026): Foundation
+Phase 1 (Q1 2026): Cataloger & Foundation
+├─ RES-0.1: Catalog Maintenance Toolkit (early release)
 ├─ RES-A.2: Field-Level Semantic Schema
 ├─ Add schema-based validation to mrrc
 └─ Publish schema + tools
 
-Phase 2 (Q2 2026): Analytics Unlocked
+Phase 2 (Q2 2026): Analytics & Data Quality
 ├─ RES-B.1: Columnar MARC representation
 ├─ RES-B.2: SQL-Like DSL (basic version)
+├─ Integrate RES-0.1 toolkit with validation (for data quality)
 └─ DuckDB integration examples
 
-Phase 3 (Q3 2026): Interoperability Enhanced
+Phase 3 (Q3 2026): Interoperability & Authority
 ├─ RES-C.1: MARC Exchange Format proof-of-concept
-└─ Round-trip MARC ↔ BIBFRAME with annotations
+├─ Round-trip MARC ↔ BIBFRAME with annotations
+└─ RES-E.2: Authority Linking ML prototype (parallel track)
 
 Phase 4 (Q4 2026): Production Ready
 ├─ Performance tuning (RES-D.1 if needed)
-├─ Community feedback incorporation
-└─ Stable API documentation
+├─ Cataloger feedback integration (from Phase 1-3)
+├─ Authority Linking ML refinement (if promising)
+└─ Stable API documentation & training resources
 ```
+
+**Cataloger Engagement Strategy:**
+- Early alpha access to RES-0.1 for feedback
+- Regular check-ins on schema usability (RES-A.2)
+- Pilot validation profiles at 2-3 early adopter institutions
+- Authority linking (RES-E.2) tested with copy catalogers who spend time on authority work
 
 ---
 
@@ -808,25 +903,33 @@ Phase 4 (Q4 2026): Production Ready
 
 MARC 21 is a remarkable achievement: 50+ years of standardization, deep institutional knowledge, and near-universal adoption. These strengths should not be discounted.
 
-However, MARC's 1970s-era design shows strain in modern contexts:
-- **Semantic implicitness** makes tooling complex
-- **Flat structure** hides hierarchical relationships
-- **Positional encoding** is brittle
-- **Field-level encoding** is awkward for multilingual data
+**For catalogers**: MARC works well because they understand its implicit structure deeply. Training and experience enable them to apply indicators correctly, navigate field-to-field relationships, and manage complex multilingual data. The challenge isn't MARC itself, but:
+- **Training burden**: New catalogers must memorize field-specific rules and indicators
+- **Tool support**: Quality validation, bulk operations, and maintenance would benefit from explicit rules
+- **Authority management**: Updates to LCSH or other controlled vocabularies require tedious manual work
+- **Batch operations**: Fixing systematic errors or migrating records needs better tooling
+
+**For systems**: MARC's 1970s-era design shows strain in modern contexts:
+- **Semantic implicitness** makes automation complex (requires reimplementing domain knowledge in every tool)
+- **Flat structure** hides hierarchical relationships (systems must infer Work/Instance/Item from field patterns)
+- **Positional encoding** is brittle (008 field has no extensibility)
+- **Field-level encoding** is awkward for multilingual data (880 field linking is error-prone)
 
 Rather than abandoning MARC, we should **build better on top of it**:
-1. Create explicit semantic layers (Semantic IR, schema registry)
-2. Enable modern use cases (columnar analytics, query DSLs)
-3. Improve interoperability (MARC Exchange Format)
-4. Preserve compatibility with 50 years of data
+1. **Serve catalogers first** (RES-0.1: maintenance toolkit, better training tools from RES-A.2)
+2. **Create explicit semantic layers** (RES-A.1/A.2: Semantic IR, schema registry)
+3. **Enable modern use cases** (RES-B.1/B.2: columnar analytics, query DSLs)
+4. **Improve interoperability** (RES-C.1: MARC Exchange Format with semantic annotations)
+5. **Preserve compatibility** with 50 years of data
 
 **MRRC is positioned to lead this research** because it combines:
-- Deep MARC expertise (full pymarc compatibility)
-- Performance (Rust implementation)
-- Format flexibility (10+ serialization formats)
+- Deep MARC expertise (full pymarc compatibility, extensive test suite)
+- Understanding of cataloger workflows (through domain analysis)
+- Performance (Rust implementation enabling efficient transformations)
+- Format flexibility (10+ serialization formats, BIBFRAME support)
 - Modern tooling (Parquet/Arrow/DuckDB integration)
 
-The opportunities identified here are not theoretical—they address real pain points in library data management. Starting with RES-A.2 (semantic schema) and RES-B.1 (columnar representation) would unlock immediate value while building toward longer-term interoperability goals.
+The opportunities identified here are not theoretical—they address real pain points in both library cataloging and data management. **Starting immediately with RES-0.1 (catalog toolkit) and RES-A.2 (semantic schema)** would unlock value for catalogers while building foundation for longer-term interoperability goals. **Phase 1 engagement with early adopter catalogers** will validate these priorities and guide implementation.
 
 ---
 
