@@ -1,0 +1,14 @@
+{
+  "failures": [],
+  "fidelity_score": 100,
+  "memory_peak_mb": 18.11147689819336,
+  "perfect_roundtrips": 100,
+  "performance": {
+    "compression_ratio_percent": 97.9176868728036,
+    "file_size_bytes": 7596504,
+    "gzipped_size_bytes": 158183,
+    "read_throughput_rec_sec": 31522.80773648509,
+    "write_throughput_rec_sec": 57408.906417741644
+  },
+  "total_records": 100
+}

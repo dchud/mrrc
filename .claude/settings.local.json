@@ -22,7 +22,22 @@
       "Bash(cargo build:*)",
       "Bash(cargo clippy:*)",
       "Bash(ls:*)",
-      "Bash(./.cargo/check.sh:*)"
+      "Bash(./.cargo/check.sh:*)",
+      "WebFetch(domain:www.loc.gov)",
+      "Bash(gh repo view:*)",
+      "Bash(gh search:*)",
+      "Bash(gh api:*)",
+      "Bash(bd create:*)",
+      "WebFetch(domain:id.loc.gov)",
+      "WebFetch(domain:github.com)",
+      "Bash(xsltproc:*)",
+      "Bash(cd:*)",
+      "Bash(make:*)",
+      "WebSearch",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:lib.rs)",
+      "Bash(cargo tree:*)",
+      "Bash(bd sync:*)"
     ]
   }
 }
