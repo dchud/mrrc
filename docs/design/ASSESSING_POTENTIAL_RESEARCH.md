@@ -587,9 +587,9 @@ struct MarcSemanticRecord {
 
 ## Part 6: Research Priorities & Opportunities
 
-### Research Track 0: Cataloger-Facing Tooling (Foundational)
+### Research Track A: Cataloger-Facing Tooling (Foundational)
 
-**RES-0.1: Catalog Maintenance Toolkit**
+**RES-A.1: Catalog Maintenance Toolkit**
 
 **Objective**: Build tools that make common catalog maintenance tasks easier and more reliable.
 
@@ -603,7 +603,7 @@ struct MarcSemanticRecord {
 - Query DSL for identifying records needing updates
 - Rule-based batch operations with preview/confirm workflow
 - Detailed audit reports showing what changed and why
-- Integration with institutional MARC profiles (from RES-A.2)
+- Integration with institutional MARC profiles (from RES-C.2)
 
 **Challenges**:
 - Different institutions have different maintenance needs
@@ -619,9 +619,9 @@ struct MarcSemanticRecord {
 
 ---
 
-### Research Track α: Discovery System Optimization
+### Research Track B: Discovery System Optimization
 
-**RES-α.1: Declarative Index Schema for MARC**
+**RES-B.1: Declarative Index Schema for MARC**
 
 **Objective**: Create a machine-readable schema that tells discovery systems how to index MARC fields for search, faceting, and ranking.
 
@@ -679,7 +679,7 @@ fields:
 
 ---
 
-**RES-α.2: Record Deduplication & Linking**
+**RES-B.2: Record Deduplication & Linking**
 
 **Objective**: Provide explicit tools for discovering duplicate records, variant editions, and related manifestations.
 
@@ -709,9 +709,9 @@ fields:
 
 ---
 
-### Research Track A: MARC Data Modeling
+### Research Track C: MARC Data Modeling
 
-**RES-A.1: MARC Semantic Intermediate Representation**
+**RES-C.1: MARC Semantic Intermediate Representation**
 
 **Objective**: Design and prototype an IR (Intermediate Representation) that captures explicit semantics while preserving MARC fidelity.
 
@@ -730,7 +730,7 @@ fields:
 
 ---
 
-**RES-A.2: Field-Level Semantic Schema**
+**RES-C.2: Field-Level Semantic Schema**
 
 **Objective**: Create a declarative schema that describes MARC field meaning without code.
 
@@ -770,9 +770,9 @@ fields:
 
 ---
 
-### Research Track B: Analytics & Query Optimization
+### Research Track D: Analytics & Query Optimization
 
-**RES-B.1: Column-Oriented MARC Representation**
+**RES-D.1: Column-Oriented MARC Representation**
 
 **Objective**: Design a columnar representation of MARC data optimized for analytics.
 
@@ -804,7 +804,7 @@ Publishers: [string]  # 260/b values
 
 ---
 
-**RES-B.2: SQL-Like Query DSL for MARC**
+**RES-D.2: SQL-Like Query DSL for MARC**
 
 **Objective**: Design a declarative query language for MARC records.
 
@@ -838,9 +838,9 @@ WHERE 008/06 = 's'  (single known date)
 
 ---
 
-### Research Track C: Format Evolution & Interoperability
+### Research Track E: Format Evolution & Interoperability
 
-**RES-C.1: MARC Exchange Format (MEF)**
+**RES-E.1: MARC Exchange Format (MEF)**
 
 **Objective**: Design a format that exchanges MARC with embedded semantic metadata.
 
@@ -881,7 +881,7 @@ WHERE 008/06 = 's'  (single known date)
 
 ---
 
-**RES-C.2: MARC Profile Registry**
+**RES-E.2: MARC Profile Registry**
 
 **Objective**: Create a registry of MARC profiles (subsets/interpretations) for different communities.
 
@@ -926,9 +926,9 @@ extensions:
 
 ---
 
-### Research Track D: Performance & Scale
+### Research Track F: Performance & Scale
 
-**RES-D.1: Streaming Columnar Conversion**
+**RES-F.1: Streaming Columnar Conversion**
 
 **Objective**: Convert MARC → columnar format in a single streaming pass without intermediate representation.
 
@@ -963,7 +963,7 @@ extensions:
 
 ---
 
-**RES-D.2: Parallel Semantic Extraction**
+**RES-F.2: Parallel Semantic Extraction**
 
 **Objective**: Extract semantic entities (Work/Instance/Item) from MARC records in parallel.
 
@@ -984,9 +984,9 @@ extensions:
 
 ---
 
-### Research Track E: Machine Learning & Data Quality
+### Research Track G: Machine Learning & Data Quality
 
-**RES-E.1: MARC Anomaly Detection**
+**RES-G.1: MARC Anomaly Detection**
 
 **Objective**: Build ML models to detect unusual or suspicious MARC records.
 
@@ -1010,7 +1010,7 @@ extensions:
 
 ---
 
-**RES-E.2: Authority Record Linking via ML**
+**RES-G.2: Authority Record Linking via ML**
 
 **Objective**: Use NLP/ML to automatically link MARC author/subject fields to authority records.
 
@@ -1035,9 +1035,9 @@ extensions:
 
 ---
 
-### Research Track F: AI-Powered Metadata Enhancement & Intelligence
+### Research Track H: AI-Powered Metadata Enhancement & Intelligence
 
-**RES-F.1: LLM-Based Cataloging Assistance**
+**RES-H.1: LLM-Based Cataloging Assistance**
 
 **Objective**: Build LLM-powered tools to automate routine cataloging tasks and reduce manual effort.
 
@@ -1076,7 +1076,7 @@ extensions:
 
 ---
 
-**RES-F.2: Semantic Embeddings for Discovery & Deduplication**
+**RES-H.2: Semantic Embeddings for Discovery & Deduplication**
 
 **Objective**: Create dense vector embeddings of MARC records to enable semantic search, deduplication, and relationship discovery without explicit linking.
 
@@ -1122,7 +1122,7 @@ extensions:
 
 ---
 
-**RES-F.3: Authority Record Generation & Enrichment via LLM**
+**RES-H.3: Authority Record Generation & Enrichment via LLM**
 
 **Objective**: Use LLMs to auto-generate or enrich authority records with linked data connections.
 
@@ -1168,55 +1168,55 @@ extensions:
 ### What to Prioritize
 
 **Immediate Impact (Serves Multiple Stakeholders):**
-1. **RES-0.1** (Catalog Maintenance Toolkit) — Directly addresses pain points in daily catalog work; high cataloger satisfaction
-2. **RES-α.1** (Declarative Index Schema for MARC) — Reduces duplicate effort across discovery platforms; serves discovery system builders and affects end-user experience
-3. **RES-A.2** (Field-Level Semantic Schema) — Foundational for all other tracks; enables self-documenting MARC, better training tools, and discovery system configuration
+1. **RES-A.1** (Catalog Maintenance Toolkit) — Directly addresses pain points in daily catalog work; high cataloger satisfaction
+2. **RES-B.1** (Declarative Index Schema for MARC) — Reduces duplicate effort across discovery platforms; serves discovery system builders and affects end-user experience
+3. **RES-C.2** (Field-Level Semantic Schema) — Foundational for all other tracks; enables self-documenting MARC, better training tools, and discovery system configuration
 
 **High Impact, Medium Effort (Unlocks New Capabilities):**
-4. **RES-F.2** (Semantic Embeddings) — Embedding-based deduplication & discovery enables cross-system linking without centralized coordination; high end-user impact
-5. **RES-F.1** (LLM Cataloging Assistance) — Direct time savings for catalogers; reduces training burden; high cataloger satisfaction
-6. **RES-B.1** (Columnar MARC) — Direct analytics value; aligns with data science use cases; enables ad-hoc queries on catalog
-7. **RES-B.2** (SQL-Like DSL) — High usability for institutional research; bridges gap between MARC experts and data scientists
-8. **RES-α.2** (Record Deduplication & Linking) — Improves search results quality for end-users; reduces effort for discovery system teams
+4. **RES-H.2** (Semantic Embeddings) — Embedding-based deduplication & discovery enables cross-system linking without centralized coordination; high end-user impact
+5. **RES-H.1** (LLM Cataloging Assistance) — Direct time savings for catalogers; reduces training burden; high cataloger satisfaction
+6. **RES-D.1** (Columnar MARC) — Direct analytics value; aligns with data science use cases; enables ad-hoc queries on catalog
+7. **RES-D.2** (SQL-Like DSL) — High usability for institutional research; bridges gap between MARC experts and data scientists
+8. **RES-B.2** (Record Deduplication & Linking) — Improves search results quality for end-users; reduces effort for discovery system teams
 
 **High Impact, Lower Risk (Community Value):**
-9. **RES-F.3** (Authority Record Generation) — Reduces expensive manual authority work; enables emerging topics to get authorities; enables multilingual enrichment
-10. **RES-C.1** (MARC Exchange Format) — Proof-of-concept design; potential community standard for interoperability
-11. **RES-D.1** (Streaming Columnar) — Performance work; de-risks scaling to petabyte archives
+9. **RES-H.3** (Authority Record Generation) — Reduces expensive manual authority work; enables emerging topics to get authorities; enables multilingual enrichment
+10. **RES-E.1** (MARC Exchange Format) — Proof-of-concept design; potential community standard for interoperability
+11. **RES-F.1** (Streaming Columnar) — Performance work; de-risks scaling to petabyte archives
 
 **Exploratory (Medium-term, Cross-Functional):**
-12. **RES-A.1** (Semantic IR) — Complex design; validate feasibility with RES-A.2 first; supports catalogers, discovery builders, and analytics
-13. **RES-E.2** (Authority Linking via ML) — Reduces manual authority work; overlaps with RES-F.1/F.3; prioritize LLM approaches (better infrastructure, more accessible)
+12. **RES-C.1** (Semantic IR) — Complex design; validate feasibility with RES-C.2 first; supports catalogers, discovery builders, and analytics
+13. **RES-G.2** (Authority Linking via ML) — Reduces manual authority work; overlaps with RES-H.1/H.3; prioritize LLM approaches (better infrastructure, more accessible)
 
 **Lower Priority (Systems/Tools Focus):**
-14. **RES-E.1** (Anomaly Detection) — Valuable for QA, but less urgent than cataloger-facing tools; LLM-based quality assessment (RES-F.1) is more powerful
-15. **RES-C.2** (Profile Registry) — Community governance challenge; nice-to-have for standardization
-16. **RES-D.2** (Parallel Extraction) — Incremental performance; parallelism already achieved via Rayon
+14. **RES-G.1** (Anomaly Detection) — Valuable for QA, but less urgent than cataloger-facing tools; LLM-based quality assessment (RES-H.1) is more powerful
+15. **RES-E.2** (Profile Registry) — Community governance challenge; nice-to-have for standardization
+16. **RES-F.2** (Parallel Extraction) — Incremental performance; parallelism already achieved via Rayon
 
 ### Suggested Research Phases
 
 ```
 Phase 1: Catalog & Discovery Foundation
-├─ RES-0.1: Catalog Maintenance Toolkit
-├─ RES-A.2: Field-Level Semantic Schema
-├─ RES-α.1: Declarative Index Schema for MARC (specification)
-├─ RES-F.2: Semantic Embeddings proof-of-concept
+├─ RES-A.1: Catalog Maintenance Toolkit
+├─ RES-C.2: Field-Level Semantic Schema
+├─ RES-B.1: Declarative Index Schema for MARC (specification)
+├─ RES-H.2: Semantic Embeddings proof-of-concept
 └─ Schema-based validation tooling
 
 Phase 2: Analytics, AI-Assisted Cataloging & Discovery
-├─ RES-B.1: Columnar MARC representation
-├─ RES-B.2: SQL-Like DSL
-├─ RES-F.1: LLM Cataloging Assistance
-├─ RES-F.2: Semantic Embeddings (vector index, deduplication)
-├─ RES-α.2: Deduplication & linking tools
+├─ RES-D.1: Columnar MARC representation
+├─ RES-D.2: SQL-Like DSL
+├─ RES-H.1: LLM Cataloging Assistance
+├─ RES-H.2: Semantic Embeddings (vector index, deduplication)
+├─ RES-B.2: Deduplication & linking tools
 └─ Search platform integration (Elasticsearch/Solr/DuckDB)
 
 Phase 3: Interoperability, Authority Enrichment & Evaluation
-├─ RES-F.3: Authority Record Generation
-├─ RES-C.1: MARC Exchange Format proof-of-concept
+├─ RES-H.3: Authority Record Generation
+├─ RES-E.1: MARC Exchange Format proof-of-concept
 ├─ Round-trip MARC ↔ BIBFRAME with annotations
 ├─ Early adopter evaluation
-└─ Parallel track: RES-E.2 (traditional ML alternatives)
+└─ Parallel track: RES-G.2 (traditional ML alternatives)
 
 Phase 4: Production & Community Validation
 ├─ LLM model optimization
@@ -1229,28 +1229,28 @@ Phase 4: Production & Community Validation
 ### Stakeholder Engagement
 
 **Catalogers & Authority Control Specialists:**
-- Maintenance toolkit feedback (RES-0.1)
-- Validation profile pilots (RES-A.2)
+- Maintenance toolkit feedback (RES-A.1)
+- Validation profile pilots (RES-C.2)
 - Authority linking tested with copy catalogers
 
 **Discovery System Builders:**
-- Schema pilots with discovery teams (RES-α.1)
-- Schema usability feedback (RES-A.2, RES-α.1)
-- Cross-system deduplication testing (RES-α.2)
+- Schema pilots with discovery teams (RES-B.1)
+- Schema usability feedback (RES-C.2, RES-B.1)
+- Cross-system deduplication testing (RES-B.2)
 
 **Collection Development & Quality Assessment:**
-- Schema review for collection assessment patterns (RES-A.2)
-- Toolkit testing for quality auditing workflows (RES-0.1)
+- Schema review for collection assessment patterns (RES-C.2)
+- Toolkit testing for quality auditing workflows (RES-A.1)
 
 **Consortia & Aggregators:**
-- Deduplication tested on union catalog data (RES-α.2)
-- MARC Exchange Format design with consortia (RES-C.1)
-- Schema normalization across institutional profiles (RES-A.2)
+- Deduplication tested on union catalog data (RES-B.2)
+- MARC Exchange Format design with consortia (RES-E.1)
+- Schema normalization across institutional profiles (RES-C.2)
 
 **Archivists & Special Collections:**
-- Schema review for non-standard materials (RES-A.2)
+- Schema review for non-standard materials (RES-C.2)
 - Custom profile extension testing
-- Collection hierarchy representation feedback (RES-A.1)
+- Collection hierarchy representation feedback (RES-C.1)
 
 ---
 
@@ -1321,15 +1321,15 @@ MARC 21 is a remarkable achievement: 50+ years of standardization, deep institut
 - **Field-level encoding** is awkward for multilingual data (880 field linking is error-prone)
 
 Rather than abandoning MARC, we should **build better on top of it**:
-1. **Serve catalogers first** (RES-0.1: maintenance toolkit, RES-F.1: AI assistance for cataloging, better training tools from RES-A.2)
-2. **Serve collection developers & quality assessors** (RES-A.2: explicit quality metrics, RES-0.1: batch audit/fix tools, RES-F.1/F.3: AI-powered quality insights)
-3. **Serve discovery system builders** (RES-α.1/α.2: declarative index schema, RES-F.2: semantic embeddings for deduplication, intelligent search)
-4. **Serve consortia & aggregators** (RES-C.1: MARC Exchange Format with semantic annotations, RES-F.2: embedding-based cross-system deduplication without coordination)
-5. **Serve archivists & special collections** (RES-A.1/A.2: support for hierarchies and custom profiles, RES-F.3: AI-generated authorities for specialized subjects)
-6. **Improve end-user experience** (through better search results via RES-F.2, AI-powered deduplication, faceting, personalized discovery)
-7. **Create explicit semantic layers** (RES-A.1/A.2: Semantic IR, schema registry)
-8. **Enable modern use cases** (RES-B.1/B.2: columnar analytics, query DSLs, RES-F.2: vector search and semantic similarity)
-9. **Leverage AI/ML for automation** (RES-F.1/F.2/F.3: cataloging assistance, embeddings, authority enrichment)
+1. **Serve catalogers first** (RES-A.1: maintenance toolkit, RES-H.1: AI assistance for cataloging, better training tools from RES-C.2)
+2. **Serve collection developers & quality assessors** (RES-C.2: explicit quality metrics, RES-A.1: batch audit/fix tools, RES-H.1/H.3: AI-powered quality insights)
+3. **Serve discovery system builders** (RES-B.1/B.2: declarative index schema, RES-H.2: semantic embeddings for deduplication, intelligent search)
+4. **Serve consortia & aggregators** (RES-E.1: MARC Exchange Format with semantic annotations, RES-H.2: embedding-based cross-system deduplication without coordination)
+5. **Serve archivists & special collections** (RES-C.1/C.2: support for hierarchies and custom profiles, RES-H.3: AI-generated authorities for specialized subjects)
+6. **Improve end-user experience** (through better search results via RES-H.2, AI-powered deduplication, faceting, personalized discovery)
+7. **Create explicit semantic layers** (RES-C.1/C.2: Semantic IR, schema registry)
+8. **Enable modern use cases** (RES-D.1/D.2: columnar analytics, query DSLs, RES-H.2: vector search and semantic similarity)
+9. **Leverage AI/ML for automation** (RES-H.1/H.2/H.3: cataloging assistance, embeddings, authority enrichment)
 10. **Preserve compatibility** with 50 years of data
 
 The opportunities identified here address real pain points across the library ecosystem:
@@ -1341,11 +1341,11 @@ The opportunities identified here address real pain points across the library ec
 - **Archivists & special collections** managing non-standard materials
 - **End-users** discovering and accessing library resources
 
-Tools like mrrc could support this research by providing MARC21 compliance, multi-format serialization, and performance characteristics suitable for prototyping new representations. Phase 1 priorities (RES-0.1, RES-A.2, RES-α.1) would benefit from multi-stakeholder engagement to validate priorities and guide implementation.
+Tools like mrrc could support this research by providing MARC21 compliance, multi-format serialization, and performance characteristics suitable for prototyping new representations. Phase 1 priorities (RES-A.1, RES-C.2, RES-B.1) would benefit from multi-stakeholder engagement to validate priorities and guide implementation.
 
 ### Important Considerations for AI/ML in Bibliographic Infrastructure
 
-As we explore AI/ML applications in RES-F.1, F.2, and F.3, several critical principles should guide implementation:
+As we explore AI/ML applications in RES-H.1, H.2, and H.3, several critical principles should guide implementation:
 
 **Transparency & Explainability:**
 - Catalogers must understand *why* an LLM suggested a particular field value or authority link
