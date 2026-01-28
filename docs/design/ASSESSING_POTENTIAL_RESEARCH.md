@@ -1193,78 +1193,64 @@ extensions:
 15. **RES-C.2** (Profile Registry) — Community governance challenge; nice-to-have for standardization
 16. **RES-D.2** (Parallel Extraction) — Incremental performance; parallelism already achieved via Rayon
 
-### How MRRC Fits Into This Research
-
-MRRC is a **platform** for experimentation:
-
-1. **Current strength**: Full MARC21 compliance + multi-format serialization
-2. **Research value**: Can prototype new representations without breaking compatibility
-3. **Leverage**: Rust performance enables efficient implementation of complex transformations
-
-**Suggested research roadmap for MRRC:**
+### Suggested Research Phases
 
 ```
-Phase 1 (Q1 2026): Catalog & Discovery Foundation
-├─ RES-0.1: Catalog Maintenance Toolkit (early release)
+Phase 1: Catalog & Discovery Foundation
+├─ RES-0.1: Catalog Maintenance Toolkit
 ├─ RES-A.2: Field-Level Semantic Schema
 ├─ RES-α.1: Declarative Index Schema for MARC (specification)
-├─ RES-F.2: Semantic Embeddings proof-of-concept (start training)
-├─ Add schema-based validation to mrrc
-└─ Publish all schemas + tools
+├─ RES-F.2: Semantic Embeddings proof-of-concept
+└─ Schema-based validation tooling
 
-Phase 2 (Q2 2026): Analytics, AI-Assisted Cataloging & Discovery
+Phase 2: Analytics, AI-Assisted Cataloging & Discovery
 ├─ RES-B.1: Columnar MARC representation
-├─ RES-B.2: SQL-Like DSL (basic version)
-├─ RES-F.1: LLM Cataloging Assistance (fine-tune, RAG pipeline, UI)
-├─ RES-F.2: Semantic Embeddings (vector index, deduplication CLI)
-├─ RES-α.2: Deduplication & linking tools (integrate with RES-F.2)
-├─ Integrate RES-0.1 toolkit with validation (for data quality)
-├─ Elasticsearch/Solr plugins for RES-α.1 schema
-└─ DuckDB integration examples
+├─ RES-B.2: SQL-Like DSL
+├─ RES-F.1: LLM Cataloging Assistance
+├─ RES-F.2: Semantic Embeddings (vector index, deduplication)
+├─ RES-α.2: Deduplication & linking tools
+└─ Search platform integration (Elasticsearch/Solr/DuckDB)
 
-Phase 3 (Q3 2026): Interoperability, Authority Enrichment & Evaluation
-├─ RES-F.3: Authority Record Generation (LLM service, Wikidata linking)
+Phase 3: Interoperability, Authority Enrichment & Evaluation
+├─ RES-F.3: Authority Record Generation
 ├─ RES-C.1: MARC Exchange Format proof-of-concept
 ├─ Round-trip MARC ↔ BIBFRAME with annotations
-├─ Evaluate RES-F.1/F.2/F.3 with early adopter libraries
-├─ Cataloger feedback on LLM-assisted workflows
-└─ Parallel track: RES-E.2 (if choosing traditional ML over LLM)
+├─ Early adopter evaluation
+└─ Parallel track: RES-E.2 (traditional ML alternatives)
 
-Phase 4 (Q4 2026): Production Ready & Community Validation
-├─ LLM model tuning & deployment optimization (RES-F.1/F.3)
-├─ Embedding model distillation for performance (RES-F.2)
-├─ Performance tuning (RES-D.1 if needed)
-├─ Multi-institutional validation (F.1/F.2/F.3)
-├─ Discovery platform validation (feedback from library systems)
-├─ Stable API documentation & training resources
+Phase 4: Production & Community Validation
+├─ LLM model optimization
+├─ Embedding model distillation for performance
+├─ Multi-institutional validation
+├─ Discovery platform validation
 └─ Community guidelines for responsible AI use in cataloging
 ```
 
-**Multi-Stakeholder Engagement Strategy:**
+### Stakeholder Engagement
 
 **Catalogers & Authority Control Specialists:**
-- Early alpha access to RES-0.1 (Maintenance Toolkit) for cataloger feedback
-- Pilot validation profiles at 2-3 early adopter institutions (RES-0.1, RES-A.2)
-- Authority linking (RES-E.2) tested with copy catalogers and authority system teams
+- Maintenance toolkit feedback (RES-0.1)
+- Validation profile pilots (RES-A.2)
+- Authority linking tested with copy catalogers
 
 **Discovery System Builders:**
-- RES-α.1 schema piloted with 2-3 discovery system teams (ILS vendors, open source projects)
-- Regular check-ins on schema usability (RES-A.2, RES-α.1)
-- RES-α.2 deduplication tested on real cross-system data (federated catalogs)
+- Schema pilots with discovery teams (RES-α.1)
+- Schema usability feedback (RES-A.2, RES-α.1)
+- Cross-system deduplication testing (RES-α.2)
 
 **Collection Development & Quality Assessment:**
-- RES-A.2 schema review for collection assessment patterns (what quality metrics should be measurable?)
-- RES-0.1 toolkit testing for quality auditing workflows
+- Schema review for collection assessment patterns (RES-A.2)
+- Toolkit testing for quality auditing workflows (RES-0.1)
 
 **Consortia & Aggregators:**
-- RES-α.2 deduplication tested on union catalog data (multiple institutions)
-- RES-C.1 MARC Exchange Format design with 2-3 consortia (OCLC, university systems, regional networks)
-- RES-A.2 schema normalized across variant institutional MARC profiles
+- Deduplication tested on union catalog data (RES-α.2)
+- MARC Exchange Format design with consortia (RES-C.1)
+- Schema normalization across institutional profiles (RES-A.2)
 
 **Archivists & Special Collections:**
-- RES-A.2 schema review for archival/non-standard materials
-- Custom profile support testing (can archivists extend the schema for their local needs?)
-- Collection hierarchy representation feedback (does RES-A.1 Semantic IR support archival relationships?)
+- Schema review for non-standard materials (RES-A.2)
+- Custom profile extension testing
+- Collection hierarchy representation feedback (RES-A.1)
 
 ---
 
@@ -1284,8 +1270,8 @@ Phase 4 (Q4 2026): Production Ready & Community Validation
    - Pro: Unlocks analytics on existing archives
    - Con: Extraction is lossy; 50+ years of variant interpretations
 
-4. **Lead standardization efforts (RES-C.1, RES-C.2)?**
-   - Pro: MRRC could influence future library data standards
+4. **Contribute to standardization efforts (RES-C.1, RES-C.2)?**
+   - Pro: Could influence future library data standards
    - Con: Standards work is slow; high organizational effort
 
 ---
@@ -1346,19 +1332,7 @@ Rather than abandoning MARC, we should **build better on top of it**:
 9. **Leverage AI/ML for automation** (RES-F.1/F.2/F.3: cataloging assistance, embeddings, authority enrichment)
 10. **Preserve compatibility** with 50 years of data
 
-**MRRC is positioned to lead this research** because it combines:
-- Deep MARC expertise (full pymarc compatibility, extensive test suite)
-- Understanding of cataloger workflows (through domain analysis)
-- Understanding of discovery system needs (analysis in this document)
-- Understanding of collection development and quality assessment needs
-- Understanding of consortial/aggregator integration challenges
-- Understanding of archival and special collections use cases
-- Performance (Rust implementation enabling efficient transformations)
-- Format flexibility (10+ serialization formats, BIBFRAME support)
-- Modern tooling (Parquet/Arrow/DuckDB integration, vector databases)
-- **AI/ML infrastructure readiness** (embedding generation, fine-tuning support, RAG pipeline integration)
-
-The opportunities identified here are not theoretical—they address real pain points across the entire library ecosystem:
+The opportunities identified here address real pain points across the library ecosystem:
 - **Catalogers** creating metadata and managing catalogs
 - **Collection developers** assessing holdings and making strategic decisions
 - **Metadata quality assessors** measuring and improving catalog health
@@ -1367,7 +1341,7 @@ The opportunities identified here are not theoretical—they address real pain p
 - **Archivists & special collections** managing non-standard materials
 - **End-users** discovering and accessing library resources
 
-**Starting immediately with Phase 1** (RES-0.1, RES-A.2, RES-α.1) would unlock value across all stakeholders: catalogers get better tools, collection developers get quality metrics, discovery systems get declarative schema, aggregators get standardized deduplication, and users get better search results. **Multi-stakeholder engagement** (catalogers, collection developers, system builders, consortia, archivists, libraries) will validate priorities and guide implementation toward maximum impact.
+Tools like mrrc could support this research by providing MARC21 compliance, multi-format serialization, and performance characteristics suitable for prototyping new representations. Phase 1 priorities (RES-0.1, RES-A.2, RES-α.1) would benefit from multi-stakeholder engagement to validate priorities and guide implementation.
 
 ### Important Considerations for AI/ML in Bibliographic Infrastructure
 
