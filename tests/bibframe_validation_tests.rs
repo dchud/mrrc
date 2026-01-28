@@ -35,6 +35,7 @@ fn make_config() -> BibframeConfig {
 }
 
 /// Extracts all rdf:type declarations from RDF/XML
+#[allow(dead_code)]
 fn extract_types(rdf_xml: &str) -> HashSet<String> {
     let mut types = HashSet::new();
     for line in rdf_xml.lines() {
@@ -52,6 +53,7 @@ fn extract_types(rdf_xml: &str) -> HashSet<String> {
 }
 
 /// Extracts all properties (predicates) used in the RDF
+#[allow(dead_code)]
 fn extract_properties(rdf_xml: &str) -> HashSet<String> {
     let mut properties = HashSet::new();
     for line in rdf_xml.lines() {
@@ -256,7 +258,7 @@ fn test_instance_has_carrier_type() {
     );
 
     let graph = marc_to_bibframe(&record, &make_config());
-    let rdf = graph
+    let _rdf = graph
         .serialize(RdfFormat::RdfXml)
         .expect("serialization failed");
 

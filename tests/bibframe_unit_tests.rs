@@ -36,11 +36,13 @@ fn make_config() -> BibframeConfig {
 }
 
 /// Checks if RDF output contains a specific property with expected value.
+#[allow(dead_code)]
 fn has_property(rdf: &str, property: &str, expected_value: &str) -> bool {
     rdf.contains(&format!("<{}>", property)) && rdf.contains(expected_value)
 }
 
 /// Checks if RDF output contains a BIBFRAME class.
+#[allow(dead_code)]
 fn has_class(rdf: &str, class_name: &str) -> bool {
     rdf.contains(&format!("<{}", class_name)) || rdf.contains(&format!("bf:{}", class_name))
 }
@@ -387,7 +389,7 @@ fn test_publication_260_basic() {
 }
 
 #[test]
-fn test_publication_264_RDA() {
+fn test_publication_264_rda() {
     let mut record = Record::new(make_test_leader());
     record.add_control_field("001".to_string(), "test-264".to_string());
     record.add_control_field(
