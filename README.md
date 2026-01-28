@@ -239,6 +239,69 @@ println!("{}", json.to_string());
 let restored = marcjson::marcjson_to_record(&json)?;
 ```
 
+### BIBFRAME Conversion (Linked Data)
+
+Convert MARC records to BIBFRAME, the Library of Congress's modern linked data standard for bibliographic description.
+
+**Enable with feature flag:**
+
+```toml
+[dependencies]
+mrrc = { version = "0.4", features = ["format-bibframe"] }
+```
+
+**Basic conversion (Rust):**
+
+```rust,ignore
+use mrrc::bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat};
+
+// Convert MARC to BIBFRAME RDF graph
+let config = BibframeConfig::new()
+    .with_base_uri("http://library.example.org/");
+let graph = marc_to_bibframe(&record, &config);
+
+// Serialize to RDF/XML, Turtle, JSON-LD, or N-Triples
+let rdf_xml = graph.serialize(RdfFormat::RdfXml)?;
+let jsonld = graph.serialize(RdfFormat::JsonLd)?;
+```
+
+**Reverse conversion (BIBFRAME back to MARC):**
+
+```rust,ignore
+use mrrc::bibframe::{bibframe_to_marc, RdfFormat};
+
+// Parse BIBFRAME from RDF/XML
+let graph = RdfGraph::parse(&rdf_xml, RdfFormat::RdfXml)?;
+
+// Convert back to MARC
+let record = bibframe_to_marc(&graph)?;
+```
+
+**Python example:**
+
+```python
+import mrrc
+
+# Create or load a MARC record
+record = mrrc.Record(leader="00000nam a22000007a 4500")
+# ... add fields ...
+
+# Convert to BIBFRAME
+config = mrrc.BibframeConfig()
+graph = mrrc.marc_to_bibframe(record, config)
+
+# Serialize to JSON-LD
+jsonld = graph.serialize("jsonld")
+
+# Convert back to MARC
+recovered = mrrc.bibframe_to_marc(graph)
+```
+
+**Learn more:**
+- [BIBFRAME documentation](https://www.loc.gov/bibframe/)
+- Rust examples: `marc_to_bibframe.rs`, `bibframe_to_marc.rs`, `bibframe_batch.rs`
+- Python examples: `marc_to_bibframe.py`, `bibframe_roundtrip.py`, `bibframe_config.py`
+
 ## MARC Record Structure
 
 A MARC record consists of:

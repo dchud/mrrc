@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### BIBFRAME Conversion (2026-01-28)
+- **Bidirectional MARC ↔ BIBFRAME conversion** (`format-bibframe` feature):
+  - `marc_to_bibframe()`: Convert MARC bibliographic records to BIBFRAME 2.0 RDF graphs
+  - `bibframe_to_marc()`: Reverse conversion from BIBFRAME RDF back to MARC records
+  - Full implementation of LOC MARC21 to BIBFRAME 2.0 Conversion Specifications
+  - Support for all MARC content types: books, serials, music, maps, visual materials
+- **RDF Serialization Formats**:
+  - RDF/XML (W3C standard, maximum interoperability)
+  - N-Triples (simple line-based triple format)
+  - Turtle (human-readable, compact RDF syntax)
+  - JSON-LD (modern web standard, JSON representation)
+- **Configuration Options** (`BibframeConfig`):
+  - Custom base URI for generated resources
+  - Output format selection
+  - Authority linking control
+  - BFLC extension support
+- **Comprehensive Test Suite** (93 tests):
+  - Unit tests for individual MARC→BIBFRAME mappings
+  - Validation tests for BIBFRAME 2.0 ontology compliance
+  - Integration tests with real-world record types
+  - Round-trip tests documenting acceptable data loss
+  - Baseline comparison tests against official LOC tool
+- **Examples**:
+  - Rust: `marc_to_bibframe.rs`, `bibframe_to_marc.rs`, `bibframe_batch.rs`
+  - Python: `marc_to_bibframe.py`, `bibframe_roundtrip.py`, `bibframe_config.py`
+- **Documentation**:
+  - README section with conversion examples
+  - API documentation with docstrings
+  - Known limitations and data loss documentation
+
 ### Changed
 
 #### Field Insertion Order Preservation (2026-01-14)
