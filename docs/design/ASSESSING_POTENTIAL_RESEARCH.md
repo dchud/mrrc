@@ -78,7 +78,7 @@ When properly coded, a MARC record can be a node in a larger authority graph—a
 
 Example: A MARC record doesn't distinguish *what* a series is at the structural level—you must parse field 490 indicators and cross-reference 8XX tags.
 
-**Impact on MRRC**: BIBFRAME conversion must infer entity structure, introducing complexity and potential data loss. Our 48 BIBFRAME tests document these transformation challenges.
+**Impact on MRRC**: BIBFRAME conversion must infer entity structure, introducing complexity and potential data loss. The library includes 48 BIBFRAME-specific tests documenting these transformation challenges.
 
 ### 2.2 Implicit Semantics Through Indicator Conventions
 
@@ -112,7 +112,7 @@ These conventions are not machine-discoverable. An unknowing parser might correc
 
 **Example**: A Russian title in MARC-8 requires escape sequences; in modern systems, UTF-8 is cleaner. But existing data uses MARC-8, and the standard still permits it.
 
-**mrrc impact**: We invested significantly in MARC-8 encoding support (see `marc8_tables.rs`). This is necessary for compatibility but adds ~5% to parsing overhead on mixed character sets.
+**mrrc impact**: We invested significantly in MARC-8 encoding support (see `marc8_tables.rs`). This is necessary for compatibility but introduces non-trivial decoding overhead compared to native UTF-8 parsing.
 
 ### 2.4 Control Field Structure Limits Analysis
 
@@ -188,10 +188,11 @@ BIBFRAME showed that moving from implicit field/indicator semantics to explicit 
 - **Type safety**: Each column has a declared type (string, integer, date, etc.)
 - **Null semantics**: Missing values are explicit (not empty strings or absent fields)
 - **Compression**: Columnar format compresses repetitive data aggressively
+- **Ecosystem integration**: Direct use in Pandas, Polars, DuckDB, and data science tools
 
-**mrrc implementation**: We've added Arrow support with solid performance (31K records/sec read, 57K write) as seen in `flatbuffers_evaluation_results.json`.
+**mrrc implementation**: We've added Arrow support and can serialize MARC records into columnar format for analytics pipelines. The columnar representation naturally exposes the structure hidden in MARC's flat field layout.
 
-**Takeaway**: MARC data *is* naturally columnar—all 245 fields across all records are titles. The flat MARC structure hides this. An intermediate representation that surfaces columnarity would unlock analytics naturally.
+**Takeaway**: MARC data *is* naturally columnar—all 245 fields across all records are titles, all 650 fields are subjects. The flat MARC structure hides this. An intermediate representation that surfaces columnarity would unlock analytics naturally without special parsing logic.
 
 ### 3.3 MessagePack/FlatBuffers: Zero-Copy Efficiency
 
@@ -199,10 +200,11 @@ BIBFRAME showed that moving from implicit field/indicator semantics to explicit 
 - **Direct memory mapping**: No parsing step; data is immediately accessible
 - **Compact encoding**: 30-50% smaller than JSON, comparable to binary MARC
 - **Language-agnostic**: Multiple implementations available
+- **Schema-based**: Enables code generation and type safety across languages
 
-**mrrc implementation**: FlatBuffers tests showed 97% compression on our test suite with perfect round-trip fidelity.
+**mrrc implementation**: FlatBuffers evaluation showed 97% compression ratio with perfect round-trip fidelity on test records. The format excels at memory-efficient streaming and embedded use cases.
 
-**Takeaway**: When performance matters (streaming, mobile), schema-based binary formats beat MARC's fixed positional encoding because they're more composable and easier to optimize.
+**Takeaway**: When performance matters (streaming, mobile, embedded systems), schema-based binary formats beat MARC's fixed positional encoding because they're more composable and easier to optimize. The standardized schema is also more self-documenting than MARC's implicit field structure.
 
 ### 3.4 JSON-LD / RDF Formats: Semantics for the Web
 
@@ -403,7 +405,7 @@ struct MarcSemanticRecord {
 
 **RES-A.1: MARC Semantic Intermediate Representation**
 
-**Objective**: Design and prototype an IRinterior representation that captures explicit semantics while preserving MARC fidelity.
+**Objective**: Design and prototype an IR (Intermediate Representation) that captures explicit semantics while preserving MARC fidelity.
 
 **Questions to answer:**
 - Can we automatically extract Work/Instance entities from MARC fields?
