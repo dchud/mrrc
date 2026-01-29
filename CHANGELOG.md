@@ -9,12 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-#### BIBFRAME Conversion (2026-01-28)
+#### BIBFRAME Conversion (2026-01-28, updated 2026-01-29)
 - **Bidirectional MARC ↔ BIBFRAME conversion** (`format-bibframe` feature):
   - `marc_to_bibframe()`: Convert MARC bibliographic records to BIBFRAME 2.0 RDF graphs
   - `bibframe_to_marc()`: Reverse conversion from BIBFRAME RDF back to MARC records
   - Full implementation of LOC MARC21 to BIBFRAME 2.0 Conversion Specifications
   - Support for all MARC content types: books, serials, music, maps, visual materials
+- **Python BIBFRAME Bindings** (2026-01-29):
+  - `mrrc.marc_to_bibframe(record, config)`: Python wrapper for MARC→BIBFRAME conversion
+  - `mrrc.bibframe_to_marc(graph)`: Python wrapper for BIBFRAME→MARC conversion
+  - `mrrc.BibframeConfig`: Configuration class with all options exposed
+  - `mrrc.RdfGraph`: RDF graph class with `serialize()` method for all formats
+  - `mrrc.RdfFormat`: Enum for output format selection (RdfXml, NTriples, Turtle, JsonLd)
+- **Hub/Expression Support** (2026-01-29):
+  - MARC 240 (Uniform Title) creates bf:Hub for expression-level grouping
+  - Work → hasExpression → Hub → hasInstance → Instance linking pattern
+  - Hub → expressionOf → Work reverse relationship
+  - Supports translations, versions, and other expression-level variants
+- **Item Creation from Holdings** (2026-01-29):
+  - MARC 852 (Location) creates bf:Item entities linked to Instance
+  - Call number from $h/$i, sublocation from $b, barcode from $p
+  - MARC 876-878 (Item Information) support for detailed holdings
+  - Multiple Items per Instance with sequential URI generation
+- **Classification Support** (2026-01-29):
+  - MARC 050 → bf:ClassificationLcc (Library of Congress Classification)
+  - MARC 060 → bf:ClassificationNlm (National Library of Medicine)
+  - MARC 080 → bf:ClassificationUdc (Universal Decimal Classification)
+  - MARC 082 → bf:ClassificationDdc (Dewey Decimal Classification)
+  - MARC 084 → bf:Classification (Other schemes with source in $2)
+  - classificationPortion ($a) and itemPortion ($b) properties
 - **RDF Serialization Formats**:
   - RDF/XML (W3C standard, maximum interoperability)
   - N-Triples (simple line-based triple format)
@@ -25,12 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Output format selection
   - Authority linking control
   - BFLC extension support
-- **Comprehensive Test Suite** (93 tests):
-  - Unit tests for individual MARC→BIBFRAME mappings
-  - Validation tests for BIBFRAME 2.0 ontology compliance
-  - Integration tests with real-world record types
-  - Round-trip tests documenting acceptable data loss
-  - Baseline comparison tests against official LOC tool
+- **Comprehensive Test Suite** (111 tests):
+  - 48 unit tests for individual MARC→BIBFRAME mappings (including Hub, Item, Classification)
+  - 26 validation tests for BIBFRAME 2.0 ontology compliance
+  - 16 integration tests with real-world record types
+  - 16 round-trip tests documenting acceptable data loss
+  - 5 baseline comparison tests against official LOC tool
 - **Examples**:
   - Rust: `marc_to_bibframe.rs`, `bibframe_to_marc.rs`, `bibframe_batch.rs`
   - Python: `marc_to_bibframe.py`, `bibframe_roundtrip.py`, `bibframe_config.py`
