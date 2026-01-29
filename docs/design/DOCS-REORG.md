@@ -6,15 +6,54 @@
 
 ## Executive Summary
 
-This plan proposes reorganizing MRRC's documentation using [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) to create a professional, navigable documentation site. The current README.md is ~900 lines and serves too many purposes; this reorganization will create focused, discoverable content for different user journeys.
+This plan proposes reorganizing MRRC's documentation using [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) to create a navigable documentation site. The current README.md is ~900 lines and serves too many purposes; this reorganization will create focused, discoverable content for different user needs.
 
 ## Goals
 
-1. **Friendly onboarding** - New users should understand what MRRC is and see working code in under 2 minutes
+1. **Clear onboarding** - New users should understand what MRRC does and see working code quickly
 2. **Clear navigation** - Users should find what they need without reading everything
 3. **Separated concerns** - Quickstart vs. tutorials vs. reference vs. internals
 4. **Maintainability** - Easier to update individual sections without cascading changes
-5. **Professional presentation** - Material for MkDocs with light theme, search, and GitHub Pages hosting
+5. **Accessible hosting** - Material for MkDocs with light theme, search, and GitHub Pages hosting
+
+## Style and Tone Guidelines
+
+The documentation should be **factual, accurate, and helpful** - not promotional.
+
+### General Principles
+
+1. **Be accurate, not aspirational** - State what the library actually does, not what we wish it did
+2. **Avoid marketing language** - No superlatives ("blazing fast", "revolutionary"), no hype
+3. **Acknowledge limitations** - If something requires workarounds or has caveats, say so
+4. **Let code speak** - Working examples are more convincing than claims
+
+### Specific Guidelines
+
+| Instead of... | Write... |
+|---------------|----------|
+| "Drop-in replacement for pymarc" | "pymarc-compatible API with minor differences" |
+| "Blazing fast performance" | "~4x faster than pymarc in benchmarks (see methodology)" |
+| "Seamless migration" | "Migration requires updating imports and minor API adjustments" |
+| "Full support for X" | "Supports X" (or "Partial support for X" if applicable) |
+| "Simply do X" | "To do X:" (avoid implying things are simple) |
+
+### Accuracy Checklist for Claims
+
+Before making performance or compatibility claims, verify:
+
+- [ ] Benchmark methodology is documented and reproducible
+- [ ] Numbers include context (hardware, dataset size, warm-up)
+- [ ] Comparisons are fair (same task, same conditions)
+- [ ] Limitations and edge cases are noted
+- [ ] pymarc compatibility differences are documented in migration guide
+
+### What to Avoid
+
+- Emoji in technical documentation (unless showing output that contains them)
+- Exclamation points for emphasis
+- Words like "just", "simply", "easily" (they dismiss complexity)
+- Vague claims without evidence ("much faster", "highly compatible")
+- Comparisons that cherry-pick favorable scenarios
 
 ## Current State Analysis
 
@@ -103,44 +142,83 @@ docs/
 
 ## New Root README.md
 
-The repository README.md should be dramatically shortened to ~150-200 lines:
+The repository README.md should be shortened to ~150-200 lines:
 
 ```markdown
 # MRRC: MARC Rust Crate
 
 [badges]
 
-A high-performance Rust library for MARC bibliographic records with Python bindings.
+A Rust library for reading, writing, and manipulating MARC bibliographic records, with Python bindings.
 
-## Why MRRC?
+## Features
 
-- **Fast**: ~4x faster than pymarc, ~1M records/sec in pure Rust
-- **Compatible**: Drop-in replacement for pymarc API
-- **Flexible**: 10+ serialization formats including BIBFRAME
+- Reads and writes ISO 2709 (MARC21) binary format
+- Python bindings with pymarc-compatible API (minor differences documented)
+- Multiple serialization formats: JSON, XML, MARCJSON, CSV, Protobuf, Arrow, and others
+- MARC-8 and UTF-8 character encoding support
+- Benchmarked at ~4x pymarc throughput in Python, ~1M records/sec in Rust
 
-## Quick Install
+## Installation
 
-**Python**: `pip install mrrc`
-**Rust**: `cargo add mrrc`
+**Python** (3.9+):
+```bash
+pip install mrrc
+```
 
-## Quick Example
+**Rust**:
+```bash
+cargo add mrrc
+```
 
-[Single 10-line Python example]
-[Single 10-line Rust example]
+## Example
+
+**Python:**
+```python
+from mrrc import MARCReader
+
+with open("records.mrc", "rb") as f:
+    for record in MARCReader(f):
+        print(record.title())
+```
+
+**Rust:**
+```rust
+use mrrc::MarcReader;
+use std::fs::File;
+
+let file = File::open("records.mrc")?;
+let mut reader = MarcReader::new(file);
+while let Some(record) = reader.read_record()? {
+    if let Some(title) = record.title() {
+        println!("{}", title);
+    }
+}
+```
 
 ## Documentation
 
-📖 **[Full Documentation](https://dchud.github.io/mrrc/)**
-
-- [Getting Started](link) - Installation and first steps
-- [Python Tutorial](link) - Complete Python guide
-- [Rust Tutorial](link) - Complete Rust guide
-- [API Reference](link) - Detailed API documentation
-- [Examples](link) - Working code examples
+- [Getting Started](https://dchud.github.io/mrrc/getting-started/)
+- [Python Tutorial](https://dchud.github.io/mrrc/tutorials/python/)
+- [Rust Tutorial](https://dchud.github.io/mrrc/tutorials/rust/)
+- [API Reference](https://dchud.github.io/mrrc/reference/)
+- [Migration from pymarc](https://dchud.github.io/mrrc/guides/migration-from-pymarc/)
 
 ## Format Support
 
-[Condensed 5-row table with links to full matrix]
+| Format | Read | Write | Notes |
+|--------|------|-------|-------|
+| ISO 2709 | Yes | Yes | Standard MARC binary |
+| JSON | Yes | Yes | Generic JSON |
+| XML | Yes | Yes | MARCXML |
+| Protobuf | Yes | Yes | Feature-gated |
+| Arrow | Yes | Yes | Feature-gated |
+
+[Full format matrix](https://dchud.github.io/mrrc/reference/formats/)
+
+## Status
+
+Experimental. The Python API aims for pymarc compatibility but has some differences; see the [migration guide](https://dchud.github.io/mrrc/guides/migration-from-pymarc/). Rust APIs may change between minor versions.
 
 ## License
 
@@ -171,15 +249,15 @@ MIT
 ### Phase 2: Landing Page and Getting Started
 
 1. **Write new `docs/index.md`** (landing page)
-   - Brief intro (50 words)
-   - Feature highlights with icons
+   - Brief, factual intro
+   - Feature list (not feature "highlights")
    - Language tabs for Python/Rust
    - Links to next steps
 
 2. **Create getting-started section**
    - Condense INSTALLATION_GUIDE.md
-   - Write quickstart-python.md (5-minute guide)
-   - Write quickstart-rust.md (5-minute guide)
+   - Write quickstart-python.md
+   - Write quickstart-rust.md
 
 ### Phase 3: Tutorials
 
@@ -218,7 +296,7 @@ MIT
 
 2. **Write example walkthroughs**
    - Annotated versions of key examples
-   - Explain why, not just what
+   - Explain the reasoning, not just the code
    - Link to related tutorials
 
 ### Phase 6: Contributing Section
@@ -235,7 +313,7 @@ MIT
 ### Phase 7: Final Polish
 
 1. **Update root README.md**
-   - Dramatic reduction to ~150-200 lines
+   - Reduce to ~150-200 lines
    - Link to hosted docs for everything else
 
 2. **Cross-linking pass**
@@ -243,9 +321,10 @@ MIT
    - Add "See also" sections
    - Verify no dead links
 
-3. **Search optimization**
-   - Add appropriate titles and descriptions
-   - Ensure code blocks are searchable
+3. **Accuracy review**
+   - Verify all claims against current benchmarks
+   - Check pymarc compatibility statements against migration guide
+   - Ensure version numbers are current
 
 ## MkDocs Configuration
 
@@ -253,7 +332,7 @@ MIT
 # mkdocs.yml
 site_name: MRRC Documentation
 site_url: https://dchud.github.io/mrrc/
-site_description: High-performance MARC library for Rust and Python
+site_description: MARC library for Rust and Python
 repo_url: https://github.com/dchud/mrrc
 repo_name: dchud/mrrc
 
@@ -410,7 +489,7 @@ jobs:
 ## Success Criteria
 
 ### For New Users
-- [ ] Can understand what MRRC is in 30 seconds from landing page
+- [ ] Can understand what MRRC does in 30 seconds from landing page
 - [ ] Can install and run first example in under 5 minutes
 - [ ] Can find language-specific content (Python vs Rust) easily
 - [ ] Search returns relevant results for common queries
@@ -419,7 +498,7 @@ jobs:
 - [ ] Can find API reference quickly
 - [ ] Can find troubleshooting/performance guides
 - [ ] Examples are easy to discover and copy
-- [ ] Migration guide is prominent for pymarc users
+- [ ] Migration guide clearly lists pymarc differences
 
 ### For Contributors
 - [ ] Development setup is clear
@@ -436,10 +515,11 @@ jobs:
 ## Content Guidelines
 
 ### Writing Style
+- **Factual**: State what things do, not how great they are
 - **Concise**: Get to the point quickly
 - **Task-oriented**: Focus on what users want to accomplish
 - **Code-first**: Show working code, then explain
-- **Progressive**: Simple → intermediate → advanced
+- **Honest**: Acknowledge limitations and differences
 
 ### Code Examples
 - **Complete**: Examples should run without modification
@@ -458,6 +538,8 @@ Brief intro (1-2 sentences max).
 ## Main Content
 
 ### Subsection
+
+## Limitations or Caveats (if applicable)
 
 ## Next Steps
 
@@ -506,7 +588,7 @@ Brief intro (1-2 sentences max).
 - [ ] `docs/ARCHITECTURE.md` → `docs/contributing/architecture.md`
 
 ### Files to Update
-- [ ] `README.md` - Dramatic reduction to ~150-200 lines
+- [ ] `README.md` - Reduce to ~150-200 lines
 - [ ] `docs/benchmarks/RESULTS.md` - Minor updates for navigation
 
 ### Files to Keep As-Is
@@ -555,7 +637,7 @@ Brief intro (1-2 sentences max).
 - **Admonitions**: Note, warning, tip, info boxes
 - **Code annotations**: Numbered explanations for code
 - **Content tabs**: Python/Rust side-by-side
-- **Code copy button**: Easy copying of examples
+- **Code copy button**: Copying of examples
 
 ### Navigation Features
 - **Tabs**: Top-level navigation
@@ -565,45 +647,31 @@ Brief intro (1-2 sentences max).
 
 ### Integrations
 - **GitHub**: Edit on GitHub links
-- **Social cards**: Auto-generated for sharing
-- **Analytics**: Optional Google Analytics
+- **Analytics**: Optional (if we want usage data)
 
 ## Appendix: Example Landing Page
 
 ```markdown
 # MRRC
 
-**High-performance MARC library for Rust and Python**
+A Rust library for MARC bibliographic records, with Python bindings.
 
 ---
 
-<div class="grid cards" markdown>
+## What MRRC Does
 
--   :material-speedometer:{ .lg .middle } **Fast**
+- Reads and writes ISO 2709 (MARC21) binary format
+- Provides Python bindings with a pymarc-compatible API
+- Supports multiple serialization formats (JSON, XML, Protobuf, Arrow, etc.)
+- Handles MARC-8 and UTF-8 character encodings
 
-    ---
+## Performance
 
-    ~4x faster than pymarc in Python, ~1M records/sec in pure Rust
+In benchmarks on [hardware/dataset details]:
+- Python: ~4x throughput compared to pymarc
+- Rust: ~1M records/sec
 
--   :material-swap-horizontal:{ .lg .middle } **Compatible**
-
-    ---
-
-    Drop-in replacement for pymarc API - migrate with one import change
-
--   :material-file-multiple:{ .lg .middle } **Flexible**
-
-    ---
-
-    10+ serialization formats including BIBFRAME, Arrow, and MessagePack
-
--   :material-language-python:{ .lg .middle } **Dual Language**
-
-    ---
-
-    First-class support for both Python and Rust developers
-
-</div>
+See [benchmarks](benchmarks/RESULTS.md) for methodology and detailed results.
 
 ## Quick Example
 
@@ -624,30 +692,31 @@ Brief intro (1-2 sentences max).
     use std::fs::File;
 
     let file = File::open("records.mrc")?;
-    for record in MarcReader::new(file) {
-        println!("{}", record?.title());
+    let mut reader = MarcReader::new(file);
+    while let Some(record) = reader.read_record()? {
+        if let Some(title) = record.title() {
+            println!("{}", title);
+        }
     }
     ```
 
-## Get Started
+## Getting Started
 
-<div class="grid cards" markdown>
+- [Installation](getting-started/installation.md) - Install for Python or Rust
+- [Python Quickstart](getting-started/quickstart-python.md)
+- [Rust Quickstart](getting-started/quickstart-rust.md)
+- [Tutorials](tutorials/index.md) - Step-by-step guides
+- [API Reference](reference/index.md) - Detailed documentation
 
--   [:material-download: **Installation**](getting-started/installation.md)
+## pymarc Users
 
-    Install mrrc for Python or Rust
+MRRC's Python API is designed to be similar to pymarc. Most code requires only minor changes:
 
--   [:material-rocket-launch: **Quickstart**](getting-started/quickstart-python.md)
+- Update imports from `pymarc` to `mrrc`
+- Adjust record creation syntax
+- See the [migration guide](guides/migration-from-pymarc.md) for specific differences
 
-    Your first MARC program in 5 minutes
+## Status
 
--   [:material-school: **Tutorials**](tutorials/index.md)
-
-    Learn mrrc step by step
-
--   [:material-book-open-variant: **API Reference**](reference/index.md)
-
-    Detailed API documentation
-
-</div>
+This library is experimental. APIs may change between versions.
 ```
