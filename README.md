@@ -83,8 +83,8 @@ while let Some(record) = reader.read_record()? {
 | CSV | - | Yes | Tabular export |
 | Protobuf | Yes | Yes | Feature-gated |
 | Arrow | Yes | Yes | Feature-gated |
-| FlatBuffers | Yes | Yes | Feature-gated |
-| MessagePack | Yes | Yes | Feature-gated |
+| `FlatBuffers` | Yes | Yes | Feature-gated |
+| `MessagePack` | Yes | Yes | Feature-gated |
 | BIBFRAME | - | Yes | Feature-gated |
 
 [Full format matrix](https://dchud.github.io/mrrc/reference/formats/)
@@ -95,8 +95,8 @@ Pre-built Python wheels are available for:
 
 | Platform | Architectures |
 |----------|---------------|
-| Linux | x86_64, aarch64 |
-| macOS | x86_64 (Intel), arm64 (Apple Silicon) |
+| Linux | `x86_64`, `aarch64` |
+| macOS | `x86_64` (Intel), `arm64` (Apple Silicon) |
 | Windows | x64 |
 
 ## Status
