@@ -14,7 +14,7 @@ This plan proposes reorganizing MRRC's documentation using [Material for MkDocs]
 2. **Clear navigation** - Users should find what they need without reading everything
 3. **Separated concerns** - Quickstart vs. tutorials vs. reference vs. internals
 4. **Maintainability** - Easier to update individual sections without cascading changes
-5. **Accessible hosting** - Material for MkDocs with light theme, search, and GitHub Pages hosting
+5. **Accessible hosting** - Material for MkDocs with light/dark theme toggle (defaults to light, respects system preference), search, and GitHub Pages hosting
 
 ## Style and Tone Guidelines
 
@@ -237,14 +237,16 @@ MIT
 ### Phase 1: Infrastructure Setup
 
 1. **Add MkDocs configuration**
-   - Create `mkdocs.yml` with Material theme (light mode)
+   - Create `mkdocs.yml` with Material theme (light/dark toggle)
    - Configure navigation structure
    - Set up GitHub Actions for deployment
+   - Test locally with `mkdocs serve` before committing
 
 2. **Create docs scaffold**
    - Create directory structure
    - Add placeholder index.md files
    - Set up navigation
+   - Verify build succeeds with `mkdocs build --strict`
 
 ### Phase 2: Landing Page and Getting Started
 
@@ -339,9 +341,22 @@ repo_name: dchud/mrrc
 theme:
   name: material
   palette:
-    scheme: default  # Light theme
-    primary: indigo
-    accent: indigo
+    # Light mode (default) - listed first so it's the default
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode - auto-activates if user's system prefers dark
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - navigation.tabs
     - navigation.sections
@@ -511,6 +526,7 @@ jobs:
 - [ ] Mobile-responsive
 - [ ] Search indexes all content
 - [ ] Deploys automatically on merge to main
+- [ ] Light/dark theme toggle works; respects system preference by default
 
 ## Content Guidelines
 
@@ -591,11 +607,19 @@ Brief intro (1-2 sentences max).
 - [ ] `README.md` - Reduce to ~150-200 lines
 - [ ] `docs/benchmarks/RESULTS.md` - Minor updates for navigation
 
-### Files to Keep As-Is
-- [ ] `docs/design/*.md` - Internal design docs
-- [ ] `docs/history/*.md` - Historical archive
-- [ ] `docs/MEMORY_SAFETY.md` - Link from contributing
-- [ ] `docs/CONCURRENCY.md` - Merge into guides or reference
+### Files to Keep As-Is (not in main navigation)
+- [ ] `docs/design/*.md` - Internal design docs (accessible via direct URL only)
+- [ ] `docs/history/*.md` - Historical archive (accessible via direct URL only)
+
+### Files to Merge or Relocate
+- [ ] `docs/MEMORY_SAFETY.md` - Link from contributing/testing.md
+- [ ] `docs/CONCURRENCY.md` - Merge relevant content into guides/threading-python.md
+
+### Post-Migration Cleanup
+After verifying the new structure works:
+- Delete migrated source files (INSTALLATION_GUIDE.md, PYTHON_TUTORIAL.md, etc.)
+- Keep design/ and history/ directories as archival reference
+- Update any external links that pointed to old file locations
 
 ## Estimated Effort
 
@@ -612,15 +636,22 @@ Brief intro (1-2 sentences max).
 
 ## Open Questions
 
+Decisions to make before or during implementation:
+
 1. **API Documentation Generation**: Should we use mkdocstrings to auto-generate Python API docs from docstrings, or maintain hand-written docs?
+   - *Recommendation*: Start with hand-written; add mkdocstrings later if maintenance burden is high
 
 2. **Versioned Documentation**: Do we need versioned docs (e.g., v0.5, v0.6) or is latest-only sufficient for now?
+   - *Recommendation*: Latest-only until v1.0; versioning adds complexity
 
-3. **Internationalization**: Any plans for non-English documentation?
+3. **Examples Testing**: Should we add CI that validates all code examples in docs compile/run?
+   - *Recommendation*: Yes, but as a follow-up task after initial migration
 
-4. **Examples Testing**: Should we add CI that validates all code examples in docs compile/run?
+Deferred (not needed for initial migration):
 
-5. **Search Analytics**: Do we want to track what users search for to identify documentation gaps?
+4. **Internationalization**: Not planned; English-only for now
+
+5. **Search Analytics**: Not needed initially; can add later if useful
 
 ## Next Steps
 
@@ -632,6 +663,11 @@ Brief intro (1-2 sentences max).
 ---
 
 ## Appendix: Material for MkDocs Features to Use
+
+### Theme Features
+- **Light/dark toggle**: User can switch themes manually
+- **System preference detection**: Automatically uses user's OS preference
+- **Persistent preference**: Remembers user's choice across sessions
 
 ### Content Features
 - **Admonitions**: Note, warning, tip, info boxes
@@ -649,14 +685,14 @@ Brief intro (1-2 sentences max).
 - **GitHub**: Edit on GitHub links
 - **Analytics**: Optional (if we want usage data)
 
-## Appendix: Example Landing Page
+## Appendix: Landing Page Template
+
+This template shows the recommended structure for `docs/index.md`. It demonstrates the use of Material for MkDocs features (content tabs, admonitions) while following our style guidelines.
 
 ```markdown
 # MRRC
 
 A Rust library for MARC bibliographic records, with Python bindings.
-
----
 
 ## What MRRC Does
 
@@ -667,11 +703,10 @@ A Rust library for MARC bibliographic records, with Python bindings.
 
 ## Performance
 
-In benchmarks on [hardware/dataset details]:
+In benchmarks (see [methodology](benchmarks/RESULTS.md)):
+
 - Python: ~4x throughput compared to pymarc
 - Rust: ~1M records/sec
-
-See [benchmarks](benchmarks/RESULTS.md) for methodology and detailed results.
 
 ## Quick Example
 
@@ -702,19 +737,13 @@ See [benchmarks](benchmarks/RESULTS.md) for methodology and detailed results.
 
 ## Getting Started
 
-- [Installation](getting-started/installation.md) - Install for Python or Rust
+- [Installation](getting-started/installation.md)
 - [Python Quickstart](getting-started/quickstart-python.md)
 - [Rust Quickstart](getting-started/quickstart-rust.md)
-- [Tutorials](tutorials/index.md) - Step-by-step guides
-- [API Reference](reference/index.md) - Detailed documentation
 
 ## pymarc Users
 
-MRRC's Python API is designed to be similar to pymarc. Most code requires only minor changes:
-
-- Update imports from `pymarc` to `mrrc`
-- Adjust record creation syntax
-- See the [migration guide](guides/migration-from-pymarc.md) for specific differences
+MRRC's Python API is similar to pymarc but not identical. See the [migration guide](guides/migration-from-pymarc.md) for specific differences.
 
 ## Status
 
