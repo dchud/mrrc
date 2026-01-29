@@ -252,6 +252,7 @@ MIT
 2. **Create docs scaffold**
    - Create directory structure
    - Add placeholder index.md files (including design/index.md and history/index.md)
+     - **Note**: `docs/history/README.md` already has comprehensive content; adapt it for `history/index.md`
    - Set up navigation
    - Verify build succeeds:
      ```bash
@@ -626,6 +627,7 @@ Brief intro (1-2 sentences max).
 ### Files to Keep As-Is (add index pages for navigation)
 - [ ] `docs/design/*.md` - Internal design docs; add `docs/design/index.md` with categorized links
 - [ ] `docs/history/*.md` - Historical archive; add `docs/history/index.md` with chronological/topical index
+  - **Note**: Existing `docs/history/README.md` is comprehensive and well-organized; adapt it for `index.md` rather than starting from scratch
 
 ### Files to Merge or Relocate
 - [ ] `docs/MEMORY_SAFETY.md` - Link from contributing/testing.md
