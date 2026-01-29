@@ -51,7 +51,7 @@ with open("records.mrc", "rb") as f:
 
 **Rust:**
 
-```rust
+```rust,ignore
 use mrrc::MarcReader;
 use std::fs::File;
 
