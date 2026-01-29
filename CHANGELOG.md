@@ -17,6 +17,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+#### Documentation Reorganization (2026-01-29)
+- **Complete restructure using Material for MkDocs**:
+  - New tabbed navigation with Getting Started, Tutorials, Guides, Reference, Examples sections
+  - Light/dark theme toggle with persistent preference
+  - Built-in search with instant results
+  - Mobile-responsive layout
+- **Getting Started**:
+  - `quickstart-python.md`: 5-minute Python quickstart with installation, reading, writing examples
+  - `quickstart-rust.md`: 5-minute Rust quickstart with Cargo setup and basic operations
+- **Tutorials** (split from monolithic guides):
+  - Python tutorials: reading-records, writing-records, querying-fields, format-conversion, concurrency (5 files)
+  - Rust tutorials: reading-records, writing-records, querying-fields, format-conversion, concurrency (5 files)
+- **Reference Documentation**:
+  - `marc-primer.md`: MARC record structure explained for non-librarians (leader, directory, fields, indicators, subfields)
+  - `encoding.md`: Character encoding reference (MARC-8, UTF-8, escape sequences, detection)
+  - `python-api.md`: Complete Python API reference (Record, Field, MARCReader, formats, BIBFRAME)
+  - `rust-api.md`: Complete Rust API reference (types, builders, traits, feature flags)
+- **Examples Index**: Organized links to 29 example files by category (Python/Rust)
+- **README Reduction**: Streamlined from 897 to 115 lines per documentation best practices
+- **Archived Legacy Docs**: Moved superseded files to `docs/history/legacy-docs-superseded/`
+
 ## [0.6.0] - 2026-01-29
 
 ### Added
