@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Performance
+
+### Documentation
+
+## [0.6.0] - 2026-01-29
+
+### Added
+
 #### BIBFRAME Conversion (2026-01-28, updated 2026-01-29)
 - **Bidirectional MARC ↔ BIBFRAME conversion** (`format-bibframe` feature):
   - `marc_to_bibframe()`: Convert MARC bibliographic records to BIBFRAME 2.0 RDF graphs
