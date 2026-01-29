@@ -805,6 +805,7 @@ impl<'a> BibframeToMarcConverter<'a> {
     // ========================================================================
 
     /// Extracts series to 490 and 8XX fields.
+    #[allow(clippy::cognitive_complexity)]
     fn extract_series(&mut self, record: &mut Record) {
         if let Some(ref work_key) = self.work_node {
             let has_series_prop = format!("{BF}hasSeries");
@@ -824,7 +825,7 @@ impl<'a> BibframeToMarcConverter<'a> {
                                         for (t_pred, t_obj) in title_props {
                                             if t_pred.ends_with("mainTitle") {
                                                 if let RdfNode::Literal { value, .. } = t_obj {
-                                                    title = value.clone();
+                                                    title.clone_from(value);
                                                 }
                                             }
                                         }
@@ -834,7 +835,7 @@ impl<'a> BibframeToMarcConverter<'a> {
                                 if series_pred == &format!("{RDFS}label") {
                                     if let RdfNode::Literal { value, .. } = series_obj {
                                         if title.is_empty() {
-                                            title = value.clone();
+                                            title.clone_from(value);
                                         }
                                     }
                                 }
@@ -923,6 +924,7 @@ impl<'a> BibframeToMarcConverter<'a> {
     }
 
     /// Creates a linking entry field (76X-78X) from a related entity.
+    #[allow(clippy::cognitive_complexity)]
     fn create_linking_field(&self, tag: &str, related_key: &str) -> Option<Field> {
         let related_props = self.subject_index.get(related_key)?;
 

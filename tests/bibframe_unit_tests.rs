@@ -735,3 +735,489 @@ fn test_record_with_control_fields_only() {
         "Record with only control fields should produce RDF"
     );
 }
+
+// ============================================================================
+// Unit Tests: Hub/Expression Support (240 Uniform Title)
+// ============================================================================
+
+#[test]
+fn test_no_hub_without_240() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-no-hub".to_string());
+
+    let mut field_245 = Field::new("245".to_string(), '1', '0');
+    field_245.add_subfield('a', "Test Title".to_string());
+    record.add_field(field_245);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Without 240, no Hub should be created
+    assert!(
+        !rdf.contains("bibframe/Hub"),
+        "Without 240 field, no Hub should be created"
+    );
+
+    // Work should link directly to Instance
+    assert!(
+        rdf.contains("hasInstance"),
+        "Work should have hasInstance relationship"
+    );
+}
+
+#[test]
+fn test_hub_created_with_240() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-hub".to_string());
+
+    // Add 240 - Uniform Title
+    let mut field_240 = Field::new("240".to_string(), '1', '0');
+    field_240.add_subfield('a', "Works.".to_string());
+    field_240.add_subfield('l', "English".to_string());
+    record.add_field(field_240);
+
+    let mut field_245 = Field::new("245".to_string(), '1', '0');
+    field_245.add_subfield('a', "Complete Works of Shakespeare".to_string());
+    record.add_field(field_245);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Hub should be created
+    assert!(
+        rdf.contains("bibframe/Hub"),
+        "With 240 field, Hub should be created"
+    );
+
+    // Work should link to Hub via hasExpression
+    assert!(
+        rdf.contains("hasExpression"),
+        "Work should have hasExpression relationship to Hub"
+    );
+
+    // Hub should link to Instance via hasInstance
+    assert!(
+        rdf.contains("hasInstance"),
+        "Hub should have hasInstance relationship to Instance"
+    );
+}
+
+#[test]
+fn test_hub_has_uniform_title() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-hub-title".to_string());
+
+    let mut field_240 = Field::new("240".to_string(), '1', '0');
+    field_240.add_subfield('a', "Don Quixote".to_string());
+    field_240.add_subfield('l', "English".to_string());
+    field_240.add_subfield('f', "1605".to_string());
+    record.add_field(field_240);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Hub should have the uniform title
+    assert!(
+        rdf.contains("Don Quixote"),
+        "Hub should contain uniform title from 240 $a"
+    );
+
+    // Hub should have language
+    assert!(
+        rdf.contains("English"),
+        "Hub should contain language from 240 $l"
+    );
+}
+
+#[test]
+fn test_hub_uri_generation() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-hub-uri".to_string());
+
+    let mut field_240 = Field::new("240".to_string(), '1', '0');
+    field_240.add_subfield('a', "Works".to_string());
+    record.add_field(field_240);
+
+    let config = BibframeConfig::new().with_base_uri("http://example.org/");
+    let graph = marc_to_bibframe(&record, &config);
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Hub should have a minted URI
+    assert!(
+        rdf.contains("http://example.org/hub/test-hub-uri"),
+        "Hub should have minted URI with control number"
+    );
+}
+
+#[test]
+fn test_hub_with_music_240() {
+    let mut record = Record::new(make_test_leader());
+    record.leader.record_type = 'c'; // Notated music
+    record.add_control_field("001".to_string(), "test-music-hub".to_string());
+
+    // 240 for music with key, arrangement
+    let mut field_240 = Field::new("240".to_string(), '1', '0');
+    field_240.add_subfield('a', "Sonatas".to_string());
+    field_240.add_subfield('n', "no. 14".to_string());
+    field_240.add_subfield('p', "Moonlight".to_string());
+    record.add_field(field_240);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    assert!(rdf.contains("bibframe/Hub"), "Music 240 should create Hub");
+    assert!(rdf.contains("Sonatas"), "Hub should contain uniform title");
+    assert!(
+        rdf.contains("no. 14") || rdf.contains("partNumber"),
+        "Hub should contain part number"
+    );
+}
+
+// ============================================================================
+// Unit Tests: Item/Holdings Support (852, 876-878)
+// ============================================================================
+
+#[test]
+fn test_no_item_without_holdings() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-no-item".to_string());
+
+    let mut field_245 = Field::new("245".to_string(), '1', '0');
+    field_245.add_subfield('a', "Test Title".to_string());
+    record.add_field(field_245);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Without holdings fields, no Item should be created
+    assert!(
+        !rdf.contains("bibframe/Item"),
+        "Without holdings fields, no Item should be created"
+    );
+}
+
+#[test]
+fn test_item_created_with_852() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-item".to_string());
+
+    // Add 852 - Location field
+    let mut field_852 = Field::new("852".to_string(), '0', '0');
+    field_852.add_subfield('a', "DLC".to_string()); // Library of Congress
+    field_852.add_subfield('b', "General Collections".to_string());
+    field_852.add_subfield('h', "QA76.73".to_string());
+    field_852.add_subfield('i', ".P97".to_string());
+    record.add_field(field_852);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Item should be created
+    assert!(
+        rdf.contains("bibframe/Item"),
+        "With 852 field, Item should be created"
+    );
+
+    // Instance should link to Item
+    assert!(
+        rdf.contains("hasItem"),
+        "Instance should have hasItem relationship to Item"
+    );
+
+    // Item should have location
+    assert!(
+        rdf.contains("DLC"),
+        "Item should contain location from 852 $a"
+    );
+}
+
+#[test]
+fn test_item_has_call_number() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-item-callno".to_string());
+
+    let mut field_852 = Field::new("852".to_string(), '0', '1');
+    field_852.add_subfield('a', "MH".to_string());
+    field_852.add_subfield('h', "PS3537".to_string());
+    field_852.add_subfield('i', ".T4244 Z7".to_string());
+    record.add_field(field_852);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Item should have shelfMark
+    assert!(
+        rdf.contains("shelfMark") || rdf.contains("PS3537"),
+        "Item should contain call number from 852 $h/$i"
+    );
+}
+
+#[test]
+fn test_item_with_barcode() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-item-barcode".to_string());
+
+    let mut field_852 = Field::new("852".to_string(), '0', '0');
+    field_852.add_subfield('a', "DLC".to_string());
+    field_852.add_subfield('p', "00001234567".to_string()); // Barcode
+    record.add_field(field_852);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Item should have barcode
+    assert!(
+        rdf.contains("00001234567"),
+        "Item should contain barcode from 852 $p"
+    );
+    assert!(
+        rdf.contains("Barcode"),
+        "Item should have Barcode identifier type"
+    );
+}
+
+#[test]
+fn test_item_uri_generation() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-item-uri".to_string());
+
+    let mut field_852 = Field::new("852".to_string(), '0', '0');
+    field_852.add_subfield('a', "DLC".to_string());
+    record.add_field(field_852);
+
+    let config = BibframeConfig::new().with_base_uri("http://example.org/");
+    let graph = marc_to_bibframe(&record, &config);
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Item should have a minted URI
+    assert!(
+        rdf.contains("http://example.org/item/test-item-uri-0"),
+        "Item should have minted URI with control number and sequence"
+    );
+}
+
+#[test]
+fn test_multiple_items_from_852() {
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-multi-item".to_string());
+
+    // Add multiple 852 fields (multiple copies)
+    let mut field_852a = Field::new("852".to_string(), '0', '0');
+    field_852a.add_subfield('a', "DLC".to_string());
+    field_852a.add_subfield('p', "copy1".to_string());
+    record.add_field(field_852a);
+
+    let mut field_852b = Field::new("852".to_string(), '0', '0');
+    field_852b.add_subfield('a', "MH".to_string());
+    field_852b.add_subfield('p', "copy2".to_string());
+    record.add_field(field_852b);
+
+    let config = BibframeConfig::new().with_base_uri("http://example.org/");
+    let graph = marc_to_bibframe(&record, &config);
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Should have two Items with different URIs
+    assert!(
+        rdf.contains("item/test-multi-item-0"),
+        "First item should have URI with seq 0"
+    );
+    assert!(
+        rdf.contains("item/test-multi-item-1"),
+        "Second item should have URI with seq 1"
+    );
+}
+
+// ===========================================================================
+// Classification Tests (050, 060, 080, 082, 084)
+// ===========================================================================
+
+#[test]
+fn test_classification_050_lcc() {
+    // 050 - Library of Congress Classification
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-lcc".to_string());
+
+    let mut field_050 = Field::new("050".to_string(), '0', '0');
+    field_050.add_subfield('a', "QA76.73".to_string());
+    field_050.add_subfield('b', ".P98 2023".to_string());
+    record.add_field(field_050);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Should create ClassificationLcc
+    assert!(
+        rdf.contains("ClassificationLcc"),
+        "Should create bf:ClassificationLcc type"
+    );
+    // Should have classification portion
+    assert!(
+        rdf.contains("classificationPortion"),
+        "Should include classificationPortion property"
+    );
+    assert!(
+        rdf.contains("QA76.73"),
+        "Should include the LC class number"
+    );
+    // Should have item portion (cutter)
+    assert!(
+        rdf.contains("itemPortion"),
+        "Should include itemPortion property"
+    );
+    assert!(
+        rdf.contains(".P98 2023"),
+        "Should include the cutter number"
+    );
+    // Should be linked to Work via classification property
+    assert!(
+        rdf.contains("classification"),
+        "Should link to Work via classification"
+    );
+}
+
+#[test]
+fn test_classification_082_dewey() {
+    // 082 - Dewey Decimal Classification
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-dewey".to_string());
+
+    let mut field_082 = Field::new("082".to_string(), '0', '4');
+    field_082.add_subfield('a', "005.133".to_string());
+    record.add_field(field_082);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Should create ClassificationDdc
+    assert!(
+        rdf.contains("ClassificationDdc"),
+        "Should create bf:ClassificationDdc type"
+    );
+    assert!(rdf.contains("005.133"), "Should include the Dewey number");
+}
+
+#[test]
+fn test_classification_060_nlm() {
+    // 060 - National Library of Medicine Classification
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-nlm".to_string());
+
+    let mut field_060 = Field::new("060".to_string(), '1', '4');
+    field_060.add_subfield('a', "WB 102".to_string());
+    field_060.add_subfield('b', "S65m 2020".to_string());
+    record.add_field(field_060);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Should create ClassificationNlm
+    assert!(
+        rdf.contains("ClassificationNlm"),
+        "Should create bf:ClassificationNlm type"
+    );
+    assert!(
+        rdf.contains("WB 102"),
+        "Should include the NLM class number"
+    );
+}
+
+#[test]
+fn test_classification_080_udc() {
+    // 080 - Universal Decimal Classification
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-udc".to_string());
+
+    let mut field_080 = Field::new("080".to_string(), ' ', ' ');
+    field_080.add_subfield('a', "004.42".to_string());
+    record.add_field(field_080);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Should create ClassificationUdc
+    assert!(
+        rdf.contains("ClassificationUdc"),
+        "Should create bf:ClassificationUdc type"
+    );
+    assert!(rdf.contains("004.42"), "Should include the UDC number");
+}
+
+#[test]
+fn test_classification_084_other() {
+    // 084 - Other Classification with source
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-other-class".to_string());
+
+    let mut field_084 = Field::new("084".to_string(), ' ', ' ');
+    field_084.add_subfield('a', "B2430".to_string());
+    field_084.add_subfield('2', "bliss".to_string());
+    record.add_field(field_084);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Should create generic Classification
+    assert!(
+        rdf.contains("Classification"),
+        "Should create bf:Classification type"
+    );
+    assert!(
+        rdf.contains("B2430"),
+        "Should include the classification number"
+    );
+    // Should include source
+    assert!(rdf.contains("source"), "Should include source property");
+    assert!(rdf.contains("bliss"), "Should include the source code");
+}
+
+#[test]
+fn test_classification_linked_to_work() {
+    // Classification should be linked to Work, not Instance
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-class-link".to_string());
+
+    let mut field_050 = Field::new("050".to_string(), '0', '0');
+    field_050.add_subfield('a', "PS3566.A822".to_string());
+    record.add_field(field_050);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // The classification triple should reference the Work URI, not Instance
+    // Work URI pattern: http://example.org/work/...
+    // Instance URI pattern: http://example.org/instance/...
+    assert!(
+        rdf.contains("work/") && rdf.contains("classification"),
+        "Classification should be linked to Work"
+    );
+}
+
+#[test]
+fn test_multiple_classifications() {
+    // Record can have multiple classification fields
+    let mut record = Record::new(make_test_leader());
+    record.add_control_field("001".to_string(), "test-multi-class".to_string());
+
+    let mut field_050 = Field::new("050".to_string(), '0', '0');
+    field_050.add_subfield('a', "QA76.73.R87".to_string());
+    record.add_field(field_050);
+
+    let mut field_082 = Field::new("082".to_string(), '0', '4');
+    field_082.add_subfield('a', "005.133".to_string());
+    record.add_field(field_082);
+
+    let graph = marc_to_bibframe(&record, &make_config());
+    let rdf = graph.serialize(RdfFormat::NTriples).unwrap();
+
+    // Should have both LCC and DDC
+    assert!(
+        rdf.contains("ClassificationLcc"),
+        "Should have LC Classification"
+    );
+    assert!(
+        rdf.contains("ClassificationDdc"),
+        "Should have Dewey Classification"
+    );
+    assert!(rdf.contains("QA76.73.R87"), "Should have LC number");
+    assert!(rdf.contains("005.133"), "Should have Dewey number");
+}

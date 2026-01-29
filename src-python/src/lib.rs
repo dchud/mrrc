@@ -5,6 +5,7 @@ mod authority_readers;
 mod backend;
 mod batched_reader;
 mod batched_unified_reader;
+mod bibframe;
 mod boundary_scanner_wrapper;
 mod buffered_reader;
 mod error;
@@ -22,6 +23,7 @@ mod wrappers;
 mod writers;
 
 use authority_readers::PyAuthorityMARCReader;
+use bibframe::{PyBibframeConfig, PyRdfGraph};
 use boundary_scanner_wrapper::PyRecordBoundaryScanner;
 use holdings_readers::PyHoldingsMARCReader;
 use producer_consumer_pipeline_wrapper::PyProducerConsumerPipeline;
@@ -95,6 +97,12 @@ fn _mrrc(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tier2_formats::flatbuffers_to_record, m)?)?;
     m.add_function(wrap_pyfunction!(tier2_formats::record_to_messagepack, m)?)?;
     m.add_function(wrap_pyfunction!(tier2_formats::messagepack_to_record, m)?)?;
+
+    // BIBFRAME conversion (LOC linked data format)
+    m.add_class::<PyBibframeConfig>()?;
+    m.add_class::<PyRdfGraph>()?;
+    m.add_function(wrap_pyfunction!(bibframe::py_marc_to_bibframe, m)?)?;
+    m.add_function(wrap_pyfunction!(bibframe::py_bibframe_to_marc, m)?)?;
 
     // Rayon parser pool functions
     m.add_function(wrap_pyfunction!(parse_batch_parallel, m)?)?;

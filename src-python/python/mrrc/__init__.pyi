@@ -410,3 +410,260 @@ class MARCWriter:
         This is automatically called when using the context manager.
         """
         ...
+
+# =============================================================================
+# BIBFRAME Conversion (LOC Linked Data Format)
+# =============================================================================
+
+class BibframeConfig:
+    """Configuration for BIBFRAME conversion.
+
+    Controls how MARC records are converted to BIBFRAME entities and how
+    the resulting RDF graph is serialized.
+
+    Examples:
+        Default configuration:
+
+        ```python
+        import mrrc
+
+        config = mrrc.BibframeConfig()
+        ```
+
+        Custom configuration:
+
+        ```python
+        config = mrrc.BibframeConfig()
+        config.set_base_uri("http://example.org/")
+        config.set_output_format("turtle")
+        config.set_authority_linking(True)
+        ```
+    """
+
+    def __new__(cls) -> BibframeConfig: ...
+    def __repr__(self) -> str: ...
+    def set_base_uri(self, uri: str) -> None:
+        """Set the base URI for generated resources.
+
+        When set, entities are given minted URIs like `{base}/work/{id}`.
+        When not set, blank nodes are used.
+
+        Args:
+            uri: The base URI string
+        """
+        ...
+
+    @property
+    def base_uri(self) -> str | None:
+        """Get the current base URI."""
+        ...
+
+    def set_output_format(self, format: str) -> None:
+        """Set the output format for RDF serialization.
+
+        Args:
+            format: One of: "rdf-xml", "jsonld", "turtle", "ntriples"
+
+        Raises:
+            ValueError: If format is not recognized
+        """
+        ...
+
+    @property
+    def output_format(self) -> str:
+        """Get the current output format."""
+        ...
+
+    def set_authority_linking(self, enabled: bool) -> None:
+        """Enable or disable linking to external authority URIs.
+
+        When True, agents and subjects with identifiable authority control
+        numbers link to external URIs like http://id.loc.gov/authorities/names/.
+
+        Args:
+            enabled: Whether to enable authority linking
+        """
+        ...
+
+    @property
+    def authority_linking(self) -> bool:
+        """Get the current authority linking setting."""
+        ...
+
+    def set_include_bflc(self, enabled: bool) -> None:
+        """Enable or disable BFLC extensions.
+
+        BFLC extensions are required for practical LOC compatibility.
+
+        Args:
+            enabled: Whether to include BFLC extensions
+        """
+        ...
+
+    @property
+    def include_bflc(self) -> bool:
+        """Get the current BFLC extension setting."""
+        ...
+
+    def set_strict(self, enabled: bool) -> None:
+        """Enable or disable strict validation mode.
+
+        When True, questionable data causes errors.
+        When False (default), best-effort conversion is attempted.
+
+        Args:
+            enabled: Whether to enable strict mode
+        """
+        ...
+
+    @property
+    def strict(self) -> bool:
+        """Get the current strict mode setting."""
+        ...
+
+    def set_fail_fast(self, enabled: bool) -> None:
+        """Enable or disable fail-fast error handling.
+
+        When True, conversion stops at the first error.
+        When False (default), errors are collected and conversion continues.
+
+        Args:
+            enabled: Whether to enable fail-fast mode
+        """
+        ...
+
+    @property
+    def fail_fast(self) -> bool:
+        """Get the current fail-fast setting."""
+        ...
+
+class RdfGraph:
+    """An RDF graph containing BIBFRAME triples.
+
+    This class wraps the RDF graph produced by MARC-to-BIBFRAME conversion
+    and provides serialization to various RDF formats.
+
+    Examples:
+        ```python
+        import mrrc
+
+        record = mrrc.Record(leader=mrrc.Leader())
+        config = mrrc.BibframeConfig()
+        graph = mrrc.marc_to_bibframe(record, config)
+
+        # Get number of triples
+        print(f"Graph has {len(graph)} triples")
+
+        # Serialize to different formats
+        rdf_xml = graph.serialize("rdf-xml")
+        jsonld = graph.serialize("jsonld")
+        turtle = graph.serialize("turtle")
+        ```
+    """
+
+    def __new__(cls) -> RdfGraph: ...
+    def __repr__(self) -> str: ...
+    def __len__(self) -> int:
+        """Get the number of triples in the graph."""
+        ...
+
+    def is_empty(self) -> bool:
+        """Check if the graph is empty."""
+        ...
+
+    def serialize(self, format: str) -> str:
+        """Serialize the graph to a string in the specified format.
+
+        Args:
+            format: One of: "rdf-xml", "jsonld", "turtle", "ntriples"
+
+        Returns:
+            The serialized RDF as a string
+
+        Raises:
+            ValueError: If format is not recognized or serialization fails
+        """
+        ...
+
+    @staticmethod
+    def parse(data: str, format: str) -> RdfGraph:
+        """Parse an RDF graph from a string.
+
+        Args:
+            data: The RDF data as a string
+            format: One of: "rdf-xml", "jsonld", "turtle", "ntriples"
+
+        Returns:
+            A new RdfGraph instance
+
+        Raises:
+            ValueError: If format is not recognized or parsing fails
+        """
+        ...
+
+    def triples(self) -> list[tuple[str, str, str]]:
+        """Get all triples as a list of (subject, predicate, object) tuples.
+
+        Returns:
+            A list of tuples where each tuple is (subject_str, predicate_str, object_str)
+        """
+        ...
+
+def marc_to_bibframe(record: Record, config: BibframeConfig) -> RdfGraph:
+    """Convert a MARC record to a BIBFRAME RDF graph.
+
+    This function transforms a MARC bibliographic record into a BIBFRAME 2.0
+    RDF graph containing Work, Instance, and optionally Item entities.
+
+    Args:
+        record: The MARC record to convert
+        config: Configuration options for the conversion
+
+    Returns:
+        An RdfGraph containing the BIBFRAME representation
+
+    Examples:
+        ```python
+        import mrrc
+
+        record = mrrc.Record(leader=mrrc.Leader())
+        record.add_control_field("001", "12345")
+        record.add_control_field("008", "040520s2023    xxu           000 0 eng  ")
+
+        config = mrrc.BibframeConfig()
+        config.set_base_uri("http://example.org/")
+
+        graph = mrrc.marc_to_bibframe(record, config)
+        print(graph.serialize("jsonld"))
+        ```
+    """
+    ...
+
+def bibframe_to_marc(graph: RdfGraph) -> Record:
+    """Convert a BIBFRAME RDF graph to a MARC record.
+
+    This function transforms a BIBFRAME 2.0 RDF graph back into a MARC
+    bibliographic record. Note that some information loss is inherent
+    because BIBFRAME is semantically richer than MARC.
+
+    Args:
+        graph: The BIBFRAME RDF graph to convert
+
+    Returns:
+        A MARC Record representing the BIBFRAME data
+
+    Raises:
+        ValueError: If the graph cannot be converted
+
+    Examples:
+        ```python
+        import mrrc
+
+        # Round-trip conversion
+        record = mrrc.Record(leader=mrrc.Leader())
+        config = mrrc.BibframeConfig()
+        graph = mrrc.marc_to_bibframe(record, config)
+        recovered = mrrc.bibframe_to_marc(graph)
+        ```
+    """
+    ...

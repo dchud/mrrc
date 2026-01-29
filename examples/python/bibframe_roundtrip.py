@@ -12,27 +12,28 @@ import mrrc
 
 def main():
     # Create a sample MARC record
-    record = mrrc.Record(
-        leader="00000nam a22000007a 4500",
-    )
+    leader = mrrc.Leader()
+    leader.record_type = "a"  # language material
+    leader.bibliographic_level = "m"  # monograph
+    record = mrrc.Record(leader=leader)
 
     # Add control fields
     record.add_control_field("001", "roundtrip-001")
     record.add_control_field("008", "040520s2023    xxu           000 0 eng  ")
 
     # Add ISBN
-    field_020 = mrrc.Field(tag="020", ind1=" ", ind2=" ")
+    field_020 = mrrc.Field(tag="020", indicator1=" ", indicator2=" ")
     field_020.add_subfield("a", "9780123456789")
     record.add_field(field_020)
 
     # Add title
-    field_245 = mrrc.Field(tag="245", ind1="1", ind2="0")
+    field_245 = mrrc.Field(tag="245", indicator1="1", indicator2="0")
     field_245.add_subfield("a", "MARC Roundtrip Test /")
     field_245.add_subfield("c", "by Test Author.")
     record.add_field(field_245)
 
     # Add author
-    field_100 = mrrc.Field(tag="100", ind1="1", ind2=" ")
+    field_100 = mrrc.Field(tag="100", indicator1="1", indicator2=" ")
     field_100.add_subfield("a", "Author, Test,")
     field_100.add_subfield("4", "aut")
     record.add_field(field_100)
@@ -75,10 +76,10 @@ def main():
         title_field = title_fields[0]
         print(f"\nSample recovered 245 field:")
         print(f"  Tag: {title_field.tag}")
-        print(f"  Ind1: '{title_field.ind1}'")
-        print(f"  Ind2: '{title_field.ind2}'")
-        for code, value in title_field.subfields:
-            print(f"  ${code}: {value}")
+        print(f"  Ind1: '{title_field.indicator1}'")
+        print(f"  Ind2: '{title_field.indicator2}'")
+        for sf in title_field.subfields():
+            print(f"  ${sf.code}: {sf.value}")
 
     print("\n✓ Round-trip conversion complete!")
     print("\nNote: Some data may be lost in round-trip conversion:")

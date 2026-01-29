@@ -137,15 +137,31 @@ pub mod classes {
     pub const LCCN: &str = "Lccn";
     /// Local identifier type.
     pub const LOCAL: &str = "Local";
+
+    // Classification types
+    /// Classification (general).
+    pub const CLASSIFICATION: &str = "Classification";
+    /// `ClassificationLcc` - Library of Congress Classification.
+    pub const CLASSIFICATION_LCC: &str = "ClassificationLcc";
+    /// `ClassificationDdc` - Dewey Decimal Classification.
+    pub const CLASSIFICATION_DDC: &str = "ClassificationDdc";
+    /// `ClassificationNlm` - National Library of Medicine Classification.
+    pub const CLASSIFICATION_NLM: &str = "ClassificationNlm";
+    /// `ClassificationUdc` - Universal Decimal Classification.
+    pub const CLASSIFICATION_UDC: &str = "ClassificationUdc";
 }
 
 /// Common BIBFRAME property local names.
 pub mod properties {
     // Core relationships
-    /// hasInstance - links Work to Instance.
+    /// hasInstance - links Work to Instance (or Hub to Instance when Hub present).
     pub const HAS_INSTANCE: &str = "hasInstance";
-    /// instanceOf - links Instance to Work.
+    /// instanceOf - links Instance to Work (or Instance to Hub when Hub present).
     pub const INSTANCE_OF: &str = "instanceOf";
+    /// hasExpression - links Work to Hub (expression-level grouping).
+    pub const HAS_EXPRESSION: &str = "hasExpression";
+    /// expressionOf - links Hub to Work.
+    pub const EXPRESSION_OF: &str = "expressionOf";
     /// hasItem - links Instance to Item.
     pub const HAS_ITEM: &str = "hasItem";
     /// itemOf - links Item to Instance.
@@ -198,6 +214,12 @@ pub mod properties {
     pub const EXTENT: &str = "extent";
     /// dimensions - physical dimensions.
     pub const DIMENSIONS: &str = "dimensions";
+    /// classification - links to Classification.
+    pub const CLASSIFICATION: &str = "classification";
+    /// `classificationPortion` - classification number portion.
+    pub const CLASSIFICATION_PORTION: &str = "classificationPortion";
+    /// itemPortion - item number/cutter portion.
+    pub const ITEM_PORTION: &str = "itemPortion";
     /// note - general note.
     pub const NOTE: &str = "note";
     /// summary - summary of content.

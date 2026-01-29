@@ -61,9 +61,9 @@
 //!
 //! # Modules
 //!
-//! - [`config`]: Configuration options for BIBFRAME conversion
-//! - [`namespaces`]: BIBFRAME namespace prefixes and vocabulary terms
-//! - [`rdf`]: RDF graph representation and serialization
+//! - `config`: Configuration options for BIBFRAME conversion
+//! - `namespaces`: BIBFRAME namespace prefixes and vocabulary terms
+//! - `rdf`: RDF graph representation and serialization
 
 mod config;
 mod converter;

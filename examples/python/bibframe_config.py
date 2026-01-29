@@ -13,22 +13,23 @@ import mrrc
 
 def main():
     # Create a sample MARC record
-    record = mrrc.Record(
-        leader="00000nam a22000007a 4500",
-    )
+    leader = mrrc.Leader()
+    leader.record_type = "a"  # language material
+    leader.bibliographic_level = "m"  # monograph
+    record = mrrc.Record(leader=leader)
 
     # Add control fields
     record.add_control_field("001", "config-example")
     record.add_control_field("008", "040520s2023    xxu           000 0 eng  ")
 
     # Add title
-    field_245 = mrrc.Field(tag="245", ind1="1", ind2="0")
+    field_245 = mrrc.Field(tag="245", indicator1="1", indicator2="0")
     field_245.add_subfield("a", "Configuration Example /")
     field_245.add_subfield("c", "by Demo User.")
     record.add_field(field_245)
 
     # Add author with authority link
-    field_100 = mrrc.Field(tag="100", ind1="1", ind2=" ")
+    field_100 = mrrc.Field(tag="100", indicator1="1", indicator2=" ")
     field_100.add_subfield("a", "User, Demo,")
     field_100.add_subfield("0", "(OCoLC)12345678")
     record.add_field(field_100)

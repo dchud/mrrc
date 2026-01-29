@@ -55,6 +55,11 @@ from ._mrrc import (
     flatbuffers_to_record,
     record_to_messagepack,
     messagepack_to_record,
+    # BIBFRAME conversion support (LOC linked data format)
+    BibframeConfig,
+    RdfGraph,
+    marc_to_bibframe as _marc_to_bibframe,
+    bibframe_to_marc as _bibframe_to_marc,
 )
 from typing import Optional, List, Union, Any, Tuple
 
@@ -1418,6 +1423,69 @@ def write(records, path: Union[str, Any], format: Optional[str] = None) -> int:
     return count
 
 
+# =============================================================================
+# BIBFRAME Conversion Functions (LOC Linked Data Format)
+# =============================================================================
+
+def marc_to_bibframe(record, config: BibframeConfig = None) -> RdfGraph:
+    """Convert a MARC record to a BIBFRAME RDF graph.
+
+    This function transforms a MARC bibliographic record into a BIBFRAME 2.0
+    RDF graph containing Work, Instance, and optionally Item entities.
+
+    Args:
+        record: The MARC record to convert (Record or wrapped Record)
+        config: Configuration options for the conversion (default: BibframeConfig())
+
+    Returns:
+        An RdfGraph containing the BIBFRAME representation
+
+    Example:
+        >>> import mrrc
+        >>> record = mrrc.Record(leader=mrrc.Leader())
+        >>> record.add_control_field("001", "12345")
+        >>> config = mrrc.BibframeConfig()
+        >>> graph = mrrc.marc_to_bibframe(record, config)
+        >>> print(graph.serialize("jsonld"))
+    """
+    if config is None:
+        config = BibframeConfig()
+    # Handle wrapped Record (get inner PyRecord)
+    inner_record = record._inner if hasattr(record, '_inner') else record
+    return _marc_to_bibframe(inner_record, config)
+
+
+def bibframe_to_marc(graph: RdfGraph) -> 'Record':
+    """Convert a BIBFRAME RDF graph to a MARC record.
+
+    This function transforms a BIBFRAME 2.0 RDF graph back into a MARC
+    bibliographic record. Note that some information loss is inherent
+    because BIBFRAME is semantically richer than MARC.
+
+    Args:
+        graph: The BIBFRAME RDF graph to convert
+
+    Returns:
+        A MARC Record representing the BIBFRAME data
+
+    Raises:
+        ValueError: If the graph cannot be converted
+
+    Example:
+        >>> import mrrc
+        >>> # Round-trip conversion
+        >>> record = mrrc.Record(leader=mrrc.Leader())
+        >>> config = mrrc.BibframeConfig()
+        >>> graph = mrrc.marc_to_bibframe(record, config)
+        >>> recovered = mrrc.bibframe_to_marc(graph)
+    """
+    inner_record = _bibframe_to_marc(graph)
+    # Wrap in Python Record class
+    wrapped = Record.__new__(Record)
+    wrapped._inner = inner_record
+    return wrapped
+
+
 __all__ = [
     # Core classes
     "AuthorityMARCReader",
@@ -1473,6 +1541,11 @@ __all__ = [
     "flatbuffers_to_record",
     "record_to_messagepack",
     "messagepack_to_record",
+    # BIBFRAME conversion support (LOC linked data format)
+    "BibframeConfig",
+    "RdfGraph",
+    "marc_to_bibframe",
+    "bibframe_to_marc",
     # Format-agnostic helpers
     "read",
     "write",

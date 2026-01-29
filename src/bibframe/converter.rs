@@ -24,6 +24,10 @@ struct MarcToBibframeConverter<'a> {
     graph: RdfGraph,
     work_node: Option<RdfNode>,
     instance_node: Option<RdfNode>,
+    /// Hub node for expression-level grouping (created when 240 present)
+    hub_node: Option<RdfNode>,
+    /// Item nodes for specific copies (created when holdings fields present)
+    item_nodes: Vec<RdfNode>,
 }
 
 impl<'a> MarcToBibframeConverter<'a> {
@@ -34,6 +38,8 @@ impl<'a> MarcToBibframeConverter<'a> {
             graph: RdfGraph::new(),
             work_node: None,
             instance_node: None,
+            hub_node: None,
+            item_nodes: Vec::new(),
         }
     }
 
@@ -42,18 +48,23 @@ impl<'a> MarcToBibframeConverter<'a> {
         self.create_work_node();
         self.create_instance_node();
 
-        // Link Work and Instance
+        // Create Hub node if 240 (uniform title) is present
+        self.create_hub_if_needed();
+
+        // Link Work and Instance (possibly through Hub)
         self.link_work_instance();
 
         // Add Work type from Leader
         self.add_work_type();
 
         // Process field groups
+        self.process_uniform_title(); // 240 uniform title -> Hub
         self.process_titles();
         self.process_creators();
         self.process_contributors();
         self.process_subjects();
         self.process_identifiers();
+        self.process_classification();
         self.process_provision_activity();
         self.process_physical_description();
         self.process_notes();
@@ -63,6 +74,9 @@ impl<'a> MarcToBibframeConverter<'a> {
         self.process_linking_entries();
         self.process_series();
         self.process_format_specific_fields();
+
+        // Process holdings fields to create Items (852, 876-878)
+        self.process_holdings();
 
         // Add admin metadata if configured
         if self.config.include_bflc {
@@ -93,19 +107,65 @@ impl<'a> MarcToBibframeConverter<'a> {
             .add(node, format!("{RDF}type"), RdfNode::bf_class(instance_type));
     }
 
+    /// Creates a Hub node if field 240 (uniform title) is present.
+    /// Hub represents expression-level grouping (e.g., translations, versions).
+    fn create_hub_if_needed(&mut self) {
+        // Check if 240 field exists
+        if self.record.fields.get("240").is_none() {
+            return;
+        }
+
+        let node = self.generate_entity_uri("hub");
+        self.hub_node = Some(node.clone());
+
+        // Add rdf:type bf:Hub
+        self.graph
+            .add(node, format!("{RDF}type"), RdfNode::bf_class(classes::HUB));
+    }
+
     /// Links Work and Instance with hasInstance/instanceOf.
+    /// When Hub is present, links: Work -> hasExpression -> Hub -> hasInstance -> Instance
     fn link_work_instance(&mut self) {
-        if let (Some(work), Some(instance)) = (&self.work_node, &self.instance_node) {
-            self.graph.add(
-                work.clone(),
-                format!("{BF}{}", properties::HAS_INSTANCE),
-                instance.clone(),
-            );
-            self.graph.add(
-                instance.clone(),
-                format!("{BF}{}", properties::INSTANCE_OF),
-                work.clone(),
-            );
+        match (&self.work_node, &self.hub_node, &self.instance_node) {
+            // With Hub: Work -> hasExpression -> Hub -> hasInstance -> Instance
+            (Some(work), Some(hub), Some(instance)) => {
+                // Work -> hasExpression -> Hub
+                self.graph.add(
+                    work.clone(),
+                    format!("{BF}{}", properties::HAS_EXPRESSION),
+                    hub.clone(),
+                );
+                self.graph.add(
+                    hub.clone(),
+                    format!("{BF}{}", properties::EXPRESSION_OF),
+                    work.clone(),
+                );
+                // Hub -> hasInstance -> Instance
+                self.graph.add(
+                    hub.clone(),
+                    format!("{BF}{}", properties::HAS_INSTANCE),
+                    instance.clone(),
+                );
+                self.graph.add(
+                    instance.clone(),
+                    format!("{BF}{}", properties::INSTANCE_OF),
+                    hub.clone(),
+                );
+            },
+            // Without Hub: Work -> hasInstance -> Instance (direct)
+            (Some(work), None, Some(instance)) => {
+                self.graph.add(
+                    work.clone(),
+                    format!("{BF}{}", properties::HAS_INSTANCE),
+                    instance.clone(),
+                );
+                self.graph.add(
+                    instance.clone(),
+                    format!("{BF}{}", properties::INSTANCE_OF),
+                    work.clone(),
+                );
+            },
+            _ => {},
         }
     }
 
@@ -167,6 +227,100 @@ impl<'a> MarcToBibframeConverter<'a> {
             RdfNode::uri(format!("{base}{entity_type}/{id}"))
         } else {
             self.graph.new_blank_node()
+        }
+    }
+
+    /// Processes 240 (uniform title) field into Hub title properties.
+    /// The 240 field represents a standardized title form for grouping expressions.
+    fn process_uniform_title(&mut self) {
+        let hub = match &self.hub_node {
+            Some(n) => n.clone(),
+            None => return, // No Hub = no 240 processing needed
+        };
+
+        // Process 240 - Uniform Title
+        if let Some(fields) = self.record.fields.get("240") {
+            for field in fields {
+                let title_node = self.graph.new_blank_node();
+
+                // Add type bf:Title
+                self.graph.add(
+                    title_node.clone(),
+                    format!("{RDF}type"),
+                    RdfNode::bf_class(classes::TITLE),
+                );
+
+                // Extract 240 subfields
+                // $a - Uniform title
+                // $d - Date of signing (treaties)
+                // $f - Date of work
+                // $g - Miscellaneous info
+                // $k - Form subheading
+                // $l - Language
+                // $m - Medium of performance (music)
+                // $n - Number of part/section
+                // $o - Arranged statement (music)
+                // $p - Name of part/section
+                // $r - Key (music)
+                // $s - Version
+                for subfield in &field.subfields {
+                    match subfield.code {
+                        'a' => {
+                            self.graph.add(
+                                title_node.clone(),
+                                format!("{BF}{}", properties::MAIN_TITLE),
+                                RdfNode::literal(&subfield.value),
+                            );
+                        },
+                        'n' => {
+                            self.graph.add(
+                                title_node.clone(),
+                                format!("{BF}{}", properties::PART_NUMBER),
+                                RdfNode::literal(&subfield.value),
+                            );
+                        },
+                        'p' => {
+                            self.graph.add(
+                                title_node.clone(),
+                                format!("{BF}{}", properties::PART_NAME),
+                                RdfNode::literal(&subfield.value),
+                            );
+                        },
+                        'l' => {
+                            // Language of work
+                            self.graph.add(
+                                hub.clone(),
+                                format!("{BF}language"),
+                                RdfNode::literal(&subfield.value),
+                            );
+                        },
+                        'f' => {
+                            // Date of work
+                            self.graph.add(
+                                hub.clone(),
+                                format!("{BF}{}", properties::DATE),
+                                RdfNode::literal(&subfield.value),
+                            );
+                        },
+                        's' => {
+                            // Version
+                            self.graph.add(
+                                hub.clone(),
+                                format!("{BF}version"),
+                                RdfNode::literal(&subfield.value),
+                            );
+                        },
+                        _ => {},
+                    }
+                }
+
+                // Link Hub to title
+                self.graph.add(
+                    hub.clone(),
+                    format!("{BF}{}", properties::TITLE),
+                    title_node,
+                );
+            }
         }
     }
 
@@ -765,10 +919,9 @@ impl<'a> MarcToBibframeConverter<'a> {
                     .subfields
                     .iter()
                     .find(|s| s.code == '2')
-                    .map(|s| s.value.as_str())
-                    .unwrap_or("Identifier")
+                    .map_or("Identifier", |s| s.value.as_str())
             },
-            '8' => "Identifier", // Unspecified type
+            // '8' and others: Unspecified type
             _ => "Identifier",
         };
 
@@ -962,6 +1115,96 @@ impl<'a> MarcToBibframeConverter<'a> {
             instance.clone(),
             format!("{BF}{}", properties::IDENTIFIED_BY),
             id_node,
+        );
+    }
+
+    /// Processes classification fields (050, 060, 080, 082).
+    /// Classification in BIBFRAME is linked to Work, not Instance.
+    fn process_classification(&mut self) {
+        let work = match &self.work_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+
+        // 050 - Library of Congress Classification
+        if let Some(fields) = self.record.fields.get("050") {
+            for field in fields {
+                self.add_classification(&work, field, classes::CLASSIFICATION_LCC);
+            }
+        }
+
+        // 060 - National Library of Medicine Classification
+        if let Some(fields) = self.record.fields.get("060") {
+            for field in fields {
+                self.add_classification(&work, field, classes::CLASSIFICATION_NLM);
+            }
+        }
+
+        // 080 - Universal Decimal Classification
+        if let Some(fields) = self.record.fields.get("080") {
+            for field in fields {
+                self.add_classification(&work, field, classes::CLASSIFICATION_UDC);
+            }
+        }
+
+        // 082 - Dewey Decimal Classification
+        if let Some(fields) = self.record.fields.get("082") {
+            for field in fields {
+                self.add_classification(&work, field, classes::CLASSIFICATION_DDC);
+            }
+        }
+
+        // 084 - Other Classification (generic)
+        if let Some(fields) = self.record.fields.get("084") {
+            for field in fields {
+                self.add_classification(&work, field, classes::CLASSIFICATION);
+            }
+        }
+    }
+
+    /// Adds a classification node to the Work.
+    fn add_classification(&mut self, work: &RdfNode, field: &Field, class_type: &str) {
+        let class_node = self.graph.new_blank_node();
+
+        // Add type
+        self.graph.add(
+            class_node.clone(),
+            format!("{RDF}type"),
+            RdfNode::bf_class(class_type),
+        );
+
+        // $a - Classification number (classificationPortion)
+        if let Some(class_num) = field.subfields.iter().find(|s| s.code == 'a') {
+            self.graph.add(
+                class_node.clone(),
+                format!("{BF}{}", properties::CLASSIFICATION_PORTION),
+                RdfNode::literal(&class_num.value),
+            );
+        }
+
+        // $b - Item number/Cutter (itemPortion)
+        if let Some(item_num) = field.subfields.iter().find(|s| s.code == 'b') {
+            self.graph.add(
+                class_node.clone(),
+                format!("{BF}{}", properties::ITEM_PORTION),
+                RdfNode::literal(&item_num.value),
+            );
+        }
+
+        // $2 - Source of classification (for 084 Other Classification)
+        if let Some(source) = field.subfields.iter().find(|s| s.code == '2') {
+            self.graph.add(
+                class_node.clone(),
+                format!("{BF}{}", properties::SOURCE),
+                RdfNode::literal(&source.value),
+            );
+        }
+
+        // Link classification to Work
+        self.graph.add(
+            work.clone(),
+            format!("{BF}{}", properties::CLASSIFICATION),
+            class_node,
         );
     }
 
@@ -1190,6 +1433,220 @@ impl<'a> MarcToBibframeConverter<'a> {
         }
     }
 
+    /// Processes holdings fields (852, 876-878) to create bf:Item entities.
+    /// Items represent specific copies of an Instance.
+    #[allow(clippy::too_many_lines)]
+    fn process_holdings(&mut self) {
+        let instance = match &self.instance_node {
+            Some(n) => n.clone(),
+            None => return,
+        };
+
+        // Check if any holdings fields exist
+        let has_holdings = self.record.fields.get("852").is_some()
+            || self.record.fields.get("876").is_some()
+            || self.record.fields.get("877").is_some()
+            || self.record.fields.get("878").is_some();
+
+        if !has_holdings {
+            return;
+        }
+
+        // Process 852 - Location fields (primary source for Items)
+        if let Some(fields) = self.record.fields.get("852") {
+            for (idx, field) in fields.iter().enumerate() {
+                let item_node = self.generate_item_uri(idx);
+
+                // Add rdf:type bf:Item
+                self.graph.add(
+                    item_node.clone(),
+                    format!("{RDF}type"),
+                    RdfNode::bf_class(classes::ITEM),
+                );
+
+                // $a - Location (institution)
+                if let Some(loc) = field.subfields.iter().find(|s| s.code == 'a') {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}heldBy"),
+                        RdfNode::literal(&loc.value),
+                    );
+                }
+
+                // $b - Sublocation or collection
+                if let Some(subloc) = field.subfields.iter().find(|s| s.code == 'b') {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}subLocation"),
+                        RdfNode::literal(&subloc.value),
+                    );
+                }
+
+                // $h, $i, $j, $k, $l, $m - Call number components
+                let call_parts: Vec<&str> = field
+                    .subfields
+                    .iter()
+                    .filter(|s| matches!(s.code, 'h' | 'i' | 'j' | 'k' | 'l' | 'm'))
+                    .map(|s| s.value.as_str())
+                    .collect();
+                if !call_parts.is_empty() {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}shelfMark"),
+                        RdfNode::literal(call_parts.join(" ")),
+                    );
+                }
+
+                // $p - Barcode
+                if let Some(barcode) = field.subfields.iter().find(|s| s.code == 'p') {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}itemOf"),
+                        RdfNode::literal(&barcode.value),
+                    );
+                    // Also add as identifier
+                    let id_node = self.graph.new_blank_node();
+                    self.graph.add(
+                        id_node.clone(),
+                        format!("{RDF}type"),
+                        RdfNode::uri(format!("{BF}Barcode")),
+                    );
+                    self.graph.add(
+                        id_node.clone(),
+                        format!("{RDF}value"),
+                        RdfNode::literal(&barcode.value),
+                    );
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}{}", properties::IDENTIFIED_BY),
+                        id_node,
+                    );
+                }
+
+                // $x - Nonpublic note
+                if let Some(note) = field.subfields.iter().find(|s| s.code == 'x') {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}note"),
+                        RdfNode::literal(&note.value),
+                    );
+                }
+
+                // $z - Public note
+                if let Some(note) = field.subfields.iter().find(|s| s.code == 'z') {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}note"),
+                        RdfNode::literal(&note.value),
+                    );
+                }
+
+                // Link Instance to Item
+                self.graph.add(
+                    instance.clone(),
+                    format!("{BF}{}", properties::HAS_ITEM),
+                    item_node.clone(),
+                );
+                self.graph.add(
+                    item_node.clone(),
+                    format!("{BF}{}", properties::ITEM_OF),
+                    instance.clone(),
+                );
+
+                self.item_nodes.push(item_node);
+            }
+        }
+
+        // Process 876 - Item Information (basic)
+        // These often supplement 852 or provide additional item details
+        if let Some(fields) = self.record.fields.get("876") {
+            for field in fields {
+                // Try to find associated item or create new one
+                let item_node = if self.item_nodes.is_empty() {
+                    let node = self.generate_item_uri(0);
+                    self.graph.add(
+                        node.clone(),
+                        format!("{RDF}type"),
+                        RdfNode::bf_class(classes::ITEM),
+                    );
+                    self.graph.add(
+                        instance.clone(),
+                        format!("{BF}{}", properties::HAS_ITEM),
+                        node.clone(),
+                    );
+                    self.item_nodes.push(node.clone());
+                    node
+                } else {
+                    self.item_nodes[0].clone()
+                };
+
+                // $a - Internal item number
+                if let Some(num) = field.subfields.iter().find(|s| s.code == 'a') {
+                    let id_node = self.graph.new_blank_node();
+                    self.graph.add(
+                        id_node.clone(),
+                        format!("{RDF}type"),
+                        RdfNode::bf_class(classes::LOCAL),
+                    );
+                    self.graph.add(
+                        id_node.clone(),
+                        format!("{RDF}value"),
+                        RdfNode::literal(&num.value),
+                    );
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}{}", properties::IDENTIFIED_BY),
+                        id_node,
+                    );
+                }
+
+                // $c - Cost
+                if let Some(cost) = field.subfields.iter().find(|s| s.code == 'c') {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}acquisitionSource"),
+                        RdfNode::literal(&cost.value),
+                    );
+                }
+
+                // $d - Date acquired
+                if let Some(date) = field.subfields.iter().find(|s| s.code == 'd') {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}acquisitionDate"),
+                        RdfNode::literal(&date.value),
+                    );
+                }
+
+                // $j - Item status
+                if let Some(status) = field.subfields.iter().find(|s| s.code == 'j') {
+                    self.graph.add(
+                        item_node.clone(),
+                        format!("{BF}status"),
+                        RdfNode::literal(&status.value),
+                    );
+                }
+            }
+        }
+    }
+
+    /// Generates a URI or blank node for an Item entity.
+    fn generate_item_uri(&mut self, seq: usize) -> RdfNode {
+        if let Some(ref base) = self.config.base_uri {
+            let id = if self.config.use_control_number {
+                self.record
+                    .control_fields
+                    .get("001")
+                    .map_or("unknown", String::as_str)
+            } else {
+                "unknown"
+            };
+            RdfNode::uri(format!("{base}item/{id}-{seq}"))
+        } else {
+            self.graph.new_blank_node()
+        }
+    }
+
     /// Adds administrative metadata.
     fn add_admin_metadata(&mut self) {
         let instance = match &self.instance_node {
@@ -1262,8 +1719,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                     .subfields
                     .iter()
                     .find(|s| s.code == '6')
-                    .map(|s| &s.value[..3.min(s.value.len())])
-                    .unwrap_or("");
+                    .map_or("", |s| &s.value[..3.min(s.value.len())]);
 
                 // Determine language tag from script code if present
                 let lang_tag = self.extract_language_from_880(field);
@@ -1333,14 +1789,13 @@ impl<'a> MarcToBibframeConverter<'a> {
                     // Map MARC-8 script codes to language tags
                     match script {
                         "(3" | "arab" => Some("ar".to_string()),
-                        "(B" | "latn" => None, // Latin is default, no tag needed
                         "(N" | "cyrl" => Some("ru".to_string()), // Cyrillic -> Russian (could be others)
                         "hang" => Some("ko".to_string()),        // Korean Hangul
                         "hani" => Some("zh".to_string()),        // CJK ideographs -> Chinese
                         "jpan" => Some("ja".to_string()),        // Japanese
-                        "$1" => None, // CJK - detect from content instead
                         "(2" | "hebr" => Some("he".to_string()),
                         "(S" | "grek" => Some("el".to_string()),
+                        // Latin "(B"/"latn" is default, "$1" CJK detects from content, others fallthrough
                         _ => None,
                     }
                     .or_else(|| self.detect_script_from_content(field))
@@ -1352,6 +1807,7 @@ impl<'a> MarcToBibframeConverter<'a> {
     }
 
     /// Attempts to detect script from field content.
+    #[allow(clippy::unused_self)]
     fn detect_script_from_content(&self, field: &Field) -> Option<String> {
         let text: String = field
             .subfields
@@ -1370,7 +1826,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                 '\u{0590}'..='\u{05FF}' => return Some("he".to_string()), // Hebrew
                 '\u{0600}'..='\u{06FF}' => return Some("ar".to_string()), // Arabic
                 '\u{0370}'..='\u{03FF}' => return Some("el".to_string()), // Greek
-                _ => continue,
+                _ => {},
             }
         }
         None
@@ -1642,6 +2098,7 @@ impl<'a> MarcToBibframeConverter<'a> {
     /// - 785: Succeeding entry
     /// - 786: Data source entry
     /// - 787: Nonspecific relationship entry
+    #[allow(clippy::too_many_lines)]
     fn process_linking_entries(&mut self) {
         let instance = match &self.instance_node {
             Some(n) => n.clone(),
@@ -1809,6 +2266,7 @@ impl<'a> MarcToBibframeConverter<'a> {
     /// - 810: Series added entry - Corporate name
     /// - 811: Series added entry - Meeting name
     /// - 830: Series added entry - Uniform title
+    #[allow(clippy::too_many_lines)]
     fn process_series(&mut self) {
         let instance = match &self.instance_node {
             Some(n) => n.clone(),
@@ -1918,7 +2376,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                         self.graph.add(
                             title_node.clone(),
                             format!("{BF}{}", properties::MAIN_TITLE),
-                            RdfNode::literal(&title_parts.join(". ")),
+                            RdfNode::literal(title_parts.join(". ")),
                         );
                         self.graph.add(
                             series_node.clone(),
