@@ -54,7 +54,7 @@ jobs:
 
   codspeed:
     name: Codspeed Performance Regression Detection
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # CodSpeed only supports Ubuntu 20.04/22.04
     steps:
       - uses: actions/checkout@v4
       
@@ -85,5 +85,4 @@ jobs:
         with:
           # NOTE: Only enabled if CODSPEED_TOKEN is set as a repo secret
           token: ${{ secrets.CODSPEED_TOKEN }}
-          fail-on-failure: false
           run: pytest tests/python/ --benchmark-only -m "not slow" -v
