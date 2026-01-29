@@ -85,4 +85,5 @@ jobs:
         with:
           # NOTE: Only enabled if CODSPEED_TOKEN is set as a repo secret
           token: ${{ secrets.CODSPEED_TOKEN }}
-          run: pytest tests/python/ --benchmark-only -m "not slow" -v
+          # Note: Don't use --benchmark-only here; CodSpeed handles benchmarks differently
+          run: pytest tests/python/ -m "benchmark and not slow" -v
