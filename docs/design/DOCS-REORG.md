@@ -132,9 +132,11 @@ docs/
 │   ├── testing.md             # Running tests
 │   ├── release-procedure.md   # From RELEASE_PROCEDURE.md
 │   └── architecture.md        # From ARCHITECTURE.md
-├── design/                    # Keep existing (internal)
+├── design/                    # Internal design docs
+│   ├── index.md              # NEW: Index of design proposals
 │   └── *.md
-├── history/                   # Keep existing (archival)
+├── history/                   # Historical archive
+│   ├── index.md              # NEW: Index of historical docs
 │   └── *.md
 └── benchmarks/                # Keep existing
     └── *.md
@@ -164,6 +166,8 @@ A Rust library for reading, writing, and manipulating MARC bibliographic records
 **Python** (3.9+):
 ```bash
 pip install mrrc
+# or with uv:
+uv add mrrc
 ```
 
 **Rust**:
@@ -240,13 +244,19 @@ MIT
    - Create `mkdocs.yml` with Material theme (light/dark toggle)
    - Configure navigation structure
    - Set up GitHub Actions for deployment
-   - Test locally with `mkdocs serve` before committing
+   - Test locally before committing:
+     ```bash
+     mkdocs serve          # or: uv run mkdocs serve
+     ```
 
 2. **Create docs scaffold**
    - Create directory structure
-   - Add placeholder index.md files
+   - Add placeholder index.md files (including design/index.md and history/index.md)
    - Set up navigation
-   - Verify build succeeds with `mkdocs build --strict`
+   - Verify build succeeds:
+     ```bash
+     mkdocs build --strict  # or: uv run mkdocs build --strict
+     ```
 
 ### Phase 2: Landing Page and Getting Started
 
@@ -431,6 +441,8 @@ nav:
     - Release Procedure: contributing/release-procedure.md
     - Architecture: contributing/architecture.md
   - Benchmarks: benchmarks/RESULTS.md
+  - Design: design/index.md
+  - History: history/index.md
 ```
 
 ## GitHub Pages Deployment
@@ -471,9 +483,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
       - name: Install dependencies
-        run: |
-          pip install mkdocs-material mkdocstrings[python] pymdown-extensions
+        run: uv pip install --system mkdocs-material mkdocstrings[python] pymdown-extensions
 
       - name: Build documentation
         run: mkdocs build --strict
@@ -588,6 +602,8 @@ Brief intro (1-2 sentences max).
 - [ ] `docs/contributing/index.md`
 - [ ] `docs/contributing/development-setup.md`
 - [ ] `docs/contributing/testing.md`
+- [ ] `docs/design/index.md` (index of design proposals)
+- [ ] `docs/history/index.md` (index of historical docs)
 - [ ] `.github/workflows/docs.yml`
 
 ### Files to Migrate (rename/move)
@@ -607,9 +623,9 @@ Brief intro (1-2 sentences max).
 - [ ] `README.md` - Reduce to ~150-200 lines
 - [ ] `docs/benchmarks/RESULTS.md` - Minor updates for navigation
 
-### Files to Keep As-Is (not in main navigation)
-- [ ] `docs/design/*.md` - Internal design docs (accessible via direct URL only)
-- [ ] `docs/history/*.md` - Historical archive (accessible via direct URL only)
+### Files to Keep As-Is (add index pages for navigation)
+- [ ] `docs/design/*.md` - Internal design docs; add `docs/design/index.md` with categorized links
+- [ ] `docs/history/*.md` - Historical archive; add `docs/history/index.md` with chronological/topical index
 
 ### Files to Merge or Relocate
 - [ ] `docs/MEMORY_SAFETY.md` - Link from contributing/testing.md
