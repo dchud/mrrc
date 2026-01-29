@@ -43,10 +43,6 @@ jobs:
         run: |
           pytest tests/python/ -v --benchmark-only -m "not slow"
       
-      - name: Run comparison benchmarks
-        run: |
-          python scripts/benchmark_comparison.py
-      
       - name: Upload benchmark results
         if: always()
         uses: actions/upload-artifact@v4
@@ -82,7 +78,7 @@ jobs:
       - name: Install mrrc and dependencies
         run: |
           pip install --no-index --find-links dist mrrc
-          pip install pytest pytest-benchmark codspeed
+          pip install pytest pytest-benchmark pytest-codspeed
       
       - name: Run benchmarks with Codspeed (1k/10k only)
         uses: CodSpeedHQ/action@v1
