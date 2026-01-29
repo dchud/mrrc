@@ -58,6 +58,10 @@ echo "=== Rust library tests ==="
 cargo test --lib --package mrrc -q
 
 echo ""
+echo "=== Rust doc tests ==="
+cargo test --doc --package mrrc -q
+
+echo ""
 echo "=== Python tests (core functionality, excludes benchmarks) ==="
 python -m pytest tests/python/ -m "not benchmark" -q
 
