@@ -26,7 +26,7 @@ These formats require feature flags in Rust or are available in Python by defaul
 | Arrow | Yes | Yes | `format-arrow` | Analytics/columnar format |
 | FlatBuffers | Yes | Yes | `format-flatbuffers` | Zero-copy access |
 | MessagePack | Yes | Yes | `format-messagepack` | Compact binary |
-| BIBFRAME | - | Yes | `format-bibframe` | RDF/Linked Data output |
+| BIBFRAME | Yes | Yes | `format-bibframe` | RDF/Linked Data (bidirectional) |
 
 ## Format Details
 

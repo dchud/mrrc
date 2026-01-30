@@ -87,7 +87,7 @@ while let Some(record) = reader.read_record()? {
 | Arrow | Yes | Yes | Feature-gated |
 | `FlatBuffers` | Yes | Yes | Feature-gated |
 | `MessagePack` | Yes | Yes | Feature-gated |
-| BIBFRAME | - | Yes | Feature-gated |
+| BIBFRAME | Yes | Yes | Feature-gated |
 
 [Full format matrix](https://dchud.github.io/mrrc/reference/formats/)
 
