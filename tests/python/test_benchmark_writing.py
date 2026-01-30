@@ -229,7 +229,8 @@ class TestRustFileBackendBenchmarks:
 
 class TestBackendComparison:
      """Performance comparison between PythonFile (BytesIO) and RustFile backends."""
-     
+
+     @pytest.mark.benchmark
      def test_backend_comparison_1k(self, fixture_1k):
          """Compare PythonFile vs RustFile performance for 1k records."""
          # Pre-load records
