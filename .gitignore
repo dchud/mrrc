@@ -33,7 +33,8 @@ perf.data.old
 
 # Documentation
 /doc/
-/site/  # MkDocs build output
+# MkDocs build output
+/site/
 # Note: /docs/ is intentionally NOT ignored - it contains project documentation
 
 # Test outputs
