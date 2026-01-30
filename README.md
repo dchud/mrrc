@@ -44,10 +44,12 @@ cargo add mrrc --features format-arrow,format-protobuf
 ```python
 from mrrc import MARCReader
 
-with open("records.mrc", "rb") as f:
-    for record in MARCReader(f):
-        print(record.title())
+# Pass filename directly for best performance (releases GIL)
+for record in MARCReader("records.mrc"):
+    print(record.title())
 ```
+
+> File paths use pure Rust I/O, releasing Python's GIL for multi-threaded workloads. See the [threading guide](https://dchud.github.io/mrrc/guides/threading-python/) for details.
 
 **Rust:**
 

@@ -13,18 +13,12 @@ pip install mrrc
 ```python
 from mrrc import MARCReader
 
-# Read from a file
-with open("records.mrc", "rb") as f:
-    for record in MARCReader(f):
-        print(record.title())
-```
-
-Or pass the filename directly:
-
-```python
+# Pass filename for best performance
 for record in MARCReader("records.mrc"):
     print(record.title())
 ```
+
+This approach uses pure Rust I/O and releases Python's GIL, enabling multi-threaded speedups.
 
 ## Access Fields
 

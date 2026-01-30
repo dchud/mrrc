@@ -4,22 +4,24 @@ Learn to read MARC records from files and work with their contents.
 
 ## Basic Reading
 
-```python
-import mrrc
+Pass a filename directly for best performance—this uses pure Rust I/O and fully releases Python's GIL during parsing:
 
-# Read from a file
+```python
+from mrrc import MARCReader
+
+for record in MARCReader("records.mrc"):
+    print(record.title())
+```
+
+You can also use a file object if needed (e.g., for network streams), though this holds the GIL during I/O:
+
+```python
 with open("records.mrc", "rb") as f:
-    reader = mrrc.MARCReader(f)
-    for record in reader:
+    for record in MARCReader(f):
         print(record.title())
 ```
 
-Or pass the filename directly (recommended for performance):
-
-```python
-for record in mrrc.MARCReader("records.mrc"):
-    print(record.title())
-```
+See [Threading in Python](../../guides/threading-python.md) for details on GIL behavior and multi-threaded performance.
 
 ## Reading from Memory
 
