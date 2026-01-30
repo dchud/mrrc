@@ -1,6 +1,6 @@
 # MRRC Performance Guide
 
-Performance analysis and optimization guidance for MRRC. For parallel processing patterns, see [CONCURRENCY.md](CONCURRENCY.md). For thread safety details, see [THREADING.md](THREADING.md).
+Performance analysis and optimization guidance for MRRC. For parallel processing patterns, see the [Python Concurrency Tutorial](../tutorials/python/concurrency.md). For thread safety details, see [Threading in Python](threading-python.md).
 
 ## Executive Summary
 
@@ -26,7 +26,7 @@ Performance analysis and optimization guidance for MRRC. For parallel processing
 | ThreadPoolExecutor | 3-4x | Multiple files |
 | Multiprocessing | 4-5x | CPU-heavy work |
 
-See [CONCURRENCY.md](CONCURRENCY.md) for pattern implementation details.
+See the [Python Concurrency Tutorial](../tutorials/python/concurrency.md) for pattern implementation details.
 
 ## Backend Strategy
 
@@ -161,8 +161,8 @@ print(f"Throughput: {count / elapsed:.0f} rec/s")
 
 ## References
 
-- [CONCURRENCY.md](CONCURRENCY.md) - Parallel processing patterns
-- [THREADING.md](THREADING.md) - Thread safety and GIL behavior
-- **Benchmarking results**: `benchmarks/RESULTS.md`
+- [Python Concurrency Tutorial](../tutorials/python/concurrency.md) - Parallel processing patterns
+- [Threading in Python](threading-python.md) - Thread safety and GIL behavior
+- [Benchmarking Results](../benchmarks/RESULTS.md) - Detailed benchmark data
 - **Rust benchmarks**: `benches/marc_benchmarks.rs`
 - **Python benchmarks**: `tests/python/test_benchmark_*.py`

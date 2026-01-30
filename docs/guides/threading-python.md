@@ -1,6 +1,6 @@
 # Threading and Thread Safety in MRRC
 
-This document covers thread safety guarantees, GIL behavior, and safe usage patterns for MRRC. For parallel processing patterns and code examples, see [CONCURRENCY.md](CONCURRENCY.md).
+This document covers thread safety guarantees, GIL behavior, and safe usage patterns for MRRC. For parallel processing patterns and code examples, see the [Python Concurrency Tutorial](../tutorials/python/concurrency.md).
 
 ## GIL Behavior
 
@@ -183,8 +183,8 @@ finally:
 
 ## References
 
-- [CONCURRENCY.md](CONCURRENCY.md) - Parallel processing patterns and code examples
-- [PERFORMANCE.md](PERFORMANCE.md) - Performance tuning and benchmarks
+- [Python Concurrency Tutorial](../tutorials/python/concurrency.md) - Parallel processing patterns and code examples
+- [Performance Tuning](performance-tuning.md) - Performance tuning and benchmarks
 - [Python GIL Documentation](https://docs.python.org/3/glossary.html#term-GIL)
 - [Concurrent.futures Documentation](https://docs.python.org/3/library/concurrent.futures.html)
 - [PyO3 Threading Guide](https://pyo3.rs/latest/advanced/index.html)

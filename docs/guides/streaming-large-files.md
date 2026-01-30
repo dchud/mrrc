@@ -407,6 +407,6 @@ If peak memory grows with record count, check for:
 
 ## Next Steps
 
-- [Threading Documentation](./THREADING.md) - Thread safety and patterns
-- [Performance Guide](./PERFORMANCE.md) - Detailed optimization
-- [Format Selection Guide](./FORMAT_SELECTION_GUIDE.md) - Choose optimal formats
+- [Threading in Python](threading-python.md) - Thread safety and patterns
+- [Performance Tuning](performance-tuning.md) - Detailed optimization
+- [Format Selection](format-selection.md) - Choose optimal formats

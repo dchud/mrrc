@@ -296,6 +296,6 @@ If you're starting with ISO 2709 and want to adopt modern formats:
 
 ## Next Steps
 
-- [Installation Guide](./INSTALLATION_GUIDE.md) - Enable format features
-- [Python Tutorial](./PYTHON_TUTORIAL.md) - Format conversion examples
-- [Streaming Guide](./STREAMING_GUIDE.md) - Large file handling
+- [Installation Guide](../getting-started/installation.md) - Enable format features
+- [Format Conversion Tutorial](../tutorials/python/format-conversion.md) - Python format conversion examples
+- [Streaming Large Files](streaming-large-files.md) - Large file handling

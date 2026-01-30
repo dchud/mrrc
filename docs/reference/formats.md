@@ -37,6 +37,7 @@ The standard interchange format for MARC records.
 **File extension**: `.mrc`
 
 **Use cases**:
+
 - Library system interchange (ILS, OCLC)
 - Z39.50 compatible systems
 - Maximum compatibility
@@ -105,6 +106,7 @@ Protocol Buffers format with schema evolution support.
 **Feature flag**: `format-protobuf`
 
 **Use cases**:
+
 - Microservices and APIs
 - Cross-language compatibility
 - Schema evolution
@@ -130,6 +132,7 @@ Apache Arrow columnar format for analytics.
 **Feature flag**: `format-arrow`
 
 **Use cases**:
+
 - DuckDB and Polars integration
 - Data science pipelines
 - Large-scale analytics
@@ -160,6 +163,7 @@ Zero-copy binary format for maximum read performance.
 **Feature flag**: `format-flatbuffers`
 
 **Use cases**:
+
 - Memory-constrained environments
 - Streaming applications
 - Mobile/embedded systems
@@ -183,6 +187,7 @@ Compact binary format with wide language support.
 **Feature flag**: `format-messagepack`
 
 **Use cases**:
+
 - REST APIs (smaller than JSON)
 - Cross-language IPC
 - 50+ language implementations

@@ -17,7 +17,8 @@ export VERSION="0.5.0"
 # Then follow Sections 1-6 for preparation, or Sections 1-9 for full workflow
 ```
 
-**Terminology**: 
+**Terminology**:
+
 - **"Prepare"** (Sections 1-6): Version updates through git tag creation (ends with tag ready to push)
 - **"Publish"** (Sections 7-8): Publishing to registries (automated via GitHub Actions)
 - **"Post-Release"** (Sections 9-10): Cleanup and next cycle setup
@@ -507,9 +508,10 @@ grep -r "\[.*\](.*\.md)" docs/ --include="*.md" | grep -v "http"
 ```
 
 Update any version-specific documentation in:
-- `docs/MIGRATION_GUIDE.md` - Add section for new release
-- `docs/PERFORMANCE.md` - Update performance baselines if optimizations were made
-- `docs/ARCHITECTURE.md` - Note architectural changes if any
+
+- `docs/guides/migration-from-pymarc.md` - Add section for new release
+- `docs/guides/performance-tuning.md` - Update performance baselines if optimizations were made
+- `docs/contributing/architecture.md` - Note architectural changes if any
 - `docs/design/` - Update design documents if decisions changed
 - Any docs with "Supported in X.Y+" style language
 

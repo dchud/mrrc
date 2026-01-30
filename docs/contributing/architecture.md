@@ -124,12 +124,14 @@ enum ReaderBackend {
 ```
 
 **Advantages**:
+
 - **Automatic Detection**: Input type determined at construction
 - **Optimal Performance**: Each backend uses fastest available method
 - **Backward Compatible**: Python file objects still work via GIL management
 - **Zero-GIL Paths**: File paths and bytes bypass Python entirely
 
 **Performance Impact**:
+
 - File path: Pure Rust I/O, Phase 1 has minimal GIL hold
 - Bytes: Zero I/O, Phase 1 is trivial
 - File object: Requires GIL for `.read()`, but Phase 2 still releases it
@@ -161,6 +163,7 @@ SmallVec<[u8; 4096]>
 ```
 
 **Benefits**:
+
 - Inline storage for ~85-90% of records (no allocation)
 - Dynamic heap allocation for oversized records
 - <3% memory overhead
@@ -358,14 +361,17 @@ Located in `tests/data/fixtures/`:
 ## References
 
 **Performance & Benchmarking:**
-- **Performance Guide**: `docs/PERFORMANCE.md` - Usage patterns and tuning
-- **Benchmarking Results**: `docs/benchmarks/RESULTS.md` - Detailed performance data with four-way comparisons (mrrc, pymrrc single-threaded, pymrrc multi-threaded, pymarc)
-- **Performance FAQ**: `docs/benchmarks/FAQ.md` - Quick Q&A about speedups
+
+- [Performance Tuning Guide](../guides/performance-tuning.md) - Usage patterns and tuning
+- [Benchmarking Results](../benchmarks/RESULTS.md) - Detailed performance data
+- [Performance FAQ](../benchmarks/FAQ.md) - Quick Q&A about speedups
 
 **Guides:**
-- **Threading Guide**: `docs/THREADING.md`
+
+- [Threading in Python](../guides/threading-python.md) - Thread safety and GIL behavior
 
 **External References:**
-- **MARC Standard**: https://www.loc.gov/marc/
-- **ISO 2709**: https://en.wikipedia.org/wiki/MARC_standards
-- **PyO3 Documentation**: https://pyo3.rs/
+
+- [MARC Standard](https://www.loc.gov/marc/)
+- [ISO 2709](https://en.wikipedia.org/wiki/MARC_standards)
+- [PyO3 Documentation](https://pyo3.rs/)
