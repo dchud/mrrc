@@ -130,29 +130,53 @@ except FileNotFoundError:
 
 ## Complete Example
 
+This example analyzes a MARC file to summarize the collection by language and material type:
+
 ```python
 #!/usr/bin/env python3
-"""Extract bibliographic data to CSV."""
+"""Analyze a MARC file for collection statistics."""
 
-import mrrc
-import csv
+from collections import Counter
+from mrrc import MARCReader
 
-def extract_to_csv(input_path, output_path):
-    with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['Title', 'Author', 'ISBN', 'Year', 'Subjects'])
+def analyze_collection(path):
+    languages = Counter()
+    material_types = Counter()
+    total = 0
 
-        for record in mrrc.MARCReader(input_path):
-            title = record.title() or ''
-            author = record.author() or ''
-            isbn = record.isbn() or ''
-            year = record.pubyear() or ''
-            subjects = '; '.join(record.subjects())
+    for record in MARCReader(path):
+        total += 1
 
-            writer.writerow([title, author, isbn, year, subjects])
+        # Language from 008 positions 35-37
+        fixed = record.control_field("008")
+        if fixed and len(fixed) >= 38:
+            lang = fixed[35:38]
+            languages[lang] += 1
+
+        # Material type from leader
+        leader = record.leader
+        if leader.record_type == 'a':
+            if leader.bibliographic_level == 'm':
+                material_types["Book"] += 1
+            elif leader.bibliographic_level == 's':
+                material_types["Serial"] += 1
+        elif leader.record_type == 'j':
+            material_types["Music recording"] += 1
+        elif leader.record_type == 'g':
+            material_types["Video"] += 1
+        else:
+            material_types["Other"] += 1
+
+    print(f"Total records: {total}\n")
+    print("Top 5 languages:")
+    for lang, count in languages.most_common(5):
+        print(f"  {lang}: {count}")
+    print("\nMaterial types:")
+    for mat_type, count in material_types.most_common():
+        print(f"  {mat_type}: {count}")
 
 if __name__ == '__main__':
-    extract_to_csv("records.mrc", "output.csv")
+    analyze_collection("records.mrc")
 ```
 
 ## Next Steps
