@@ -18,8 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Local CI script**: Updated `.cargo/check.sh` to use `uv run` for maturin and pytest steps instead of manual venv activation.
 - **100k fixture scrub**: Removed remaining references to `100k_records.mrc` from scripts, benches, CI workflow names, and public docs (benchmarks, contributing, tests README). Fixture generation script no longer produces the 100k file.
 - **Developer docs standardized on uv**: Replaced manual venv activation and bare `maturin develop`/`pytest` commands with `uv sync`/`uv run` equivalents across installation, development setup, testing, and migration guides.
+- **Release procedure updated**: Refreshed for OIDC trusted publishing (replaces `PYPI_API_TOKEN`), added `installation.md` and `quickstart-rust.md` to version-bump checklist.
+- **Rust dependency version in docs**: Updated hardcoded `mrrc = "0.6"` to `"0.7"` in installation and quickstart guides.
 
 ### Fixed
+
+- **Flaky benchmark test**: `test_backend_comparison_1k` now uses 5 iterations with median instead of 3 iterations with mean, making it resilient to single-iteration CI runner I/O spikes.
 
 - **CI: Python release workflow**: Added `actions/setup-python` before `maturin-action` to properly set Python version; `python-version` is not a valid input for maturin-action
 - **CI: Python release OIDC publishing**: Removed `password:` secret from `pypa/gh-action-pypi-publish` step; action auto-detects OIDC token from `id-token: write` permission

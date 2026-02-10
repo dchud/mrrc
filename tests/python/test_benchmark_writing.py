@@ -217,8 +217,9 @@ class TestBackendComparison:
              records.append(record)
          
          # Benchmark PythonFile backend (BytesIO)
+         # Use 5 iterations and median to drop outliers from CI runner noise
          pythonfile_times = []
-         for _ in range(3):
+         for _ in range(5):
              start = time.perf_counter()
              output = io.BytesIO()
              writer = MARCWriter(output)
@@ -227,13 +228,13 @@ class TestBackendComparison:
              writer.close()
              elapsed = time.perf_counter() - start
              pythonfile_times.append(elapsed)
-         
+
          # Benchmark RustFile backend (file path)
          rustfile_times = []
-         for _ in range(3):
+         for _ in range(5):
              with tempfile.NamedTemporaryFile(delete=False, suffix='.mrc') as tmp:
                  temp_path = tmp.name
-             
+
              try:
                  start = time.perf_counter()
                  writer = MARCWriter(temp_path)
@@ -245,18 +246,18 @@ class TestBackendComparison:
              finally:
                  if os.path.exists(temp_path):
                      os.unlink(temp_path)
-         
-         # Calculate averages
-         avg_pythonfile = sum(pythonfile_times) / len(pythonfile_times)
-         avg_rustfile = sum(rustfile_times) / len(rustfile_times)
-         
+
+         # Use median to naturally drop outlier spikes from CI runner noise
+         median_pythonfile = sorted(pythonfile_times)[len(pythonfile_times) // 2]
+         median_rustfile = sorted(rustfile_times)[len(rustfile_times) // 2]
+
          # RustFile should be comparable to PythonFile (no regression)
          # Note: exact performance depends on system I/O, so we just verify no major regression
-         speedup = avg_pythonfile / avg_rustfile
+         speedup = median_pythonfile / median_rustfile
          print(f"\n1k records benchmark:")
-         print(f"  PythonFile (BytesIO): {avg_pythonfile*1000:.2f}ms")
-         print(f"  RustFile (temp file): {avg_rustfile*1000:.2f}ms")
+         print(f"  PythonFile (BytesIO): {median_pythonfile*1000:.2f}ms")
+         print(f"  RustFile (temp file): {median_rustfile*1000:.2f}ms")
          print(f"  Speedup ratio: {speedup:.2f}x")
-         
+
          # Just verify we didn't have a major regression (allow 2x slower on I/O)
-         assert avg_rustfile < avg_pythonfile * 2, "RustFile performance regression"
+         assert median_rustfile < median_pythonfile * 2, "RustFile performance regression"
