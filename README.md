@@ -92,7 +92,7 @@ Pre-built Python wheels are available for:
 
 | Platform | Architectures |
 |----------|---------------|
-| Linux | `x86_64`, `aarch64` |
+| Linux | `x86_64`, `aarch64`, `i686` |
 | macOS | `x86_64` (Intel), `arm64` (Apple Silicon) |
 | Windows | x64 |
 
