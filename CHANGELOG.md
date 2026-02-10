@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Cross-compiled Linux wheels**: Release workflow now builds `aarch64` and `i686` Linux wheels via maturin-action Docker cross-compilation, increasing wheel count from 15 to 25 per release.
+- **Cross-compiled Linux wheels** ([mrrc-experiments#16](https://github.com/dchud/mrrc-experiments/issues/16)): Release workflow now builds `aarch64` and `i686` Linux wheels via maturin-action Docker cross-compilation, increasing wheel count from 15 to 25 per release.
 - **Field constructor `subfields=` and `indicators=` kwargs** ([mrrc-experiments#15](https://github.com/dchud/mrrc-experiments/issues/15)): `Field` now accepts `subfields=` (list of `Subfield`) and `indicators=` (list/tuple of two strings) as keyword arguments, enabling inline construction matching pymarc style: `Field('245', indicators=['0', '1'], subfields=[Subfield('a', 'Title')])`. The Rust binding already supported this signature; the Python wrapper now passes through both kwargs.
 - **Record constructor `fields=` kwarg** ([mrrc-experiments#15](https://github.com/dchud/mrrc-experiments/issues/15)): `Record` now accepts an optional `fields=` keyword argument (list of `Field`), enabling inline record construction: `Record(fields=[Field(...), ...])`. This goes beyond pymarc parity (pymarc's `Record.__init__` does not accept `fields=`) as a UX improvement. `Record()` with no arguments also now works, defaulting to `Leader()`.
 - **Constructor kwargs tests**: 8 new tests in `TestConstructorKwargs` covering `indicators=`, `subfields=`, `fields=`, combined usage, full inline construction, and backward compatibility.
