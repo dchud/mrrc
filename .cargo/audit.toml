@@ -1,0 +1,14 @@
+# Cargo audit configuration
+#
+# Ignores specific advisories that are not security vulnerabilities
+# or are beyond our direct control (transitive dependencies)
+
+[advisories]
+ignore = [
+    "RUSTSEC-2024-0436", # paste crate (unmaintained)
+                         # Advisory: https://rustsec.org/advisories/RUSTSEC-2024-0436
+                         # Dependency chain: paste -> parquet -> mrrc (transitive)
+                         # Issue: Creator marked project as unmaintained, but no security vulnerability
+                         # Status: Upstream apache/arrow-rs#7598 tracking fix
+                         # Resolution: No actual risk; crate is stable and functional
+]

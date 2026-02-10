@@ -1,0 +1,118 @@
+[workspace]
+members = [".", "src-python"]
+resolver = "2"
+
+[package]
+name = "mrrc"
+version = "0.7.0"
+edition = "2021"
+authors = ["MARC Rust Community"]
+description = "A Rust library for reading, writing, and manipulating MARC bibliographic records in ISO 2709 binary format"
+license = "MIT"
+repository = "https://github.com/dchud/mrrc"
+homepage = "https://github.com/dchud/mrrc"
+documentation = "https://docs.rs/mrrc"
+readme = "README.md"
+rust-version = "1.71"
+keywords = ["marc", "bibliographic", "library", "metadata"]
+categories = ["encoding", "parser-implementations"]
+
+[features]
+default = []
+
+[dependencies]
+# Core parsing and data handling
+bytes = "1.11.1"
+nom = "7.1"
+lazy_static = "1.4"
+memchr = "2.7"
+
+# Encoding support
+encoding_rs = "0.8"
+unicode-normalization = "0.1"
+
+# Serialization formats
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+quick-xml = { version = "0.31", features = ["serialize"] }
+
+# Ordered map for insertion order preservation
+indexmap = { version = "2.2", features = ["serde"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Pattern matching
+regex = "1.10"
+
+# Testing and examples
+#proptest = "1.0"
+
+# Examples and utilities
+csv = "1.3"
+flate2 = "1.0"
+smallvec = { version = "1.11", features = ["union", "serde"] }
+
+# Parallelism
+rayon = "1.7"
+crossbeam-channel = "0.5"
+
+# RDF serialization for BIBFRAME support
+oxrdfio = "0.2"
+oxrdf = "0.3"
+
+[dev-dependencies]
+proptest = "1.0"
+criterion = { version = "4.3.0", package = "codspeed-criterion-compat", features = ["html_reports"] }
+rayon = "1.7"
+tempfile = "3.8"
+smallvec = { version = "1.11", features = ["union", "serde"] }
+
+# Lint configuration following Rust API Guidelines
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Restrict to reasonable cognitive complexity
+cognitive_complexity = "warn"
+# Allow module name in error messages
+module_name_repetitions = "allow"
+# Allow similar names in tests
+similar_names = "allow"
+# Type complexity is managed separately
+type_complexity = "allow"
+
+[[bench]]
+name = "marc_benchmarks"
+harness = false
+
+[[bench]]
+name = "parallel_benchmarks"
+harness = false
+
+[[bench]]
+name = "profiling_harness"
+harness = false
+
+[[bench]]
+name = "detailed_profiling"
+harness = false
+
+[[bench]]
+name = "rayon_profiling"
+harness = false
+
+[[bench]]
+name = "rayon_file_io_profiling"
+harness = false
+
+[profile.release]
+opt-level = 3
+
+[profile.bench]
+debug = true

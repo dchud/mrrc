@@ -1,0 +1,749 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="http://id.loc.gov/ontologies/bibframe/" xmlns:bflc="http://id.loc.gov/ontologies/bflc/" xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <bf:Work rdf:about="http://example.org/1#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>1</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:expressionOf>
+      <bf:Hub rdf:about="http://example.org/1#Hub130-2">
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Arrangement"/>
+        <bf:title>
+          <bf:Title>
+            <bflc:nonSortNum>4</bflc:nonSortNum>
+            <bf:mainTitle>The Encyclopedia of Latin American history and culture. (1952). [between 1775 and 1800]. Manuscripts, Latin. Sound recording. violin, viola, D major. arr. O.T. Book 4. Selections</bf:mainTitle>
+            <bf:partNumber>Book 4</bf:partNumber>
+            <bf:partName>O.T.</bf:partName>
+          </bf:Title>
+        </bf:title>
+        <bf:legalDate>1952</bf:legalDate>
+        <bf:originDate>[between 1775 and 1800]</bf:originDate>
+        <bf:musicMedium>
+          <bf:MusicMedium>
+            <rdfs:label>violin, viola</rdfs:label>
+          </bf:MusicMedium>
+        </bf:musicMedium>
+        <bf:musicKey>D major</bf:musicKey>
+        <bf:identifiedBy>
+          <bf:Identifier>
+            <rdf:value>0001</rdf:value>
+            <bf:source>
+              <bf:Source>
+                <bf:code>ID</bf:code>
+              </bf:Source>
+            </bf:source>
+          </bf:Identifier>
+        </bf:identifiedBy>
+        <bflc:marcKey>1304 $aThe Encyclopedia of Latin American history and culture.$d(1952).$f[between 1775 and 1800].$gManuscripts, Latin.$hSound recording.$mviolin, viola,$rD major.$oarr.$pO.T.$nBook 4.$kSelections.$0(ID)0001</bflc:marcKey>
+      </bf:Hub>
+    </bf:expressionOf>
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>Latin American lives</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/9999#Work">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <madsrdf:authoritativeLabel>Ukrainian weekly depicted--Indexes--Periodicals</madsrdf:authoritativeLabel>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/subjectSchemes/example">
+            <bf:code>example</bf:code>
+          </bf:Source>
+        </bf:source>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <bf:Hub rdf:about="http://example.org/9999#Work">
+            <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Title"/>
+            <madsrdf:authoritativeLabel>Ukrainian weekly depicted</madsrdf:authoritativeLabel>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Ukrainian weekly depicted</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:source>
+              <bf:Source rdf:about="http://id.loc.gov/vocabulary/subjectSchemes/example">
+                <bf:code>example</bf:code>
+              </bf:Source>
+            </bf:source>
+            <bflc:marcKey>63007$aUkrainian weekly$edepicted.$vIndexes$vPeriodicals$0(uri)http://example.org/9999#Work$2example</bflc:marcKey>
+          </bf:Hub>
+          <madsrdf:GenreForm>
+            <madsrdf:authoritativeLabel>Indexes</madsrdf:authoritativeLabel>
+          </madsrdf:GenreForm>
+          <madsrdf:GenreForm>
+            <madsrdf:authoritativeLabel>Periodicals</madsrdf:authoritativeLabel>
+          </madsrdf:GenreForm>
+        </madsrdf:componentList>
+      </bf:Topic>
+    </bf:subject>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/part"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/1#Hub700-5">
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/1#Agent700-5">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Cendrars, Blaise, 1887-1961</rdfs:label>
+                    <bflc:marcKey>70012$aCendrars, Blaise, 1887-1961.$tSelections.$f1987.</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Selections. 1987.</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:originDate>1987</bf:originDate>
+            <bflc:marcKey>70012$aCendrars, Blaise, 1887-1961.$tSelections.$f1987.</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/1#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/1#Instance">
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>Latin American lives</bf:mainTitle>
+        <bf:subtitle>selected biographies from the five-volume Encyclopedia of Latin American history and culture</bf:subtitle>
+      </bf:Title>
+    </bf:title>
+    <bf:instanceOf rdf:resource="http://example.org/1#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/2#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>2</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:contribution>
+      <bf:Contribution>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/PrimaryContribution"/>
+        <bf:agent>
+          <bf:Agent rdf:about="http://example.org/2#Agent100-2">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+            <rdfs:label>Cendrars, Blaise, 1887-1961</rdfs:label>
+            <bflc:marcKey>1001 $aCendrars, Blaise, 1887-1961.$tSelections.$f1987.</bflc:marcKey>
+          </bf:Agent>
+        </bf:agent>
+        <bf:role>
+          <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+        </bf:role>
+      </bf:Contribution>
+    </bf:contribution>
+    <bf:expressionOf>
+      <bf:Hub rdf:about="http://example.org/2#Hub100-2">
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Selections. 1987.</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bf:originDate>1987</bf:originDate>
+        <bflc:marcKey>$t</bflc:marcKey>
+      </bf:Hub>
+    </bf:expressionOf>
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>Tarjamat al-Zabūr al-sharīf</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/part"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/2#Hub730-4">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Bible. O.T. Psalms. Codex Sinaiticus</bf:mainTitle>
+                <bf:partName>O.T.</bf:partName>
+                <bf:partName>Psalms</bf:partName>
+              </bf:Title>
+            </bf:title>
+            <bf:version>Codex Sinaiticus</bf:version>
+            <bflc:appliesTo>
+              <bflc:AppliesTo>
+                <rdfs:label>1980</rdfs:label>
+              </bflc:AppliesTo>
+            </bflc:appliesTo>
+            <bflc:marcKey>73002$31980:$aBible.$pO.T.$pPsalms.$sCodex Sinaiticus.</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:keyMode>
+      <bf:KeyMode>
+        <rdfs:label>B-flat minor</rdfs:label>
+      </bf:KeyMode>
+    </bf:keyMode>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/relatedwork"/>
+        <bf:relationship>
+          <bf:Relationship>
+            <rdfs:label>Parody of (work)</rdfs:label>
+          </bf:Relationship>
+        </bf:relationship>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/2#Hub730-6">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>[Motets]. E minor Sound recording</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:musicKey>E minor</bf:musicKey>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>1234-5678</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bflc:applicableInstitution>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bflc:applicableInstitution>
+            <bflc:marcKey>73002$iParody of (work):$a[Motets].$rE minor$hSound recording$x1234-5678$5DLC</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/ontologies/bflc/hasVariantEntry"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/2#Hub730-8">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Apocrypha</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>73004$aApocrypha</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/arrangementof"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/2#Hub730-9">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Partita, clarinets (2), bassoon, E♭ major</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:musicMedium>
+              <bf:MusicMedium>
+                <rdfs:label>clarinets (2), bassoon</rdfs:label>
+              </bf:MusicMedium>
+            </bf:musicMedium>
+            <bf:musicKey>E♭ major</bf:musicKey>
+            <bflc:marcKey>730  $iis arrangement of$aPartita,$mclarinets (2), bassoon,$rE♭ major;</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/translationof"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/2#Hub730-10">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Etrusques et lEurope</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>730  $iis translation of$aEtrusques et lEurope.</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/2#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/2#Instance">
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>Tarjamat al-Zabūr al-sharīf</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:instanceOf rdf:resource="http://example.org/2#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/3#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>3</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>Tōkaidō panorama chizu</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship>
+          <bf:Relationship rdf:about="http://id.loc.gov/vocabulary/relationship/series">
+            <rdfs:label>series</rdfs:label>
+          </bf:Relationship>
+        </bf:relationship>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/3#Hub830-3">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Series"/>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Nihon zenkoku panorama chizu</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>830 0$7ab$aNihon zenkoku panorama chizu ;$v1.</bflc:marcKey>
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Text"/>
+            <bf:issuance>
+              <bf:Issuance>
+                <bf:code>s</bf:code>
+              </bf:Issuance>
+            </bf:issuance>
+          </bf:Hub>
+        </bf:associatedResource>
+        <bf:seriesEnumeration>1.</bf:seriesEnumeration>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/3#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/3#Instance">
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>Tōkaidō panorama chizu</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:instanceOf rdf:resource="http://example.org/3#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/4#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>4</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/resourceComponents/otx"/>
+        <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/epo"/>
+      </bf:Note>
+    </bf:note>
+    <bf:expressionOf>
+      <bf:Hub rdf:about="http://example.org/4#Hub130-3">
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Jara raporto de la Ministro de Supply kaj Servo Kanado sub la Korporacioj kaj Labor Unions Returns Akto. English.</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bf:language>
+          <bf:Language>
+            <rdfs:label>English</rdfs:label>
+          </bf:Language>
+        </bf:language>
+        <bflc:marcKey>1300 $aJara raporto de la Ministro de Supply kaj Servo Kanado sub la Korporacioj kaj Labor Unions Returns Akto.$lEnglish.</bflc:marcKey>
+      </bf:Hub>
+    </bf:expressionOf>
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>Annual report of the Minister of Supply and Service Canada under the Corporations and Labour Unions Returns Act</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:hasInstance rdf:resource="http://example.org/4#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/4#Instance">
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>Annual report of the Minister of Supply and Service Canada under the Corporations and Labour Unions Returns Act</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:instanceOf rdf:resource="http://example.org/4#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/5#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2016-04-12</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>5</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bf:originDate rdf:datatype="http://id.loc.gov/datatypes/edtf">2013</bf:originDate>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/resourceComponents/otx"/>
+        <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/ita"/>
+      </bf:Note>
+    </bf:note>
+    <bf:contribution>
+      <bf:Contribution>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/PrimaryContribution"/>
+        <bf:agent>
+          <bf:Agent rdf:about="http://example.org/5#Agent100-4">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+            <rdfs:label>Ferrante, Elena</rdfs:label>
+            <bflc:marcKey>1001 $aFerrante, Elena,$eauthor.</bflc:marcKey>
+          </bf:Agent>
+        </bf:agent>
+        <bf:role>
+          <bf:Role>
+            <rdfs:label>author</rdfs:label>
+          </bf:Role>
+        </bf:role>
+      </bf:Contribution>
+    </bf:contribution>
+    <bf:expressionOf>
+      <bf:Hub rdf:about="http://example.org/5#Hub240-5">
+        <bf:contribution>
+          <bf:Contribution>
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/PrimaryContribution"/>
+            <bf:agent>
+              <bf:Agent rdf:about="http://example.org/5#Hub240-5-Agent">
+                <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                <rdfs:label>Ferrante, Elena</rdfs:label>
+                <bflc:marcKey>1001 $aFerrante, Elena,$eauthor.</bflc:marcKey>
+              </bf:Agent>
+            </bf:agent>
+            <bf:role>
+              <bf:Role>
+                <rdfs:label>author</rdfs:label>
+              </bf:Role>
+            </bf:role>
+          </bf:Contribution>
+        </bf:contribution>
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Storia del nuovo cognome. English</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bf:language>
+          <bf:Language>
+            <rdfs:label>English</rdfs:label>
+          </bf:Language>
+        </bf:language>
+        <bflc:marcKey>1001 $aFerrante, Elena,$eauthor.$tStoria del nuovo cognome.$lEnglish</bflc:marcKey>
+      </bf:Hub>
+    </bf:expressionOf>
+    <bf:title>
+      <bf:Title>
+        <bflc:nonSortNum>4</bflc:nonSortNum>
+        <bf:mainTitle>The story of a new name</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:hasInstance rdf:resource="http://example.org/5#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/5#Instance">
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">2015</bf:date>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/nyu"/>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:responsibilityStatement>Elena Ferrante ; translated from the Italian by Ann Goldstein</bf:responsibilityStatement>
+    <bf:title>
+      <bf:Title>
+        <bflc:nonSortNum>4</bflc:nonSortNum>
+        <bf:mainTitle>The story of a new name</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:instanceOf rdf:resource="http://example.org/5#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/6#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>6</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:contribution>
+      <bf:Contribution>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/PrimaryContribution"/>
+        <bf:agent>
+          <bf:Agent rdf:about="http://example.org/6#Agent100-2">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+            <rdfs:label>Nefwich, Harvey</rdfs:label>
+            <bflc:marcKey>1001 $aNefwich, Harvey.</bflc:marcKey>
+          </bf:Agent>
+        </bf:agent>
+        <bf:role>
+          <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+        </bf:role>
+      </bf:Contribution>
+    </bf:contribution>
+    <bf:expressionOf>
+      <bf:Hub rdf:about="http://example.org/6#Hub240-3">
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Arrangement"/>
+        <bf:contribution>
+          <bf:Contribution>
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/PrimaryContribution"/>
+            <bf:agent>
+              <bf:Agent rdf:about="http://example.org/6#Hub240-3-Agent">
+                <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                <rdfs:label>Nefwich, Harvey</rdfs:label>
+                <bflc:marcKey>1001 $aNefwich, Harvey.</bflc:marcKey>
+              </bf:Agent>
+            </bf:agent>
+            <bf:role>
+              <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+            </bf:role>
+          </bf:Contribution>
+        </bf:contribution>
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Sonata for kazoo. arr.</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bflc:marcKey>1001 $aNefwich, Harvey.$tSonata for kazoo.$oarr.</bflc:marcKey>
+      </bf:Hub>
+    </bf:expressionOf>
+    <bf:hasInstance rdf:resource="http://example.org/6#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/6#Instance">
+    <bf:instanceOf rdf:resource="http://example.org/6#Work"/>
+  </bf:Instance>
+</rdf:RDF>

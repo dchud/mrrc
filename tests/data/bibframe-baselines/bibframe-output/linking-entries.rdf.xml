@@ -1,0 +1,1371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="http://id.loc.gov/ontologies/bibframe/" xmlns:bflc="http://id.loc.gov/ontologies/bflc/" xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <bf:Work rdf:about="http://example.org/1#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>1</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>College English</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/series"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work760-3">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Water supply papers</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:contribution>
+              <bf:PrimaryContribution>
+                <bf:agent>
+                  <bf:Agent>
+                    <rdfs:label>United States. Geological Survey.</rdfs:label>
+                  </bf:Agent>
+                </bf:agent>
+              </bf:PrimaryContribution>
+            </bf:contribution>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance760-3">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Water supply papers</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work760-3"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/subseries"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work762-4">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Quality of surface waters of the United States</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance762-4">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Quality of surface waters of the United States</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work762-4"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/translationof"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work765-5">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Astrofizicheskie issledovaniíà</bf:mainTitle>
+                <bf:qualifier>Original</bf:qualifier>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance765-5">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Astrofizicheskie issledovaniíà</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>   78648457 </rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>4798581</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work765-5"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/translatedas"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work767-6">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Astrofizicheskie issledovaniíà. English. Bulletin of the Special Astrophysical Observatory (North Caucasus)</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0190-2709</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance767-6">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Astrofizicheskie issledovaniíà. English. Bulletin of the Special Astrophysical Observatory (North Caucasus)</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>   86649325 </rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>4698159</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work767-6"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/supplement"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work770-7">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>College English</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0733-1959</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance770-7">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>College English</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:ReportNumber>
+                    <rdf:value>APA 3011</rdf:value>
+                  </bf:ReportNumber>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work770-7"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/supplementto"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work772-8">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Statistiques pour l'économie normande</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance772-8">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Statistiques pour l'économie normande</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:part>1979-</bf:part>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>6260766</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work772-8"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/partof"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work773-9">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Entomologists' monthly magazine</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:title>
+              <bf:AbbreviatedTitle>
+                <bf:mainTitle>ENTOMOL MON MAG</bf:mainTitle>
+              </bf:AbbreviatedTitle>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0013-8908</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bflc:appliesTo>
+              <bflc:AppliesTo>
+                <rdfs:label>Pamphlet</rdfs:label>
+              </bflc:AppliesTo>
+            </bflc:appliesTo>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance773-9">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Entomologists' monthly magazine</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:provisionActivityStatement>Wallingford : Gem Publishing Company</bf:provisionActivityStatement>
+                <bf:note>
+                  <bf:Note>
+                    <rdfs:label>24:B:9&lt;235</rdfs:label>
+                  </bf:Note>
+                </bf:note>
+                <bf:seriesStatement>Wonders of man series</bf:seriesStatement>
+                <bf:identifiedBy>
+                  <bf:Coden>
+                    <rdf:value>FNMMA</rdf:value>
+                  </bf:Coden>
+                </bf:identifiedBy>
+                <bflc:appliesTo>
+                  <bflc:AppliesTo>
+                    <rdfs:label>Pamphlet</rdfs:label>
+                  </bflc:AppliesTo>
+                </bflc:appliesTo>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work773-9"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/part"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work774-10">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>View SE from Mill Brook Houses on rooftop on Cypress Ave. Between 136th St. and 137th St.</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance774-10">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>View SE from Mill Brook Houses on rooftop on Cypress Ave. Between 136th St. and 137th St.</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:provisionActivityStatement>93/05</bf:provisionActivityStatement>
+                <bf:extent>
+                  <bf:Extent>
+                    <rdfs:label>file on disc</rdfs:label>
+                  </bf:Extent>
+                </bf:extent>
+                <bf:note>
+                  <bf:Note>
+                    <rdfs:label>[DIAPimage]</rdfs:label>
+                  </bf:Note>
+                </bf:note>
+                <bf:note>
+                  <bf:Note>
+                    <rdfs:label>240 x 760px</rdfs:label>
+                  </bf:Note>
+                </bf:note>
+                <bf:identifiedBy>
+                  <bf:Local>
+                    <rdf:value>NYDA.1993.010.00132.</rdf:value>
+                  </bf:Local>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work774-10"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/otheredition"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work775-11">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Cuba economic news</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:language>
+              <bf:Language rdf:about="http://id.loc.gov/vocabulary/languages/eng"/>
+            </bf:language>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0590-2932</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance775-11">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Cuba economic news</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:editionStatement>Havana ed.</bf:editionStatement>
+                <bf:provisionActivity>
+                  <bf:ProvisionActivity>
+                    <bf:place>
+                      <bf:Place rdf:about="http://id.loc.gov/vocabulary/countries/cu"/>
+                    </bf:place>
+                  </bf:ProvisionActivity>
+                </bf:provisionActivity>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>2259984</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work775-11"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/otherphysicalformat"/>
+        <bf:relationship>
+          <bf:Relationship>
+            <rdfs:label>Additional physical form</rdfs:label>
+          </bf:Relationship>
+        </bf:relationship>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work776-12">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>College English</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0010-0994</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance776-12">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>College English</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>sc#84007753#</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>3546316</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work776-12"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/issuedwith"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work777-13">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Mythprint</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0146-9347</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance777-13">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Mythprint</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work777-13"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/absorptionof"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work780-14">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Publications</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:contribution>
+              <bf:PrimaryContribution>
+                <bf:agent>
+                  <bf:Agent>
+                    <rdfs:label>American Society of International Law</rdfs:label>
+                  </bf:Agent>
+                </bf:agent>
+              </bf:PrimaryContribution>
+            </bf:contribution>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance780-14">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Proceedings</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:part>1971</bf:part>
+                <bf:identifiedBy>
+                  <bf:Strn>
+                    <rdf:value>MPC-387</rdf:value>
+                  </bf:Strn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Isbn>
+                    <rdf:value>0491001304</rdf:value>
+                  </bf:Isbn>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work780-14"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/absorbedby"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work785-15">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Business week</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0007-7135</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:role>
+              <bf:Role rdf:about="http://rdaregistry.info/Elements/w/P10145"/>
+            </bf:role>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance785-15">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Business week</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:part>Oct. 1940</bf:part>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>   31006225 </rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:role>
+                  <bf:Role rdf:about="http://rdaregistry.info/Elements/w/P10145"/>
+                </bf:role>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work785-15"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/datasource"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work786-16">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Reno, NV-CA west digital terrain elevation data</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:contribution>
+              <bf:PrimaryContribution>
+                <bf:agent>
+                  <bf:Agent>
+                    <rdfs:label>United States. Defense Mapping Agency.</rdfs:label>
+                  </bf:Agent>
+                </bf:agent>
+              </bf:PrimaryContribution>
+            </bf:contribution>
+            <bf:note>
+              <bf:Note>
+                <rdfs:label>Data for reformatting to DEM format</rdfs:label>
+              </bf:Note>
+            </bf:note>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance786-16">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Reno, NV-CA west digital terrain elevation data</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:note>
+                  <bf:Note>
+                    <rdfs:label>19181111</rdfs:label>
+                  </bf:Note>
+                </bf:note>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work786-16"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/relatedwork"/>
+        <bf:relationship>
+          <bf:Relationship>
+            <rdfs:label>Related source work</rdfs:label>
+          </bf:Relationship>
+        </bf:relationship>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/1#Work787-17">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>College English</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/1#Instance787-17">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>College English</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Local>
+                    <rdf:value>(istc)0A3200912B4A1057</rdf:value>
+                  </bf:Local>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/1#Work787-17"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/1#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/1#Instance">
+    <bf:title>
+      <bf:Title>
+        <bf:mainTitle>College English</bf:mainTitle>
+      </bf:Title>
+    </bf:title>
+    <bf:instanceOf rdf:resource="http://example.org/1#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/2#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1991-11-04</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bflc:encodingLevel>
+          <bflc:EncodingLevel rdf:about="http://id.loc.gov/vocabulary/menclvl/f">
+            <rdfs:label>full</rdfs:label>
+          </bflc:EncodingLevel>
+        </bflc:encodingLevel>
+        <bf:descriptionConventions>
+          <bf:DescriptionConventions rdf:about="http://id.loc.gov/vocabulary/descriptionConventions/aacr">
+            <bf:code>aacr</bf:code>
+          </bf:DescriptionConventions>
+        </bf:descriptionConventions>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>2</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/metaentry"/>
+            <rdfs:label>0 - successive</rdfs:label>
+          </bf:Note>
+        </bf:note>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Text"/>
+    <bf:content>
+      <bf:Content rdf:about="http://id.loc.gov/vocabulary/contentTypes/txt">
+        <rdfs:label>text</rdfs:label>
+      </bf:Content>
+    </bf:content>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Serial"/>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/pol"/>
+    <bflc:serialPubType>
+      <bflc:SerialPubType rdf:about="http://id.loc.gov/vocabulary/mserialpubtype/periodical">
+        <rdfs:label>periodical</rdfs:label>
+      </bflc:SerialPubType>
+    </bflc:serialPubType>
+    <bflc:governmentPubType>
+      <bflc:GovernmentPubType rdf:about="http://id.loc.gov/vocabulary/mgovtpubtype/f">
+        <rdfs:label>federal</rdfs:label>
+      </bflc:GovernmentPubType>
+    </bflc:governmentPubType>
+    <bf:contribution>
+      <bf:Contribution>
+        <bf:agent>
+          <bf:Agent rdf:about="http://example.org/2#Agent710-5">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Organization"/>
+            <rdfs:label>Centralny Instytut Rolniczy (Poland)</rdfs:label>
+            <bflc:marcKey>7102 $aCentralny Instytut Rolniczy (Poland)</bflc:marcKey>
+          </bf:Agent>
+        </bf:agent>
+        <bf:role>
+          <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+        </bf:role>
+      </bf:Contribution>
+    </bf:contribution>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/continuationof"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work780-6">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych i leśnych</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance780-6">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych i leśnych</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>   91656663</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>24650058</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work780-6"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/relnote"/>
+            <rdfs:label>Split into eight sections with the common title: Roczniki nauk rolniczych; Seria A, Roślinna; Seria B, Zootechniczna; Seria C, Mechanizacji; Seria D, Monografie; Seria E, Ochrona roślin; Seria F, Melioracji i użytków zielonych; Seria G, Ekonomiki rolnictwa; and: Seria H, Rybactwo.</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/splitinto"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work785-7">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych. Seria A, Roślinna</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance785-7">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych. Seria A, Roślinna</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>   68040708</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>20278833</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work785-7"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work785-8">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych. Seria B, Zootechniczna</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0080-3669</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance785-8">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych. Seria B, Zootechniczna</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>sn 85005500</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>2482294</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work785-8"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work785-9">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych. Seria C, Mechanizacji</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0080-3677</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance785-9">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych. Seria C, Mechanizacji</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>4362035</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work785-9"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work785-10">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych. Seria D, Monografie</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0080-3685</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance785-10">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych. Seria D, Monografie</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>   68040707</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>2510810</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work785-10"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work785-11">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych. Seria E, Ochrona roślin</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0080-3693</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance785-11">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych. Seria E, Ochrona roślin</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>   73646266</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>1788681</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work785-11"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work785-12">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych. Seria F, Melioracji i użytków zielonych</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0080-3707</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance785-12">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych. Seria F, Melioracji i użytków zielonych</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>   68040710</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>2516165</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work785-12"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work785-13">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych. Seria G, Ekonomiki rolnictwa</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0080-3715</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance785-13">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych. Seria G, Ekonomiki rolnictwa</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>sn 85008633</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>2505513</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work785-13"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/2#Work785-14">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Roczniki nauk rolniczych. Seria H, Rybactwo</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Issn>
+                <rdf:value>0376-2173</rdf:value>
+              </bf:Issn>
+            </bf:identifiedBy>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/2#Instance785-14">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Roczniki nauk rolniczych. Seria H, Rybactwo</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>sf 98086144</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>2515449</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/2#Work785-14"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/2#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/2#Instance">
+    <bf:issuance rdf:resource="http://id.loc.gov/vocabulary/issuance/serl"/>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">19XX/1952</bf:date>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/ceased">
+            <rdfs:label>ceased</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/pl"/>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:instanceOf rdf:resource="http://example.org/2#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/3#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1993-08-19</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bflc:encodingLevel>
+          <bflc:EncodingLevel rdf:about="http://id.loc.gov/vocabulary/menclvl/f">
+            <rdfs:label>full</rdfs:label>
+          </bflc:EncodingLevel>
+        </bflc:encodingLevel>
+        <bf:descriptionConventions>
+          <bf:DescriptionConventions rdf:about="http://id.loc.gov/vocabulary/descriptionConventions/aacr">
+            <bf:code>aacr</bf:code>
+          </bf:DescriptionConventions>
+        </bf:descriptionConventions>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>3</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/metaentry"/>
+            <rdfs:label>2 - integrated</rdfs:label>
+          </bf:Note>
+        </bf:note>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Text"/>
+    <bf:content>
+      <bf:Content rdf:about="http://id.loc.gov/vocabulary/contentTypes/txt">
+        <rdfs:label>text</rdfs:label>
+      </bf:Content>
+    </bf:content>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Integrating"/>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bflc:serialPubType>
+      <bflc:SerialPubType rdf:about="http://id.loc.gov/vocabulary/mserialpubtype/looseleaf">
+        <rdfs:label>loose leaf</rdfs:label>
+      </bflc:SerialPubType>
+    </bflc:serialPubType>
+    <bf:notation>
+      <bf:Script rdf:about="http://id.loc.gov/vocabulary/mscript/a">
+        <rdfs:label>Basic roman</rdfs:label>
+      </bf:Script>
+    </bf:notation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/relnote"/>
+            <rdfs:label>Continued by a print serial publication with the same title, and also as part of the annually issued CD-ROM: International business law library.</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/continuedby"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/3#Work785-5">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Legal aspects of doing business in Europe (Yorkhill Law Publishing)</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/3#Instance785-5">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>Legal aspects of doing business in Europe (Yorkhill Law Publishing)</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Lccn>
+                    <rdf:value>  2007247005</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                        <bf:code>DLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Lccn>
+                </bf:identifiedBy>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>80016886</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/3#Work785-5"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/relatedwork"/>
+        <bf:associatedResource>
+          <bf:Work rdf:about="http://example.org/3#Work787-6">
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>International business law library</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:hasInstance>
+              <bf:Instance rdf:about="http://example.org/3#Instance787-6">
+                <bf:title>
+                  <bf:Title>
+                    <bf:mainTitle>International business law library</bf:mainTitle>
+                  </bf:Title>
+                </bf:title>
+                <bf:identifiedBy>
+                  <bf:Identifier>
+                    <rdf:value>59758257</rdf:value>
+                    <bf:assigner>
+                      <bf:Agent>
+                        <bf:code>OCoLC</bf:code>
+                      </bf:Agent>
+                    </bf:assigner>
+                  </bf:Identifier>
+                </bf:identifiedBy>
+                <bf:instanceOf rdf:resource="http://example.org/3#Work787-6"/>
+              </bf:Instance>
+            </bf:hasInstance>
+          </bf:Work>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/3#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/3#Instance">
+    <bf:issuance rdf:resource="http://id.loc.gov/vocabulary/issuance/intg"/>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1990/2001</bf:date>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/ceased">
+            <rdfs:label>ceased</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/ne"/>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:instanceOf rdf:resource="http://example.org/3#Work"/>
+  </bf:Instance>
+</rdf:RDF>

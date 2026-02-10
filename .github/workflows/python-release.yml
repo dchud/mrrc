@@ -1,0 +1,122 @@
+name: Python Release to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release-wheels:
+    name: Build release wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          manylinux: auto
+          args: --release --out dist -i python${{ matrix.python-version }}
+      
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist
+
+  test-release-wheels:
+    name: Test release wheels on ${{ matrix.os }}
+    needs: build-release-wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist
+
+      - name: Install wheel
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/mrrc-*.whl
+
+      - name: Install test dependencies
+        shell: bash
+        run: |
+          python -m pip install pytest pytest-benchmark mypy pyright
+
+      - name: Run pytest (core tests, excludes benchmarks)
+        run: |
+          pytest tests/python/ -m "not benchmark" -v
+        # Retry on macOS due to intermittent runner flakiness
+        if: runner.os != 'macOS'
+
+      - name: Run pytest with retry (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          max_attempts=3
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts"
+            if pytest tests/python/ -m "not benchmark" -v; then
+              echo "Tests passed on attempt $attempt"
+              exit 0
+            fi
+            echo "Attempt $attempt failed, retrying..."
+            attempt=$((attempt + 1))
+            sleep 5
+          done
+          echo "All $max_attempts attempts failed"
+          exit 1
+        shell: bash
+      
+      - name: Run type checking
+        run: |
+          mypy tests/python/ --strict || true
+          pyright tests/python/ || true
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: test-release-wheels
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/*
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}

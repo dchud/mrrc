@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="http://id.loc.gov/ontologies/bibframe/" xmlns:bflc="http://id.loc.gov/ontologies/bflc/" xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <bf:Work rdf:about="http://example.org/1#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>1</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:contribution>
+      <bf:Contribution>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/PrimaryContribution"/>
+        <bf:agent>
+          <bf:Agent rdf:about="http://example.org/1#Agent100-2">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+            <rdfs:label>Beethoven, Ludwig van, 1770-1827 (Spirit)</rdfs:label>
+            <bflc:marcKey>1001 $aBeethoven, Ludwig van,$d1770-1827$c(Spirit)$0(DE-101c)310008891$2naf</bflc:marcKey>
+            <bf:identifiedBy>
+              <bf:Identifier>
+                <rdf:value>310008891</rdf:value>
+                <bf:source>
+                  <bf:Source>
+                    <bf:code>DE-101c</bf:code>
+                  </bf:Source>
+                </bf:source>
+              </bf:Identifier>
+            </bf:identifiedBy>
+            <bf:source>
+              <bf:Source rdf:about="http://id.loc.gov/vocabulary/nameTitleSchemes/naf">
+                <bf:code>naf</bf:code>
+              </bf:Source>
+            </bf:source>
+          </bf:Agent>
+        </bf:agent>
+        <bf:role>
+          <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+        </bf:role>
+      </bf:Contribution>
+    </bf:contribution>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/1#Topic600-3">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <madsrdf:authoritativeLabel>Nixon, Richard M. (Richard Milhouse), 1913---Psychology.</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <bf:Agent rdf:about="http://example.org/1#Agent600-3">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+            <rdfs:label>Nixon, Richard M. (Richard Milhouse), 1913-</rdfs:label>
+            <bflc:marcKey>60010$aNixon, Richard M.$q(Richard Milhouse),$d1913-</bflc:marcKey>
+            <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+          </bf:Agent>
+          <madsrdf:Topic>
+            <madsrdf:authoritativeLabel>Psychology</madsrdf:authoritativeLabel>
+          </madsrdf:Topic>
+        </madsrdf:componentList>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Hub rdf:about="http://example.org/1#Hub600-4">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#NameTitle"/>
+        <madsrdf:authoritativeLabel>Bellamy, Edward, 1850-1898. Looking backward, 2000-1887.</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:contribution>
+          <bf:Contribution>
+            <bf:agent>
+              <bf:Agent rdf:about="http://example.org/1#Agent600-4">
+                <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                <rdfs:label>Bellamy, Edward, 1850-1898</rdfs:label>
+                <bflc:marcKey>60010$aBellamy, Edward,$b1850-1898.$tLooking backward, 2000-1887.</bflc:marcKey>
+              </bf:Agent>
+            </bf:agent>
+            <bf:role>
+              <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+            </bf:role>
+          </bf:Contribution>
+        </bf:contribution>
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Looking backward, 2000-1887</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bflc:marcKey>60010$aBellamy, Edward,$b1850-1898.$tLooking backward, 2000-1887.</bflc:marcKey>
+      </bf:Hub>
+    </bf:subject>
+    <bf:subject>
+      <bf:Agent rdf:about="http://example.org/1#Agent600-5">
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+        <rdfs:label>Beethoven, Ludwig van, 1770-1827 (Spirit)</rdfs:label>
+        <bflc:marcKey>60010$aBeethoven, Ludwig van,$d1770-1827$c(Spirit)</bflc:marcKey>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+      </bf:Agent>
+    </bf:subject>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/relatedwork"/>
+        <bf:relationship>
+          <bf:Relationship>
+            <rdfs:label>Parody of (work)</rdfs:label>
+          </bf:Relationship>
+        </bf:relationship>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/1#Hub700-6">
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/1#Agent700-6">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Carroll, Lewis, 1832-1898</rdfs:label>
+                    <bflc:marcKey>7001 $iParody of (work):$aCarroll, Lewis,$d1832-1898.$tAlice's adventures in Wonderland$0(isni)0000000121358464</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Alice's adventures in Wonderland</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:identifiedBy>
+              <bf:Identifier>
+                <rdf:value>0000000121358464</rdf:value>
+                <bf:source>
+                  <bf:Source>
+                    <bf:code>isni</bf:code>
+                  </bf:Source>
+                </bf:source>
+              </bf:Identifier>
+            </bf:identifiedBy>
+            <bflc:marcKey>7001 $iParody of (work):$aCarroll, Lewis,$d1832-1898.$tAlice's adventures in Wonderland$0(isni)0000000121358464</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/part"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/1#Hub700-7">
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/1#Agent700-7">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Voltaire, 1694-1778</rdfs:label>
+                    <bflc:marcKey>70012$aVoltaire,$d1694-1778.$tCorrespondence.$kSelections.$f1777.</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Correspondence. Selections. 1777.</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bf:originDate>1777</bf:originDate>
+            <bflc:marcKey>70012$aVoltaire,$d1694-1778.$tCorrespondence.$kSelections.$f1777.</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:contribution>
+      <bf:Contribution>
+        <bf:agent>
+          <bf:Agent rdf:about="http://example.org/1#Agent700-8">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+            <rdfs:label>Hecht, Ben, 1893-1964</rdfs:label>
+            <bflc:marcKey>7001 $aHecht, Ben,$d1893-1964,$ewriting, direction, and production.$econception,$ecreative consulting.$uChemistry Dept., American University.</bflc:marcKey>
+          </bf:Agent>
+        </bf:agent>
+        <bf:role>
+          <bf:Role>
+            <rdfs:label>writing</rdfs:label>
+          </bf:Role>
+        </bf:role>
+        <bf:role>
+          <bf:Role>
+            <rdfs:label>direction</rdfs:label>
+          </bf:Role>
+        </bf:role>
+        <bf:role>
+          <bf:Role>
+            <rdfs:label>production</rdfs:label>
+          </bf:Role>
+        </bf:role>
+        <bf:role>
+          <bf:Role>
+            <rdfs:label>conception</rdfs:label>
+          </bf:Role>
+        </bf:role>
+        <bf:role>
+          <bf:Role>
+            <rdfs:label>creative consulting</rdfs:label>
+          </bf:Role>
+        </bf:role>
+      </bf:Contribution>
+    </bf:contribution>
+    <bf:contribution>
+      <bf:Contribution>
+        <bf:agent>
+          <bf:Agent rdf:about="http://id.loc.gov/rwo/agents/n81042545">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+            <rdfs:label>Galway, James</rdfs:label>
+            <bflc:marcKey>7001 $aGalway, James.$4prf$4cnd$4http://id.loc.gov/vocabulary/relators/adi$0http://id.loc.gov/authorities/names/n81042545</bflc:marcKey>
+            <madsrdf:isIdentifiedByAuthority rdf:resource="http://id.loc.gov/authorities/names/n81042545"/>
+          </bf:Agent>
+        </bf:agent>
+        <bf:role>
+          <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/prf"/>
+        </bf:role>
+        <bf:role>
+          <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/cnd"/>
+        </bf:role>
+        <bf:role>
+          <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/adi"/>
+        </bf:role>
+      </bf:Contribution>
+    </bf:contribution>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/ontologies/bflc/hasVariantEntry"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/1#Hub700-11">
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/1#Agent700-11">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Tyler, Anne</rdfs:label>
+                    <bflc:marcKey>70014$aTyler, Anne.$tPatchwork planet</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Patchwork planet</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>70014$aTyler, Anne.$tPatchwork planet</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/translationof"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/1#Hub700-12">
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/1#Agent700-12">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Collodi, Carlo, 1826-1890</rdfs:label>
+                    <bflc:marcKey>7001 $iis translation of$aCollodi, Carlo,$d1826-1890.$tAvventure di Pinocchio.</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Avventure di Pinocchio</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>7001 $iis translation of$aCollodi, Carlo,$d1826-1890.$tAvventure di Pinocchio.</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship rdf:resource="http://id.loc.gov/vocabulary/relationship/arrangementof"/>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/1#Hub700-13">
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/1#Agent700-13">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Thomas, John Rogers, 1829-1896</rdfs:label>
+                    <bflc:marcKey>7001 $iis arrangement of$aThomas, John Rogers,$d1829-1896.$tCottage by the sea;</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Cottage by the sea</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>7001 $iis arrangement of$aThomas, John Rogers,$d1829-1896.$tCottage by the sea;</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/1#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/1#Instance">
+    <bf:instanceOf rdf:resource="http://example.org/1#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/2#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>2</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:subject>
+      <bf:Agent rdf:about="http://example.org/2#Agent600-2">
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+        <bf:relation>
+          <bf:Relation>
+            <bf:relationship>
+              <bf:Relationship>
+                <rdfs:label>honoree</rdfs:label>
+              </bf:Relationship>
+            </bf:relationship>
+            <bf:relatedTo rdf:resource="http://example.org/2#Work"/>
+          </bf:Relation>
+        </bf:relation>
+        <bf:relation>
+          <bf:Relation>
+            <bf:relationship>
+              <bf:Relationship rdf:about="http://id.loc.gov/vocabulary/relators/hon"/>
+            </bf:relationship>
+            <bf:relatedTo rdf:resource="http://example.org/2#Work"/>
+          </bf:Relation>
+        </bf:relation>
+        <rdfs:label>Dickens, Charles, 1812-1870</rdfs:label>
+        <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$ehonoree.$4hon</bflc:marcKey>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+      </bf:Agent>
+    </bf:subject>
+    <bf:subject>
+      <bf:Hub rdf:about="http://example.org/2#Hub630-3">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Title"/>
+        <madsrdf:authoritativeLabel>Bible</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Bible</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bflc:marcKey>630 0$aBible$4cmp</bflc:marcKey>
+      </bf:Hub>
+    </bf:subject>
+    <bf:subject>
+      <bf:Hub rdf:about="http://example.org/2#Hub600-4">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#NameTitle"/>
+        <madsrdf:authoritativeLabel>Dickens, Charles, 1812-1870 Tale of two cities</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:contribution>
+          <bf:Contribution>
+            <bf:agent>
+              <bf:Agent rdf:about="http://example.org/2#Agent600-4">
+                <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                <rdfs:label>Dickens, Charles, 1812-1870</rdfs:label>
+                <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$tTale of two cities</bflc:marcKey>
+              </bf:Agent>
+            </bf:agent>
+            <bf:role>
+              <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+            </bf:role>
+          </bf:Contribution>
+        </bf:contribution>
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Tale of two cities</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$tTale of two cities</bflc:marcKey>
+      </bf:Hub>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/2#Topic600-5">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <madsrdf:authoritativeLabel>Dickens, Charles, 1812-1870 Tale of two cities--History and criticism.</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <bf:Hub rdf:about="http://example.org/2#Hub600-5">
+            <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#NameTitle"/>
+            <madsrdf:authoritativeLabel>Dickens, Charles, 1812-1870 Tale of two cities</madsrdf:authoritativeLabel>
+            <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/2#Agent600-5">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Dickens, Charles, 1812-1870</rdfs:label>
+                    <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$tTale of two cities</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Tale of two cities</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$tTale of two cities$xHistory and criticism.</bflc:marcKey>
+          </bf:Hub>
+          <madsrdf:Topic>
+            <madsrdf:authoritativeLabel>History and criticism</madsrdf:authoritativeLabel>
+          </madsrdf:Topic>
+        </madsrdf:componentList>
+      </bf:Topic>
+    </bf:subject>
+    <bf:contribution>
+      <bf:Contribution>
+        <bf:agent>
+          <bf:Agent rdf:about="http://example.org/2#Agent720-6">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+            <rdfs:label>Vestris, Le citoyen</rdfs:label>
+          </bf:Agent>
+        </bf:agent>
+        <bf:role>
+          <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/dnc"/>
+        </bf:role>
+      </bf:Contribution>
+    </bf:contribution>
+    <bf:relation>
+      <bf:Relation>
+        <bf:relationship>
+          <bf:Relationship rdf:about="http://id.loc.gov/vocabulary/relationship/series">
+            <rdfs:label>series</rdfs:label>
+          </bf:Relationship>
+        </bf:relationship>
+        <bf:associatedResource>
+          <bf:Hub rdf:about="http://example.org/2#Hub800-7">
+            <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Series"/>
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/2#Agent800-7">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Smith, Dan</rdfs:label>
+                    <bflc:marcKey>800 0$aSmith, Dan$ttitle of 8xx$ptitle part</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>title of 8xx title part</bf:mainTitle>
+                <bf:partName>title part</bf:partName>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>800 0$aSmith, Dan$ttitle of 8xx$ptitle part</bflc:marcKey>
+          </bf:Hub>
+        </bf:associatedResource>
+      </bf:Relation>
+    </bf:relation>
+    <bf:hasInstance rdf:resource="http://example.org/2#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/2#Instance">
+    <bf:instanceOf rdf:resource="http://example.org/2#Work"/>
+  </bf:Instance>
+</rdf:RDF>

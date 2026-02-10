@@ -1,0 +1,58 @@
+name: Memory Safety Checks (ASAN)
+
+# Run nightly to detect memory safety regressions without blocking regular CI
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  # Allow manual trigger for on-demand testing
+  workflow_dispatch:
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  asan-library-tests:
+    name: ASAN Memory Safety Tests
+    runs-on: ubuntu-latest
+    strategy:
+      # Let all ASAN tests run even if one fails, for comprehensive feedback
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust nightly toolchain with ASAN support
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-asan-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run ASAN on library tests
+        run: |
+          export RUSTFLAGS="-Z sanitizer=address"
+          export LSAN_OPTIONS="suppressions=${{ github.workspace }}/.cargo/asan_suppressions.txt"
+          # Use -Zbuild-std to rebuild std with ASAN and properly handle proc-macros
+          # Proc-macros run on host at compile time, so they need special handling
+          cargo test --lib --package mrrc -q -Zbuild-std --target x86_64-unknown-linux-gnu
+
+      - name: Report results
+        if: always()
+        run: echo "ASAN tests completed. Check output above for any issues."

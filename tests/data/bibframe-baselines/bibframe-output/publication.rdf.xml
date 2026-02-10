@@ -1,0 +1,1068 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="http://id.loc.gov/ontologies/bibframe/" xmlns:bflc="http://id.loc.gov/ontologies/bflc/" xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <bf:Work rdf:about="http://example.org/7334561#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1982-12-08</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>7334561</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bf:hasInstance rdf:resource="http://example.org/7334561#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/7334561#Instance">
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>New York</bflc:simplePlace>
+        <bflc:simpleAgent>The Macmillan company</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>New York: The Macmillan company</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>New York</bflc:simplePlace>
+        <bflc:simpleAgent>The Macmillan company</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>New York: The Macmillan company</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1927</bf:date>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/nyu"/>
+        <bflc:simplePlace>London</bflc:simplePlace>
+        <bflc:simpleAgent>Macmillan and company</bflc:simpleAgent>
+        <bflc:simpleDate>1927</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>London: Macmillan and company, 1927</bf:publicationStatement>
+    <bf:instanceOf rdf:resource="http://example.org/7334561#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/5295609#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1997-09-08</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>5295609</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/jpn"/>
+    <bf:hasInstance rdf:resource="http://example.org/5295609#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/5295609#Instance">
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>[S.l.]</bflc:simplePlace>
+        <bflc:simplePlace xml:lang="ja-jpan">[S.l.]</bflc:simplePlace>
+        <bflc:simpleAgent>[s.n.]</bflc:simpleAgent>
+        <bflc:simpleAgent xml:lang="ja-jpan">[s.n.]</bflc:simpleAgent>
+        <bflc:simpleDate>[Shōwa 62 i.e. 1987]</bflc:simpleDate>
+        <bflc:simpleDate xml:lang="ja-jpan">[昭和 62 i.e. 1987]</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>[S.l.]: [s.n.], [Shōwa 62 i.e. 1987]</bf:publicationStatement>
+    <bf:publicationStatement xml:lang="ja-jpan">[S.l.]: [s.n.], [昭和 62 i.e. 1987]</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1987</bf:date>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/ja"/>
+        <bflc:simplePlace>[S.l.]</bflc:simplePlace>
+        <bflc:simplePlace xml:lang="ja-jpan">[S.l.]</bflc:simplePlace>
+        <bflc:simpleAgent>[s.n.]</bflc:simpleAgent>
+        <bflc:simpleAgent xml:lang="ja-jpan">[s.n.]</bflc:simpleAgent>
+        <bflc:simpleDate>[Shōwa 62 i.e. 1987]</bflc:simpleDate>
+        <bflc:simpleDate xml:lang="ja-jpan">[昭和 62 i.e. 1987]</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>[S.l.]: [s.n.], [Shōwa 62 i.e. 1987]</bf:publicationStatement>
+    <bf:publicationStatement xml:lang="ja-jpan">[S.l.]: [s.n.], [昭和 62 i.e. 1987]</bf:publicationStatement>
+    <bf:instanceOf rdf:resource="http://example.org/5295609#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/20621601#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2018-07-09</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>20621601</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+        <bflc:encodingLevel>
+          <bflc:EncodingLevel rdf:about="http://id.loc.gov/vocabulary/menclvl/f">
+            <rdfs:label>full</rdfs:label>
+          </bflc:EncodingLevel>
+        </bflc:encodingLevel>
+        <bf:descriptionConventions>
+          <bf:DescriptionConventions rdf:about="http://id.loc.gov/vocabulary/descriptionConventions/isbd">
+            <bf:code>isbd</bf:code>
+          </bf:DescriptionConventions>
+        </bf:descriptionConventions>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Text"/>
+    <bf:content>
+      <bf:Content rdf:about="http://id.loc.gov/vocabulary/contentTypes/txt">
+        <rdfs:label>text</rdfs:label>
+      </bf:Content>
+    </bf:content>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Monograph"/>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bf:illustrativeContent>
+      <bf:Illustration rdf:about="http://id.loc.gov/vocabulary/millus/ill">
+        <rdfs:label>illustrations</rdfs:label>
+      </bf:Illustration>
+    </bf:illustrativeContent>
+    <bf:supplementaryContent>
+      <bf:SupplementaryContent rdf:about="http://id.loc.gov/vocabulary/msupplcont/bibliography">
+        <rdfs:label>bibliography</rdfs:label>
+      </bf:SupplementaryContent>
+    </bf:supplementaryContent>
+    <bf:supplementaryContent>
+      <bf:SupplementaryContent rdf:about="http://id.loc.gov/vocabulary/msupplcont/index">
+        <rdfs:label>index</rdfs:label>
+      </bf:SupplementaryContent>
+    </bf:supplementaryContent>
+    <bf:hasInstance rdf:resource="http://example.org/20621601#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/20621601#Instance">
+    <bf:issuance rdf:resource="http://id.loc.gov/vocabulary/issuance/mono"/>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>London</bflc:simplePlace>
+        <bflc:simplePlace>New York, NY</bflc:simplePlace>
+        <bflc:simpleAgent>Routledge/Taylor &amp; Francis Group</bflc:simpleAgent>
+        <bflc:simpleDate>2019</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>London; New York, NY: Routledge/Taylor &amp; Francis Group, 2019</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">2019</bf:date>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/enk"/>
+        <bflc:simplePlace>London</bflc:simplePlace>
+        <bflc:simplePlace>New York, NY</bflc:simplePlace>
+        <bflc:simpleAgent>Routledge/Taylor &amp; Francis Group</bflc:simpleAgent>
+        <bflc:simpleDate>2019</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>London; New York, NY: Routledge/Taylor &amp; Francis Group, 2019</bf:publicationStatement>
+    <bf:copyrightDate rdf:datatype="http://id.loc.gov/datatypes/edtf">2019</bf:copyrightDate>
+    <bf:media>
+      <bf:Media rdf:about="http://id.loc.gov/vocabulary/mediaTypes/n">
+        <rdfs:label>unmediated</rdfs:label>
+      </bf:Media>
+    </bf:media>
+    <bf:instanceOf rdf:resource="http://example.org/20621601#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/1972268#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1988-08-04</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>1972268</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bf:hasInstance rdf:resource="http://example.org/1972268#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/1972268#Instance">
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>[Milnor, N.D.]</bflc:simplePlace>
+        <bflc:simpleAgent>[Milnor Centennial Corp]</bflc:simpleAgent>
+        <bflc:simpleDate>[1983?]</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>[Milnor, N.D.]: [Milnor Centennial Corp], [1983?]</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1983</bf:date>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/ndu"/>
+        <bflc:simplePlace>[Milnor, N.D.]</bflc:simplePlace>
+        <bflc:simpleAgent>[Milnor Centennial Corp]</bflc:simpleAgent>
+        <bflc:simpleDate>[1983?]</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>[Milnor, N.D.]: [Milnor Centennial Corp], [1983?]</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Manufacture"/>
+        <bflc:simplePlace>Gwiner, N.D.</bflc:simplePlace>
+        <bflc:simpleAgent>J &amp; M Print</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:manufactureStatement>Gwiner, N.D.: J &amp; M Print</bf:manufactureStatement>
+    <bf:instanceOf rdf:resource="http://example.org/1972268#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/11457859#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1992-04-30</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>11457859</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+        <bflc:encodingLevel>
+          <bflc:EncodingLevel rdf:about="http://id.loc.gov/vocabulary/menclvl/f">
+            <rdfs:label>full</rdfs:label>
+          </bflc:EncodingLevel>
+        </bflc:encodingLevel>
+        <bf:descriptionConventions>
+          <bf:DescriptionConventions rdf:about="http://id.loc.gov/vocabulary/descriptionConventions/isbd">
+            <bf:code>isbd</bf:code>
+          </bf:DescriptionConventions>
+        </bf:descriptionConventions>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/metaentry"/>
+            <rdfs:label>0 - successive</rdfs:label>
+          </bf:Note>
+        </bf:note>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Text"/>
+    <bf:content>
+      <bf:Content rdf:about="http://id.loc.gov/vocabulary/contentTypes/txt">
+        <rdfs:label>text</rdfs:label>
+      </bf:Content>
+    </bf:content>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Serial"/>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bflc:serialPubType>
+      <bflc:SerialPubType rdf:about="http://id.loc.gov/vocabulary/mserialpubtype/periodical">
+        <rdfs:label>periodical</rdfs:label>
+      </bflc:SerialPubType>
+    </bflc:serialPubType>
+    <bf:notation>
+      <bf:Script rdf:about="http://id.loc.gov/vocabulary/mscript/a">
+        <rdfs:label>Basic roman</rdfs:label>
+      </bf:Script>
+    </bf:notation>
+    <bf:hasInstance rdf:resource="http://example.org/11457859#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/11457859#Instance">
+    <bf:issuance rdf:resource="http://id.loc.gov/vocabulary/issuance/serl"/>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/earliest">
+            <rdfs:label>earliest</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bflc:simplePlace>New York, NY</bflc:simplePlace>
+        <bflc:simpleAgent>Out Publishing, Inc</bflc:simpleAgent>
+        <bflc:simpleDate>[1992]-</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>New York, NY: Out Publishing, Inc, [1992]-</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/earliest">
+            <rdfs:label>earliest</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bflc:simplePlace>New York, NY</bflc:simplePlace>
+        <bflc:simpleAgent>Out Publishing, Inc</bflc:simpleAgent>
+        <bflc:simpleDate>[1992]-</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>New York, NY: Out Publishing, Inc, [1992]-</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>&lt;February 2010-&gt;</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:simplePlace>Los Angeles, CA</bflc:simplePlace>
+        <bflc:simpleAgent>Here Publishing, Inc</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Los Angeles, CA: Here Publishing, Inc</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>&lt;February 2010-&gt;</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:simplePlace>Los Angeles, CA</bflc:simplePlace>
+        <bflc:simpleAgent>Here Publishing, Inc</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Los Angeles, CA: Here Publishing, Inc</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/current">
+            <rdfs:label>current</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>&lt;November 2019-&gt;</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:simplePlace>Los Angeles, CA</bflc:simplePlace>
+        <bflc:simpleAgent>Pride Publishing Inc</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Los Angeles, CA: Pride Publishing Inc</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1992/..</bf:date>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/current">
+            <rdfs:label>current</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/cau"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>&lt;November 2019-&gt;</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:simplePlace>Los Angeles, CA</bflc:simplePlace>
+        <bflc:simpleAgent>Pride Publishing Inc</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Los Angeles, CA: Pride Publishing Inc</bf:publicationStatement>
+    <bf:frequency>
+      <bf:Frequency rdf:about="http://id.loc.gov/vocabulary/frequencies/bmn">
+        <rdfs:label>bimonthly</rdfs:label>
+      </bf:Frequency>
+    </bf:frequency>
+    <bf:instanceOf rdf:resource="http://example.org/11457859#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/21009588#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2019-06-07</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>21009588</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bf:hasInstance rdf:resource="http://example.org/21009588#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/21009588#Instance">
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>Minneapolis, MN</bflc:simplePlace>
+        <bflc:simpleAgent>Dominion</bflc:simpleAgent>
+        <bflc:simpleAgent>Manufactured and distributed in the U.S. by K-tel International</bflc:simpleAgent>
+        <bflc:simpleDate>[1998?], ℗1997.</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Minneapolis, MN: Dominion, Manufactured and distributed in the U.S. by K-tel International, [1998?], ℗1997.</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>Minneapolis, MN</bflc:simplePlace>
+        <bflc:simpleAgent>Dominion</bflc:simpleAgent>
+        <bflc:simpleAgent>Manufactured and distributed in the U.S. by K-tel International</bflc:simpleAgent>
+        <bflc:simpleDate>[1998?], ℗1997.</bflc:simpleDate>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Minneapolis, MN: Dominion, Manufactured and distributed in the U.S. by K-tel International, [1998?], ℗1997.</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Distribution"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1998</bf:date>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/mnu"/>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Production"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1996</bf:date>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:instanceOf rdf:resource="http://example.org/21009588#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/15387794#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2008-07-29</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bflc:encodingLevel>
+          <bflc:EncodingLevel rdf:about="http://id.loc.gov/vocabulary/menclvl/5">
+            <rdfs:label>preliminary</rdfs:label>
+          </bflc:EncodingLevel>
+        </bflc:encodingLevel>
+        <bf:descriptionConventions>
+          <bf:DescriptionConventions rdf:about="http://id.loc.gov/vocabulary/descriptionConventions/aacr">
+            <bf:code>aacr</bf:code>
+          </bf:DescriptionConventions>
+        </bf:descriptionConventions>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>15387794</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/metaentry"/>
+            <rdfs:label>0 - successive</rdfs:label>
+          </bf:Note>
+        </bf:note>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Text"/>
+    <bf:content>
+      <bf:Content rdf:about="http://id.loc.gov/vocabulary/contentTypes/txt">
+        <rdfs:label>text</rdfs:label>
+      </bf:Content>
+    </bf:content>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Serial"/>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bflc:serialPubType>
+      <bflc:SerialPubType rdf:about="http://id.loc.gov/vocabulary/mserialpubtype/periodical">
+        <rdfs:label>periodical</rdfs:label>
+      </bflc:SerialPubType>
+    </bflc:serialPubType>
+    <bf:notation>
+      <bf:Script rdf:about="http://id.loc.gov/vocabulary/mscript/a">
+        <rdfs:label>Basic roman</rdfs:label>
+      </bf:Script>
+    </bf:notation>
+    <bf:hasInstance rdf:resource="http://example.org/15387794#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/15387794#Instance">
+    <bf:issuance rdf:resource="http://id.loc.gov/vocabulary/issuance/serl"/>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>Charlotte, NC</bflc:simplePlace>
+        <bflc:simpleAgent>Hearst Communications, Inc</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Charlotte, NC: Hearst Communications, Inc</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">2008/..</bf:date>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/current">
+            <rdfs:label>current</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/ncu"/>
+        <bflc:simplePlace>Charlotte, NC</bflc:simplePlace>
+        <bflc:simpleAgent>Hearst Communications, Inc</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Charlotte, NC: Hearst Communications, Inc</bf:publicationStatement>
+    <bf:frequency>
+      <bf:Frequency rdf:about="http://id.loc.gov/vocabulary/frequencies/mon">
+        <rdfs:label>monthly</rdfs:label>
+      </bf:Frequency>
+    </bf:frequency>
+    <bf:frequency>
+      <bf:Frequency rdf:about="http://id.loc.gov/vocabulary/frequencies/irr">
+        <rdfs:label>irregular</rdfs:label>
+      </bf:Frequency>
+    </bf:frequency>
+    <bf:instanceOf rdf:resource="http://example.org/15387794#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/12027497#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2000-06-01</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bflc:encodingLevel>
+          <bflc:EncodingLevel rdf:about="http://id.loc.gov/vocabulary/menclvl/f">
+            <rdfs:label>full</rdfs:label>
+          </bflc:EncodingLevel>
+        </bflc:encodingLevel>
+        <bf:descriptionConventions>
+          <bf:DescriptionConventions rdf:about="http://id.loc.gov/vocabulary/descriptionConventions/isbd">
+            <bf:code>isbd</bf:code>
+          </bf:DescriptionConventions>
+        </bf:descriptionConventions>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>12027497</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/metaentry"/>
+            <rdfs:label>0 - successive</rdfs:label>
+          </bf:Note>
+        </bf:note>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Text"/>
+    <bf:content>
+      <bf:Content rdf:about="http://id.loc.gov/vocabulary/contentTypes/txt">
+        <rdfs:label>text</rdfs:label>
+      </bf:Content>
+    </bf:content>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Serial"/>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+    <bflc:serialPubType>
+      <bflc:SerialPubType rdf:about="http://id.loc.gov/vocabulary/mserialpubtype/periodical">
+        <rdfs:label>periodical</rdfs:label>
+      </bflc:SerialPubType>
+    </bflc:serialPubType>
+    <bf:notation>
+      <bf:Script rdf:about="http://id.loc.gov/vocabulary/mscript/a">
+        <rdfs:label>Basic roman</rdfs:label>
+      </bf:Script>
+    </bf:notation>
+    <bf:hasInstance rdf:resource="http://example.org/12027497#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/12027497#Instance">
+    <bf:issuance rdf:resource="http://id.loc.gov/vocabulary/issuance/serl"/>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/earliest">
+            <rdfs:label>earliest</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bflc:simplePlace>Seattle, Wash</bflc:simplePlace>
+        <bflc:simpleAgent>Avalanche Review</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Seattle, Wash: Avalanche Review</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/earliest">
+            <rdfs:label>earliest</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bflc:simplePlace>Seattle, Wash</bflc:simplePlace>
+        <bflc:simpleAgent>Avalanche Review</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Seattle, Wash: Avalanche Review</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>&lt;2002-&gt;</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:simplePlace>Whitefish, Montana</bflc:simplePlace>
+        <bflc:simpleAgent>American Avalanche Association</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Whitefish, Montana: American Avalanche Association</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>&lt;2002-&gt;</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:simplePlace>Whitefish, Montana</bflc:simplePlace>
+        <bflc:simpleAgent>American Avalanche Association</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Whitefish, Montana: American Avalanche Association</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/current">
+            <rdfs:label>current</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>&lt;2005-&gt;</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:simplePlace>Driggs, Idaho</bflc:simplePlace>
+        <bflc:simpleAgent>American Avalanche Association</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Driggs, Idaho: American Avalanche Association</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1982/..</bf:date>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/current">
+            <rdfs:label>current</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/idu"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>&lt;2005-&gt;</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:simplePlace>Driggs, Idaho</bflc:simplePlace>
+        <bflc:simpleAgent>American Avalanche Association</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Driggs, Idaho: American Avalanche Association</bf:publicationStatement>
+    <bf:frequency>
+      <bf:Frequency rdf:about="http://id.loc.gov/vocabulary/frequencies/qrt">
+        <rdfs:label>quarterly</rdfs:label>
+      </bf:Frequency>
+    </bf:frequency>
+    <bf:frequency>
+      <bf:Frequency rdf:about="http://id.loc.gov/vocabulary/frequencies/irr">
+        <rdfs:label>irregular</rdfs:label>
+      </bf:Frequency>
+    </bf:frequency>
+    <bf:instanceOf rdf:resource="http://example.org/12027497#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/18825600#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2010-03-18</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2023-10-11T08:25:28</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:52:05-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bflc:encodingLevel>
+          <bflc:EncodingLevel rdf:about="http://id.loc.gov/vocabulary/menclvl/f">
+            <rdfs:label>full</rdfs:label>
+          </bflc:EncodingLevel>
+        </bflc:encodingLevel>
+        <bf:descriptionConventions>
+          <bf:DescriptionConventions rdf:about="http://id.loc.gov/vocabulary/descriptionConventions/isbd">
+            <bf:code>isbd</bf:code>
+          </bf:DescriptionConventions>
+        </bf:descriptionConventions>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>18825600</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/metaentry"/>
+            <rdfs:label>0 - successive</rdfs:label>
+          </bf:Note>
+        </bf:note>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Text"/>
+    <bf:content>
+      <bf:Content rdf:about="http://id.loc.gov/vocabulary/contentTypes/txt">
+        <rdfs:label>text</rdfs:label>
+      </bf:Content>
+    </bf:content>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Serial"/>
+    <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/ger"/>
+    <bflc:serialPubType>
+      <bflc:SerialPubType rdf:about="http://id.loc.gov/vocabulary/mserialpubtype/periodical">
+        <rdfs:label>periodical</rdfs:label>
+      </bflc:SerialPubType>
+    </bflc:serialPubType>
+    <bf:supplementaryContent>
+      <bf:SupplementaryContent rdf:about="http://id.loc.gov/vocabulary/msupplcont/bibliography">
+        <rdfs:label>bibliography</rdfs:label>
+      </bf:SupplementaryContent>
+    </bf:supplementaryContent>
+    <bf:notation>
+      <bf:Script rdf:about="http://id.loc.gov/vocabulary/mscript/b">
+        <rdfs:label>Extended roman</rdfs:label>
+      </bf:Script>
+    </bf:notation>
+    <bf:hasInstance rdf:resource="http://example.org/18825600#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/18825600#Instance">
+    <bf:issuance rdf:resource="http://id.loc.gov/vocabulary/issuance/serl"/>
+    <bf:media>
+      <bf:Media rdf:about="http://id.loc.gov/vocabulary/mediaTypes/c">
+        <rdfs:label>computer</rdfs:label>
+      </bf:Media>
+    </bf:media>
+    <bf:colorContent>
+      <bf:ColorContent rdf:about="http://id.loc.gov/vocabulary/mcolor/blw">
+        <rdfs:label>black and white</rdfs:label>
+      </bf:ColorContent>
+    </bf:colorContent>
+    <bf:media>
+      <bf:Media rdf:about="http://id.loc.gov/vocabulary/mediaTypes/c">
+        <rdfs:label>computer</rdfs:label>
+      </bf:Media>
+    </bf:media>
+    <bf:colorContent>
+      <bf:ColorContent rdf:about="http://id.loc.gov/vocabulary/mcolor/blw">
+        <rdfs:label>black and white</rdfs:label>
+      </bf:ColorContent>
+    </bf:colorContent>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bflc:simplePlace>Berlin, Germany</bflc:simplePlace>
+        <bflc:simpleAgent>De Gruyter</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Berlin, Germany: De Gruyter</bf:publicationStatement>
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">1877/1920</bf:date>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/ceased">
+            <rdfs:label>ceased</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/gw"/>
+        <bflc:simplePlace>Berlin, Germany</bflc:simplePlace>
+        <bflc:simpleAgent>De Gruyter</bflc:simpleAgent>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:publicationStatement>Berlin, Germany: De Gruyter</bf:publicationStatement>
+    <bf:carrier>
+      <bf:Carrier rdf:about="http://id.loc.gov/vocabulary/carriers/cr">
+        <rdfs:label>online resource</rdfs:label>
+      </bf:Carrier>
+    </bf:carrier>
+    <bf:instanceOf rdf:resource="http://example.org/18825600#Work"/>
+  </bf:Instance>
+</rdf:RDF>

@@ -1,0 +1,68 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "mrrc"
+version = "0.7.0"
+description = "MRRC: A fast MARC library written in Rust with Python bindings"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "MRRC Contributors", email = "contact@example.com"}
+]
+requires-python = ">=3.10"
+keywords = ["marc", "bibliographic", "data", "rust"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+    "mypy>=1.0",
+    "pyright>=1.1",
+    "ruff>=0.1",
+]
+benchmark = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+]
+
+[tool.maturin]
+python-packages = ["mrrc"]
+module-name = "mrrc._mrrc"
+manifest-path = "src-python/Cargo.toml"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "benchmark: mark test as a benchmark (deselect with '-m \"not benchmark\"')",
+    "slow: mark test as slow running (deselect with '-m \"not slow\"')",
+]
+# Note: benchmark addopts moved to explicit --benchmark-* flags when running benchmarks
+# Default runs skip benchmarks for fast feedback
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+strict = false
+
+[tool.pyright]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"

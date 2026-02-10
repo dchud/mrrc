@@ -1,0 +1,112 @@
+name: Python Wheel Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+
+jobs:
+  build-wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install maturin
+        run: pip install maturin
+      
+      - name: Debug Python detection
+        run: |
+          python --version
+          which python
+          python -c "import sys; print(f'Python executable: {sys.executable}')"
+      
+      - uses: PyO3/maturin-action@v1
+        with:
+          manylinux: off
+          args: --release --out dist -i python${{ matrix.python-version }}
+      
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist
+
+  test-wheels:
+    name: Test wheels on ${{ matrix.os }}
+    needs: build-wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist
+      
+      - name: Install wheel
+        run: |
+          pip install --upgrade pip
+          if ("${{ runner.os }}" -eq "Windows") {
+            $whl = Get-Item dist/*.whl | Select-Object -First 1
+            pip install $whl
+          } else {
+            pip install dist/*.whl
+          }
+        shell: pwsh
+      
+      - name: Install test dependencies
+        run: |
+          pip install pytest pytest-benchmark mypy pyright
+      
+      - name: Run pytest (core tests, excludes benchmarks)
+        run: |
+          pytest tests/python/ -m "not benchmark" -v
+        # Retry on macOS due to intermittent runner flakiness
+        # See: mrrc-vxmp - tests pass but job occasionally fails
+        if: runner.os != 'macOS'
+
+      - name: Run pytest with retry (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          max_attempts=3
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts"
+            if pytest tests/python/ -m "not benchmark" -v; then
+              echo "Tests passed on attempt $attempt"
+              exit 0
+            fi
+            echo "Attempt $attempt failed, retrying..."
+            attempt=$((attempt + 1))
+            sleep 5
+          done
+          echo "All $max_attempts attempts failed"
+          exit 1
+        shell: bash

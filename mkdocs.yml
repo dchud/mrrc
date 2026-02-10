@@ -1,0 +1,107 @@
+# MRRC Documentation Configuration
+# See docs/design/DOCS-REORG.md for the full reorganization plan
+
+site_name: MRRC Documentation
+site_url: https://dchud.github.io/mrrc/
+site_description: MARC library for Rust and Python
+repo_url: https://github.com/dchud/mrrc
+repo_name: dchud/mrrc
+
+theme:
+  name: material
+  palette:
+    # Light mode (default) - listed first so it's the default
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode - auto-activates if user's system prefers dark
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.tabs.link
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [mrrc]
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Python Quickstart: getting-started/quickstart-python.md
+    - Rust Quickstart: getting-started/quickstart-rust.md
+  - Tutorials:
+    - tutorials/index.md
+    - Python:
+      - tutorials/python/reading-records.md
+      - tutorials/python/writing-records.md
+      - tutorials/python/format-conversion.md
+      - tutorials/python/querying-fields.md
+      - tutorials/python/concurrency.md
+    - Rust:
+      - tutorials/rust/reading-records.md
+      - tutorials/rust/writing-records.md
+      - tutorials/rust/format-conversion.md
+      - tutorials/rust/querying-fields.md
+      - tutorials/rust/concurrency.md
+  - Guides:
+    - guides/index.md
+    - Format Selection: guides/format-selection.md
+    - Migration from pymarc: guides/migration-from-pymarc.md
+    - Working with Large Files: guides/working-with-large-files.md
+    - Threading (Python): guides/threading-python.md
+    - Performance Tuning: guides/performance-tuning.md
+    - Query DSL: guides/query-dsl.md
+    - BIBFRAME Conversion: guides/bibframe-conversion.md
+  - Reference:
+    - reference/index.md
+    - Python API: reference/python-api.md
+    - Rust API: reference/rust-api.md
+    - Format Support: reference/formats.md
+    - MARC Primer: reference/marc-primer.md
+    - Character Encoding: reference/encoding.md
+  - Examples:
+    - examples/index.md
+  - Contributing:
+    - contributing/index.md
+    - Development Setup: contributing/development-setup.md
+    - Testing: contributing/testing.md
+    - Release Procedure: contributing/release-procedure.md
+    - Architecture: contributing/architecture.md
+  - Benchmarks:
+    - benchmarks/index.md
+    - Results: benchmarks/results.md
+    - FAQ: benchmarks/faq.md
+  - Design: design/index.md
+  - History: history/index.md

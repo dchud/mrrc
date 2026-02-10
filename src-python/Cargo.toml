@@ -1,0 +1,18 @@
+[package]
+name = "mrrc-python"
+version = "0.7.0"
+edition = "2021"
+
+[dependencies]
+pyo3 = { version = "0.27", features = ["extension-module"] }
+mrrc = { path = ".." }
+serde_json = "1.0"
+# SmallVec for buffered reader: we own the bytes here to safely cross the GIL boundary.
+# Typical MARC records (100B-5KB) fit in 4KB inline buffer without allocation.
+# Larger records automatically spill to heap. ~85-90% of real-world records avoid allocation.
+smallvec = "1.11"
+tempfile = "3.0"
+
+[lib]
+name = "_mrrc"
+crate-type = ["cdylib"]

@@ -1,0 +1,76 @@
+name: "Benchmarks: Python"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  benchmark:
+    name: Python Benchmark Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build mrrc wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          manylinux: off
+          args: --release --out dist
+
+      - name: Install mrrc and dependencies
+        run: |
+          pip install --no-index --find-links dist mrrc
+          pip install pytest pytest-benchmark pymarc
+
+      - name: Run pytest benchmarks (1k/10k only, skip slow 100k tests)
+        run: |
+          pytest tests/python/ -v --benchmark-only -m "not slow"
+
+  codspeed:
+    name: Codspeed Performance Regression Detection
+    runs-on: ubuntu-22.04  # CodSpeed only supports Ubuntu 20.04/22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Build mrrc wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          manylinux: off
+          args: --release --out dist
+      
+      - name: Install mrrc and dependencies
+        run: |
+          pip install --no-index --find-links dist mrrc
+          pip install pytest pytest-benchmark pytest-codspeed
+      
+      - name: Run benchmarks with Codspeed (1k/10k only)
+        uses: CodSpeedHQ/action@v4
+        with:
+          # NOTE: Only enabled if CODSPEED_TOKEN is set as a repo secret
+          token: ${{ secrets.CODSPEED_TOKEN }}
+          # Required for v4: use walltime mode for standard CI runners
+          mode: walltime
+          # Note: Don't use --benchmark-only here; CodSpeed handles benchmarks differently
+          run: pytest tests/python/ -m "benchmark and not slow" -v

@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="http://id.loc.gov/ontologies/bibframe/" xmlns:bflc="http://id.loc.gov/ontologies/bflc/" xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <bf:Work rdf:about="http://example.org/1#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>1</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:subject>
+      <bf:Agent rdf:about="http://example.org/1#Agent600-2">
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+        <bf:relation>
+          <bf:Relation>
+            <bf:relationship>
+              <bf:Relationship>
+                <rdfs:label>honoree</rdfs:label>
+              </bf:Relationship>
+            </bf:relationship>
+            <bf:relatedTo rdf:resource="http://example.org/1#Work"/>
+          </bf:Relation>
+        </bf:relation>
+        <bf:relation>
+          <bf:Relation>
+            <bf:relationship>
+              <bf:Relationship rdf:about="http://id.loc.gov/vocabulary/relators/hon"/>
+            </bf:relationship>
+            <bf:relatedTo rdf:resource="http://example.org/1#Work"/>
+          </bf:Relation>
+        </bf:relation>
+        <rdfs:label>Dickens, Charles, 1812-1870</rdfs:label>
+        <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$ehonoree.$4hon</bflc:marcKey>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+      </bf:Agent>
+    </bf:subject>
+    <bf:subject>
+      <bf:Hub rdf:about="http://example.org/1#Hub630-3">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Title"/>
+        <madsrdf:authoritativeLabel>Bible</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Bible</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bflc:marcKey>630 0$aBible$4cmp</bflc:marcKey>
+      </bf:Hub>
+    </bf:subject>
+    <bf:subject>
+      <bf:Event rdf:about="http://id.worldcat.org/fast/01351651">
+        <rdfs:label>Allied Occupation of Germany (Germany : 1918-1930)</rdfs:label>
+        <madsrdf:authoritativeLabel>Allied Occupation of Germany (Germany : 1918-1930)</madsrdf:authoritativeLabel>
+        <bf:source rdf:resource="http://id.loc.gov/vocabulary/subjectSchemes/fast"/>
+        <madsrdf:identifiesRWO rdf:resource="https://id.oclc.org/worldcat/entity/E39Qhp4vB9x3k8H8xR7TqHFkBX"/>
+        <bflc:marcKey>647 7$aAllied Occupation of Germany$c(Germany :$d1918-1930)$2fast$0(OCoLC)fst01351651$1https://id.oclc.org/worldcat/entity/E39Qhp4vB9x3k8H8xR7TqHFkBX</bflc:marcKey>
+      </bf:Event>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/1#Event647-5">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <rdfs:label>Allied Occupation 1918-1930--Europe--Tanks</rdfs:label>
+        <madsrdf:authoritativeLabel>Allied Occupation 1918-1930--Europe--Tanks</madsrdf:authoritativeLabel>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <bf:Event>
+            <madsrdf:authoritativeLabel>Allied Occupation 1918-1930</madsrdf:authoritativeLabel>
+            <rdfs:label>Allied Occupation 1918-1930</rdfs:label>
+          </bf:Event>
+          <madsrdf:Geographic>
+            <madsrdf:authoritativeLabel>Europe</madsrdf:authoritativeLabel>
+          </madsrdf:Geographic>
+          <madsrdf:Topic>
+            <madsrdf:authoritativeLabel>Tanks</madsrdf:authoritativeLabel>
+          </madsrdf:Topic>
+        </madsrdf:componentList>
+        <bf:source rdf:resource="http://id.loc.gov/vocabulary/subjectSchemes/fast"/>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Temporal rdf:about="http://example.org/1#Temporal648-6">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Temporal"/>
+        <rdfs:label>1900-1999</rdfs:label>
+        <madsrdf:authoritativeLabel>1900-1999</madsrdf:authoritativeLabel>
+        <bf:source rdf:resource="http://id.loc.gov/vocabulary/subjectSchemes/fast"/>
+      </bf:Temporal>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/1#Topic650-7">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <rdfs:label>Caracas Bolivar Statue Far away Long ago--History</rdfs:label>
+        <madsrdf:authoritativeLabel>Caracas Bolivar Statue Far away Long ago--History</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <madsrdf:Topic>
+            <madsrdf:authoritativeLabel>Caracas Bolivar Statue Far away Long ago</madsrdf:authoritativeLabel>
+            <bflc:marcKey>650 0$aCaracas$bBolivar Statue$cFar away$dLong ago$edepicted$gMiscellania$xHistory.</bflc:marcKey>
+          </madsrdf:Topic>
+          <madsrdf:Topic>
+            <madsrdf:authoritativeLabel>History</madsrdf:authoritativeLabel>
+          </madsrdf:Topic>
+        </madsrdf:componentList>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>Miscellania</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/1#Topic650-8">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Topic"/>
+        <rdfs:label>Baseball cards</rdfs:label>
+        <madsrdf:authoritativeLabel>Baseball cards</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Place rdf:about="http://id.loc.gov/rwo/agents/n97057532">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Geographic"/>
+        <rdfs:label>Kenwood (Chicago, Ill.)</rdfs:label>
+        <madsrdf:authoritativeLabel>Kenwood (Chicago, Ill.)</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <madsrdf:isIdentifiedByAuthority rdf:resource="http://id.loc.gov/authorities/names/n97057532"/>
+      </bf:Place>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+        <rdfs:label>Man</rdfs:label>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+        <rdfs:label>Eye</rdfs:label>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+        <rdfs:label>Diseases</rdfs:label>
+      </bf:Topic>
+    </bf:subject>
+    <bf:genreForm>
+      <bf:GenreForm rdf:about="http://example.org/1#GenreForm655-11">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#GenreForm"/>
+        <rdfs:label>Festschrift</rdfs:label>
+        <madsrdf:authoritativeLabel>Festschrift</madsrdf:authoritativeLabel>
+        <bf:source rdf:resource="http://id.loc.gov/vocabulary/subjectSchemes/mesh"/>
+      </bf:GenreForm>
+    </bf:genreForm>
+    <bf:genreForm>
+      <bf:GenreForm rdf:about="http://example.org/1#GenreForm655-12">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#GenreForm"/>
+        <rdfs:label>Fiction</rdfs:label>
+        <madsrdf:authoritativeLabel>Fiction</madsrdf:authoritativeLabel>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/genreFormSchemes/lcgft">
+            <bf:code>lcgft</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:GenreForm>
+    </bf:genreForm>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/1#GenreForm655-13">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <rdfs:label>Hymnals--Massachusetts--18th century</rdfs:label>
+        <madsrdf:authoritativeLabel>Hymnals--Massachusetts--18th century</madsrdf:authoritativeLabel>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <madsrdf:GenreForm>
+            <madsrdf:authoritativeLabel>Hymnals</madsrdf:authoritativeLabel>
+          </madsrdf:GenreForm>
+          <madsrdf:Geographic>
+            <madsrdf:authoritativeLabel>Massachusetts</madsrdf:authoritativeLabel>
+          </madsrdf:Geographic>
+          <madsrdf:Temporal>
+            <madsrdf:authoritativeLabel>18th century</madsrdf:authoritativeLabel>
+          </madsrdf:Temporal>
+        </madsrdf:componentList>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/genreFormSchemes/rbgenr">
+            <bf:code>rbgenr</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/1#GenreForm655-14">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <rdfs:label>Photomechanical prints--Color--2020-2030</rdfs:label>
+        <madsrdf:authoritativeLabel>Photomechanical prints--Color--2020-2030</madsrdf:authoritativeLabel>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <madsrdf:GenreForm>
+            <madsrdf:authoritativeLabel>Photomechanical prints</madsrdf:authoritativeLabel>
+          </madsrdf:GenreForm>
+          <madsrdf:Topic>
+            <madsrdf:authoritativeLabel>Color</madsrdf:authoritativeLabel>
+          </madsrdf:Topic>
+          <madsrdf:Temporal>
+            <madsrdf:authoritativeLabel>2020-2030</madsrdf:authoritativeLabel>
+          </madsrdf:Temporal>
+        </madsrdf:componentList>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/genreFormSchemes/gmgpc">
+            <bf:code>gmgpc</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/1#Topic656-15">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <rdfs:label>Chauffeurs--France.</rdfs:label>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <madsrdf:Occupation>
+            <rdfs:label>Chauffeurs</rdfs:label>
+          </madsrdf:Occupation>
+          <madsrdf:Geographic>
+            <rdfs:label>France</rdfs:label>
+          </madsrdf:Geographic>
+        </madsrdf:componentList>
+        <bf:source>
+          <bf:Source>
+            <bf:code>someCode</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Place rdf:about="http://example.org/1#Place662-16">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#HierarchicalGeographic"/>
+        <rdfs:label>Japan--Hokkaido--Asahi-dake.</rdfs:label>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <madsrdf:Country>
+            <rdfs:label>Japan</rdfs:label>
+          </madsrdf:Country>
+          <madsrdf:County>
+            <rdfs:label>Hokkaido</rdfs:label>
+          </madsrdf:County>
+          <madsrdf:Region>
+            <rdfs:label>Asahi-dake</rdfs:label>
+          </madsrdf:Region>
+        </madsrdf:componentList>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/subjectSchemes/pemracs">
+            <bf:code>pemracs</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Place>
+    </bf:subject>
+    <bf:subject>
+      <bf:Hub rdf:about="http://example.org/1#Hub600-17">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#NameTitle"/>
+        <madsrdf:authoritativeLabel>Dickens, Charles, 1812-1870 Tale of two cities</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:contribution>
+          <bf:Contribution>
+            <bf:agent>
+              <bf:Agent rdf:about="http://example.org/1#Agent600-17">
+                <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                <rdfs:label>Dickens, Charles, 1812-1870</rdfs:label>
+                <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$tTale of two cities</bflc:marcKey>
+              </bf:Agent>
+            </bf:agent>
+            <bf:role>
+              <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+            </bf:role>
+          </bf:Contribution>
+        </bf:contribution>
+        <bf:title>
+          <bf:Title>
+            <bf:mainTitle>Tale of two cities</bf:mainTitle>
+          </bf:Title>
+        </bf:title>
+        <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$tTale of two cities</bflc:marcKey>
+      </bf:Hub>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic rdf:about="http://example.org/1#Topic600-18">
+        <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#ComplexSubject"/>
+        <madsrdf:authoritativeLabel>Dickens, Charles, 1812-1870 Tale of two cities--History and criticism.</madsrdf:authoritativeLabel>
+        <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <bf:source rdf:resource="http://id.loc.gov/authorities/subjects"/>
+        <madsrdf:componentList rdf:parseType="Collection">
+          <bf:Hub rdf:about="http://example.org/1#Hub600-18">
+            <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#NameTitle"/>
+            <madsrdf:authoritativeLabel>Dickens, Charles, 1812-1870 Tale of two cities</madsrdf:authoritativeLabel>
+            <madsrdf:isMemberOfMADSScheme rdf:resource="http://id.loc.gov/authorities/subjects"/>
+            <bf:contribution>
+              <bf:Contribution>
+                <bf:agent>
+                  <bf:Agent rdf:about="http://example.org/1#Agent600-18">
+                    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Person"/>
+                    <rdfs:label>Dickens, Charles, 1812-1870</rdfs:label>
+                    <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$tTale of two cities</bflc:marcKey>
+                  </bf:Agent>
+                </bf:agent>
+                <bf:role>
+                  <bf:Role rdf:about="http://id.loc.gov/vocabulary/relators/ctb"/>
+                </bf:role>
+              </bf:Contribution>
+            </bf:contribution>
+            <bf:title>
+              <bf:Title>
+                <bf:mainTitle>Tale of two cities</bf:mainTitle>
+              </bf:Title>
+            </bf:title>
+            <bflc:marcKey>600 0$aDickens, Charles,$d1812-1870$tTale of two cities$xHistory and criticism.</bflc:marcKey>
+          </bf:Hub>
+          <madsrdf:Topic>
+            <madsrdf:authoritativeLabel>History and criticism</madsrdf:authoritativeLabel>
+          </madsrdf:Topic>
+        </madsrdf:componentList>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic rdf:about="https://www.wikidata.org/wiki/Q40614">
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+        <rdfs:label>fossil</rdfs:label>
+      </bf:Topic>
+    </bf:subject>
+    <bf:subject>
+      <bf:Topic>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bflc/Uncontrolled"/>
+        <rdfs:label>fossil</rdfs:label>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+            <bf:code>DLC</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:Topic>
+    </bf:subject>
+    <bf:hasInstance rdf:resource="http://example.org/1#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/1#Instance">
+    <bf:instanceOf rdf:resource="http://example.org/1#Work"/>
+  </bf:Instance>
+</rdf:RDF>

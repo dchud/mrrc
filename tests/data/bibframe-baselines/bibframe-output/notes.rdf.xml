@@ -1,0 +1,734 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="http://id.loc.gov/ontologies/bibframe/" xmlns:bflc="http://id.loc.gov/ontologies/bflc/" xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <bf:Work rdf:about="http://example.org/1#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>1</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:dissertation>
+      <bf:Dissertation>
+        <rdfs:label>Karl Schmidt's thesis (doctoral)--Ludwig-Maximilians-Universität, Munich, 1965.</rdfs:label>
+      </bf:Dissertation>
+    </bf:dissertation>
+    <bf:dissertation>
+      <bf:Dissertation>
+        <bf:degree>Doctoral</bf:degree>
+        <bf:grantingInstitution>
+          <bf:Agent>
+            <rdfs:label>Ludwig-Maximilians-Universität, Munich</rdfs:label>
+          </bf:Agent>
+        </bf:grantingInstitution>
+        <bf:date>1965</bf:date>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>Karl Schmidt's thesis</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:identifiedBy>
+          <bf:DissertationIdentifier>
+            <rdf:value>U 58.4033.</rdf:value>
+          </bf:DissertationIdentifier>
+        </bf:identifiedBy>
+      </bf:Dissertation>
+    </bf:dissertation>
+    <bf:tableOfContents>
+      <bf:TableOfContents>
+        <rdfs:label>Quatrain II (16:35) -- Water ways (1:57) / by Stephen Paulus.</rdfs:label>
+        <bf:electronicLocator rdf:resource="https://stephenpaulus.com"/>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/part">
+            <rdfs:label>Partial</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:TableOfContents>
+    </bf:tableOfContents>
+    <bf:scale>
+      <bf:Scale>
+        <rdfs:label>Scale 1:500,000; 1 in. equals 8 miles.</rdfs:label>
+      </bf:Scale>
+    </bf:scale>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/credits"/>
+        <rdfs:label>Music, Michael Fishbein ; camera, George Mo.</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>our favorite property</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/participants"/>
+        <rdfs:label>Cast: Jackie Glanville.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:capture>
+      <bf:Capture>
+        <rdfs:label>Found on March 5, 1975, in Richmond, Tex.</rdfs:label>
+      </bf:Capture>
+    </bf:capture>
+    <bf:capture>
+      <bf:Capture>
+        <bf:date>1976 January through June</bf:date>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>Filmed on location</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:place>
+          <bf:Place>
+            <rdfs:label>Rome and Venice</rdfs:label>
+          </bf:Place>
+        </bf:place>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Part of the work</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Capture>
+    </bf:capture>
+    <bf:summary>
+      <bf:Summary>
+        <rdfs:label>Contains swear words, sex scenes and violence, but otherwise it's ok. Central County Library</rdfs:label>
+        <bf:electronicLocator rdf:resource="http://www.mpaa.org"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Some other part</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Summary>
+    </bf:summary>
+    <bf:intendedAudience>
+      <bf:IntendedAudience>
+        <rdfs:label>K-3. 4-6.</rdfs:label>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>interest grade level</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:source>
+          <bf:Source>
+            <rdfs:label>Follett Library Book Co.</rdfs:label>
+          </bf:Source>
+        </bf:source>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Puzzles</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:IntendedAudience>
+    </bf:intendedAudience>
+    <bf:geographicCoverage>
+      <bf:GeographicCoverage>
+        <rdfs:label>Canada.</rdfs:label>
+      </bf:GeographicCoverage>
+    </bf:geographicCoverage>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/lang"/>
+        <rdfs:label>German</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Marriage certificate</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:notation>
+      <bf:Notation>
+        <rdfs:label>Fraktur</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Marriage certificate</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Notation>
+    </bf:notation>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/relnote"/>
+        <rdfs:label>Forms part of the Frances Benjamin Johnston Collection.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/award"/>
+        <rdfs:label>National Book Award, 1981</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Accompanying material</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/datasource"/>
+        <bf:preferredCitation>Borges, Jorge Luis. El aleph [ER], 2011</bf:preferredCitation>
+        <rdfs:label>table of contents frame (Lists 16 short stories including the title story El Aleph) title page frame (Jorge Luis Borges. Debolsillo)</rdfs:label>
+        <bf:electronicLocator rdf:resource="https://toc.content.gov"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/suppl"/>
+        <rdfs:label>Has numerous supplements.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:hasInstance rdf:resource="http://example.org/1#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/1#Instance">
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>From the papers of the Chase family.</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Some stuff</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+            <bf:code>DLC</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>With: The reformed school / John Dury. London : Printed for R. Wasnothe, [1850]</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/with"/>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+            <bf:code>DLC</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:Note>
+    </bf:note>
+    <bf:usageAndAccessPolicy>
+      <bf:AccessPolicy>
+        <rdfs:label>Restricted access; Written permission required; Donor; Members of donor's family; Title 50, chapter 401, U.S.C. DLC</rdfs:label>
+        <bf:validDate rdf:datatype="http://id.loc.gov/datatypes/edtf">2019-02-07</bf:validDate>
+        <bf:qualifier>Preview only</bf:qualifier>
+        <bf:electronicLocator rdf:resource="https://www.local.org/license.txt"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Office files of Under Secretary</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/mh">
+            <bf:code>MH</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:AccessPolicy>
+    </bf:usageAndAccessPolicy>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Quarterly technical progress report; Jan.-Apr. 1, 1977.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/report"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Issued in parts.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/issuance"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Computer programs.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/computer"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Available in microfilm; National Archives; Standing order account required.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/addphys"/>
+        <bf:identifiedBy>
+          <bf:StockNumber>
+            <rdf:value>M449</rdf:value>
+          </bf:StockNumber>
+        </bf:identifiedBy>
+        <bf:electronicLocator rdf:resource="http://www.bartleby.com/99/index.html"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Dispatches from U.S. consuls in Batavia, Java, Netherlands East Indies, 1818-1906</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:contentAccessibility>
+      <bf:ContentAccessibility>
+        <rdfs:label>Closed captioning in English</rdfs:label>
+      </bf:ContentAccessibility>
+    </bf:contentAccessibility>
+    <bf:contentAccessibility>
+      <bf:ContentAccessibility>
+        <rdfs:label>Closed captioning in English of the special DVD</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Special DVD, naturally</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:ContentAccessibility>
+    </bf:contentAccessibility>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Microfilm. Middleton, Conn., Wesleyan University Archives, 1973 35 mm. negative. (Current periodical series : publication no. 2313). Issues for 1853-1856 on reel with: Journal of the American Temperance Union and the New York prohibitionist, v. 21, no. 7 (July 1857)-v. 24 (1860).</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/repro"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>1962-1965</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Correspondence files</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/icu">
+            <bf:code>ICU</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Berlin :Eulenspiegel, c1978, 1st ed. Frederick, John. under title: Luck. 1 art original : oil, col. ; 79 x 64 cm. (International series of monographs on electromagnetic waves ; v. 4). American journal of theology &amp; philosophy, at scale 1:50,000.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/orig"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Reprint. Originally published</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:identifiedBy>
+          <bf:Issn>
+            <rdf:value>0228-913X</rdf:value>
+          </bf:Issn>
+        </bf:identifiedBy>
+        <bf:identifiedBy>
+          <bf:Isbn>
+            <rdf:value>0385061781 (v. 1)</rdf:value>
+          </bf:Isbn>
+        </bf:identifiedBy>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>vol. 2</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Sponsored by the U.S. Air Force</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/fundinfo"/>
+        <rdfs:label>Contract: N00014-68-A-0245-0007</rdfs:label>
+        <rdfs:label>Grant: EF-77-C-01-2556</rdfs:label>
+        <rdfs:label>910 3450</rdfs:label>
+        <rdfs:label>Program element: 601101F</rdfs:label>
+        <rdfs:label>Project: 1LIR</rdfs:label>
+        <rdfs:label>Task: 5H</rdfs:label>
+        <rdfs:label>Work unit: WUAFGLILIR5H01</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:systemRequirement>
+      <bf:SystemRequirement>
+        <rdfs:label>Master and use copy. Digital Master created according to Benchmark for Faithful Digital Reproductions of Monographs and Serials, Version 1. Digital Library Federation, December 2002.</rdfs:label>
+        <bf:electronicLocator rdf:resource="http://www.diglib.org/standards/bmarkfin.htm"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>v.1-49(1927-1975)</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/nic">
+            <bf:code>NIC</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:SystemRequirement>
+    </bf:systemRequirement>
+    <bf:usageAndAccessPolicy>
+      <bf:UsePolicy>
+        <rdfs:label>Photocopying prohibited; 50 Stat.88; Executor of estate. DLC</rdfs:label>
+        <bf:validDate rdf:datatype="http://id.loc.gov/datatypes/edtf">2019-05-23</bf:validDate>
+        <bf:qualifier>CC BY-NC-ND</bf:qualifier>
+        <bf:electronicLocator rdf:resource="http://lcweb.loc.gov/rr/print/195_copr.html"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Diaries</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+            <bf:code>DLC</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:UsePolicy>
+    </bf:usageAndAccessPolicy>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Burt Barnes papers; Also located at; State Historical Society of Wisconsin.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/related"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Flamingo statues</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Author and reformer. Born Harriet Elizabeth Beecher.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/biogdata"/>
+        <bf:electronicLocator rdf:resource="https://www.harrietbeecherstowecenter.org/hbs/"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Edition varies: 1916, New York edition.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Vols. for 1972- issued with: Bureau de recherches géologiques et minières.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/issuing"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Preliminary inventory prepared in 1962; Available in NARS central search room.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/finding"/>
+        <bf:electronicLocator rdf:resource="http://hdl.loc.gov/loc.mss/eadmss.ms996001"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Claims settled under Treaty of Washington, May 8, 1871</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>BASIC reference. 3rd ed. Boca Raton, Fl. : IBM, c1984. (Personal computer hardware reference library); 6361132.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/doc"/>
+      </bf:Note>
+    </bf:note>
+    <bf:custodialHistory>On permanent loan from the collection of Paul Mellon.</bf:custodialHistory>
+    <bf:custodialHistory>LC copy has something special about it.</bf:custodialHistory>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/binding"/>
+        <rdfs:label>Late 16th century blind-tooled centrepiece binding, dark brown calf.</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/binding"/>
+        <rdfs:label>LC copy binding is something special indeed!</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Reproduction: Antiques, June 1952, p. 76.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/related"/>
+        <bf:identifiedBy>
+          <bf:Isbn>
+            <rdf:value>1234567890</rdf:value>
+          </bf:Isbn>
+        </bf:identifiedBy>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Preliminary reports</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/action"/>
+        <rdfs:label>downgraded</rdfs:label>
+        <bf:date>19910110</bf:date>
+        <rdfs:label>Joe Smith</rdfs:label>
+        <bf:agent>
+          <bf:Agent>
+            <rdfs:label>Thomas Swing</rdfs:label>
+          </bf:Agent>
+        </bf:agent>
+        <bf:status>
+          <bf:Status>
+            <rdfs:label>mutilated</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>Institute for Museum and Library Services grant</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:electronicLocator rdf:resource="http://karamelik.eastlib.ufl.edu/cgi-bin/conserve/rara.pl"/>
+        <bf:source>
+          <bf:Source>
+            <bf:code>pda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/action"/>
+        <rdfs:label>upgraded</rdfs:label>
+        <bf:date>19920110</bf:date>
+        <rdfs:label>Guy 1</rdfs:label>
+        <bf:agent>
+          <bf:Agent>
+            <rdfs:label>Gal 2</rdfs:label>
+          </bf:Agent>
+        </bf:agent>
+        <bf:status>
+          <bf:Status>
+            <rdfs:label>mutilated</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>Institute for Museum and Library Services grant</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:electronicLocator rdf:resource="http://karamelik.eastlib.ufl.edu/domain/no/existy.pl"/>
+        <bf:source>
+          <bf:Source>
+            <bf:code>pda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Exhibited: "Le Brun à Versailles," sponsored by the Cabinet des dessins, Musée du Louvre, 1985-1986.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/exhibit"/>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Color lithographs</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+            <bf:code>DLC</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Publication to be resumed by F&amp;W Publications, Inc.in Oct. 2009.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/descsource"/>
+        <bflc:applicableInstitution>
+          <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/ezb">
+            <bf:code>EZB</bf:code>
+          </bf:Agent>
+        </bflc:applicableInstitution>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdfs:label>Description based on: Volume 2.</rdfs:label>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/descsource"/>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/action"/>
+        <rdfs:label>item uri downgraded</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/biblio"/>
+        <rdfs:label>"Literature cited": p. 67-68.</rdfs:label>
+        <bf:count>19</bf:count>
+      </bf:Note>
+    </bf:note>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/citeas"/>
+        <rdfs:label>James Hazen Hyde Papers, 1891-1941, New York Historical Society.</rdfs:label>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/citationschemes/ssrq">
+            <bf:code>ssrq</bf:code>
+          </bf:Source>
+        </bf:source>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Some part, but not the whole</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Note>
+    </bf:note>
+    <bf:instanceOf rdf:resource="http://example.org/1#Work"/>
+    <bf:hasItem>
+      <bf:Item rdf:about="http://example.org/1#Item">
+        <bf:heldBy rdf:resource="http://id.loc.gov/vocabulary/organizations/dlc"/>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>From the papers of the Chase family.</rdfs:label>
+            <bflc:appliesTo>
+              <bflc:AppliesTo>
+                <rdfs:label>Some stuff</rdfs:label>
+              </bflc:AppliesTo>
+            </bflc:appliesTo>
+            <bflc:applicableInstitution>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bflc:applicableInstitution>
+          </bf:Note>
+        </bf:note>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>With: The reformed school / John Dury. London : Printed for R. Wasnothe, [1850]</rdfs:label>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/with"/>
+            <bflc:applicableInstitution>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bflc:applicableInstitution>
+          </bf:Note>
+        </bf:note>
+        <bf:usageAndAccessPolicy>
+          <bf:UsePolicy>
+            <rdfs:label>Photocopying prohibited; 50 Stat.88; Executor of estate. DLC</rdfs:label>
+            <bf:validDate rdf:datatype="http://id.loc.gov/datatypes/edtf">2019-05-23</bf:validDate>
+            <bf:qualifier>CC BY-NC-ND</bf:qualifier>
+            <bf:electronicLocator rdf:resource="http://lcweb.loc.gov/rr/print/195_copr.html"/>
+            <bflc:appliesTo>
+              <bflc:AppliesTo>
+                <rdfs:label>Diaries</rdfs:label>
+              </bflc:AppliesTo>
+            </bflc:appliesTo>
+            <bflc:applicableInstitution>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bflc:applicableInstitution>
+          </bf:UsePolicy>
+        </bf:usageAndAccessPolicy>
+        <bf:custodialHistory>LC copy has something special about it.</bf:custodialHistory>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/binding"/>
+            <rdfs:label>LC copy binding is something special indeed!</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/action"/>
+            <rdfs:label>upgraded</rdfs:label>
+            <bf:date>19920110</bf:date>
+            <rdfs:label>Guy 1</rdfs:label>
+            <bf:agent>
+              <bf:Agent>
+                <rdfs:label>Gal 2</rdfs:label>
+              </bf:Agent>
+            </bf:agent>
+            <bf:status>
+              <bf:Status>
+                <rdfs:label>mutilated</rdfs:label>
+              </bf:Status>
+            </bf:status>
+            <bf:note>
+              <bf:Note>
+                <rdfs:label>Institute for Museum and Library Services grant</rdfs:label>
+              </bf:Note>
+            </bf:note>
+            <bf:electronicLocator rdf:resource="http://karamelik.eastlib.ufl.edu/domain/no/existy.pl"/>
+            <bf:source>
+              <bf:Source>
+                <bf:code>pda</bf:code>
+              </bf:Source>
+            </bf:source>
+          </bf:Note>
+        </bf:note>
+        <bf:note>
+          <bf:Note>
+            <rdfs:label>Exhibited: "Le Brun à Versailles," sponsored by the Cabinet des dessins, Musée du Louvre, 1985-1986.</rdfs:label>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/exhibit"/>
+            <bflc:appliesTo>
+              <bflc:AppliesTo>
+                <rdfs:label>Color lithographs</rdfs:label>
+              </bflc:AppliesTo>
+            </bflc:appliesTo>
+            <bflc:applicableInstitution>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bflc:applicableInstitution>
+          </bf:Note>
+        </bf:note>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/action"/>
+            <rdfs:label>item uri downgraded</rdfs:label>
+          </bf:Note>
+        </bf:note>
+        <bf:immediateAcquisition>
+          <bf:ImmediateAcquisition>
+            <rdfs:label>25 reels of microfilm U.S. Department of Transportation; Transfer under schedule; 1980/01/10.</rdfs:label>
+            <bflc:appliesTo>
+              <bflc:AppliesTo>
+                <rdfs:label>Materials scheduled for permanent retention</rdfs:label>
+              </bflc:AppliesTo>
+            </bflc:appliesTo>
+            <bflc:applicableInstitution>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bflc:applicableInstitution>
+          </bf:ImmediateAcquisition>
+        </bf:immediateAcquisition>
+        <bf:itemOf rdf:resource="http://example.org/1#Instance"/>
+      </bf:Item>
+    </bf:hasItem>
+  </bf:Instance>
+</rdf:RDF>

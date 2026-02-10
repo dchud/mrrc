@@ -1,0 +1,1020 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="http://id.loc.gov/ontologies/bibframe/" xmlns:bflc="http://id.loc.gov/ontologies/bflc/" xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <bf:Work rdf:about="http://example.org/1#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2024-03-13</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bflc:encodingLevel>
+          <bflc:EncodingLevel rdf:about="http://id.loc.gov/vocabulary/menclvl/f">
+            <rdfs:label>full</rdfs:label>
+          </bflc:EncodingLevel>
+        </bflc:encodingLevel>
+        <bf:descriptionConventions>
+          <bf:DescriptionConventions rdf:about="http://id.loc.gov/vocabulary/descriptionConventions/isbd">
+            <bf:code>isbd</bf:code>
+          </bf:DescriptionConventions>
+        </bf:descriptionConventions>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>1</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/NotatedMusic"/>
+    <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Monograph"/>
+    <bf:content>
+      <bf:Content rdf:about="http://id.loc.gov/vocabulary/contentTypes/prm">
+        <rdfs:label>performed music</rdfs:label>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/genreFormSchemes/rdacontent"/>
+        </bf:source>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>record</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Content>
+    </bf:content>
+    <bf:illustrativeContent>
+      <bf:Illustration>
+        <rdfs:label>illustrations</rdfs:label>
+      </bf:Illustration>
+    </bf:illustrativeContent>
+    <bf:contentAccessibility>
+      <bf:ContentAccessibility>
+        <rdfs:label>Content access mode: auditory</rdfs:label>
+        <rdfs:label>Textual assistive features: transcript</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>termList</bf:code>
+          </bf:Source>
+        </bf:source>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>accompanying audio CD</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:ContentAccessibility>
+    </bf:contentAccessibility>
+    <bf:contentAccessibility>
+      <bf:ContentAccessibility>
+        <rdfs:label>Content access mode: auditory</rdfs:label>
+        <rdfs:label>Visual assistive features: signLanguage</rdfs:label>
+      </bf:ContentAccessibility>
+    </bf:contentAccessibility>
+    <bf:contentAccessibility>
+      <bf:ContentAccessibility>
+        <rdfs:label>Content access mode: visual</rdfs:label>
+        <rdfs:label>Auditory assistive features: audioDescription</rdfs:label>
+      </bf:ContentAccessibility>
+    </bf:contentAccessibility>
+    <bf:contentAccessibility>
+      <bf:ContentAccessibility>
+        <rdfs:label>Content access mode: textual</rdfs:label>
+        <rdfs:label>Tactile assistive features: braille</rdfs:label>
+      </bf:ContentAccessibility>
+    </bf:contentAccessibility>
+    <bf:musicFormat>
+      <bf:MusicFormat rdf:about="http://id.loc.gov/vocabulary/mmusicformat/vocalscore">
+        <rdfs:label>vocal score</rdfs:label>
+        <bf:identifiedBy>
+          <bf:Identifier>
+            <rdf:value>12345</rdf:value>
+            <bf:source>
+              <bf:Source>
+                <bf:code>foo</bf:code>
+              </bf:Source>
+            </bf:source>
+          </bf:Identifier>
+        </bf:identifiedBy>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>enclosed score</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>foo</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:MusicFormat>
+    </bf:musicFormat>
+    <bf:notation>
+      <bf:MusicNotation>
+        <rdfs:label>staff notation</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>enclosed score</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>foo</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:MusicNotation>
+    </bf:notation>
+    <bf:collectionArrangement>
+      <bf:CollectionArrangement>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Records</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:hierarchicalLevel>Series</bf:hierarchicalLevel>
+        <bf:collectionOrganization>Hierarchical</bf:collectionOrganization>
+        <bf:pattern>Arranged by form of material</bf:pattern>
+      </bf:CollectionArrangement>
+    </bf:collectionArrangement>
+    <bf:supplementaryContent>
+      <bf:SupplementaryContent rdf:about="http://id.loc.gov/vocabulary/msupplcont/creatorbio">
+        <rdfs:label>biography of creator</rdfs:label>
+      </bf:SupplementaryContent>
+    </bf:supplementaryContent>
+    <bf:originPlace>
+      <bf:Place>
+        <rdfs:label>Latvia</rdfs:label>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/subjectSchemes/lcsh"/>
+        </bf:source>
+      </bf:Place>
+    </bf:originPlace>
+    <bf:originPlace>
+      <bf:Place rdf:about="http://id.loc.gov/authorities/subjects/sh2007010623">
+        <rdfs:label>Riga, Latvia</rdfs:label>
+      </bf:Place>
+    </bf:originPlace>
+    <bf:language>
+      <bf:Language rdf:about="http://id.loc.gov/vocabulary/languages/eng">
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Lecture</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Language>
+    </bf:language>
+    <bf:language>
+      <bf:Language rdf:about="http://id.loc.gov/vocabulary/languages/ger">
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Lecture</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Language>
+    </bf:language>
+    <bf:language>
+      <bf:Language>
+        <rdf:value>foo</rdf:value>
+        <bf:source>
+          <bf:Source>
+            <bf:code>bazz</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Language>
+    </bf:language>
+    <bf:language>
+      <bf:Language rdf:about="http://example.org/languages/foo">
+        <rdfs:label>foobar</rdfs:label>
+      </bf:Language>
+    </bf:language>
+    <bf:genreForm>
+      <bf:GenreForm>
+        <rdfs:label>Play</rdfs:label>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/genreFormSchemes/lcgft">
+            <bf:code>lcgft</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:GenreForm>
+    </bf:genreForm>
+    <bf:ensemble>
+      <bf:Ensemble>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Nach Bach</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:mediumComponent>
+          <bf:MediumComponent>
+            <bf:mediumOfPerformance>
+              <bf:MediumOfPerformance>
+                <rdfs:label>piano</rdfs:label>
+                <bf:source>
+                  <bf:Source rdf:about="http://id.loc.gov/authorities/performanceMediums">
+                    <bf:code>lcmpt</bf:code>
+                  </bf:Source>
+                </bf:source>
+              </bf:MediumOfPerformance>
+            </bf:mediumOfPerformance>
+            <bf:count>1</bf:count>
+            <bf:note>
+              <bf:Note>
+                <rdfs:label>played on altered piano</rdfs:label>
+              </bf:Note>
+            </bf:note>
+            <bf:note>
+              <bf:Note>
+                <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/doubling"/>
+                <rdfs:label>synthesizer</rdfs:label>
+              </bf:Note>
+            </bf:note>
+          </bf:MediumComponent>
+        </bf:mediumComponent>
+        <bf:mediumComponent>
+          <bf:MediumComponent>
+            <bf:mediumOfPerformance>
+              <bf:MediumOfPerformance>
+                <rdfs:label>baritone horn</rdfs:label>
+                <bf:source>
+                  <bf:Source rdf:about="http://id.loc.gov/authorities/performanceMediums">
+                    <bf:code>lcmpt</bf:code>
+                  </bf:Source>
+                </bf:source>
+              </bf:MediumOfPerformance>
+            </bf:mediumOfPerformance>
+            <bf:count>1</bf:count>
+          </bf:MediumComponent>
+        </bf:mediumComponent>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/part">
+            <rdfs:label>partial</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:ensembleSize>
+          <bf:EnsembleSize rdf:about="http://id.loc.gov/vocabulary/ensemblesize/duo">
+            <rdfs:label>duo</rdfs:label>
+          </bf:EnsembleSize>
+        </bf:ensembleSize>
+      </bf:Ensemble>
+    </bf:ensemble>
+    <bf:identifiedBy>
+      <bf:OpusNumber>
+        <rdf:value>op. 27, no. 1</rdf:value>
+        <bf:source>
+          <bf:Source>
+            <bf:code>J. André</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:OpusNumber>
+    </bf:identifiedBy>
+    <bf:identifiedBy>
+      <bf:ThematicCatalogNumber>
+        <rdf:value>F. I, 22-25</rdf:value>
+        <bf:source>
+          <bf:Source>
+            <bf:code>Fanna</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:ThematicCatalogNumber>
+    </bf:identifiedBy>
+    <bf:keyMode>
+      <bf:KeyMode>
+        <rdfs:label>B minor</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Shostakovich sonata no. 2</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:KeyMode>
+    </bf:keyMode>
+    <bf:intendedAudience>
+      <bf:IntendedAudience>
+        <rdfs:label>Children</rdfs:label>
+        <bf:code>kid</bf:code>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/subjectSchemes/ws">
+            <bf:code>ws</bf:code>
+          </bf:Source>
+        </bf:source>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Nonsense</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:IntendedAudience>
+    </bf:intendedAudience>
+    <bf:intendedAudience>
+      <bf:IntendedAudience rdf:about="http://id.loc.gov/authorities/demographicTerms/dg2015060010">
+        <rdfs:label>Youngsters</rdfs:label>
+        <bf:code>aaa</bf:code>
+      </bf:IntendedAudience>
+    </bf:intendedAudience>
+    <bf:intendedAudience rdf:resource="http://id.loc.gov/authorities/demographicTerms/occ"/>
+    <bf:intendedAudience>
+      <bflc:DemographicGroup rdf:about="http://id.loc.gov/authorities/demographicTerms/occ">
+        <rdfs:label>occupations</rdfs:label>
+      </bflc:DemographicGroup>
+    </bf:intendedAudience>
+    <bflc:creatorCharacteristic>
+      <bflc:CreatorCharacteristic>
+        <rdfs:label>Females</rdfs:label>
+        <bf:code>f</bf:code>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/subjectSchemes/ericd">
+            <bf:code>ericd</bf:code>
+          </bf:Source>
+        </bf:source>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>Other stuff</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bflc:CreatorCharacteristic>
+    </bflc:creatorCharacteristic>
+    <bflc:creatorCharacteristic>
+      <bflc:CreatorCharacteristic rdf:about="http://id.loc.gov/authorities/demographicTerms/dg2015060010">
+        <rdfs:label>Youngsters</rdfs:label>
+        <bf:code>aaa</bf:code>
+      </bflc:CreatorCharacteristic>
+    </bflc:creatorCharacteristic>
+    <bf:hasInstance rdf:resource="http://example.org/1#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/1#Instance">
+    <bf:provisionActivity>
+      <bf:ProvisionActivity>
+        <rdf:type rdf:resource="http://id.loc.gov/ontologies/bibframe/Publication"/>
+        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">2023</bf:date>
+        <bf:place rdf:resource="http://id.loc.gov/vocabulary/countries/mou"/>
+      </bf:ProvisionActivity>
+    </bf:provisionActivity>
+    <bf:copyrightDate rdf:datatype="http://id.loc.gov/datatypes/edtf">2023</bf:copyrightDate>
+    <bf:extent>
+      <bf:Extent>
+        <rdfs:label>1 box 2 x 4 x 3 1/2 ft.</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>records</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Extent>
+    </bf:extent>
+    <bf:extent>
+      <bf:Extent>
+        <rdfs:label>271 p.</rdfs:label>
+        <bf:note>
+          <bf:Note>
+            <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/physical"/>
+            <rdfs:label>ill.</rdfs:label>
+          </bf:Note>
+        </bf:note>
+      </bf:Extent>
+    </bf:extent>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/accmat"/>
+        <rdfs:label>1 answer book</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:dimensions>21 cm</bf:dimensions>
+    <bf:duration rdf:datatype="http://www.w3.org/2001/XMLSchema#duration">002016</bf:duration>
+    <bf:duration rdf:datatype="http://www.w3.org/2001/XMLSchema#duration">014500</bf:duration>
+    <bf:frequency>
+      <bf:Frequency rdf:about="http://id.loc.gov/vocabulary/frequencies/anl">
+        <rdfs:label>Annual</rdfs:label>
+        <bf:date>1983-</bf:date>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/current">
+            <rdfs:label>current</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:source>
+          <bf:Source>
+            <bf:code>freq</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Frequency>
+    </bf:frequency>
+    <bf:frequency>
+      <bf:Frequency>
+        <rdfs:label>Semiannual</rdfs:label>
+        <bf:date>1981-1982</bf:date>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/former">
+            <rdfs:label>former</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:source>
+          <bf:Source>
+            <bf:code>freq</bf:code>
+          </bf:Source>
+        </bf:source>
+        <bf:identifiedBy>
+          <bf:Identifier>
+            <rdf:value>sma</rdf:value>
+            <bf:source>
+              <bf:Source rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Source>
+            </bf:source>
+          </bf:Identifier>
+        </bf:identifiedBy>
+      </bf:Frequency>
+    </bf:frequency>
+    <bf:issuance>
+      <bf:Issuance rdf:about="http://id.loc.gov/vocabulary/issuance/mono">
+        <rdfs:label>single unit</rdfs:label>
+      </bf:Issuance>
+    </bf:issuance>
+    <bf:media>
+      <bf:Media rdf:about="http://id.loc.gov/vocabulary/mediaTypes/s">
+        <rdfs:label>audio</rdfs:label>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/genreFormSchemes/rdamedia"/>
+        </bf:source>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>soundtrack</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Media>
+    </bf:media>
+    <bf:carrier>
+      <bf:Carrier rdf:about="http://id.loc.gov/vocabulary/carriers/sd">
+        <rdfs:label>audio disc</rdfs:label>
+        <bf:source>
+          <bf:Source rdf:about="http://id.loc.gov/vocabulary/genreFormSchemes/rdacarrier"/>
+        </bf:source>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>soundtrack</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:Carrier>
+    </bf:carrier>
+    <bf:baseMaterial>
+      <bf:BaseMaterial>
+        <rdfs:label>rice paper</rdfs:label>
+      </bf:BaseMaterial>
+    </bf:baseMaterial>
+    <bf:appliedMaterial>
+      <bf:AppliedMaterial>
+        <rdfs:label>colored inks</rdfs:label>
+      </bf:AppliedMaterial>
+    </bf:appliedMaterial>
+    <bf:mount>
+      <bf:Mount>
+        <rdfs:label>none</rdfs:label>
+      </bf:Mount>
+    </bf:mount>
+    <bf:colorContent>
+      <bf:ColorContent>
+        <rdfs:label>color</rdfs:label>
+        <bf:identifiedBy>
+          <bf:Identifier>
+            <rdf:value>123456</rdf:value>
+            <bf:source>
+              <bf:Source>
+                <bf:code>lnl</bf:code>
+              </bf:Source>
+            </bf:source>
+          </bf:Identifier>
+        </bf:identifiedBy>
+      </bf:ColorContent>
+    </bf:colorContent>
+    <bf:dimensions>7" x 9"</bf:dimensions>
+    <bf:baseMaterial>
+      <bf:BaseMaterial>
+        <rdfs:label>aperture cards</rdfs:label>
+      </bf:BaseMaterial>
+    </bf:baseMaterial>
+    <bf:productionMethod>
+      <bf:ProductionMethod>
+        <rdfs:label>microfilm</rdfs:label>
+      </bf:ProductionMethod>
+    </bf:productionMethod>
+    <bf:reductionRatio>
+      <bf:ReductionRatio>
+        <rdf:value>48x</rdf:value>
+      </bf:ReductionRatio>
+    </bf:reductionRatio>
+    <bf:reductionRatio>
+      <bf:ReductionRatio>
+        <rdfs:label>high reduction</rdfs:label>
+      </bf:ReductionRatio>
+    </bf:reductionRatio>
+    <bf:dimensions>9 x 19 cm</bf:dimensions>
+    <bf:systemRequirement>
+      <bf:SystemRequirement>
+        <rdfs:label>Ibord Model 74 tape reader</rdfs:label>
+      </bf:SystemRequirement>
+    </bf:systemRequirement>
+    <bf:generation>
+      <bf:Generation>
+        <rdfs:label>original</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Generation>
+    </bf:generation>
+    <bf:layout>
+      <bf:Layout>
+        <rdfs:label>double-sided</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Layout>
+    </bf:layout>
+    <bf:binding>
+      <bf:Binding>
+        <rdfs:label>saddle stitch binding</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Binding>
+    </bf:binding>
+    <bf:bookFormat>
+      <bf:BookFormat>
+        <rdfs:label>folio</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:BookFormat>
+    </bf:bookFormat>
+    <bf:fontSize>
+      <bf:FontSize rdf:about="http://rdaregistry.info/termList/fontSize/1001">
+        <rdfs:label>giant print (36 point)</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:FontSize>
+    </bf:fontSize>
+    <bf:polarity>
+      <bf:Polarity>
+        <rdfs:label>positive</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Polarity>
+    </bf:polarity>
+    <bf:soundCharacteristic>
+      <bf:RecordingMethod rdf:about="http://id.loc.gov/vocabulary/mrectype/digital">
+        <rdfs:label>digital</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>audio disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:RecordingMethod>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:RecordingMedium rdf:about="http://id.loc.gov/vocabulary/mrecmedium/opt">
+        <rdfs:label>optical</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>audio disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:RecordingMedium>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:PlaybackChannels rdf:about="http://id.loc.gov/vocabulary/mplayback/mul">
+        <rdfs:label>surround</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>audio disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:PlaybackChannels>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:PlaybackCharacteristic rdf:about="http://id.loc.gov/vocabulary/mspecplayback/dolby">
+        <rdfs:label>Dolby</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>audio disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:PlaybackCharacteristic>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:RecordingMethod rdf:about="http://id.loc.gov/vocabulary/mrectype/analog">
+        <rdfs:label>analog</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>record</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:RecordingMethod>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:PlayingSpeed>
+        <rdfs:label>78 rpm</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>record</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:PlayingSpeed>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:GrooveCharacteristic rdf:about="http://id.loc.gov/vocabulary/mgroove/coarse">
+        <rdfs:label>coarse groove</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>record</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:GrooveCharacteristic>
+    </bf:soundCharacteristic>
+    <bf:soundContent>
+      <bf:SoundContent rdf:about="http://id.loc.gov/vocabulary/msoundcontent/sound">
+        <rdfs:label>sound</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>record</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:SoundContent>
+    </bf:soundContent>
+    <bf:soundCharacteristic>
+      <bf:TrackConfig>
+        <rdfs:label>edge track</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>audio tape</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:TrackConfig>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:TapeConfig>
+        <rdfs:label>12 track</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>audio tape</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+      </bf:TapeConfig>
+    </bf:soundCharacteristic>
+    <bf:projectionCharacteristic>
+      <bf:PresentationFormat rdf:about="http://id.loc.gov/vocabulary/mpresformat/ciner">
+        <rdfs:label>Cinerama</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>filmstrip</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:PresentationFormat>
+    </bf:projectionCharacteristic>
+    <bf:projectionCharacteristic>
+      <bf:ProjectionSpeed>
+        <rdfs:label>24 fps</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>filmstrip</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:ProjectionSpeed>
+    </bf:projectionCharacteristic>
+    <bf:aspectRatio>
+      <bf:AspectRatio>
+        <rdf:value>16:9</rdf:value>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>filmstrip</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:AspectRatio>
+    </bf:aspectRatio>
+    <bf:aspectRatio>
+      <bf:AspectRatio>
+        <rdfs:label>wide screen</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>filmstrip</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:AspectRatio>
+    </bf:aspectRatio>
+    <bf:videoCharacteristic>
+      <bf:VideoFormat rdf:about="http://id.loc.gov/vocabulary/mvidformat/betamax">
+        <rdfs:label>Betamax</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>videotape</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:VideoFormat>
+    </bf:videoCharacteristic>
+    <bf:videoCharacteristic>
+      <bf:BroadcastStandard rdf:about="http://id.loc.gov/vocabulary/mbroadstd/pal">
+        <rdfs:label>PAL</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>videotape</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:BroadcastStandard>
+    </bf:videoCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:FileType rdf:about="http://id.loc.gov/vocabulary/mfiletype/image">
+        <rdfs:label>image file</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>computer disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:FileType>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:EncodingFormat rdf:about="http://id.loc.gov/vocabulary/mencformat/bluray">
+        <rdfs:label>Blu-ray video</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>computer disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:EncodingFormat>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:FileSize>
+        <rdfs:label>182 KB</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>computer disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:FileSize>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:Resolution>
+        <rdfs:label>3.1 megapixels</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>computer disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:Resolution>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:RegionalEncoding rdf:about="http://id.loc.gov/vocabulary/mregencoding/region4">
+        <rdfs:label>region 4</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>computer disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:RegionalEncoding>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:EncodedBitrate>
+        <rdfs:label>32 kbps</rdfs:label>
+        <bflc:appliesTo>
+          <bflc:AppliesTo>
+            <rdfs:label>computer disc</rdfs:label>
+          </bflc:AppliesTo>
+        </bflc:appliesTo>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:EncodedBitrate>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:CartographicDataType>
+        <rdfs:label>Vector</rdfs:label>
+      </bf:CartographicDataType>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:EncodingFormat>
+        <rdfs:label>ARC/INFO export</rdfs:label>
+      </bf:EncodingFormat>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:CartographicObjectType>
+        <rdfs:label>Point</rdfs:label>
+        <bf:count>13671</bf:count>
+      </bf:CartographicObjectType>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:CartographicObjectType>
+        <rdfs:label>string</rdfs:label>
+        <bf:count>20171</bf:count>
+      </bf:CartographicObjectType>
+    </bf:digitalCharacteristic>
+    <bf:firstIssue>Vol. 1, no. 1 (Apr. 1983)</bf:firstIssue>
+    <bf:lastIssue>v. 1, no. 3 (June 1983)</bf:lastIssue>
+    <bf:note>
+      <bf:Note>
+        <rdf:type rdf:resource="http://id.loc.gov/vocabulary/mnotetype/number"/>
+        <rdfs:label>3 issues in vol. 1, ceased with 3 (1983)</rdfs:label>
+      </bf:Note>
+    </bf:note>
+    <bf:digitalCharacteristic>
+      <bf:EncodingFormat rdf:about="http://id.loc.gov/vocabulary/mencformat/cda">
+        <rdfs:label>cD audoi</rdfs:label>
+      </bf:EncodingFormat>
+    </bf:digitalCharacteristic>
+    <bf:digitalCharacteristic>
+      <bf:EncodingFormat rdf:about="http://id.loc.gov/vocabulary/mencformat/mp3">
+        <rdfs:label>MP3</rdfs:label>
+      </bf:EncodingFormat>
+    </bf:digitalCharacteristic>
+    <bf:instanceOf rdf:resource="http://example.org/1#Work"/>
+  </bf:Instance>
+  <bf:Work rdf:about="http://example.org/2#Work">
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/n">
+            <rdfs:label>new</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19--</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:status>
+          <bf:Status rdf:about="http://id.loc.gov/vocabulary/mstatus/c">
+            <rdfs:label>changed</rdfs:label>
+          </bf:Status>
+        </bf:status>
+        <bf:generationProcess rdf:resource="https://github.com/lcnetdev/marc2bibframe2/releases/tag/v3.0.0"/>
+        <bf:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-01-27T18:51:35-05:00</bf:date>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:adminMetadata>
+      <bf:AdminMetadata>
+        <bf:descriptionLevel rdf:resource="http://id.loc.gov/ontologies/bibframe-2-6-0/"/>
+        <bf:identifiedBy>
+          <bf:Local>
+            <rdf:value>2</rdf:value>
+            <bf:assigner>
+              <bf:Agent rdf:about="http://id.loc.gov/vocabulary/organizations/dlc">
+                <bf:code>DLC</bf:code>
+              </bf:Agent>
+            </bf:assigner>
+          </bf:Local>
+        </bf:identifiedBy>
+      </bf:AdminMetadata>
+    </bf:adminMetadata>
+    <bf:hasInstance rdf:resource="http://example.org/2#Instance"/>
+  </bf:Work>
+  <bf:Instance rdf:about="http://example.org/2#Instance">
+    <bf:soundCharacteristic>
+      <bf:RecordingMedium rdf:about="http://id.loc.gov/vocabulary/mrecmedium/opt">
+        <rdfs:label>optical</rdfs:label>
+      </bf:RecordingMedium>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:PlaybackChannels rdf:about="http://id.loc.gov/vocabulary/mplayback/mon">
+        <rdfs:label>mono</rdfs:label>
+      </bf:PlaybackChannels>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:RecordingMethod rdf:about="http://id.loc.gov/vocabulary/mrectype/digital">
+        <rdfs:label>digital</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:RecordingMethod>
+    </bf:soundCharacteristic>
+    <bf:soundCharacteristic>
+      <bf:PlaybackCharacteristic rdf:about="http://id.loc.gov/vocabulary/mspecplayback/dolby">
+        <rdfs:label>Dolby</rdfs:label>
+        <bf:source>
+          <bf:Source>
+            <bf:code>rda</bf:code>
+          </bf:Source>
+        </bf:source>
+      </bf:PlaybackCharacteristic>
+    </bf:soundCharacteristic>
+    <bf:instanceOf rdf:resource="http://example.org/2#Work"/>
+  </bf:Instance>
+</rdf:RDF>

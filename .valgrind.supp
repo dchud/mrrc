@@ -1,0 +1,197 @@
+# Valgrind Suppressions for MRRC PyO3 Bindings
+#
+# This file contains suppressions for known memory patterns in the PyO3 Python
+# bindings that are not actionable bugs in mrrc code.
+#
+# Format: Valgrind suppression file (must be used with --suppressions=./.valgrind.supp)
+#
+# Suppressions are organized by category:
+# 1. PyO3 design patterns (intentional, safe)
+# 2. Python runtime patterns (Python interpreter responsibility)
+# 3. Build/initialization patterns (run once per process)
+#
+# Each suppression includes:
+# - Description of the pattern
+# - Why it's not a bug in mrrc
+# - Source/reference for the suppression
+
+# ============================================================================
+# PyO3 Thread-Local Arena Allocator
+# ============================================================================
+# PyO3 uses a thread-local arena allocator for performance. The arena is
+# allocated at thread initialization and freed at thread exit. This can appear
+# as a leak if Valgrind analysis doesn't account for thread-local storage.
+#
+# Reference: PyO3 source code - allocator design
+# Status: Known safe pattern in PyO3 ecosystem
+
+{
+   pyo3_thread_local_arena_alloc
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:pthread_key_create
+   obj:*/libpython*
+}
+
+{
+   pyo3_arena_reachable_leak
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:calloc
+   fun:PyMem_*
+}
+
+# ============================================================================
+# Python Module Initialization
+# ============================================================================
+# Python module initialization allocates state that is managed by the Python
+# interpreter. This state is freed by Python at interpreter shutdown.
+# Not actionable in library code.
+#
+# Reference: Python/C API docs - module initialization
+# Status: Standard pattern
+
+{
+   python_module_init
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:PyModule_Create*
+}
+
+{
+   python_module_dict
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:PyDict_New
+}
+
+# ============================================================================
+# Python Interned String Pool
+# ============================================================================
+# Python maintains a string pool for interned strings (common pattern for
+# string identity optimization). Strings in the pool are intentionally not
+# freed during the lifetime of the process.
+#
+# Reference: Python docs - sys.intern()
+# Status: Intentional Python optimization
+
+{
+   python_string_pool
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:_PyUnicode_*
+}
+
+# ============================================================================
+# libc Initialization
+# ============================================================================
+# Standard library initialization allocates global state (locale, charset
+# conversions, etc.) that is freed by the OS at process termination.
+#
+# Reference: Linux libc source
+# Status: System responsibility, not library code
+
+{
+   libc_locale_init
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:calloc
+   obj:*/libc.so*
+}
+
+{
+   libc_charset_init
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:newlocale
+   obj:*/libc.so*
+}
+
+# ============================================================================
+# PyO3 Type Object Registration
+# ============================================================================
+# PyO3 registers Python type objects at module initialization. These objects
+# are owned by the Python runtime and freed by the interpreter.
+#
+# Reference: PyO3 macros - #[pyclass]
+# Status: Known pattern
+
+{
+   pyo3_type_registration
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:PyType_Ready
+}
+
+{
+   pyo3_method_registration
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:PyMethod_New
+}
+
+# ============================================================================
+# OpenSSL Initialization
+# ============================================================================
+# If crypto dependencies initialize OpenSSL, it allocates thread-local state.
+# This is freed at thread exit (or process termination).
+#
+# Reference: OpenSSL docs - thread initialization
+# Status: Dependency responsibility
+
+{
+   openssl_thread_init
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:*/libssl.so*
+}
+
+{
+   openssl_engine_init
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:ENGINE_*
+   obj:*/libssl.so*
+}
+
+# ============================================================================
+# Notes for Maintainers
+# ============================================================================
+#
+# How to use this file:
+#
+#   valgrind --suppressions=./.valgrind.supp \
+#     --leak-check=full \
+#     python -m pytest tests/python/ -q
+#
+# Adding new suppressions:
+#
+#   1. Run Valgrind and capture the leak
+#   2. Determine if it's in mrrc code or external (Python, PyO3, libc)
+#   3. If external and known pattern, add suppression here
+#   4. Include reference and rationale in comment
+#   5. Do NOT suppress "definitely lost" leaks without investigation
+#
+# When to NOT suppress:
+#
+#   - "definitely lost" leaks in code under our control (src/, src-python/)
+#   - Leaks that grow with test iterations (indicates real memory issue)
+#   - Any leak in mrrc.so that isn't explained by PyO3 patterns
+#
+# Review schedule:
+#
+#   - After PyO3 major version upgrade
+#   - After Python version change
+#   - Annually or when new dependencies added
+#   - If Valgrind CI is enabled

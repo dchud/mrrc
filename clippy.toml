@@ -1,0 +1,18 @@
+# Clippy linting configuration
+# Reference: https://doc.rust-lang.org/clippy/
+
+# Cognitive complexity threshold (default: 25)
+# Reduce to encourage simpler functions
+cognitive-complexity-threshold = 20
+
+# Too many arguments threshold (default: 7)
+# Libraries often need more parameters
+too-many-arguments-threshold = 8
+
+# Type complexity threshold (default: 1000)
+# Be stricter about type complexity
+type-complexity-threshold = 750
+
+# Enforce standard patterns
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true
