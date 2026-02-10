@@ -9,16 +9,18 @@ Complete Python API reference for MRRC.
 A MARC bibliographic record containing a leader, control fields, and data fields.
 
 ```python
-from mrrc import Record, Leader
+from mrrc import Record, Field, Leader, Subfield
 
-# Create a new record
-leader = Leader()
-record = Record(leader)
+# Create a record with inline fields
+record = Record(fields=[
+    Field("245", indicators=["1", "0"], subfields=[
+        Subfield("a", "Title"),
+    ]),
+])
 
-# Add control field
+# Or build incrementally
+record = Record(Leader())
 record.add_control_field("001", "123456789")
-
-# Add data field
 field = Field("245", "1", "0")
 field.add_subfield("a", "Title")
 record.add_field(field)
@@ -45,15 +47,18 @@ record.add_field(field)
 A MARC data field with tag, indicators, and subfields.
 
 ```python
-from mrrc import Field
+from mrrc import Field, Subfield
 
-# Create field with indicators
+# Create field with indicators and subfields inline
+field = Field("245", indicators=["1", "0"], subfields=[
+    Subfield("a", "Main title :"),
+    Subfield("b", "subtitle /"),
+    Subfield("c", "by Author."),
+])
+
+# Or build incrementally
 field = Field("245", "1", "0")
-
-# Add subfields
 field.add_subfield("a", "Main title :")
-field.add_subfield("b", "subtitle /")
-field.add_subfield("c", "by Author.")
 
 # Access subfields
 print(field["a"])  # "Main title :"

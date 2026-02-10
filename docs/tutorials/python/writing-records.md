@@ -26,17 +26,28 @@ record.add_control_field("008", "200101s2020    xxu||||||||||||||||eng||")
 Data fields have a tag, two indicators, and subfields:
 
 ```python
-# Create a title field (245)
+# Create fields inline with subfields= and indicators= kwargs
+title = mrrc.Field("245", indicators=["1", "0"], subfields=[
+    mrrc.Subfield("a", "The Great Gatsby /"),
+    mrrc.Subfield("c", "F. Scott Fitzgerald."),
+])
+record.add_field(title)
+
+# Or use positional indicators
+author = mrrc.Field("100", "1", " ", subfields=[
+    mrrc.Subfield("a", "Fitzgerald, F. Scott,"),
+    mrrc.Subfield("d", "1896-1940."),
+])
+record.add_field(author)
+```
+
+You can also build fields incrementally with `add_subfield()`:
+
+```python
 field = mrrc.Field("245", "1", "0")
 field.add_subfield("a", "The Great Gatsby /")
 field.add_subfield("c", "F. Scott Fitzgerald.")
 record.add_field(field)
-
-# Create an author field (100)
-author = mrrc.Field("100", "1", " ")
-author.add_subfield("a", "Fitzgerald, F. Scott,")
-author.add_subfield("d", "1896-1940.")
-record.add_field(author)
 ```
 
 ## Adding Multiple Fields
@@ -131,22 +142,22 @@ def create_book_record(title, author, isbn, subjects):
     record.add_control_field("008", "200101s2020    xxu||||||||||||||||eng||")
 
     # ISBN
-    isbn_field = mrrc.Field("020", " ", " ")
-    isbn_field.add_subfield("a", isbn)
-    record.add_field(isbn_field)
+    record.add_field(mrrc.Field("020", " ", " ", subfields=[
+        mrrc.Subfield("a", isbn),
+    ]))
 
     # Author
     if author:
-        author_field = mrrc.Field("100", "1", " ")
-        author_field.add_subfield("a", author)
-        record.add_field(author_field)
+        record.add_field(mrrc.Field("100", "1", " ", subfields=[
+            mrrc.Subfield("a", author),
+        ]))
 
     # Title
-    title_field = mrrc.Field("245", "1" if author else "0", "0")
-    title_field.add_subfield("a", title)
+    title_subfields = [mrrc.Subfield("a", title)]
     if author:
-        title_field.add_subfield("c", f"by {author}")
-    record.add_field(title_field)
+        title_subfields.append(mrrc.Subfield("c", f"by {author}"))
+    record.add_field(mrrc.Field("245", "1" if author else "0", "0",
+                                subfields=title_subfields))
 
     # Subjects
     for subject in subjects:

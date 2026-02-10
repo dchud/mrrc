@@ -23,9 +23,17 @@ __version__ = "0.1.0"
 class Field:
     """Enhanced Field wrapper with pymarc-compatible API."""
     
-    def __init__(self, tag: str, indicator1: str = '0', indicator2: str = '0'):
-        """Create a new Field."""
-        self._inner = _Field(tag, indicator1, indicator2)
+    def __init__(self, tag: str, indicator1: str = '0', indicator2: str = '0', *, subfields=None, indicators=None):
+        """Create a new Field.
+
+        Args:
+            tag: 3-character field tag.
+            indicator1: First indicator (default '0').
+            indicator2: Second indicator (default '0').
+            subfields: Optional list of Subfield objects to add.
+            indicators: Optional list/tuple of [ind1, ind2], overrides indicator1/indicator2.
+        """
+        self._inner = _Field(tag, indicator1, indicator2, subfields=subfields, indicators=indicators)
     
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Field."""
@@ -262,12 +270,20 @@ class Leader:
 class Record:
     """Enhanced Record wrapper with pymarc-compatible API."""
     
-    def __init__(self, leader: Optional[Leader] = None):
-        """Create a new Record."""
+    def __init__(self, leader: Optional[Leader] = None, *, fields=None):
+        """Create a new Record.
+
+        Args:
+            leader: Optional Leader object (defaults to Leader()).
+            fields: Optional list of Field objects to add to the record.
+        """
         if leader is None:
             leader = Leader()
         self._inner = _Record(leader._inner)
         self._leader = leader
+        if fields:
+            for field in fields:
+                self.add_field(field)
     
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Record."""

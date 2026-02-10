@@ -923,5 +923,80 @@ class TestSerialization:
         assert dc_xml is not None
 
 
+class TestConstructorKwargs:
+    """Test Field and Record constructor keyword arguments for pymarc parity."""
+
+    def test_field_with_indicators_kwarg(self):
+        """Test Field with indicators= kwarg."""
+        field = Field('245', indicators=['1', '0'])
+        assert field.indicator1 == '1'
+        assert field.indicator2 == '0'
+
+    def test_field_with_subfields_kwarg(self):
+        """Test Field with subfields= kwarg."""
+        field = Field('245', '1', '0', subfields=[Subfield('a', 'Test Title')])
+        assert field['a'] == 'Test Title'
+        assert len(field.subfields()) == 1
+
+    def test_field_with_indicators_and_subfields(self):
+        """Test Field with both indicators= and subfields= kwargs."""
+        field = Field('245', indicators=['1', '0'], subfields=[
+            Subfield('a', 'Pragmatic Programmer'),
+            Subfield('c', 'Hunt and Thomas'),
+        ])
+        assert field.indicator1 == '1'
+        assert field.indicator2 == '0'
+        assert field['a'] == 'Pragmatic Programmer'
+        assert field['c'] == 'Hunt and Thomas'
+        assert len(field.subfields()) == 2
+
+    def test_record_with_fields_kwarg(self):
+        """Test Record with fields= kwarg."""
+        title = Field('245', '1', '0', subfields=[Subfield('a', 'My Book')])
+        author = Field('100', '1', ' ', subfields=[Subfield('a', 'Doe, John')])
+        record = Record(fields=[title, author])
+        assert record.title() == 'My Book'
+        assert record.get_field('100') is not None
+
+    def test_full_inline_construction(self):
+        """Test the exact pattern from the issue: full inline construction."""
+        record = Record(fields=[
+            Field('245', indicators=['0', '1'], subfields=[
+                Subfield('a', 'Pragmatic Programmer'),
+            ]),
+            Field('100', '1', ' ', subfields=[
+                Subfield('a', 'Hunt, Andrew'),
+            ]),
+            Field('650', ' ', '0', subfields=[
+                Subfield('a', 'Computer programming'),
+            ]),
+        ])
+        assert record.title() == 'Pragmatic Programmer'
+        assert len(record.get_fields('650')) == 1
+
+    def test_field_backward_compat_positional_indicators(self):
+        """Test backward compatibility: Field('245', '0', '1') still works."""
+        field = Field('245', '0', '1')
+        assert field.indicator1 == '0'
+        assert field.indicator2 == '1'
+
+    def test_record_backward_compat_no_args(self):
+        """Test backward compatibility: Record() with no args still works."""
+        record = Record()
+        assert record is not None
+        assert len(record.fields()) == 0
+
+    def test_record_with_leader_and_fields(self):
+        """Test Record with both leader and fields kwargs."""
+        leader = Leader()
+        leader.record_type = 'a'
+        leader.bibliographic_level = 'm'
+        record = Record(leader, fields=[
+            Field('245', '1', '0', subfields=[Subfield('a', 'Title')]),
+        ])
+        assert record.leader().record_type == 'a'
+        assert record.title() == 'Title'
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

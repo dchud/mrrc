@@ -54,14 +54,15 @@ with open('records.mrc', 'rb') as f:
         print(record['245']['a'])  # Works!
         print(record.title())      # Also available as convenience method
 
-# Writing records
+# Writing records - inline construction (similar to pymarc)
 with open('output.mrc', 'wb') as f:
      with mrrc.MARCWriter(f) as writer:
-         field = mrrc.Field('245', '1', '0')
-         field.add_subfield('a', 'Title')
-         record = mrrc.Record(mrrc.Leader())
-         record.add_field(field)
-         writer.write(record)  # write() works like pymarc
+         record = mrrc.Record(fields=[
+             mrrc.Field('245', indicators=['1', '0'], subfields=[
+                 mrrc.Subfield('a', 'Title'),
+             ]),
+         ])
+         writer.write(record)
 ```
 
 ## API Comparison
@@ -70,7 +71,7 @@ with open('output.mrc', 'wb') as f:
 
 | Operation | pymarc | mrrc | Same? |
 |-----------|--------|------|-------|
-| Create empty record | `pymarc.Record()` | `mrrc.Record(mrrc.Leader())` | Different |
+| Create empty record | `pymarc.Record()` | `mrrc.Record()` | **Same** |
 | Create with leader | `pymarc.Record(leader)` | `mrrc.Record(leader)` | **Same** |
 | Add control field | `record.add_field(Field('001', data='value'))` | `record.add_control_field('001', 'value')` | Different |
 | Add data field | `record.append(field)` | `record.add_field(field)` | Different |
@@ -79,7 +80,7 @@ with open('output.mrc', 'wb') as f:
 
 | Operation | pymarc | mrrc | Same? |
 |-----------|--------|------|-------|
-| Create field | `Field('245', ['1','0'], [('a', 'Title')])` | `Field('245', '1', '0'); field.add_subfield('a', 'Title')` | Different |
+| Create field | `Field('245', ['1','0'], [('a', 'Title')])` | `Field('245', indicators=['1','0'], subfields=[Subfield('a', 'Title')])` | Similar |
 | Add subfield | `field.add_subfield('a', 'value')` | `field.add_subfield('a', 'value')` | **Same** |
 | Get subfields | `field.get_subfields('a')` | `field.get_subfields('a')` | **Same** |
 | Access subfield | `field['a']` | `field['a']` | **Same** |
@@ -211,14 +212,15 @@ with mrrc.MARCWriter(f) as writer:
 
 **mrrc is nearly 100% compatible with pymarc.** Here are the only two required changes:
 
-### 1. Record Constructor Requires Explicit Leader
-**The only required change** - needed once per record:
+### 1. Record Constructor
+`Record()` now works with no arguments (leader defaults to `Leader()`):
 ```python
-# pymarc (implicit default leader)
+# pymarc
 record = pymarc.Record()
 
-# mrrc (explicit leader required)
-record = mrrc.Record(mrrc.Leader())
+# mrrc - both work
+record = mrrc.Record()                  # Default leader
+record = mrrc.Record(mrrc.Leader())     # Explicit leader
 
 # Note: Once created, all field access works identically
 print(record['245']['a'])  # Works exactly like pymarc
@@ -249,7 +251,8 @@ record.is_music()          # Check if music
 **Minimal changes needed:**
 
 - [ ] Replace `import pymarc` with `import mrrc`
-- [ ] Update record creation: `pymarc.Record()` → `mrrc.Record(mrrc.Leader())`
+- [ ] Update record creation: `pymarc.Record()` → `mrrc.Record()` (or `mrrc.Record(mrrc.Leader())`)
+- [ ] Update field creation to use `indicators=` and `subfields=` kwargs if desired
 - [ ] Everything else works the same - dictionary access, method names, iteration all identical
 
 **Optional enhancements:**
@@ -259,7 +262,7 @@ record.is_music()          # Check if music
 
 ## Known Differences from pymarc
 
-1. **Record constructor requires explicit Leader**: `mrrc.Record(mrrc.Leader())` instead of `pymarc.Record()`
+1. **Record constructor**: `mrrc.Record()` works (defaults to `Leader()`), or pass explicit `mrrc.Record(mrrc.Leader())`
 2. **UTF-8 encoding**: Set `leader.character_coding = 'a'` for UTF-8 (mrrc uses UTF-8 by default internally)
 3. **No field removal during iteration**: Use list comprehension or separate pass if modifying records during iteration
 4. **Type safety**: All data is validated at Rust layer (this is a feature, prevents data corruption)

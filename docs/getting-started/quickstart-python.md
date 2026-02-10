@@ -41,18 +41,26 @@ print(record.isbn())
 ## Create Records
 
 ```python
-from mrrc import Record, Field, Leader
+from mrrc import Record, Field, Leader, Subfield
 
-# Create a new record
-record = Record(Leader())
+# Build a record inline (pymarc-style)
+record = Record(fields=[
+    Field("245", indicators=["1", "0"], subfields=[
+        Subfield("a", "My Book Title"),
+        Subfield("c", "by Author Name"),
+    ]),
+    Field("100", "1", " ", subfields=[Subfield("a", "Author Name")]),
+])
 
 # Add a control field
 record.add_control_field("001", "123456789")
+```
 
-# Add a data field
-field = Field("245", "1", "0")
-field.add_subfield("a", "My Book Title")
-field.add_subfield("c", "by Author Name")
+You can also build records incrementally with `add_subfield()` and `add_field()`:
+
+```python
+field = Field("650", " ", "0")
+field.add_subfield("a", "Subject heading")
 record.add_field(field)
 ```
 

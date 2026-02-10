@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    from mrrc import MARCReader, MARCWriter, Record, Field, Leader
+    from mrrc import MARCReader, MARCWriter, Record, Field, Leader, Subfield
 except ImportError:
     print("Error: mrrc not installed")
     print("Install with: pip install mrrc")
@@ -44,28 +44,25 @@ def simple_record():
         bibliographic_level='m',   # 'm' = monograph
         character_coding=' ',      # ' ' = MARC-8, 'a' = UTF-8
     )
-    
-    # Create record
-    record = Record(leader)
-    
+
+    # Build record with inline fields using subfields= and indicators= kwargs
+    record = Record(leader, fields=[
+        Field('245', indicators=['1', '0'], subfields=[
+            Subfield('a', 'To Kill a Mockingbird /'),
+            Subfield('c', 'Harper Lee.'),
+        ]),
+        Field('100', '1', ' ', subfields=[
+            Subfield('a', 'Lee, Harper,'),
+            Subfield('d', '1926-2016,'),
+            Subfield('e', 'author.'),
+        ]),
+    ])
+
     # Add control fields
-    record.add_control_field('001', '9780061120084')  # Control number
-    record.add_control_field('008', '051029s2005    xxu||||||||||||||||eng||')  # Fixed-length data
-    
-    # Add title field (245)
-    title = Field('245', '1', '0')
-    title.add_subfield('a', 'To Kill a Mockingbird /')
-    title.add_subfield('c', 'Harper Lee.')
-    record.add_field(title)
-    
-    # Add author field (100)
-    author = Field('100', '1', ' ')
-    author.add_subfield('a', 'Lee, Harper,')
-    author.add_subfield('d', '1926-2016,')
-    author.add_subfield('e', 'author.')
-    record.add_field(author)
-    
-    # Add subject headings
+    record.add_control_field('001', '9780061120084')
+    record.add_control_field('008', '051029s2005    xxu||||||||||||||||eng||')
+
+    # Subject headings via loop (a natural use of add_subfield)
     for subject in ['Psychological fiction.', 'Legal stories.']:
         subject_field = Field('650', ' ', '0')
         subject_field.add_subfield('a', subject)
@@ -431,14 +428,13 @@ def main():
 4. RECOMMENDED PATTERN:
    ```python
    leader = Leader(record_type='a', bibliographic_level='m')
-   record = Record(leader)
+   record = Record(leader, fields=[
+       Field('245', indicators=['1', '0'], subfields=[
+           Subfield('a', 'main text'),
+       ]),
+   ])
    record.add_control_field('001', 'my-control-number')
-   
-   # Add fields
-   field = Field('tag', 'ind1', 'ind2')
-   field.add_subfield('a', 'main text')
-   record.add_field(field)
-   
+
    # Write
    with open('output.mrc', 'wb') as f:
        writer = MARCWriter(f)
