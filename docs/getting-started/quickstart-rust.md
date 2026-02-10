@@ -6,7 +6,7 @@ Get started with MRRC in Rust in 5 minutes.
 
 ```toml
 [dependencies]
-mrrc = "0.6"
+mrrc = "0.7"
 ```
 
 ## Read Records

@@ -2,7 +2,7 @@
 
 **Status**: Executable reference for humans and coding agents  
 **Estimated Duration**: 30-45 minutes for a standard release  
-**Last Updated**: 2026-01-20
+**Last Updated**: 2026-02-10
 
 This document provides a step-by-step, executable procedure for preparing, testing, and publishing a new release of MRRC (MARC Rust Crate). Follow these steps sequentially to ensure nothing is missed.
 
@@ -154,21 +154,20 @@ git --version || { echo "git not found"; exit 1; }
 
 - [ ] All tools are installed and at expected versions
 
-### P.3 Validate GitHub Secrets (if publishing)
+### P.3 Validate Publishing Credentials (if publishing)
 
-If you will publish to PyPI or crates.io, verify credentials:
+PyPI publishing uses **OIDC trusted publishing** — no API token or secret is needed. The `python-release.yml` workflow has `id-token: write` permission and `pypa/gh-action-pypi-publish` auto-detects the OIDC token.
+
+For crates.io (manual publish):
 
 ```bash
-# For PyPI publication (GitHub Actions uses PYPI_API_TOKEN)
-# Manual verification: GitHub repo → Settings → Secrets → PYPI_API_TOKEN should exist
-
 # For crates.io publication (manual as fallback)
 cargo login --registry crates-io 2>&1 | head -1 || echo "Note: crates.io token check"
 ```
 
 **Checklist**:
 
-- [ ] PYPI_API_TOKEN is set in GitHub repository secrets (if doing PyPI)
+- [ ] PyPI: OIDC trusted publisher is configured at pypi.org for `dchud/mrrc`
 - [ ] crates.io token is configured locally (if manual publish needed)
 
 ### P.4 Set VERSION Variable
@@ -525,6 +524,8 @@ grep -r "\[.*\](.*\.md)" docs/ --include="*.md" | grep -v "http"
 
 Update any version-specific documentation in:
 
+- `docs/getting-started/installation.md` - Update `mrrc = "X.Y"` in the Rust Cargo.toml example
+- `docs/getting-started/quickstart-rust.md` - Update `mrrc = "X.Y"` in the Add Dependency example
 - `docs/guides/migration-from-pymarc.md` - Add section for new release
 - `docs/guides/performance-tuning.md` - Update performance baselines if optimizations were made
 - `docs/contributing/architecture.md` - Note architectural changes if any
@@ -534,6 +535,8 @@ Update any version-specific documentation in:
 **Checklist**:
 
 - [ ] docs/ directory scanned for version references
+- [ ] `docs/getting-started/installation.md` Rust dependency version updated
+- [ ] `docs/getting-started/quickstart-rust.md` Rust dependency version updated
 - [ ] All hardcoded versions updated or explained
 - [ ] Internal links are still valid
 - [ ] Migration guide updated if breaking changes
@@ -1104,9 +1107,9 @@ For issues discovered immediately:
 **Problem**: Wheels build successfully but PyPI publish job fails
 
 **Steps**:
-1. Check if `PYPI_API_TOKEN` is set in GitHub secrets
-2. Verify token has permissions for the `mrrc` package
-3. If token is expired or invalid, update it in repository settings
+1. Verify OIDC trusted publisher is configured at pypi.org for `dchud/mrrc` (workflow: `python-release.yml`)
+2. Ensure the `publish-pypi` job has `id-token: write` permission
+3. Check that the workflow is using `pypa/gh-action-pypi-publish` without a `password:` parameter (OIDC is auto-detected)
 4. Re-run the failed job or push a new tag
 
 **Note**: You can manually publish wheels if CI fails:

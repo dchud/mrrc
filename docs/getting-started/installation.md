@@ -39,7 +39,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mrrc = "0.6"
+mrrc = "0.7"
 ```
 
 Or with cargo:
