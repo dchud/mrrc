@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.7.1] - 2026-02-10
+
 ### Changed
 
 - **BREAKING: Removed 7 experimental serialization formats** ([mrrc-experiments#19](https://github.com/dchud/mrrc-experiments/pull/19)): Deleted protobuf, arrow, parquet, flatbuffers, messagepack, cbor, and avro support (~15,100 lines across 78 files). These added significant build complexity and dependency weight without proven adoption. Only ISO 2709 and BIBFRAME remain.
@@ -24,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Flaky benchmark test**: `test_backend_comparison_1k` now uses 5 iterations with median instead of 3 iterations with mean, making it resilient to single-iteration CI runner I/O spikes.
-
 - **CI: Python release workflow**: Added `actions/setup-python` before `maturin-action` to properly set Python version; `python-version` is not a valid input for maturin-action
 - **CI: Python release OIDC publishing**: Removed `password:` secret from `pypa/gh-action-pypi-publish` step; action auto-detects OIDC token from `id-token: write` permission
 - **CI: Re-enabled ASAN memory-safety workflow**: Upstream Rust issue (rust-lang/rust#144168) that caused zerocopy nightly incompatibility has been resolved
