@@ -54,24 +54,10 @@ All formats (ISO 2709, JSON, XML, CSV, Dublin Core, MODS, BIBFRAME) are included
 
 ### Python
 
-With pip:
-
 ```bash
 git clone https://github.com/dchud/mrrc.git
 cd mrrc
-python -m venv venv
-source venv/bin/activate
-pip install maturin
-maturin develop --release
-```
-
-Or with uv:
-
-```bash
-git clone https://github.com/dchud/mrrc.git
-cd mrrc
-uv venv
-uv pip install maturin
+uv sync
 uv run maturin develop --release
 ```
 

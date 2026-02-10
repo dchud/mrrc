@@ -36,7 +36,7 @@ jobs:
           pip install --no-index --find-links dist mrrc
           pip install pytest pytest-benchmark pymarc
 
-      - name: Run pytest benchmarks (1k/10k only, skip slow 100k tests)
+      - name: Run pytest benchmarks
         run: |
           pytest tests/python/ -v --benchmark-only -m "not slow"
 

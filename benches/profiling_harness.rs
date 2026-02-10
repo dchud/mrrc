@@ -109,7 +109,6 @@ fn main() {
     let results = vec![
         profile_file("1k_records.mrc", 10),
         profile_file("10k_records.mrc", 10),
-        // profile_file("100k_records.mrc", 3),  // Uncomment for full profile
     ];
 
     for result in &results {

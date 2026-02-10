@@ -22,10 +22,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Activate Python virtual environment for maturin builds
-if [ -f "venv/bin/activate" ]; then
-    source venv/bin/activate
-fi
 
 echo "=== Rustfmt check ==="
 cargo fmt --all -- --check
@@ -48,7 +44,7 @@ cargo audit
 
 echo ""
 echo "=== Maturin Python extension build ==="
-maturin develop
+uv run maturin develop
 
 echo ""
 echo "=== Rust library tests ==="
@@ -60,7 +56,7 @@ cargo test --doc --package mrrc -q
 
 echo ""
 echo "=== Python tests (core functionality, excludes benchmarks) ==="
-python -m pytest tests/python/ -m "not benchmark" -q
+uv run python -m pytest tests/python/ -m "not benchmark" -q
 
 # ASAN memory safety checks (optional, nightly feature)
 if [ "$MEMORY_CHECKS" = true ]; then

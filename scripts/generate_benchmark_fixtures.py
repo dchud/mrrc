@@ -196,11 +196,6 @@ def main():
     generate_fixture(fixtures_dir / '10k_records.mrc', 10000)
     print()
     
-    # Large fixture for comprehensive benchmarks
-    print("Large fixture (100k records):")
-    generate_fixture(fixtures_dir / '100k_records.mrc', 100000)
-    print()
-    
     print("✓ All fixtures generated successfully!")
     print()
     print("Available fixtures:")

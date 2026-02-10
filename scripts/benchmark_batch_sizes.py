@@ -15,14 +15,14 @@ acquire/release frequency (from N to N/batch_size) but cannot parallelize I/O.
 Parallelism requires Phase H RustFile backend.
 
 **Test methodology:**
-1. Sequential baseline: Read 100k records in main thread
-2. Concurrent test: 2 threads reading 100k records each from separate files
+1. Sequential baseline: Read 10k records in main thread
+2. Concurrent test: 2 threads reading 10k records each from separate files
 3. Speedup = sequential_time / concurrent_wall_clock_time
 
 **Batch sizes tested:** 10, 25, 50, 100, 200, 500
 **Acceptance criteria:**
 - ≥1.2x speedup with optimal batch size
-- GIL acquire/release frequency reduced 100x (from 100k to 100k/batch_size)
+- GIL acquire/release frequency reduced 100x (from 10k to 10k/batch_size)
 - Memory high watermark < 300KB per batch
 """
 
@@ -47,27 +47,22 @@ def load_fixture(path: Path) -> bytes:
 
 
 def find_fixture() -> bytes:
-    """Find and load 100k records fixture."""
+    """Find and load benchmark fixture."""
     repo_root = Path(__file__).parent.parent
     fixture_dir = repo_root / "tests" / "data" / "fixtures"
-    
-    fixture_path = fixture_dir / "100k_records.mrc"
-    if fixture_path.exists():
-        return load_fixture(fixture_path)
-    
-    # Fallback: try 10k if 100k doesn't exist
+
     fixture_path = fixture_dir / "10k_records.mrc"
     if fixture_path.exists():
         return load_fixture(fixture_path)
-    
+
     # Fallback: try 1k
     fixture_path = fixture_dir / "1k_records.mrc"
     if fixture_path.exists():
         return load_fixture(fixture_path)
-    
+
     raise FileNotFoundError(
         f"No MARC fixture found in {fixture_dir}. "
-        "Expected one of: 100k_records.mrc, 10k_records.mrc, 1k_records.mrc"
+        "Expected one of: 10k_records.mrc, 1k_records.mrc"
     )
 
 

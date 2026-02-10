@@ -16,18 +16,14 @@ This guide covers setting up a local development environment for MRRC.
 git clone https://github.com/dchud/mrrc.git
 cd mrrc
 
-# Create Python virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install development dependencies
-uv pip install maturin pytest pytest-benchmark
+# Install dependencies and create virtual environment
+uv sync
 
 # Build and install the Python package in development mode
-maturin develop
+uv run maturin develop
 
 # Verify installation
-python -c "import mrrc; print('MRRC installed successfully')"
+uv run python -c "import mrrc; print('MRRC installed successfully')"
 ```
 
 ## Building
@@ -49,13 +45,13 @@ cargo doc --open
 
 ```bash
 # Development build (debug, fast iteration)
-maturin develop
+uv run maturin develop
 
 # Release build (optimized)
-maturin develop --release
+uv run maturin develop --release
 
 # Build wheels for distribution
-maturin build --release
+uv run maturin build --release
 ```
 
 ## Running Tests
@@ -70,7 +66,7 @@ See [Testing](testing.md) for comprehensive test documentation.
 cargo test
 
 # Python tests only
-pytest tests/python/ -m "not benchmark"
+uv run python -m pytest tests/python/ -m "not benchmark"
 ```
 
 ## IDE Setup
@@ -117,8 +113,8 @@ mrrc/
 ### Updating Python Bindings
 
 1. Modify `src-python/src/*.rs`
-2. Run `maturin develop` to rebuild
-3. Test with `pytest tests/python/`
+2. Run `uv run maturin develop` to rebuild
+3. Test with `uv run python -m pytest tests/python/`
 
 ## Troubleshooting
 
@@ -134,7 +130,7 @@ rustup update stable
 
 Try reinstalling:
 ```bash
-maturin develop --release
+uv run maturin develop --release
 ```
 
 ## Next Steps

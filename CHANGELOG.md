@@ -7,22 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
 ### Changed
 
-- **Test fixtures**: Removed 25MB `100k_records.mrc` from repo; gitignored to prevent re-commit. Regenerable via `scripts/generate_benchmark_fixtures.py`. Three CI tests refactored to use 10k fixture instead.
+- **BREAKING: Removed 7 experimental serialization formats** ([mrrc-experiments#19](https://github.com/dchud/mrrc-experiments/pull/19)): Deleted protobuf, arrow, parquet, flatbuffers, messagepack, cbor, and avro support (~15,100 lines across 78 files). These added significant build complexity and dependency weight without proven adoption. Only ISO 2709 and BIBFRAME remain.
+- **BIBFRAME promoted to core**: BIBFRAME conversion is now always-compiled rather than feature-gated (`format-bibframe`), reflecting its importance as the LOC linked data format. Dependencies `oxrdfio` and `oxrdf` are now non-optional.
+- **Python bindings simplified**: Removed format-specific classes (ProtobufReader, ArrowWriter, etc.), `mrrc/analytics.py`, and format submodules. Simplified `read()`/`write()` helpers and `__init__.py` exports.
+- **Clean repo history**: Recreated repository as `dchud/mrrc` with a clean two-commit history, replacing `dchud/mrrc-experiments`. Build artifacts, large test fixtures, and accumulated cruft from the experimental phase are no longer in git history.
+- **Test fixtures**: Removed 25MB `100k_records.mrc` from repo; gitignored to prevent re-commit. Regenerable via `scripts/generate_benchmark_fixtures.py`. Benchmark tests depending on 100k fixture removed.
+- **Build simplification**: Removed `build.rs` (was only for protobuf/flatbuffers code generation), `src/generated/`, `proto/`, and ~20 dependencies from `Cargo.toml`.
+- **Local CI script**: Updated `.cargo/check.sh` to use `uv run` for maturin and pytest steps instead of manual venv activation.
+- **100k fixture scrub**: Removed remaining references to `100k_records.mrc` from scripts, benches, CI workflow names, and public docs (benchmarks, contributing, tests README). Fixture generation script no longer produces the 100k file.
+- **Developer docs standardized on uv**: Replaced manual venv activation and bare `maturin develop`/`pytest` commands with `uv sync`/`uv run` equivalents across installation, development setup, testing, and migration guides.
 
 ### Fixed
 
 - **CI: Python release workflow**: Added `actions/setup-python` before `maturin-action` to properly set Python version; `python-version` is not a valid input for maturin-action
+- **CI: Python release OIDC publishing**: Removed `password:` secret from `pypa/gh-action-pypi-publish` step; action auto-detects OIDC token from `id-token: write` permission
 - **CI: Re-enabled ASAN memory-safety workflow**: Upstream Rust issue (rust-lang/rust#144168) that caused zerocopy nightly incompatibility has been resolved
 - **CI: ASAN workflow zerocopy_derive fix**: Removed `-Zavoid-dev-deps` flag which caused zerocopy_derive proc-macro resolution failures on nightly
+- **CI: CodSpeed benchmark integration**: Re-linked repository with CodSpeed after clean repo creation
 - **Beads: Gitignore rotated daemon logs**: Added `daemon-*.log.gz` pattern to `.beads/.gitignore` and removed accidentally committed 2.7MB rotated log file
-
-### Performance
-
-### Documentation
 
 ## [0.7.0] - 2026-02-05
 

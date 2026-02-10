@@ -18,7 +18,7 @@ def test_gil_release():
     If GIL IS released, other_thread will run quickly.
     """
     # Load test data
-    with open('tests/data/fixtures/100k_records.mrc', 'rb') as f:
+    with open('tests/data/fixtures/10k_records.mrc', 'rb') as f:
         fixture = f.read()
     
     parsing_started = threading.Event()

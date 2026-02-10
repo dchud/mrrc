@@ -40,7 +40,7 @@ def find_fixture() -> bytes:
     repo_root = Path(__file__).parent.parent
     fixture_dir = repo_root / "tests" / "data" / "fixtures"
     
-    for name in ["100k_records.mrc", "10k_records.mrc", "1k_records.mrc"]:
+    for name in ["10k_records.mrc", "1k_records.mrc"]:
         path = fixture_dir / name
         if path.exists():
             return load_fixture(path)

@@ -348,7 +348,6 @@ Located in `tests/data/`:
 Located in `tests/data/fixtures/`:
 - `1k_records.mrc` (257 KB) - Quick benchmarks
 - `10k_records.mrc` (2.5 MB) - Standard benchmarks
-- `100k_records.mrc` (25 MB) - Comprehensive (local-only)
 
 ## Key Design Principles
 

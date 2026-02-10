@@ -30,8 +30,6 @@ class BenchmarkResult:
             records = 1000
         elif "10k" in self.name:
             records = 10000
-        elif "100k" in self.name:
-            records = 100000
         else:
             return 0
         

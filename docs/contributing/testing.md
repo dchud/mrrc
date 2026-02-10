@@ -85,7 +85,6 @@ Benchmark fixtures in `tests/data/fixtures/`:
 |------|------|---------|
 | `1k_records.mrc` | 257 KB | 1,000 |
 | `10k_records.mrc` | 2.5 MB | 10,000 |
-| `100k_records.mrc` | 25 MB | 100,000 (local only) |
 
 ## Test Organization
 
@@ -146,7 +145,7 @@ CI workflows:
 
 Rebuild Python bindings:
 ```bash
-maturin develop
+uv run maturin develop
 ```
 
 ### Benchmark tests are slow

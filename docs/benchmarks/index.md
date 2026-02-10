@@ -65,7 +65,7 @@ python scripts/benchmark_comparison.py
 # Check benchmark cache status
 python scripts/criterion_extractor.py
 
-# CI-mode (skips slow 100k tests)
+# CI-mode
 CI=1 python scripts/benchmark_comparison.py
 ```
 
@@ -75,11 +75,10 @@ The benchmark infrastructure includes:
 
 - **Caching**: Criterion.rs results parsed from `target/criterion/` (~100ms, no recompilation)
 - **Staleness detection**: Auto-detects if benchmarks are >24h old or source changed; warns to refresh with `cargo bench --release`
-- **CI optimization**: Detects CI environment and runs reduced test suite (1k, 10k only; skips 100k to save ~4.5 minutes)
+- **CI optimization**: Detects CI environment and runs reduced test suite (1k, 10k)
 
 ## Test Fixtures
 
 Located in `tests/data/fixtures/`:
 - `1k_records.mrc` (257 KB) - Quick tests
 - `10k_records.mrc` (2.5 MB) - Standard benchmarks
-- `100k_records.mrc` (25 MB) - Comprehensive tests (local-only)

@@ -280,8 +280,6 @@ We welcome contributions! The project is structured as:
 
 To build locally:
 ```bash
-cd src-python
-python -m venv venv
-source venv/bin/activate
-maturin develop
+uv sync
+uv run maturin develop
 ```
