@@ -10,11 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Cross-compiled Linux wheels**: Release workflow now builds `aarch64` and `i686` Linux wheels via maturin-action Docker cross-compilation, increasing wheel count from 15 to 25 per release.
+- **Field constructor `subfields=` and `indicators=` kwargs** ([mrrc-experiments#15](https://github.com/dchud/mrrc-experiments/issues/15)): `Field` now accepts `subfields=` (list of `Subfield`) and `indicators=` (list/tuple of two strings) as keyword arguments, enabling inline construction matching pymarc style: `Field('245', indicators=['0', '1'], subfields=[Subfield('a', 'Title')])`. The Rust binding already supported this signature; the Python wrapper now passes through both kwargs.
+- **Record constructor `fields=` kwarg** ([mrrc-experiments#15](https://github.com/dchud/mrrc-experiments/issues/15)): `Record` now accepts an optional `fields=` keyword argument (list of `Field`), enabling inline record construction: `Record(fields=[Field(...), ...])`. This goes beyond pymarc parity (pymarc's `Record.__init__` does not accept `fields=`) as a UX improvement. `Record()` with no arguments also now works, defaulting to `Leader()`.
+- **Constructor kwargs tests**: 8 new tests in `TestConstructorKwargs` covering `indicators=`, `subfields=`, `fields=`, combined usage, full inline construction, and backward compatibility.
 
 ### Changed
 
 - **GitHub releases now include changelog notes**: `python-release.yml` auto-extracts the relevant CHANGELOG.md section and includes it in the GitHub Release body. Backfilled v0.7.1 release notes.
 - **Pymarc compatibility tests fully enabled**: Removed 10 `pytest.skip` guards from `test_pymarc_compatibility.py` — all features (to_json, to_xml, to_marcjson, to_dublin_core, to_marc21, writer, roundtrip, test data) were already implemented. 88/88 tests now pass with 0 skipped.
+- **Documentation updated for inline construction**: Quickstart, API reference, migration guide, writing tutorial, and examples now show `Field(subfields=..., indicators=...)` and `Record(fields=...)` as the primary construction pattern, with `add_subfield()`/`add_field()` as the incremental alternative. Migration guide updated to reflect `Record()` no longer requires an explicit `Leader` argument and field creation is now closer to pymarc.
+- **Type stubs updated**: `Field.__new__` and `Record.__new__` in `.pyi` now include the new keyword-only parameters.
 
 ### Fixed
 
