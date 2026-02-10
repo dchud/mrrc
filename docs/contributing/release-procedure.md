@@ -861,7 +861,7 @@ Should show your new version with wheels for Python 3.10, 3.11, 3.12, 3.13, 3.14
 
 ### 8.5 Verify GitHub Release Created
 
-GitHub Actions automatically creates a GitHub Release with wheels attached.
+GitHub Actions automatically creates a GitHub Release with wheels attached and release notes extracted from `CHANGELOG.md` (the section matching the tag version).
 
 Go to: https://github.com/dchud/mrrc/releases
 
@@ -869,12 +869,14 @@ Should see your new release with:
 
 - Tag name: `vX.Y.Z`
 - Release title (auto-generated from tag)
+- Release notes body (auto-extracted from CHANGELOG.md)
 - Wheels attached from `dist/`
 - Status: Not a draft, not a prerelease (unless version contains alpha/beta)
 
 **Checklist**:
 
 - [ ] Release appears on GitHub
+- [ ] Release notes match the CHANGELOG section for this version
 - [ ] Wheels are attached
 - [ ] Release status is correct (not draft)
 
@@ -1224,7 +1226,7 @@ twine upload dist/mrrc-*.whl
 - [ ] publish-pypi job completed
 - [ ] PyPI publication verified (15 wheels present)
 - [ ] crates.io publication verified (manual or CI)
-- [ ] GitHub release created and visible
+- [ ] GitHub release created with changelog notes
 - [ ] docs.rs documentation available
 
 **Phase 8: Post-Release Verification**

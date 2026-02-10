@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Cross-compiled Linux wheels**: Release workflow now builds `aarch64` and `i686` Linux wheels via maturin-action Docker cross-compilation, increasing wheel count from 15 to 25 per release.
+
 ### Changed
+
+- **GitHub releases now include changelog notes**: `python-release.yml` auto-extracts the relevant CHANGELOG.md section and includes it in the GitHub Release body. Backfilled v0.7.1 release notes.
+- **Pymarc compatibility tests fully enabled**: Removed 10 `pytest.skip` guards from `test_pymarc_compatibility.py` — all features (to_json, to_xml, to_marcjson, to_dublin_core, to_marc21, writer, roundtrip, test data) were already implemented. 88/88 tests now pass with 0 skipped.
 
 ### Fixed
 

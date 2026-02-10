@@ -485,11 +485,8 @@ class TestEdgeCases:
         record = Record(Leader())
 
         # Should handle empty records gracefully
-        try:
-            json_str = record.to_json()
-            assert json_str is not None
-        except Exception:
-            pytest.skip("Empty record serialization not yet implemented")
+        json_str = record.to_json()
+        assert json_str is not None
 
     def test_record_with_many_fields(self):
         """Test record with many fields."""
@@ -529,12 +526,9 @@ class TestFormatConversions:
         record.add_control_field('001', 'test-id')
         record.add_field(create_field('245', '1', '0', a='Title'))
 
-        try:
-            marcjson = record.to_marcjson()
-            assert marcjson is not None
-            assert len(marcjson) > 0
-        except AttributeError:
-            pytest.skip("to_marcjson not yet implemented")
+        marcjson = record.to_marcjson()
+        assert marcjson is not None
+        assert len(marcjson) > 0
 
 
 class TestFieldCreation:
@@ -654,8 +648,6 @@ class TestReaderWriter:
     def test_reader_from_file(self):
         """Test reading MARC records from file using direct path passing."""
         test_file = TEST_DATA_DIR / 'simple_book.mrc'
-        if not test_file.exists():
-            pytest.skip("Test data not available")
         # Pass path directly to MARCReader (recommended - allows Rust to handle I/O)
         reader = MARCReader(test_file)
         record = next(reader)
@@ -665,8 +657,6 @@ class TestReaderWriter:
     def test_reader_iteration(self):
         """Test iterating through records using direct path passing."""
         test_file = TEST_DATA_DIR / 'simple_book.mrc'
-        if not test_file.exists():
-            pytest.skip("Test data not available")
         # Pass path directly to MARCReader (recommended - allows Rust to handle I/O)
         reader = MARCReader(test_file)
         count = 0
@@ -684,13 +674,10 @@ class TestReaderWriter:
         record.add_field(field)
 
         output = io.BytesIO()
-        try:
-            writer = MARCWriter(output)
-            writer.write(record)
-            written_bytes = output.getvalue()
-            assert len(written_bytes) > 0
-        except (AttributeError, TypeError):
-            pytest.skip("Writer not fully implemented")
+        writer = MARCWriter(output)
+        writer.write(record)
+        written_bytes = output.getvalue()
+        assert len(written_bytes) > 0
 
     def test_roundtrip_record(self):
         """Test writing then reading a record."""
@@ -700,22 +687,19 @@ class TestReaderWriter:
         field.add_subfield('a', 'Test Title')
         original.add_field(field)
 
-        try:
-            # Write to bytes
-            output = io.BytesIO()
-            writer = MARCWriter(output)
-            writer.write(original)
+        # Write to bytes
+        output = io.BytesIO()
+        writer = MARCWriter(output)
+        writer.write(original)
 
-            # Read back
-            output.seek(0)
-            reader = MARCReader(output)
-            read_record = next(reader)
+        # Read back
+        output.seek(0)
+        reader = MARCReader(output)
+        read_record = next(reader)
 
-            # Verify content
-            assert read_record is not None
-            assert read_record.control_field('001') == 'test-123'
-        except (AttributeError, TypeError, StopIteration):
-            pytest.skip("Round-trip not fully implemented")
+        # Verify content
+        assert read_record is not None
+        assert read_record.control_field('001') == 'test-123'
 
 
 class TestLeader:
@@ -895,11 +879,8 @@ class TestEncoding:
         field = Field('245', '1', '0')
         field.add_subfield('a', 'Test')
         record.add_field(field)
-        try:
-            encoded = record.to_marc21()
-            assert encoded is not None
-        except (AttributeError, TypeError):
-            pytest.skip("MARC encoding not implemented")
+        encoded = record.to_marc21()
+        assert encoded is not None
 
 
 class TestSerialization:
@@ -913,13 +894,10 @@ class TestSerialization:
         field.add_subfield('a', 'Title')
         record.add_field(field)
 
-        try:
-            json_str = record.to_json()
-            assert json_str is not None
-            parsed = json.loads(json_str)
-            assert parsed is not None
-        except (AttributeError, TypeError):
-            pytest.skip("JSON serialization not implemented")
+        json_str = record.to_json()
+        assert json_str is not None
+        parsed = json.loads(json_str)
+        assert parsed is not None
 
     def test_xml_serialization(self):
         """Test XML serialization."""
@@ -929,12 +907,9 @@ class TestSerialization:
         field.add_subfield('a', 'Title')
         record.add_field(field)
 
-        try:
-            xml_str = record.to_xml()
-            assert xml_str is not None
-            assert '<' in xml_str
-        except (AttributeError, TypeError):
-            pytest.skip("XML serialization not implemented")
+        xml_str = record.to_xml()
+        assert xml_str is not None
+        assert '<' in xml_str
 
     def test_dublin_core_serialization(self):
         """Test Dublin Core serialization."""
@@ -944,11 +919,8 @@ class TestSerialization:
         field.add_subfield('a', 'Title')
         record.add_field(field)
 
-        try:
-            dc_xml = record.to_dublin_core()
-            assert dc_xml is not None
-        except (AttributeError, TypeError):
-            pytest.skip("Dublin Core not implemented")
+        dc_xml = record.to_dublin_core()
+        assert dc_xml is not None
 
 
 if __name__ == '__main__':

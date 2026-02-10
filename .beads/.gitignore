@@ -33,6 +33,9 @@ beads.left.meta.json
 beads.right.jsonl
 beads.right.meta.json
 
+# Export state (local-only, generated during bd sync)
+export-state/
+
 # Sync state (local-only, per-machine)
 # These files are machine-specific and should not be shared across clones
 .sync.lock
