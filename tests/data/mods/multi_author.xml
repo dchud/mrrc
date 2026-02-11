@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods xmlns="http://www.loc.gov/mods/v3" version="3.8">
+  <titleInfo>
+    <title>Advanced Database Systems</title>
+  </titleInfo>
+  <name type="personal">
+    <namePart>Garcia, Maria</namePart>
+    <role>
+      <roleTerm type="text">creator</roleTerm>
+    </role>
+  </name>
+  <name type="personal">
+    <namePart>Chen, Wei</namePart>
+    <role>
+      <roleTerm type="text">author</roleTerm>
+    </role>
+  </name>
+  <name type="corporate">
+    <namePart>University Press</namePart>
+    <role>
+      <roleTerm type="text">publisher</roleTerm>
+    </role>
+  </name>
+  <typeOfResource>text</typeOfResource>
+  <originInfo>
+    <place>
+      <placeTerm type="text">Cambridge</placeTerm>
+    </place>
+    <publisher>University Press</publisher>
+    <dateIssued>2021</dateIssued>
+    <edition>2nd ed.</edition>
+  </originInfo>
+  <identifier type="isbn">9780521168120</identifier>
+  <identifier type="lccn">2021012345</identifier>
+  <classification authority="lcc">QA76.9.D3</classification>
+  <classification authority="ddc">005.74</classification>
+</mods>

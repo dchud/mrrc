@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods xmlns="http://www.loc.gov/mods/v3" version="3.8">
+  <titleInfo>
+    <title>Machine Learning Fundamentals</title>
+  </titleInfo>
+  <name type="personal">
+    <namePart>Lee, David</namePart>
+    <role>
+      <roleTerm type="text">creator</roleTerm>
+    </role>
+  </name>
+  <typeOfResource>text</typeOfResource>
+  <originInfo>
+    <place>
+      <placeTerm type="text">New York</placeTerm>
+    </place>
+    <publisher>Springer</publisher>
+    <dateIssued>2022</dateIssued>
+  </originInfo>
+  <physicalDescription>
+    <extent>xii, 380 pages</extent>
+    <form>print</form>
+    <dimensions>25 cm</dimensions>
+  </physicalDescription>
+  <identifier type="isbn">9783030597849</identifier>
+  <relatedItem type="host">
+    <titleInfo>
+      <title>Graduate Texts in Computer Science</title>
+    </titleInfo>
+  </relatedItem>
+  <relatedItem type="series">
+    <titleInfo>
+      <title>Springer AI Series</title>
+    </titleInfo>
+  </relatedItem>
+  <location>
+    <physicalLocation>MIT Libraries</physicalLocation>
+  </location>
+  <accessCondition type="use and reproduction">Copyright 2022 Springer</accessCondition>
+</mods>

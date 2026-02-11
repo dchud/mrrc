@@ -14,6 +14,8 @@ from mrrc._mrrc import (
     MARCWriter as _MARCWriter,
     Record as _Record,
     Subfield,
+    mods_to_record,
+    mods_collection_to_records,
 )
 from typing import Optional, List, Union, Any
 
@@ -559,4 +561,5 @@ Leader.describe_value = staticmethod(get_leader_value_description)
 __all__ = [
     "Leader", "Subfield", "Field", "Record", "MARCReader", "MARCWriter",
     "get_leader_valid_values", "get_leader_value_description",
+    "mods_to_record", "mods_collection_to_records",
 ]

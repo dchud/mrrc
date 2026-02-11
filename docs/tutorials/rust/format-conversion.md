@@ -19,6 +19,10 @@ let restored = from_xml(&xml)?;
 
 // Convert to MARCJSON (LOC standard)
 let marcjson = to_marcjson(&record)?;
+
+// MODS conversion (bidirectional)
+let mods_xml = mrrc::mods::record_to_mods_xml(&record)?;
+let restored = mrrc::mods::mods_xml_to_record(&mods_xml)?;
 ```
 
 ## BIBFRAME Conversion

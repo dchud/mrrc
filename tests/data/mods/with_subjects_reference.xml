@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<marc:record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:marc="http://www.loc.gov/MARC21/slim" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"><marc:leader>     nam  22     uu 4500</marc:leader><marc:controlfield tag="001">99887766</marc:controlfield><marc:controlfield tag="003">OCoLC</marc:controlfield><marc:controlfield tag="008">      |           ||||||||||||||||||||||</marc:controlfield>
+  <marc:datafield tag="245" ind1="1" ind2="0"><marc:subfield code="a">History of the American West</marc:subfield></marc:datafield>
+  <marc:datafield tag="100" ind1="1" ind2=" "><marc:subfield code="a">Johnson, Robert </marc:subfield><marc:subfield code="e">creator</marc:subfield></marc:datafield>
+  
+  <marc:datafield tag="655" ind1=" " ind2="7"><marc:subfield code="a">History</marc:subfield></marc:datafield>
+  <marc:datafield tag="650" ind1="1" ind2=" "><marc:subfield code="a">Frontier and pioneer life</marc:subfield></marc:datafield>
+  <marc:datafield tag="651" ind1=" " ind2=" "><marc:subfield code="a">West (U.S.)</marc:subfield></marc:datafield>
+  <marc:datafield tag="650" ind1="1" ind2=" "><marc:subfield code="a">Native Americans</marc:subfield></marc:datafield>
+  <marc:datafield tag="020" ind1=" " ind2=" "><marc:subfield code="a">9780195071221</marc:subfield></marc:datafield>
+  
+  <marc:datafield tag="" ind1=" " ind2=" "><marc:subfield code="a">Open access</marc:subfield></marc:datafield>
+  <marc:datafield tag="505" ind1="0" ind2=" "><marc:subfield code="a">Chapter 1: The frontier -- Chapter 2: Expansion</marc:subfield></marc:datafield>
+  <marc:datafield tag="521" ind1=" " ind2=" "><marc:subfield code="a">General</marc:subfield></marc:datafield>
+<marc:datafield tag="500" ind1=" " ind2=" "><marc:subfield code="a">Converted from MODS 3.8 to MARCXML using MODS3-8_MARC21slim_XSLT1-0.xsl (Revision 3.07 20230520)</marc:subfield></marc:datafield></marc:record>

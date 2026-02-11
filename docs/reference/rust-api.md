@@ -240,6 +240,10 @@ use mrrc::formats::{to_json, to_xml, to_marcjson};
 let json = to_json(&record)?;
 let xml = to_xml(&record)?;
 let marcjson = to_marcjson(&record)?;
+
+// MODS conversion (bidirectional)
+let mods = mrrc::mods::record_to_mods_xml(&record)?;
+let restored = mrrc::mods::mods_xml_to_record(&mods)?;
 ```
 
 ## BIBFRAME Conversion

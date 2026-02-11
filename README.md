@@ -81,7 +81,7 @@ while let Some(record) = reader.read_record()? {
 | XML | Yes | Yes |
 | CSV | - | Yes |
 | Dublin Core | - | Yes |
-| MODS | - | Yes |
+| MODS | Yes | Yes |
 | BIBFRAME | Yes | Yes |
 
 [Full format reference](https://dchud.github.io/mrrc/reference/formats/)

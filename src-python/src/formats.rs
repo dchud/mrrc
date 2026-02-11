@@ -209,6 +209,46 @@ pub fn record_to_mods(record: &PyRecord) -> PyResult<String> {
     mods::record_to_mods_xml(&record.inner).map_err(marc_error_to_py_err)
 }
 
+/// Parse a MODS XML string into a MARC record.
+///
+/// # Arguments
+/// * `xml_str` - A MODS XML string
+///
+/// # Returns
+/// A PyRecord instance
+///
+/// # Example
+/// ```python
+/// import mrrc
+/// record = mrrc.mods_to_record(mods_xml)
+/// ```
+#[pyfunction]
+pub fn mods_to_record(xml_str: &str) -> PyResult<PyRecord> {
+    mods::mods_xml_to_record(xml_str)
+        .map(|inner| PyRecord { inner })
+        .map_err(marc_error_to_py_err)
+}
+
+/// Parse a MODS collection XML string into multiple MARC records.
+///
+/// # Arguments
+/// * `xml_str` - A MODS collection XML string containing `<modsCollection>`
+///
+/// # Returns
+/// A list of PyRecord instances
+///
+/// # Example
+/// ```python
+/// import mrrc
+/// records = mrrc.mods_collection_to_records(mods_collection_xml)
+/// ```
+#[pyfunction]
+pub fn mods_collection_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
+    mods::mods_xml_to_records(xml_str)
+        .map(|records| records.into_iter().map(|inner| PyRecord { inner }).collect())
+        .map_err(marc_error_to_py_err)
+}
+
 /// Convert a MARC record directly to Dublin Core XML format.
 ///
 /// Convenience function that combines record_to_dublin_core() and dublin_core_to_xml()

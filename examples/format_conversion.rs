@@ -50,6 +50,15 @@ fn main() {
     if let Ok(mods) = mrrc::mods::record_to_mods_xml(&record) {
         println!("{mods}");
     }
+
+    // MODS roundtrip
+    println!("\n=== MODS Roundtrip ===\n");
+    if let Ok(mods) = mrrc::mods::record_to_mods_xml(&record) {
+        if let Ok(restored) = mrrc::mods::mods_xml_to_record(&mods) {
+            println!("Title: {}", restored.title().unwrap_or("Unknown"));
+            println!("Authors: {:?}", restored.authors());
+        }
+    }
 }
 
 fn default_leader() -> Leader {

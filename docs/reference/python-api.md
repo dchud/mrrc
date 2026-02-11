@@ -207,6 +207,12 @@ import mrrc
 # Parse from JSON
 record = mrrc.json_to_record(json_str)
 
+# Parse from MODS XML
+record = mrrc.mods_to_record(mods_xml)
+
+# Parse MODS collection (multiple records)
+records = mrrc.mods_collection_to_records(mods_collection_xml)
+
 # Convert to CSV
 csv_str = mrrc.record_to_csv(record)
 csv_str = mrrc.records_to_csv(records)

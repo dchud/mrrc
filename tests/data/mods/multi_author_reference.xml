@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<marc:record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:marc="http://www.loc.gov/MARC21/slim" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"><marc:leader>     nam  22     uu 4500</marc:leader><marc:controlfield tag="008">      s           ||||||||||||||||||||||</marc:controlfield>
+  <marc:datafield tag="245" ind1="1" ind2="0"><marc:subfield code="a">Advanced Database Systems</marc:subfield></marc:datafield>
+  <marc:datafield tag="100" ind1="1" ind2=" "><marc:subfield code="a">Garcia, Maria </marc:subfield><marc:subfield code="e">creator</marc:subfield></marc:datafield>
+  <marc:datafield tag="700" ind1="1" ind2=" "><marc:subfield code="a">Chen, Wei </marc:subfield><marc:subfield code="e">author</marc:subfield></marc:datafield>
+  <marc:datafield tag="710" ind1="2" ind2=" "><marc:subfield code="a">University Press</marc:subfield><marc:subfield code="e">publisher</marc:subfield></marc:datafield>
+  
+  <marc:datafield tag="250" ind1=" " ind2=" "><marc:subfield code="a">2nd ed.</marc:subfield></marc:datafield><marc:datafield tag="260" ind1=" " ind2=" "><marc:subfield code="a">Cambridge</marc:subfield><marc:subfield code="b">University Press</marc:subfield><marc:subfield code="c">2021</marc:subfield></marc:datafield>
+  <marc:datafield tag="020" ind1=" " ind2=" "><marc:subfield code="a">9780521168120</marc:subfield></marc:datafield>
+  <marc:datafield tag="010" ind1=" " ind2=" "><marc:subfield code="a">2021012345</marc:subfield></marc:datafield>
+  
+  <marc:datafield tag="082" ind1="0" ind2=" "><marc:subfield code="a">005.74</marc:subfield></marc:datafield>
+<marc:datafield tag="500" ind1=" " ind2=" "><marc:subfield code="a">Converted from MODS 3.8 to MARCXML using MODS3-8_MARC21slim_XSLT1-0.xsl (Revision 3.07 20230520)</marc:subfield></marc:datafield><marc:datafield tag="050" ind1=" " ind2="2"><marc:subfield code="a">QA76.9.D3</marc:subfield></marc:datafield></marc:record>

@@ -1,0 +1,4 @@
+runtime error: file MODS3-8_MARC21slim_XSLT1-0.xsl line 1400 element choose
+Variable 'altRepGroup' has not been declared.
+XPath error : Undefined variable
+no result for serial_journal.xml

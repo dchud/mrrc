@@ -80,7 +80,7 @@
 //! - [`xml`] — XML serialization/deserialization
 //! - [`csv`] — CSV (Comma-Separated Values) export format
 //! - [`dublin_core`] — Dublin Core metadata serialization
-//! - [`mods`] — MODS (Metadata Object Description Schema) serialization
+//! - [`mods`] — MODS (Metadata Object Description Schema) bidirectional conversion
 //! - [`encoding`] — Character encoding support (MARC-8 and UTF-8)
 //! - [`error`] — Error types and result type
 //!

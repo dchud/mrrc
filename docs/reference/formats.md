@@ -12,7 +12,7 @@ MRRC supports multiple serialization formats for MARC records. This page provide
 | XML | Yes | Yes | Yes | Yes | MARCXML format |
 | CSV | - | Yes | Yes | Yes | Tabular export |
 | Dublin Core | - | Yes | Yes | Yes | 15-element metadata |
-| MODS | - | Yes | Yes | Yes | Metadata Object Description Schema |
+| MODS | Yes | Yes | Yes | Yes | Metadata Object Description Schema |
 | BIBFRAME | Yes | Yes | Yes | Yes | RDF/Linked Data (bidirectional) |
 
 All formats are available in both Python and Rust without feature flags.

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods xmlns="http://www.loc.gov/mods/v3" version="3.8">
+  <titleInfo>
+    <title>History of the American West</title>
+  </titleInfo>
+  <name type="personal">
+    <namePart>Johnson, Robert</namePart>
+    <role>
+      <roleTerm type="text">creator</roleTerm>
+    </role>
+  </name>
+  <typeOfResource>text</typeOfResource>
+  <genre>History</genre>
+  <subject>
+    <topic>Frontier and pioneer life</topic>
+  </subject>
+  <subject>
+    <geographic>West (U.S.)</geographic>
+  </subject>
+  <subject>
+    <topic>Native Americans</topic>
+  </subject>
+  <identifier type="isbn">9780195071221</identifier>
+  <recordInfo>
+    <recordIdentifier source="OCoLC">99887766</recordIdentifier>
+    <recordContentSource>DLC</recordContentSource>
+  </recordInfo>
+  <accessCondition type="restriction on access">Open access</accessCondition>
+  <tableOfContents>Chapter 1: The frontier -- Chapter 2: Expansion</tableOfContents>
+  <targetAudience>General</targetAudience>
+</mods>

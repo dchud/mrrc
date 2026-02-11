@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<marc:record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:marc="http://www.loc.gov/MARC21/slim" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"><marc:leader>     nam  22     uu 4500</marc:leader><marc:controlfield tag="008">      s           ||||||||||||||||||||||</marc:controlfield>
+  <marc:datafield tag="245" ind1="1" ind2="0"><marc:subfield code="a">Machine Learning Fundamentals</marc:subfield></marc:datafield>
+  <marc:datafield tag="100" ind1="1" ind2=" "><marc:subfield code="a">Lee, David </marc:subfield><marc:subfield code="e">creator</marc:subfield></marc:datafield>
+  
+  <marc:datafield tag="260" ind1=" " ind2=" "><marc:subfield code="a">New York</marc:subfield><marc:subfield code="b">Springer</marc:subfield><marc:subfield code="c">2022</marc:subfield></marc:datafield>
+  
+    <marc:datafield tag="300" ind1=" " ind2=" "><marc:subfield code="a">xii, 380 pages</marc:subfield></marc:datafield>
+    
+    
+  
+  <marc:datafield tag="020" ind1=" " ind2=" "><marc:subfield code="a">9783030597849</marc:subfield></marc:datafield>
+  <marc:datafield tag="773" ind1="0" ind2=" "><marc:subfield code="t">Graduate Texts in Computer Science</marc:subfield></marc:datafield>
+  <marc:datafield tag="830" ind1=" " ind2=" "><marc:subfield code="a">Springer AI Series</marc:subfield></marc:datafield>
+  
+  <marc:datafield tag="" ind1=" " ind2=" "><marc:subfield code="a">Copyright 2022 Springer</marc:subfield></marc:datafield>
+<marc:datafield tag="500" ind1=" " ind2=" "><marc:subfield code="a">Converted from MODS 3.8 to MARCXML using MODS3-8_MARC21slim_XSLT1-0.xsl (Revision 3.07 20230520)</marc:subfield></marc:datafield></marc:record>

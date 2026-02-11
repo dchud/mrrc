@@ -61,6 +61,9 @@ dc_str = record.to_dublin_core()
 ```python
 # Convert to MODS XML
 mods_str = record.to_mods()
+
+# Parse from MODS XML
+record = mrrc.mods_to_record(mods_xml_str)
 ```
 
 ## BIBFRAME Conversion

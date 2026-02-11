@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods xmlns="http://www.loc.gov/mods/v3" version="3.8">
+  <titleInfo>
+    <title>Journal of Library Science</title>
+  </titleInfo>
+  <typeOfResource>text</typeOfResource>
+  <originInfo>
+    <place>
+      <placeTerm type="text">Chicago</placeTerm>
+    </place>
+    <publisher>American Library Association</publisher>
+    <dateIssued>1960-</dateIssued>
+  </originInfo>
+  <identifier type="issn">0028-0836</identifier>
+  <language>
+    <languageTerm type="code" authority="iso639-2b">eng</languageTerm>
+  </language>
+  <note>Quarterly publication.</note>
+  <relatedItem type="preceding">
+    <titleInfo>
+      <title>Bulletin of Library Science</title>
+    </titleInfo>
+  </relatedItem>
+  <location>
+    <url>https://www.journals.ala.org/jls</url>
+  </location>
+</mods>

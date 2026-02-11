@@ -18,7 +18,8 @@ What's your primary goal?
 │
 ├─ Metadata crosswalks?
 │  ├─ Simple metadata? → Dublin Core (15-element standard)
-│  └─ Detailed bibliographic? → MODS (Metadata Object Description Schema)
+│  ├─ Detailed bibliographic? → MODS (bidirectional read/write)
+│  └─ Import from MODS? → MODS read (crosswalk import)
 │
 ├─ Spreadsheet export?
 │  └─ CSV
@@ -143,12 +144,17 @@ dc_xml = record.to_dublin_core()
 ### MODS
 
 **Use when:**
-- Detailed metadata crosswalks
+- Detailed metadata crosswalks (bidirectional)
 - Digital library applications
 - Need richer metadata than Dublin Core
+- Importing MODS records into MARC workflows
 
 ```python
+# Convert to MODS XML
 mods_xml = record.to_mods()
+
+# Parse from MODS XML
+record = mrrc.mods_to_record(mods_xml)
 ```
 
 ## Use Case Recommendations
