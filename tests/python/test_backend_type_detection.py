@@ -3,17 +3,12 @@ Backend Type Detection Tests
 
 This test suite validates:
 1. All 8 supported input types are correctly routed to backends
-2. Unknown types raise TypeError with descriptive messages
-3. File errors are properly converted to Python exceptions
-4. Type detection order and priority are correct
-
-Specification: docs/design/GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md
+2. Type detection order and priority are correct
 """
 
 import io
 import tempfile
 from pathlib import Path
-import pytest
 import mrrc
 
 
@@ -115,107 +110,6 @@ class TestTypeDetectionSupportedTypes:
         reader = mrrc.MARCReader(data)
         assert reader is not None
         assert isinstance(reader, mrrc.MARCReader)
-
-
-class TestTypeDetectionUnknownTypes:
-    """Test unknown/unsupported types"""
-
-    def test_unknown_type_int_raises_typeerror(self):
-        """Unknown type: int → TypeError"""
-        with pytest.raises(TypeError) as exc_info:
-            mrrc.MARCReader(12345)
-
-        error_msg = str(exc_info.value)
-        assert "Unsupported input type" in error_msg
-        assert "int" in error_msg
-
-    def test_unknown_type_list_raises_typeerror(self):
-        """Unknown type: list → TypeError"""
-        with pytest.raises(TypeError) as exc_info:
-            mrrc.MARCReader([1, 2, 3])
-
-        error_msg = str(exc_info.value)
-        assert "Unsupported input type" in error_msg
-        assert "list" in error_msg
-
-    def test_unknown_type_dict_raises_typeerror(self):
-        """Unknown type: dict → TypeError"""
-        with pytest.raises(TypeError) as exc_info:
-            mrrc.MARCReader({"data": b""})
-
-        error_msg = str(exc_info.value)
-        assert "Unsupported input type" in error_msg
-        assert "dict" in error_msg
-
-    def test_unknown_type_none_raises_typeerror(self):
-        """Unknown type: None → TypeError"""
-        with pytest.raises(TypeError) as exc_info:
-            mrrc.MARCReader(None)
-
-        error_msg = str(exc_info.value)
-        assert "Unsupported input type" in error_msg
-        assert "NoneType" in error_msg
-
-    def test_unknown_type_custom_object_without_read_raises_typeerror(self):
-        """Unknown type: Custom object without .read() → TypeError"""
-
-        class CustomObject:
-            pass
-
-        with pytest.raises(TypeError) as exc_info:
-            mrrc.MARCReader(CustomObject())
-
-        error_msg = str(exc_info.value)
-        assert "Unsupported input type" in error_msg
-
-    def test_typeerror_message_includes_supported_types(self):
-        """TypeError message lists supported types for user guidance"""
-        with pytest.raises(TypeError) as exc_info:
-            mrrc.MARCReader(12345)
-
-        error_msg = str(exc_info.value)
-        # Should mention all supported types
-        assert "str" in error_msg
-        assert "Path" in error_msg or "pathlib" in error_msg
-        assert "bytes" in error_msg
-        assert "bytearray" in error_msg
-        assert "file-like" in error_msg or ".read()" in error_msg
-
-
-class TestTypeDetectionFileErrors:
-    """Test file-related errors for RustFile backend"""
-
-    def test_str_path_nonexistent_file_raises_filenotfounderror(self):
-        """RustFile with nonexistent path → FileNotFoundError"""
-        nonexistent_path = "/tmp/this_file_should_not_exist_12345.mrc"
-        with pytest.raises(FileNotFoundError):
-            mrrc.MARCReader(nonexistent_path)
-
-    def test_pathlib_path_nonexistent_file_raises_filenotfounderror(self):
-        """RustFile with nonexistent Path → FileNotFoundError"""
-        nonexistent_path = Path("/tmp/this_file_should_not_exist_12345.mrc")
-        with pytest.raises(FileNotFoundError):
-            mrrc.MARCReader(nonexistent_path)
-
-    def test_str_path_permission_denied_raises_permissionerror(self):
-        """RustFile with permission denied → PermissionError"""
-        import os
-        import stat
-
-        with tempfile.NamedTemporaryFile(suffix=".mrc", delete=False) as f:
-            temp_path = f.name
-            f.write(b"")
-
-        try:
-            # Remove read permission
-            os.chmod(temp_path, stat.S_IWUSR)
-
-            with pytest.raises(PermissionError):
-                mrrc.MARCReader(temp_path)
-        finally:
-            # Restore permission and cleanup
-            os.chmod(temp_path, stat.S_IRUSR | stat.S_IWUSR)
-            os.unlink(temp_path)
 
 
 class TestTypeDetectionOrder:

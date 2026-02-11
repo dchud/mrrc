@@ -11,7 +11,7 @@ Reference: https://gitlab.com/pymarc/pymarc/-/tree/main/test
 """
 
 import pytest
-from mrrc import MARCReader, MARCWriter, Record, Field, Leader, Subfield
+from mrrc import MARCReader, Record, Field, Leader
 import io
 
 

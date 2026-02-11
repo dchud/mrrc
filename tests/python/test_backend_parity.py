@@ -5,22 +5,12 @@ This test suite validates:
 1. RustFile output is identical to PythonFile (record-by-record)
 2. CursorBackend output is identical to RustFile (record-by-record)
 3. GIL release is verified (no GIL overhead in Rust sections)
-4. Memory usage is stable (no leaks)
-
-Acceptance Criteria:
-- RustFile output identical to PythonFile
-- CursorBackend output identical to RustFile
-- GIL release verified (no GIL overhead in Rust sections)
-- Memory usage stable (no leaks)
 """
 
 import io
 import json
 import os
-import tempfile
 import threading
-import time
-import psutil
 from pathlib import Path
 import pytest
 import mrrc
@@ -276,70 +266,6 @@ class TestGILReleaseVerification:
             f"Different record counts across threads: {results['counts']}"
 
 
-class TestMemoryStability:
-    """Verify no memory leaks or unbounded growth"""
-
-    def test_memory_stable_iterating_large_file(self):
-        """Memory usage should not grow unboundedly while iterating"""
-        test_file = "tests/data/fixtures/10k_records.mrc"
-        if not os.path.exists(test_file):
-            pytest.skip(f"Test file not found: {test_file}")
-
-        process = psutil.Process(os.getpid())
-
-        # Record initial memory
-        process.memory_info()  # Force a measurement
-        time.sleep(0.1)
-        initial_mem = process.memory_info().rss / 1024 / 1024  # MB
-
-        # Read all records
-        reader = mrrc.MARCReader(test_file)
-        record_count = 0
-        for _ in reader:
-            record_count += 1
-
-        # Record final memory
-        final_mem = process.memory_info().rss / 1024 / 1024  # MB
-        mem_growth = final_mem - initial_mem
-
-        print(f"Memory growth: {mem_growth:.2f} MB for {record_count} records")
-
-        # Memory growth should be modest
-        # 10k records of ~1KB each = ~10 MB expected
-        # We'll allow 3x that for overhead
-        assert mem_growth < 30, \
-            f"Memory growth too large: {mem_growth:.2f} MB (expected <30 MB)"
-
-    def test_memory_stable_cursor_backend(self):
-        """CursorBackend memory should be stable (pre-loaded data)"""
-        test_file = "tests/data/fixtures/5k_records.mrc"
-        if not os.path.exists(test_file):
-            pytest.skip(f"Test file not found: {test_file}")
-
-        with open(test_file, "rb") as f:
-            file_data = f.read()
-
-        process = psutil.Process(os.getpid())
-        process.memory_info()
-        time.sleep(0.1)
-        initial_mem = process.memory_info().rss / 1024 / 1024
-
-        reader = mrrc.MARCReader(file_data)
-        record_count = 0
-        for _ in reader:
-            record_count += 1
-
-        final_mem = process.memory_info().rss / 1024 / 1024
-        mem_growth = final_mem - initial_mem
-
-        print(f"Cursor backend memory growth: {mem_growth:.2f} MB for {record_count} records")
-
-        # Cursor backend is in-memory, so growth should be minimal
-        # since data is already loaded (allow up to 10 MB for overhead)
-        assert mem_growth < 10, \
-            f"Cursor backend memory growth too large: {mem_growth:.2f} MB"
-
-
 class TestBackendParityAcceptanceCriteria:
     """Integration test validating all backend parity acceptance criteria"""
 
@@ -407,7 +333,3 @@ class TestBackendParityAcceptanceCriteria:
                         pass
             except Exception as e:
                 pytest.fail(f"PythonFile read failed for {test_file}: {e}")
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

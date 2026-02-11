@@ -182,20 +182,20 @@ class Field:
         try:
             values = self._inner.subfields_by_code(code)
             return values[0] if values else default
-        except:
+        except Exception:
             return default
-    
+
     def __contains__(self, code: str) -> bool:
         """Check if subfield code exists in field."""
         try:
             values = self._inner.subfields_by_code(code)
             return len(values) > 0
-        except:
+        except Exception:
             return False
-    
+
     def get_subfields(self, *codes: str) -> List[str]:
         """Get all subfield values for given codes (pymarc compatibility).
-        
+
         Example:
             field.get_subfields('a', 'b')  # Get all 'a' and 'b' subfield values
         """
@@ -203,23 +203,23 @@ class Field:
         for code in codes:
             try:
                 result.extend(self._inner.subfields_by_code(code))
-            except:
+            except Exception:
                 pass
         return result
-    
+
     def delete_subfield(self, code: str) -> Optional[str]:
         """Delete first subfield with given code and return its value."""
         try:
             values = self._inner.subfields_by_code(code)
             if not values:
                 return None
-            
+
             deleted_value = values[0]
-            
+
             # Find and remove the first occurrence
             subfields = self._inner.subfields()
             code_char = code[0] if code else ''
-            
+
             # Create a new list without the first occurrence
             new_subfields = []
             found = False
@@ -228,13 +228,13 @@ class Field:
                     found = True
                     continue
                 new_subfields.append(sf)
-            
+
             # Unfortunately, we can't easily replace subfields in the current API
             # This is a limitation we'll note
             return deleted_value
-        except:
+        except Exception:
             return None
-    
+
     def subfields_as_dict(self) -> dict:
         """Return subfields as dictionary mapping code to list of values."""
         result = {}
@@ -244,7 +244,7 @@ class Field:
                 if code not in result:
                     result[code] = []
                 result[code].append(sf.value)
-        except:
+        except Exception:
             pass
         return result
     

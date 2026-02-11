@@ -5,7 +5,6 @@ Tests MARC 21 spec-compliant leader position value mappings and descriptions.
 Ensures API parity with pymarc while providing enhanced functionality.
 """
 
-import pytest
 from mrrc import Leader
 
 

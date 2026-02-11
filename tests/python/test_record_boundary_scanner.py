@@ -12,8 +12,7 @@ boundary detection using 0x1D (record terminator) delimiters. These tests verify
 """
 
 import pytest
-from pathlib import Path
-from mrrc import Record, MARCReader, RecordBoundaryScanner
+from mrrc import MARCReader, RecordBoundaryScanner
 
 
 @pytest.fixture
@@ -87,7 +86,7 @@ class TestBoundaryScannerRealData:
         # All boundaries should end before file end
         for offset, length in boundaries:
             assert offset + length <= len(simple_book_bytes), \
-                f"Record boundary exceeds file size"
+                "Record boundary exceeds file size"
 
     def test_scan_multi_records(self, multi_records_bytes):
         """Scan multi_records.mrc and verify record count."""
@@ -278,7 +277,7 @@ class TestBoundaryScannerIntegration:
         assert len(boundaries) > 0, "Boundary scan should find record boundaries"
         # Boundary scan typically finds >= sequential parser (may find partial records)
         assert len(boundaries) >= len(sequential_records), \
-            f"Boundary scan should find >= complete records"
+            "Boundary scan should find >= complete records"
 
 
 class TestBoundaryScannerAcceptanceCriteria:

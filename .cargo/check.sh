@@ -47,8 +47,8 @@ echo "=== Maturin Python extension build ==="
 uv run maturin develop
 
 echo ""
-echo "=== Rust library tests ==="
-cargo test --lib --package mrrc -q
+echo "=== Rust library + integration tests ==="
+cargo test --lib --tests --package mrrc -q
 
 echo ""
 echo "=== Rust doc tests ==="
@@ -57,6 +57,10 @@ cargo test --doc --package mrrc -q
 echo ""
 echo "=== Python tests (core functionality, excludes benchmarks) ==="
 uv run python -m pytest tests/python/ -m "not benchmark" -q
+
+echo ""
+echo "=== Python lint (ruff) ==="
+uv run ruff check mrrc/ tests/python/
 
 # ASAN memory safety checks (optional, nightly feature)
 if [ "$MEMORY_CHECKS" = true ]; then

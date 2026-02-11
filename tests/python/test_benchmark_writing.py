@@ -254,7 +254,7 @@ class TestBackendComparison:
          # RustFile should be comparable to PythonFile (no regression)
          # Note: exact performance depends on system I/O, so we just verify no major regression
          speedup = median_pythonfile / median_rustfile
-         print(f"\n1k records benchmark:")
+         print("\n1k records benchmark:")
          print(f"  PythonFile (BytesIO): {median_pythonfile*1000:.2f}ms")
          print(f"  RustFile (temp file): {median_rustfile*1000:.2f}ms")
          print(f"  Speedup ratio: {speedup:.2f}x")

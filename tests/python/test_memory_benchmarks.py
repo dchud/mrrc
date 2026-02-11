@@ -7,9 +7,8 @@ memory efficiency of the Python wrapper.
 
 import pytest
 import io
-import sys
 import tracemalloc
-from mrrc import MARCReader, MARCWriter, Record, Field
+from mrrc import MARCReader, Record, Field
 
 
 class TestMemoryBenchmarks:

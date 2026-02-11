@@ -11,12 +11,10 @@ IMPORTANT: These benchmarks test both BytesIO and file-path backends.
 
 import pytest
 import io
-import time
 import tempfile
 import shutil
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-from multiprocessing import Pool, cpu_count
 from mrrc import MARCReader
 
 
@@ -30,7 +28,7 @@ class TestPythonParallelBenchmarks:
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             count = 0
-            while record := reader.read_record():
+            while reader.read_record() is not None:
                 count += 1
             return count
         
@@ -45,7 +43,7 @@ class TestPythonParallelBenchmarks:
             for _ in range(2):
                 data = io.BytesIO(fixture_1k)
                 reader = MARCReader(data)
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     total += 1
             return total
         
@@ -60,7 +58,7 @@ class TestPythonParallelBenchmarks:
             for _ in range(4):
                 data = io.BytesIO(fixture_1k)
                 reader = MARCReader(data)
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     total += 1
             return total
         
@@ -74,7 +72,7 @@ class TestPythonParallelBenchmarks:
             def read_single_file(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -92,7 +90,7 @@ class TestPythonParallelBenchmarks:
             def read_single_file(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -113,7 +111,7 @@ class TestPythonParallelBenchmarks:
             data = io.BytesIO(fixture_10k)
             reader = MARCReader(data)
             count = 0
-            while record := reader.read_record():
+            while reader.read_record() is not None:
                 count += 1
             return count
         
@@ -128,7 +126,7 @@ class TestPythonParallelBenchmarks:
             for _ in range(2):
                 data = io.BytesIO(fixture_10k)
                 reader = MARCReader(data)
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     total += 1
             return total
         
@@ -142,7 +140,7 @@ class TestPythonParallelBenchmarks:
             def read_single_file(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -160,7 +158,7 @@ class TestPythonParallelBenchmarks:
             def read_single_file(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -193,7 +191,7 @@ class TestParallelSummary:
             def read_single_file(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -218,7 +216,7 @@ class TestParallelSummary:
             def read_single_file(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -243,11 +241,11 @@ class TestParallelWithFieldAccess:
             data = io.BytesIO(fixture_10k)
             reader = MARCReader(data)
             titles = []
-            while record := reader.read_record():
+            while (record := reader.read_record()) is not None:
                 title = record.title() or "Unknown"
                 titles.append(title)
             return len(titles)
-        
+
         result = benchmark(read_with_extraction)
         assert result == 10000
     
@@ -258,11 +256,11 @@ class TestParallelWithFieldAccess:
             def extract_titles(data):
                 reader = MARCReader(io.BytesIO(data))
                 titles = []
-                while record := reader.read_record():
+                while (record := reader.read_record()) is not None:
                     title = record.title() or "Unknown"
                     titles.append(title)
                 return len(titles)
-            
+
             with ThreadPoolExecutor(max_workers=2) as executor:
                 results = list(executor.map(extract_titles, [fixture_10k, fixture_10k]))
             return sum(results)
@@ -277,11 +275,11 @@ class TestParallelWithFieldAccess:
             def extract_titles(data):
                 reader = MARCReader(io.BytesIO(data))
                 titles = []
-                while record := reader.read_record():
+                while (record := reader.read_record()) is not None:
                     title = record.title() or "Unknown"
                     titles.append(title)
                 return len(titles)
-            
+
             with ThreadPoolExecutor(max_workers=4) as executor:
                 results = list(executor.map(
                     extract_titles,
@@ -303,7 +301,7 @@ class TestIndividualOperationParallel:
             def read_single_file(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -321,12 +319,12 @@ class TestIndividualOperationParallel:
             def read_and_extract(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while (record := reader.read_record()) is not None:
                     _ = record.title()
                     _ = record.get_fields("100")
                     count += 1
                 return count
-            
+
             with ThreadPoolExecutor(max_workers=4) as executor:
                 results = list(executor.map(read_and_extract, [fixture_1k] * 4))
             return sum(results)
@@ -341,7 +339,7 @@ class TestIndividualOperationParallel:
             def read_single_file(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -359,12 +357,12 @@ class TestIndividualOperationParallel:
             def read_and_extract(data):
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
-                while record := reader.read_record():
+                while (record := reader.read_record()) is not None:
                     _ = record.title()
                     _ = record.get_fields("100")
                     count += 1
                 return count
-            
+
             with ThreadPoolExecutor(max_workers=4) as executor:
                 results = list(executor.map(read_and_extract, [fixture_10k] * 4))
             return sum(results)
@@ -407,7 +405,7 @@ class TestFileBatchParallelBenchmarks:
         def read_file():
             reader = MARCReader(filepath)
             count = 0
-            while record := reader.read_record():
+            while reader.read_record() is not None:
                 count += 1
             return count
         
@@ -423,7 +421,7 @@ class TestFileBatchParallelBenchmarks:
             total = 0
             for filepath in filepaths:
                 reader = MARCReader(filepath)
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     total += 1
             return total
         
@@ -439,7 +437,7 @@ class TestFileBatchParallelBenchmarks:
             total = 0
             for filepath in filepaths:
                 reader = MARCReader(filepath)
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     total += 1
             return total
         
@@ -455,7 +453,7 @@ class TestFileBatchParallelBenchmarks:
             def read_file(filepath):
                 reader = MARCReader(filepath)
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -479,7 +477,7 @@ class TestFileBatchParallelBenchmarks:
             def read_file(filepath):
                 reader = MARCReader(filepath)
                 count = 0
-                while record := reader.read_record():
+                while reader.read_record() is not None:
                     count += 1
                 return count
             
@@ -502,7 +500,7 @@ class TestFileBatchParallelBenchmarks:
             def process_file(filepath):
                 reader = MARCReader(filepath)
                 count = 0
-                while record := reader.read_record():
+                while (record := reader.read_record()) is not None:
                     _ = record.title()
                     _ = record.get_fields("100")
                     count += 1

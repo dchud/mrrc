@@ -21,11 +21,9 @@ Implementation Verification:
 """
 
 import io
-import sys
 import gc
 import pytest
 from mrrc import MARCReader, MARCWriter
-from pathlib import Path
 
 
 class TestQueueCapacityTracking:
@@ -61,7 +59,7 @@ class TestQueueCapacityTracking:
         reader = MARCReader(io.BytesIO(fixture_small))
         
         # Consume all
-        records = list(reader)
+        list(reader)
         
         # Queue should be empty (all records delivered)
         # We can't directly inspect, but another __next__() would fail cleanly
@@ -226,7 +224,7 @@ class TestBoundsOnMalformedInput:
         try:
             for record in reader:
                 pass
-        except Exception as e:
+        except Exception:
             error_count += 1
         
         # Should have hit an error
@@ -279,7 +277,6 @@ class TestBatchSizeBoundaryConditions:
     def test_batch_boundary_1_record(self, fixture_small):
         """File with 1 record should work"""
         # Create minimal single-record file
-        from mrrc import MARCWriter
         
         reader = MARCReader(io.BytesIO(fixture_small))
         rec = next(reader)
@@ -297,7 +294,6 @@ class TestBatchSizeBoundaryConditions:
 
     def test_batch_boundary_exact_100(self, fixture_1k):
         """Read exactly 100 records (1 batch)"""
-        from mrrc import MARCWriter
         
         reader = MARCReader(io.BytesIO(fixture_1k))
         records = []
@@ -310,7 +306,6 @@ class TestBatchSizeBoundaryConditions:
 
     def test_batch_boundary_101(self, fixture_1k):
         """Read 101 records (1 batch + 1)"""
-        from mrrc import MARCWriter
         
         reader = MARCReader(io.BytesIO(fixture_1k))
         records = []

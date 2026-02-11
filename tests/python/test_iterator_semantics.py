@@ -23,9 +23,6 @@ Iterator Protocol Compliance:
 """
 
 import io
-import sys
-import threading
-import time
 import pytest
 from mrrc import MARCReader
 
@@ -353,7 +350,7 @@ class TestErrorRecovery:
         try:
             for record in reader:
                 records.append(record)
-        except Exception as e:
+        except Exception:
             error_count += 1
         
         # After error, subsequent next() calls should behave deterministically

@@ -10,7 +10,6 @@ import io
 import time
 import tempfile
 import os
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from mrrc import MARCReader, MARCWriter
 
@@ -127,7 +126,7 @@ class TestSequentialBaseline:
          avg_rustfile = sum(times_rustfile) / len(times_rustfile)
          ratio = avg_bytesio / avg_rustfile
          
-         print(f"\nSequential Comparison (10k records):")
+         print("\nSequential Comparison (10k records):")
          print(f"  BytesIO:  {avg_bytesio*1000:.2f}ms")
          print(f"  RustFile: {avg_rustfile*1000:.2f}ms")
          print(f"  Ratio:    {ratio:.2f}x (1.0 = same speed)")
@@ -213,11 +212,11 @@ class TestConcurrentPerformance:
          avg_concurrent = sum(times_concurrent) / len(times_concurrent)
          speedup = avg_sequential / avg_concurrent
          
-         print(f"\nConcurrent Performance (2 threads × 5k records each):")
+         print("\nConcurrent Performance (2 threads × 5k records each):")
          print(f"  Sequential:  {avg_sequential*1000:.2f}ms")
          print(f"  Concurrent:  {avg_concurrent*1000:.2f}ms")
          print(f"  Ratio:       {speedup:.2f}x")
-         print(f"  (Disk I/O contention is expected; GIL release enabled non-blocking execution)")
+         print("  (Disk I/O contention is expected; GIL release enabled non-blocking execution)")
          
          # The main validation is that threads can run concurrently without deadlock
          # Disk I/O performance depends on storage characteristics
@@ -275,11 +274,11 @@ class TestConcurrentPerformance:
              if os.path.exists(temp_path):
                  os.unlink(temp_path)
          
-         print(f"\nConcurrent Execution (4 threads × 5k records each):")
+         print("\nConcurrent Execution (4 threads × 5k records each):")
          print(f"  Sequential:  {sequential_time*1000:.2f}ms (1 file)")
          print(f"  Concurrent:  {concurrent_time*1000:.2f}ms (4 files in parallel)")
          print(f"  Ratio:       {ratio:.2f}x")
-         print(f"  (GIL release validates non-blocking capability)")
+         print("  (GIL release validates non-blocking capability)")
          
          # Just verify all threads completed without deadlock
          assert concurrent_time > 0, "Concurrent execution failed"
@@ -307,7 +306,7 @@ class TestThreePhasePatternOverhead:
              times.append(elapsed)
          
          avg_time = sum(times) / len(times)
-         print(f"\nGIL Release Pattern Overhead (1k records):")
+         print("\nGIL Release Pattern Overhead (1k records):")
          print(f"  Average write time: {avg_time*1000:.2f}ms")
          print(f"  Time per record: {(avg_time/len(records))*1000000:.2f}µs")
          
@@ -367,7 +366,7 @@ class TestThreePhasePatternOverhead:
          
          avg_disk = sum(times_disk) / len(times_disk)
          
-         print(f"\nI/O Overhead Analysis (1k records):")
+         print("\nI/O Overhead Analysis (1k records):")
          print(f"  BytesIO (memory): {avg_mem*1000:.2f}ms")
          print(f"  RustFile (disk):  {avg_disk*1000:.2f}ms")
          print(f"  Disk overhead:    {(avg_disk - avg_mem)*1000:.2f}ms ({((avg_disk/avg_mem - 1)*100):.1f}%)")

@@ -6,7 +6,6 @@ Validates that read_batch() correctly returns batches of records
 with proper capacity limit enforcement.
 """
 
-import pytest
 from mrrc import MARCReader
 import io
 

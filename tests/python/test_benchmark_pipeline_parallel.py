@@ -15,9 +15,6 @@ Expected performance: 2.0x speedup (2 threads), 3.74x (4 threads)
 """
 
 import pytest
-import tempfile
-import shutil
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from mrrc import ProducerConsumerPipeline
 

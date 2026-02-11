@@ -579,8 +579,8 @@ class TestFieldCreation:
         subject_field.add_subfield('a', 'Python')
         title_field = Field('245', '1', '0')
         title_field.add_subfield('a', 'Title')
-        assert subject_field.is_subject_field() == True
-        assert title_field.is_subject_field() == False
+        assert subject_field.is_subject_field()
+        assert not title_field.is_subject_field()
 
 
 class TestRecordAdvanced:

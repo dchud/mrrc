@@ -42,7 +42,7 @@ class TestPathlibGilRelease:
         for path in paths:
             assert isinstance(path, Path), "Fixture should return Path objects"
             reader = MARCReader(path)  # Pass Path object directly
-            while record := reader.read_record():
+            while reader.read_record() is not None:
                 total += 1
 
         assert total == 20000
@@ -63,14 +63,14 @@ class TestPathlibGilRelease:
         def read_with_path(path: Path) -> int:
             reader = MARCReader(path)
             count = 0
-            while record := reader.read_record():
+            while reader.read_record() is not None:
                 count += 1
             return count
 
         def read_with_str(path: str) -> int:
             reader = MARCReader(path)
             count = 0
-            while record := reader.read_record():
+            while reader.read_record() is not None:
                 count += 1
             return count
 
@@ -102,7 +102,7 @@ class TestPathlibGilRelease:
 
         str_speedup = str_sequential / str_parallel
 
-        print(f"\nPathlib.Path vs str Threading Comparison:")
+        print("\nPathlib.Path vs str Threading Comparison:")
         print(f"  pathlib.Path: {path_sequential:.3f}s seq, {path_parallel:.3f}s par, {path_speedup:.2f}x speedup")
         print(f"  str:          {str_sequential:.3f}s seq, {str_parallel:.3f}s par, {str_speedup:.2f}x speedup")
 

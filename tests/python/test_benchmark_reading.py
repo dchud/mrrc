@@ -19,7 +19,7 @@ class TestReadingBenchmarks:
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             records = []
-            while record := reader.read_record():
+            while (record := reader.read_record()) is not None:
                 records.append(record)
             return records
         
@@ -33,10 +33,10 @@ class TestReadingBenchmarks:
             data = io.BytesIO(fixture_10k)
             reader = MARCReader(data)
             records = []
-            while record := reader.read_record():
+            while (record := reader.read_record()) is not None:
                 records.append(record)
             return records
-        
+
         result = benchmark(read_all)
         assert len(result) == 10000
     
@@ -47,7 +47,7 @@ class TestReadingBenchmarks:
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             titles = []
-            while record := reader.read_record():
+            while (record := reader.read_record()) is not None:
                 # Try to get title from field 245
                 title = record.title() or "Unknown"
                 titles.append(title)
@@ -63,11 +63,11 @@ class TestReadingBenchmarks:
             data = io.BytesIO(fixture_10k)
             reader = MARCReader(data)
             titles = []
-            while record := reader.read_record():
+            while (record := reader.read_record()) is not None:
                 title = record.title() or "Unknown"
                 titles.append(title)
             return titles
-        
+
         result = benchmark(read_with_extraction)
         assert len(result) == 10000
     
@@ -82,7 +82,7 @@ class TestIterationBenchmarks:
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             count = 0
-            while record := reader.read_record():
+            while reader.read_record() is not None:
                 count += 1
             return count
         
@@ -96,9 +96,9 @@ class TestIterationBenchmarks:
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             records = []
-            while record := reader.read_record():
+            while (record := reader.read_record()) is not None:
                 records.append(record)
             return records
-        
+
         result = benchmark(collect_all)
         assert len(result) == 1000

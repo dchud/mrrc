@@ -9,7 +9,6 @@ Demonstrates GIL release on the write-side and validates:
 
 import pytest
 import io
-import time
 import tempfile
 import os
 from pathlib import Path

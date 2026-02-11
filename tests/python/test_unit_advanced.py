@@ -4,7 +4,7 @@ Tests for edge cases, format conversions, and comprehensive API coverage.
 """
 
 import pytest
-from mrrc import MARCReader, MARCWriter, Record, Field, Leader, Subfield
+from mrrc import MARCReader, MARCWriter, Record, Field, Leader
 import io
 
 

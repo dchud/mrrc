@@ -1,6 +1,6 @@
 """Type stubs for the mrrc native extension module."""
 
-from typing import Iterator, Optional, List, Union, BinaryIO, Any
+from typing import Iterator, Optional, List, BinaryIO, Any
 
 # =============================================================================
 # Core Data Types

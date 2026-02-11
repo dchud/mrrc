@@ -12,9 +12,7 @@ These tests verify:
 """
 
 import pytest
-import json
-from pathlib import Path
-from mrrc import MARCReader, Record, RecordBoundaryScanner
+from mrrc import MARCReader, RecordBoundaryScanner
 from mrrc.rayon_parser_pool import parse_batch_parallel
 
 
