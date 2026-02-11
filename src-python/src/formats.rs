@@ -245,7 +245,12 @@ pub fn mods_to_record(xml_str: &str) -> PyResult<PyRecord> {
 #[pyfunction]
 pub fn mods_collection_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
     mods::mods_xml_to_records(xml_str)
-        .map(|records| records.into_iter().map(|inner| PyRecord { inner }).collect())
+        .map(|records| {
+            records
+                .into_iter()
+                .map(|inner| PyRecord { inner })
+                .collect()
+        })
         .map_err(marc_error_to_py_err)
 }
 

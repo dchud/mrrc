@@ -480,15 +480,15 @@ fn read_text(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<String> {
             Ok(Event::Text(e)) => {
                 text.push_str(
                     &e.unescape()
-                        .map_err(|err| MarcError::ParseError(format!("XML unescape: {err}")))?
+                        .map_err(|err| MarcError::ParseError(format!("XML unescape: {err}")))?,
                 );
-            }
+            },
             Ok(Event::CData(e)) => {
                 text.push_str(&String::from_utf8_lossy(&e));
-            }
+            },
             Ok(Event::End(_) | Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -506,10 +506,10 @@ fn skip_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<()> {
                 if depth == 0 {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML skip: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -559,10 +559,10 @@ fn next_start(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<Option<St
                 let info = StartInfo::from_event(e);
                 buf.clear();
                 return Ok(Some(info));
-            }
+            },
             Ok(Event::End(_) | Event::Eof) => return Ok(None),
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -591,14 +591,12 @@ pub fn mods_xml_to_record(xml: &str) -> Result<Record> {
                     buf.clear();
                     return parse_mods_element(&mut reader, &mut buf);
                 }
-            }
+            },
             Ok(Event::Eof) => {
-                return Err(MarcError::ParseError(
-                    "No <mods> element found".to_string(),
-                ));
-            }
+                return Err(MarcError::ParseError("No <mods> element found".to_string()));
+            },
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -624,10 +622,10 @@ pub fn mods_xml_to_records(xml: &str) -> Result<Vec<Record>> {
                     records.push(parse_mods_element(&mut reader, &mut buf)?);
                 }
                 // else modsCollection — continue into children
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -669,7 +667,7 @@ fn parse_mods_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<R
                     b"originInfo" => parse_origin_info(reader, buf, &mut record)?,
                     b"physicalDescription" => {
                         parse_physical_description(reader, buf, &mut record)?;
-                    }
+                    },
                     b"abstract" => parse_abstract(reader, buf, &mut record)?,
                     b"note" => parse_note(reader, buf, &mut record)?,
                     b"subject" => parse_subject(reader, buf, &mut record)?,
@@ -678,27 +676,27 @@ fn parse_mods_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<R
                     b"genre" => parse_genre(reader, buf, &mut record)?,
                     b"classification" => {
                         parse_classification(reader, buf, &info, &mut record)?;
-                    }
+                    },
                     b"location" => parse_location(reader, buf, &mut record)?,
                     b"relatedItem" => parse_related_item(reader, buf, &info, &mut record)?,
                     b"recordInfo" => parse_record_info(reader, buf, &mut record)?,
                     b"accessCondition" => {
                         parse_access_condition(reader, buf, &info, &mut record)?;
-                    }
+                    },
                     b"tableOfContents" => parse_table_of_contents(reader, buf, &mut record)?,
                     b"targetAudience" => parse_target_audience(reader, buf, &mut record)?,
                     _ => skip_element(reader, buf)?,
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"mods" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -719,11 +717,7 @@ fn parse_title_info(
         _ => "245",
     };
 
-    let (ind1, ind2) = if tag == "245" {
-        ('0', '0')
-    } else {
-        ('1', ' ')
-    };
+    let (ind1, ind2) = if tag == "245" { ('0', '0') } else { ('1', ' ') };
 
     let mut field = Field::new(tag.to_string(), ind1, ind2);
     let mut has_content = false;
@@ -740,43 +734,43 @@ fn parse_title_info(
                             field.add_subfield('a', text);
                             has_content = true;
                         }
-                    }
+                    },
                     b"subTitle" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
                             field.add_subfield('b', text);
                             has_content = true;
                         }
-                    }
+                    },
                     b"partNumber" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
                             field.add_subfield('n', text);
                             has_content = true;
                         }
-                    }
+                    },
                     b"partName" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
                             field.add_subfield('p', text);
                             has_content = true;
                         }
-                    }
+                    },
                     b"nonSort" => {
                         let _text = read_text(reader, buf)?;
-                    }
+                    },
                     _ => skip_element(reader, buf)?,
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"titleInfo" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -819,7 +813,7 @@ fn parse_name(
                                 name_parts.push(text);
                             }
                         }
-                    }
+                    },
                     b"role" => {
                         // Read inside <role> to find <roleTerm>
                         while let Some(role_child) = next_start(reader, buf)? {
@@ -832,19 +826,19 @@ fn parse_name(
                                 skip_element(reader, buf)?;
                             }
                         }
-                    }
+                    },
                     _ => skip_element(reader, buf)?,
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"name" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -864,7 +858,7 @@ fn parse_name(
             } else {
                 ("710", '2')
             }
-        }
+        },
         Some("conference") => {
             if is_creator && !*has_111 {
                 *has_111 = true;
@@ -872,7 +866,7 @@ fn parse_name(
             } else {
                 ("711", '2')
             }
-        }
+        },
         // "personal" and unspecified types default to personal name
         _ => {
             if is_creator && !*has_100 {
@@ -881,7 +875,7 @@ fn parse_name(
             } else {
                 ("700", '1')
             }
-        }
+        },
     };
 
     let mut field = Field::new(tag.to_string(), ind1, ' ');
@@ -938,43 +932,43 @@ fn parse_origin_info(
                                 skip_element(reader, buf)?;
                             }
                         }
-                    }
+                    },
                     b"publisher" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
                             publisher = Some(text);
                         }
-                    }
+                    },
                     b"dateIssued" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
                             date_issued = Some(text);
                         }
-                    }
+                    },
                     b"dateCreated" => {
                         let text = read_text(reader, buf)?;
                         if date_issued.is_none() && !text.is_empty() {
                             date_issued = Some(text);
                         }
-                    }
+                    },
                     b"edition" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
                             edition = Some(text);
                         }
-                    }
+                    },
                     _ => skip_element(reader, buf)?,
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"originInfo" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -1023,31 +1017,31 @@ fn parse_physical_description(
                         if !text.is_empty() {
                             extent = Some(text);
                         }
-                    }
+                    },
                     b"form" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
                             form = Some(text);
                         }
-                    }
+                    },
                     b"dimensions" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
                             dimensions = Some(text);
                         }
-                    }
+                    },
                     _ => skip_element(reader, buf)?,
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"physicalDescription" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -1085,11 +1079,7 @@ fn parse_abstract(
 }
 
 /// Parse `<note>` → 500 $a.
-fn parse_note(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
+fn parse_note(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Record) -> Result<()> {
     let text = read_text(reader, buf)?;
     if !text.is_empty() {
         let mut field = Field::new("500".to_string(), ' ', ' ');
@@ -1100,11 +1090,7 @@ fn parse_note(
 }
 
 /// Parse `<subject>` → 650/651 (topic/geographic).
-fn parse_subject(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
+fn parse_subject(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Record) -> Result<()> {
     loop {
         match reader.read_event_into(buf) {
             Ok(Event::Start(ref e)) => {
@@ -1118,7 +1104,7 @@ fn parse_subject(
                             field.add_subfield('a', text);
                             record.add_field(field);
                         }
-                    }
+                    },
                     b"geographic" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
@@ -1126,7 +1112,7 @@ fn parse_subject(
                             field.add_subfield('a', text);
                             record.add_field(field);
                         }
-                    }
+                    },
                     b"temporal" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
@@ -1134,19 +1120,19 @@ fn parse_subject(
                             field.add_subfield('y', text);
                             record.add_field(field);
                         }
-                    }
+                    },
                     _ => skip_element(reader, buf)?,
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"subject" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -1172,17 +1158,17 @@ fn parse_identifier(
             let mut field = Field::new("020".to_string(), ' ', ' ');
             field.add_subfield('a', text);
             record.add_field(field);
-        }
+        },
         Some("issn") => {
             let mut field = Field::new("022".to_string(), ' ', ' ');
             field.add_subfield('a', text);
             record.add_field(field);
-        }
+        },
         Some("lccn") => {
             let mut field = Field::new("010".to_string(), ' ', ' ');
             field.add_subfield('a', text);
             record.add_field(field);
-        }
+        },
         Some("doi" | "hdl" | "uri") => {
             let mut field = Field::new("024".to_string(), '7', ' ');
             field.add_subfield('a', text);
@@ -1190,15 +1176,15 @@ fn parse_identifier(
                 field.add_subfield('2', t.clone());
             }
             record.add_field(field);
-        }
+        },
         Some("local") => {
             record.add_control_field("001".to_string(), text);
-        }
+        },
         _ => {
             let mut field = Field::new("024".to_string(), '8', ' ');
             field.add_subfield('a', text);
             record.add_field(field);
-        }
+        },
     }
 
     Ok(())
@@ -1225,16 +1211,16 @@ fn parse_language(
                 } else {
                     skip_element(reader, buf)?;
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"language" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -1249,11 +1235,7 @@ fn parse_language(
 }
 
 /// Parse `<genre>` → 655 $a.
-fn parse_genre(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
+fn parse_genre(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Record) -> Result<()> {
     let text = read_text(reader, buf)?;
     if !text.is_empty() {
         let mut field = Field::new("655".to_string(), ' ', '7');
@@ -1282,12 +1264,12 @@ fn parse_classification(
             let mut field = Field::new("050".to_string(), ' ', '4');
             field.add_subfield('a', text);
             record.add_field(field);
-        }
+        },
         Some("ddc") => {
             let mut field = Field::new("082".to_string(), '0', '4');
             field.add_subfield('a', text);
             record.add_field(field);
-        }
+        },
         _ => {
             let mut field = Field::new("084".to_string(), ' ', ' ');
             field.add_subfield('a', text);
@@ -1295,7 +1277,7 @@ fn parse_classification(
                 field.add_subfield('2', auth);
             }
             record.add_field(field);
-        }
+        },
     }
 
     Ok(())
@@ -1320,7 +1302,7 @@ fn parse_location(
                             field.add_subfield('u', text);
                             record.add_field(field);
                         }
-                    }
+                    },
                     b"physicalLocation" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
@@ -1328,7 +1310,7 @@ fn parse_location(
                             field.add_subfield('a', text);
                             record.add_field(field);
                         }
-                    }
+                    },
                     b"shelfLocator" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
@@ -1336,19 +1318,19 @@ fn parse_location(
                             field.add_subfield('h', text);
                             record.add_field(field);
                         }
-                    }
+                    },
                     _ => skip_element(reader, buf)?,
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"location" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -1393,16 +1375,16 @@ fn parse_related_item(
                 } else {
                     skip_element(reader, buf)?;
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"relatedItem" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -1441,7 +1423,7 @@ fn parse_record_info(
                                 record.add_control_field("003".to_string(), src);
                             }
                         }
-                    }
+                    },
                     b"recordContentSource" => {
                         let text = read_text(reader, buf)?;
                         if !text.is_empty() {
@@ -1449,7 +1431,7 @@ fn parse_record_info(
                             field.add_subfield('a', text);
                             record.add_field(field);
                         }
-                    }
+                    },
                     b"languageOfCataloging" => {
                         while let Some(inner) = next_start(reader, buf)? {
                             if inner.local_name == b"languageTerm" {
@@ -1463,19 +1445,19 @@ fn parse_record_info(
                                 skip_element(reader, buf)?;
                             }
                         }
-                    }
+                    },
                     _ => skip_element(reader, buf)?,
                 }
-            }
+            },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
                 if local == b"recordInfo" {
                     break;
                 }
-            }
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
-            _ => {}
+            _ => {},
         }
         buf.clear();
     }
@@ -1878,7 +1860,10 @@ mod tests {
         </mods>"#;
         let record = mods_xml_to_record(xml).unwrap();
         let fields = record.get_fields("520").unwrap();
-        assert_eq!(fields[0].get_subfield('a'), Some("This is a test abstract."));
+        assert_eq!(
+            fields[0].get_subfield('a'),
+            Some("This is a test abstract.")
+        );
     }
 
     #[test]
@@ -1979,7 +1964,10 @@ mod tests {
         </mods>"#;
         let record = mods_xml_to_record(xml).unwrap();
         let fields = record.get_fields("856").unwrap();
-        assert_eq!(fields[0].get_subfield('u'), Some("https://example.com/resource"));
+        assert_eq!(
+            fields[0].get_subfield('u'),
+            Some("https://example.com/resource")
+        );
     }
 
     #[test]
