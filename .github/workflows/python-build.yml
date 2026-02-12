@@ -22,27 +22,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install maturin
-        run: pip install maturin
-      
-      - name: Debug Python detection
-        run: |
-          python --version
-          which python
-          python -c "import sys; print(f'Python executable: {sys.executable}')"
-      
       - uses: PyO3/maturin-action@v1
         with:
           manylinux: off
           args: --release --out dist -i python${{ matrix.python-version }}
-      
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -61,30 +52,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
           path: dist
-      
-      - name: Install wheel
+
+      - name: Install wheel and test dependencies
+        shell: bash
         run: |
-          pip install --upgrade pip
-          if ("${{ runner.os }}" -eq "Windows") {
-            $whl = Get-Item dist/*.whl | Select-Object -First 1
-            pip install $whl
-          } else {
-            pip install dist/*.whl
-          }
-        shell: pwsh
-      
-      - name: Install test dependencies
-        run: |
-          pip install pytest pytest-benchmark
-      
+          uv pip install --system dist/*.whl
+          uv pip install --system pytest pytest-benchmark
+
       - name: Run pytest (core tests, excludes benchmarks)
         run: |
           pytest tests/python/ -m "not benchmark" -v

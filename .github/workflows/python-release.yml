@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -25,7 +25,7 @@ jobs:
         with:
           manylinux: auto
           args: --release --out dist -i python${{ matrix.python-version }}
-      
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -107,25 +107,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: release-wheels-${{ matrix.os }}-${{ matrix.python-version }}
           path: dist
 
-      - name: Install wheel
+      - name: Install wheel and test dependencies
         shell: bash
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install dist/mrrc-*.whl
-
-      - name: Install test dependencies
-        shell: bash
-        run: |
-          python -m pip install pytest pytest-benchmark mypy pyright
+          uv pip install --system dist/mrrc-*.whl
+          uv pip install --system pytest pytest-benchmark mypy pyright
 
       - name: Run pytest (core tests, excludes benchmarks)
         run: |
@@ -151,7 +149,7 @@ jobs:
           echo "All $max_attempts attempts failed"
           exit 1
         shell: bash
-      
+
       - name: Run type checking
         run: |
           mypy tests/python/ --strict || true
@@ -173,7 +171,7 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-      
+
       - uses: actions/checkout@v4
         with:
           sparse-checkout: CHANGELOG.md
