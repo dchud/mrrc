@@ -54,6 +54,10 @@ Record Object
 
 ## Python Wrapper Architecture
 
+For a higher-level overview of how the Rust and Python code relate, how
+maturin and PyO3 fit in, and what builds what, see
+[Project Layout](project-layout.md).
+
 ### GIL Release Strategy: Three-Phase Model
 
 The Python wrapper implements a three-phase pattern for GIL management during every `read_record()` call:
