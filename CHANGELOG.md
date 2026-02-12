@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test suite audit**: Deleted 5 redundant/inert files from `src-python/tests/`, migrated 4 test files to `tests/python/` (backend parity, type detection, rayon parser pool, record boundary scanner), extracted 1 pipeline regression test. Deleted `src-python/tests/` entirely. Python test count: 364 → 433.
 - **Ruff lint compliance**: Fixed 76 ruff errors across `mrrc/` and `tests/python/` (bare except, unused imports/variables, walrus operator patterns, f-string placeholders, true/false comparisons). Added ruff check step to `check.sh`.
 - **Rust integration tests in check.sh**: Changed `cargo test --lib` to `cargo test --lib --tests`, adding 17 integration test files (bibframe, mods, field query, concurrent GIL, etc.) to the local CI script.
+- **CI workflow alignment with check.sh**: Closed gaps where CI was missing checks that check.sh runs locally. Added clippy on mrrc-python to `lint.yml` (was only linting mrrc core). Added ruff Python lint job to `lint.yml`. Fixed rustdoc scope from `--package mrrc` to `--all` to include PyO3 bindings. Changed `test.yml` from `--lib --bins` to `--lib --tests --package mrrc`, adding 15+ integration test files that were skipped in CI. Removed unused mypy/pyright install from `python-build.yml` test-wheels job. Upgraded `actions/cache` from v3 to v4 across all workflows.
 
 ### Fixed
 

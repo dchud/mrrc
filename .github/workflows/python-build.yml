@@ -83,7 +83,7 @@ jobs:
       
       - name: Install test dependencies
         run: |
-          pip install pytest pytest-benchmark mypy pyright
+          pip install pytest pytest-benchmark
       
       - name: Run pytest (core tests, excludes benchmarks)
         run: |
