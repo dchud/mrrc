@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Removed flaky timing assertion from `test_backend_comparison_1k`**: The benchmark's `assert median_rustfile < median_pythonfile * 2` failed intermittently on shared CI runners due to disk I/O variance. Timing data is still printed for informational purposes.
+
 ### Performance
 
 ### Documentation
