@@ -22,9 +22,7 @@ this Rust port performs as well, to a tolerance of trivial differences
   - Use Rust best practices to manage the environment and configuration
   - Use Rust best practices to store documentation and tests
 - **Environment:**
-  - We're using the free amp mode. We can't call `bash` directly, so use grep
-    and other tools instead
-  - Whenever possible, invoke the local virtual environment for Python tasks
+  - Whenever possible, use `uv` to invoke the local virtual environment for Python tasks
 
 ## Issue Tracking with bd (beads)
 
