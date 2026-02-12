@@ -130,6 +130,15 @@ impl ReaderBackend {
         )))
     }
 
+    /// Return the backend type as a string for diagnostics
+    pub fn backend_type(&self) -> &str {
+        match self {
+            ReaderBackend::RustFile(_) => "rust_file",
+            ReaderBackend::CursorBackend(_) => "cursor",
+            ReaderBackend::PythonFile(_) => "python_file",
+        }
+    }
+
     /// Read the next MARC record from this backend
     ///
     /// For RustFile and CursorBackend: reads directly without GIL

@@ -23,9 +23,8 @@ In benchmarks (see [methodology](benchmarks/results.md)):
     ```python
     from mrrc import MARCReader
 
-    with open("records.mrc", "rb") as f:
-        for record in MARCReader(f):
-            print(record.title())
+    for record in MARCReader("records.mrc"):
+        print(record.title())
     ```
 
 === "Rust"

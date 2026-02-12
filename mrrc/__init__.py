@@ -1110,6 +1110,11 @@ class MARCReader:
         wrapper._leader_modified = False
         return wrapper
     
+    @property
+    def backend_type(self) -> str:
+        """The backend type: ``"rust_file"``, ``"cursor"``, or ``"python_file"``."""
+        return self._inner.backend_type
+
     def read_record(self) -> Optional[Record]:
         """Read next record (pymarc compatibility)."""
         try:

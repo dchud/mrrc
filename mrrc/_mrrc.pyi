@@ -360,6 +360,14 @@ class MARCReader:
         """
         ...
     def records_read(self) -> int: ...
+    @property
+    def backend_type(self) -> str:
+        """The backend type: ``"rust_file"``, ``"cursor"``, or ``"python_file"``.
+
+        Raises:
+            RuntimeError: If the reader has been consumed.
+        """
+        ...
 
 class MARCWriter:
     """Writer for ISO 2709 binary MARC format.

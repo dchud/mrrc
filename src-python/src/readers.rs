@@ -267,6 +267,16 @@ impl PyMARCReader {
         }
     }
 
+    /// Return the backend type: "rust_file", "cursor", or "python_file"
+    #[getter]
+    fn backend_type(&self) -> PyResult<String> {
+        match &self.reader {
+            Some(ReaderType::Unified(reader)) => Ok(reader.backend_type().to_string()),
+            Some(ReaderType::Python(_)) => Ok("python_file".to_string()),
+            None => Err(pyo3::exceptions::PyRuntimeError::new_err("Reader consumed")),
+        }
+    }
+
     fn __repr__(&self) -> String {
         if self.reader.is_some() {
             "<MARCReader active>".to_string()

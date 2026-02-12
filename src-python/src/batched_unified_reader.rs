@@ -170,6 +170,11 @@ impl BatchedUnifiedReader {
         Ok(batch)
     }
 
+    /// Return the backend type as a string for diagnostics
+    pub fn backend_type(&self) -> &str {
+        self.unified_reader.backend_type()
+    }
+
     /// Check if the reader has reached EOF
     ///
     /// Returns true after EOF is set (idempotent).

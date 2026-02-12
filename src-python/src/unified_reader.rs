@@ -73,6 +73,14 @@ impl UnifiedReader {
         }
     }
 
+    /// Return the backend type as a string for diagnostics
+    pub fn backend_type(&self) -> &str {
+        match self {
+            UnifiedReader::Backend(backend) => backend.backend_type(),
+            UnifiedReader::Python(_) => "python_file",
+        }
+    }
+
     /// Read the next MARC record bytes from this unified reader
     ///
     /// For Backend variants (RustFile, CursorBackend):
