@@ -9,13 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`MARCReader.backend_type` property**: Exposes the reader's I/O backend as a string (`"rust_file"`, `"cursor"`, or `"python_file"`) for diagnostics and testing.
+
 ### Changed
+
+- **Replaced flaky GIL release test with deterministic verification** ([#3](https://github.com/dchud/mrrc/issues/3)): The `test_pathlib_path_threading_equivalent_to_str` test used timing-based speedup ratios to verify GIL release, which was unreliable on shared CI runners. Replaced with `TestBackendTypeRouting` (6 tests asserting each input type routes to the correct backend) and `TestPathlibThreadingCorrectness` (2 tests verifying parallel reads produce correct results without speedup assertions).
 
 ### Fixed
 
 ### Performance
 
 ### Documentation
+
+- Updated Python quick example in `docs/index.md` to use path string instead of file I/O wrapper, demonstrating the GIL-releasing code path.
 
 ## [0.7.2] - 2026-02-11
 
