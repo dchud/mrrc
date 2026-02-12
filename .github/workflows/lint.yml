@@ -107,16 +107,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install ruff
-        run: pip install "ruff>=0.1"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
 
       - name: Run ruff
-        run: ruff check mrrc/ tests/python/
+        run: uvx ruff check mrrc/ tests/python/
 
   security-audit:
     name: Security Audit
