@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Pre-push hook: run all checks before allowing push.
+# Activate with: git config core.hooksPath .githooks
+
+echo "Running pre-push checks (.cargo/check.sh)..."
+echo ""
+
+.cargo/check.sh

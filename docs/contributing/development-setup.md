@@ -59,8 +59,11 @@ uv run maturin build --release
 See [Testing](testing.md) for comprehensive test documentation.
 
 ```bash
-# Quick verification (all pre-push checks)
+# Full pre-push checks (fmt, clippy, docs, audit, build, tests, ruff)
 .cargo/check.sh
+
+# Quick checks (fmt, clippy, tests, ruff — skips docs, audit, maturin build)
+.cargo/check.sh --quick
 
 # Rust tests only
 cargo test
@@ -68,6 +71,23 @@ cargo test
 # Python tests only
 uv run python -m pytest tests/python/ -m "not benchmark"
 ```
+
+## Git Hooks
+
+The repository includes optional git hooks in `.githooks/` that enforce
+local checks before pushing. To enable them:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This activates a **pre-push hook** that runs `.cargo/check.sh` before
+every push, preventing code from reaching CI that would fail basic
+formatting, linting, or test checks. The push is blocked if any check
+fails (bypass with `git push --no-verify` if needed).
+
+This setting is local to your clone and does not affect other
+contributors.
 
 ## IDE Setup
 

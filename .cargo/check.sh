@@ -7,12 +7,17 @@ set -e
 
 # Options
 MEMORY_CHECKS=false
+QUICK=false
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --memory-checks)
             MEMORY_CHECKS=true
+            shift
+            ;;
+        --quick)
+            QUICK=true
             shift
             ;;
         *)
@@ -34,17 +39,19 @@ echo ""
 echo "=== Clippy check (mrrc-python) ==="
 cargo clippy --package mrrc-python --all-targets -- -D warnings
 
-echo ""
-echo "=== Documentation check ==="
-RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items
+if [ "$QUICK" = false ]; then
+    echo ""
+    echo "=== Documentation check ==="
+    RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items
 
-echo ""
-echo "=== Security audit ==="
-cargo audit
+    echo ""
+    echo "=== Security audit ==="
+    cargo audit
 
-echo ""
-echo "=== Maturin Python extension build ==="
-uv run maturin develop
+    echo ""
+    echo "=== Maturin Python extension build ==="
+    uv run maturin develop
+fi
 
 echo ""
 echo "=== Rust library + integration tests ==="
