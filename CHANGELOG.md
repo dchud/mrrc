@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Performance
+
+### Documentation
+
+## [0.7.2] - 2026-02-11
+
+### Added
+
 - **MODS XML read support**: `mods_to_record(xml_str)` and `mods_collection_to_records(xml_str)` parse MODS XML (single record or `<modsCollection>`) into MARC `Record` objects. Covers `titleInfo`, `name`, `subject`, `originInfo`, `physicalDescription`, `abstract`, `note`, `genre`, `classification`, `location`, `relatedItem`, `recordInfo`, `identifier`, `accessCondition`, `tableOfContents`, `targetAudience`, and `language` elements with conformance tests using LOC-derived fixtures.
 - **Cross-compiled Linux wheels** ([mrrc-experiments#16](https://github.com/dchud/mrrc-experiments/issues/16)): Release workflow now builds `aarch64` and `i686` Linux wheels via maturin-action Docker cross-compilation, increasing wheel count from 15 to 25 per release.
 - **Field constructor `subfields=` and `indicators=` kwargs** ([mrrc-experiments#15](https://github.com/dchud/mrrc-experiments/issues/15)): `Field` now accepts `subfields=` (list of `Subfield`) and `indicators=` (list/tuple of two strings) as keyword arguments, enabling inline construction matching pymarc style: `Field('245', indicators=['0', '1'], subfields=[Subfield('a', 'Title')])`. The Rust binding already supported this signature; the Python wrapper now passes through both kwargs.

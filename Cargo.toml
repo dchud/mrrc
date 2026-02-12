@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "mrrc"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 authors = ["MARC Rust Community"]
 description = "A Rust library for reading, writing, and manipulating MARC bibliographic records in ISO 2709 binary format"
