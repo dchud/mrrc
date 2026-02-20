@@ -69,7 +69,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
       fail-fast: false
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: release-wheels-${{ matrix.target }}-${{ matrix.python-version }}
           path: dist
@@ -114,7 +114,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: release-wheels-${{ matrix.os }}-${{ matrix.python-version }}
           path: dist
@@ -163,7 +163,7 @@ jobs:
       id-token: write
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: release-wheels-*
           path: dist
