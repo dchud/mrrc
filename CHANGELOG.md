@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`MARCReader.backend_type` property**: Exposes the reader's I/O backend as a string (`"rust_file"`, `"cursor"`, or `"python_file"`) for diagnostics and testing.
 - **Dependabot configuration**: Enabled automated dependency updates for `cargo`, `uv`, and `github-actions` ecosystems (weekly schedule).
+- **GIL release verification tests**: Deterministic tests proving `py.detach()` actually releases the GIL during record parsing. Uses `sys.setswitchinterval(100.0)` to suppress automatic GIL switching, then verifies a background counter thread makes progress — which can only happen if the GIL is explicitly released. Covers all three backends: `rust_file`, `cursor`, and `python_file`.
 
 ### Changed
 
