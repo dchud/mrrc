@@ -101,7 +101,7 @@ impl PyMARCReader {
     /// Also supports file paths and bytes via BatchedUnifiedReader.
     #[allow(deprecated)]
     pub fn read_record(&mut self) -> PyResult<Option<PyRecord>> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             // Step 1: Read record bytes (GIL held)
             // Uses queue-based state machine: CHECK_QUEUE → CHECK_EOF → READ_BATCH
             let record_bytes = match self.reader.as_mut() {
@@ -182,13 +182,12 @@ impl PyMARCReader {
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
         // ===== STEP 1: Read record bytes (GIL held if needed) =====
         // Must get Python handle while GIL is held by PyRefMut
-        // CRITICAL: Use assume_gil_acquired() to get an unbound Python handle that
+        // CRITICAL: Use assume_attached() to get an unbound Python handle that
         // properly releases the GIL in Phase 2. A bound handle (slf.py()) does not.
         // SAFETY: PyRefMut guarantees the GIL is held; this is the idiomatic way to get
         // an unbound Python handle without re-acquiring (which would panic if already held).
         // See GIL_RELEASE_IMPLEMENTATION_PLAN.md Part 2 Fix 2 (lines 149-235).
-        #[allow(deprecated)]
-        let py = unsafe { Python::assume_gil_acquired() };
+        let py = unsafe { Python::assume_attached() };
 
         // Get mutable reference to reader backend
         let reader = slf

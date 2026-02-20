@@ -33,7 +33,7 @@ use pyo3::prelude::*;
 /// config.set_output_format("turtle")
 /// config.set_authority_linking(True)
 /// ```
-#[pyclass(name = "BibframeConfig")]
+#[pyclass(name = "BibframeConfig", from_py_object)]
 #[derive(Clone)]
 pub struct PyBibframeConfig {
     pub(crate) inner: BibframeConfig,

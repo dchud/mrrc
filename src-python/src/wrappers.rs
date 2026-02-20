@@ -16,7 +16,7 @@ use pyo3::prelude::*;
 /// leader.record_type = 'a'  # Language material
 /// leader.bibliographic_level = 'm'  # Monograph
 /// ```
-#[pyclass(name = "Leader")]
+#[pyclass(name = "Leader", from_py_object)]
 #[derive(Clone)]
 pub struct PyLeader {
     pub inner: Leader,
@@ -342,7 +342,7 @@ impl Default for PyLeader {
 /// sf = mrrc.Subfield('a', 'The Great Gatsby')
 /// print(f"Code: {sf.code}, Value: {sf.value}")
 /// ```
-#[pyclass(name = "Subfield")]
+#[pyclass(name = "Subfield", from_py_object)]
 #[derive(Clone)]
 pub struct PySubfield {
     pub inner: Subfield,
@@ -413,7 +413,7 @@ impl PySubfield {
 /// field.add_subfield('a', 'The Great Gatsby')
 /// field.add_subfield('c', 'F. Scott Fitzgerald')
 /// ```
-#[pyclass(name = "Field")]
+#[pyclass(name = "Field", from_py_object)]
 #[derive(Clone)]
 pub struct PyField {
     pub inner: Field,
@@ -1113,7 +1113,7 @@ impl PyRecord {
 /// Authority records are used to maintain authorized access points (names, subjects, etc.)
 /// They use the same ISO 2709 binary format as bibliographic records but are organized
 /// by functional role (heading, tracings, notes, etc.).
-#[pyclass(name = "AuthorityRecord")]
+#[pyclass(name = "AuthorityRecord", from_py_object)]
 #[derive(Clone)]
 pub struct PyAuthorityRecord {
     pub inner: AuthorityRecord,
@@ -1231,7 +1231,7 @@ impl PyAuthorityRecord {
 /// Holdings records are used to maintain inventory and location information.
 /// They use the same ISO 2709 binary format as bibliographic records but organize
 /// fields by functional role (locations, enumeration, notes, etc.).
-#[pyclass(name = "HoldingsRecord")]
+#[pyclass(name = "HoldingsRecord", from_py_object)]
 #[derive(Clone)]
 pub struct PyHoldingsRecord {
     pub inner: HoldingsRecord,
