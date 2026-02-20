@@ -479,12 +479,31 @@ fn read_text(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<String> {
         match reader.read_event_into(buf) {
             Ok(Event::Text(e)) => {
                 text.push_str(
-                    &e.unescape()
-                        .map_err(|err| MarcError::ParseError(format!("XML unescape: {err}")))?,
+                    &e.decode()
+                        .map_err(|err| MarcError::ParseError(format!("XML decode: {err}")))?,
                 );
             },
             Ok(Event::CData(e)) => {
                 text.push_str(&String::from_utf8_lossy(&e));
+            },
+            Ok(Event::GeneralRef(e)) => {
+                if let Ok(Some(c)) = e.resolve_char_ref() {
+                    text.push(c);
+                } else {
+                    match e.as_ref() {
+                        b"amp" => text.push('&'),
+                        b"lt" => text.push('<'),
+                        b"gt" => text.push('>'),
+                        b"apos" => text.push('\''),
+                        b"quot" => text.push('"'),
+                        other => {
+                            return Err(MarcError::ParseError(format!(
+                                "Unknown XML entity: &{};",
+                                String::from_utf8_lossy(other)
+                            )));
+                        },
+                    }
+                }
             },
             Ok(Event::End(_) | Event::Eof) => break,
             Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
@@ -579,7 +598,7 @@ fn next_start(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<Option<St
 /// Returns an error if the XML is malformed or cannot be parsed.
 pub fn mods_xml_to_record(xml: &str) -> Result<Record> {
     let mut reader = Reader::from_str(xml);
-    reader.trim_text(true);
+    reader.config_mut().trim_text(false);
     let mut buf = Vec::new();
 
     // Advance to the <mods> start element
@@ -609,7 +628,7 @@ pub fn mods_xml_to_record(xml: &str) -> Result<Record> {
 /// Returns an error if the XML is malformed or cannot be parsed.
 pub fn mods_xml_to_records(xml: &str) -> Result<Vec<Record>> {
     let mut reader = Reader::from_str(xml);
-    reader.trim_text(true);
+    reader.config_mut().trim_text(false);
     let mut buf = Vec::new();
     let mut records = Vec::new();
 
