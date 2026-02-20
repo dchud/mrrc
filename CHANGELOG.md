@@ -10,10 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`MARCReader.backend_type` property**: Exposes the reader's I/O backend as a string (`"rust_file"`, `"cursor"`, or `"python_file"`) for diagnostics and testing.
+- **Dependabot configuration**: Enabled automated dependency updates for `cargo`, `uv`, and `github-actions` ecosystems (weekly schedule).
 
 ### Changed
 
 - **Replaced flaky GIL release test with deterministic verification** ([#3](https://github.com/dchud/mrrc/issues/3)): The `test_pathlib_path_threading_equivalent_to_str` test used timing-based speedup ratios to verify GIL release, which was unreliable on shared CI runners. Replaced with `TestBackendTypeRouting` (6 tests asserting each input type routes to the correct backend) and `TestPathlibThreadingCorrectness` (2 tests verifying parallel reads produce correct results without speedup assertions).
+- **quick-xml 0.31 → 0.39** ([#7](https://github.com/dchud/mrrc/pull/7)): Migrated MODS XML parser to quick-xml 0.39 API. `BytesText::unescape()` replaced by `decode()` with explicit entity resolution via new `Event::GeneralRef` handler (predefined XML entities and numeric character references). `Reader::trim_text()` moved to `Reader::config_mut().trim_text()`.
+- **pyo3 0.27 → 0.28** ([#8](https://github.com/dchud/mrrc/pull/8)): Migrated PyO3 bindings to 0.28 API for free-threaded Python support. `Python::with_gil()` → `Python::attach()`, `Python::assume_gil_acquired()` → `Python::assume_attached()`. Added `from_py_object` annotation to all 10 `#[pyclass]` types implementing `Clone`.
+- **thiserror 1.0 → 2.0** ([#6](https://github.com/dchud/mrrc/pull/6)): Updated error derive macro.
+- **nom 7.1 → 8.0** ([#5](https://github.com/dchud/mrrc/pull/5)): Updated parser combinator library.
+- **ruff 0.14.14 → 0.15.2** ([#9](https://github.com/dchud/mrrc/pull/9)): Updated Python linter.
+- **GitHub Actions updates**: actions/checkout 4 → 6 ([#14](https://github.com/dchud/mrrc/pull/14)), codecov/codecov-action 4 → 5 ([#13](https://github.com/dchud/mrrc/pull/13)), astral-sh/setup-uv 4 → 7 ([#12](https://github.com/dchud/mrrc/pull/12)), actions/download-artifact 4 → 7 ([#11](https://github.com/dchud/mrrc/pull/11)), moonrepo/setup-rust 0 → 1 ([#10](https://github.com/dchud/mrrc/pull/10)).
 
 ### Fixed
 
