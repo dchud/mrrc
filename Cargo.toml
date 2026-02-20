@@ -41,7 +41,7 @@ indexmap = { version = "2.2", features = ["serde"] }
 
 # Error handling
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Pattern matching
 regex = "1.10"
