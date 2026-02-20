@@ -36,7 +36,7 @@ jobs:
           cargo tarpaulin --out Xml Html --package mrrc --timeout 300 --exclude-files examples/ --exclude-files tests/
 
       - name: Upload coverage to codecov.io
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: ./cobertura.xml
           flags: unit-tests
