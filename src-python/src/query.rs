@@ -26,7 +26,7 @@ use pyo3::prelude::*;
 /// # Match any field with specific indicators
 /// query = mrrc.FieldQuery().indicator1("1").indicator2("0")
 /// ```
-#[pyclass(name = "FieldQuery")]
+#[pyclass(name = "FieldQuery", from_py_object)]
 #[derive(Clone)]
 pub struct PyFieldQuery {
     pub inner: FieldQuery,
@@ -210,7 +210,7 @@ impl PyFieldQuery {
 /// for field in record.fields_matching_range(query):
 ///     print(f"Subject: {field}")
 /// ```
-#[pyclass(name = "TagRangeQuery")]
+#[pyclass(name = "TagRangeQuery", from_py_object)]
 #[derive(Clone)]
 pub struct PyTagRangeQuery {
     pub inner: TagRangeQuery,
@@ -332,7 +332,7 @@ impl PyTagRangeQuery {
 /// # Find personal names with date ranges
 /// query = mrrc.SubfieldPatternQuery("100", "d", r"\d{4}-\d{4}")
 /// ```
-#[pyclass(name = "SubfieldPatternQuery")]
+#[pyclass(name = "SubfieldPatternQuery", from_py_object)]
 #[derive(Clone)]
 pub struct PySubfieldPatternQuery {
     pub inner: SubfieldPatternQuery,
@@ -411,7 +411,7 @@ impl PySubfieldPatternQuery {
 /// # Find subjects containing "History" anywhere
 /// query = mrrc.SubfieldValueQuery("650", "a", "History", partial=True)
 /// ```
-#[pyclass(name = "SubfieldValueQuery")]
+#[pyclass(name = "SubfieldValueQuery", from_py_object)]
 #[derive(Clone)]
 pub struct PySubfieldValueQuery {
     pub inner: SubfieldValueQuery,
