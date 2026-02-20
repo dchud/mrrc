@@ -20,7 +20,7 @@ jobs:
       # Let all ASAN tests run even if one fails, for comprehensive feedback
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust nightly toolchain with ASAN support
         uses: dtolnay/rust-toolchain@nightly
