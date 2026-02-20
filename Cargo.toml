@@ -23,7 +23,7 @@ default = []
 [dependencies]
 # Core parsing and data handling
 bytes = "1.11.1"
-nom = "7.1"
+nom = "8.0"
 lazy_static = "1.4"
 memchr = "2.7"
 
