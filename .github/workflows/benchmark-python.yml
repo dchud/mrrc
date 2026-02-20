@@ -15,7 +15,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,7 +47,7 @@ jobs:
     name: Codspeed Performance Regression Detection
     runs-on: ubuntu-22.04  # CodSpeed only supports Ubuntu 20.04/22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
