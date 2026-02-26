@@ -243,7 +243,7 @@ def convert_to_xml(record):
     - Web service integration
     """
     print("=" * 70)
-    print("3. MARCXML FORMAT (MARCXML)")
+    print("3. MARCXML FORMAT")
     print("=" * 70 + "\n")
     
     try:
