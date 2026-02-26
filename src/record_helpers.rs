@@ -83,20 +83,40 @@ pub trait RecordHelpers: MarcRecord {
         self.get_field("110").and_then(|f| f.get_subfield('a'))
     }
 
-    /// Get the publisher from field 260, subfield 'b'
+    /// Get the publisher from field 260 or 264 (RDA), subfield 'b'
+    ///
+    /// Checks field 260$b first. If absent, falls back to field 264 with
+    /// indicator2='1' (publication) to support RDA-cataloged records.
     #[must_use]
     fn publisher(&self) -> Option<&str> {
-        self.get_field("260").and_then(|f| f.get_subfield('b'))
+        self.get_field("260")
+            .and_then(|f| f.get_subfield('b'))
+            .or_else(|| {
+                self.get_fields("264").and_then(|fields| {
+                    fields
+                        .iter()
+                        .find(|f| f.indicator2 == '1')
+                        .and_then(|f| f.get_subfield('b'))
+                })
+            })
     }
 
-    /// Get the publication date from field 260, subfield 'c'
+    /// Get the publication date from field 260 or 264 (RDA), subfield 'c'
     ///
-    /// Falls back to the publication year extracted from field 008 (positions 7-10)
-    /// if field 260$c is not available.
+    /// Checks field 260$c first, then 264 (ind2='1') $c, then falls back to
+    /// the publication year extracted from field 008 (positions 7-10).
     #[must_use]
     fn publication_date(&self) -> Option<&str> {
         self.get_field("260")
             .and_then(|f| f.get_subfield('c'))
+            .or_else(|| {
+                self.get_fields("264").and_then(|fields| {
+                    fields
+                        .iter()
+                        .find(|f| f.indicator2 == '1')
+                        .and_then(|f| f.get_subfield('c'))
+                })
+            })
             .or_else(|| {
                 self.get_control_field("008").and_then(|field_008| {
                     if field_008.len() >= 11 {
@@ -226,7 +246,10 @@ pub trait RecordHelpers: MarcRecord {
         self.leader().record_type == 'g'
     }
 
-    /// Extract publication information from field 260
+    /// Extract publication information from field 260 or 264 (RDA)
+    ///
+    /// Checks field 260 first. If absent, falls back to field 264 with
+    /// indicator2='1' (publication) to support RDA-cataloged records.
     ///
     /// Returns a `PublicationInfo` struct containing place of publication (subfield 'a'),
     /// publisher (subfield 'b'), and date (subfield 'c').
@@ -243,11 +266,15 @@ pub trait RecordHelpers: MarcRecord {
     /// ```
     #[must_use]
     fn publication_info(&self) -> Option<PublicationInfo> {
-        self.get_field("260").map(|field| {
+        let field = self.get_field("260").or_else(|| {
+            self.get_fields("264")
+                .and_then(|fields| fields.iter().find(|f| f.indicator2 == '1'))
+        });
+        field.map(|f| {
             PublicationInfo::new(
-                field.get_subfield('a').map(ToString::to_string),
-                field.get_subfield('b').map(ToString::to_string),
-                field.get_subfield('c').map(ToString::to_string),
+                f.get_subfield('a').map(ToString::to_string),
+                f.get_subfield('b').map(ToString::to_string),
+                f.get_subfield('c').map(ToString::to_string),
             )
         })
     }
@@ -283,12 +310,22 @@ pub trait RecordHelpers: MarcRecord {
         })
     }
 
-    /// Get the place of publication from field 260, subfield 'a'
+    /// Get the place of publication from field 260 or 264 (RDA), subfield 'a'
     ///
-    /// Alias for accessing the 'a' subfield of field 260.
+    /// Checks field 260$a first. If absent, falls back to field 264 with
+    /// indicator2='1' (publication) to support RDA-cataloged records.
     #[must_use]
     fn place_of_publication(&self) -> Option<&str> {
-        self.get_field("260").and_then(|f| f.get_subfield('a'))
+        self.get_field("260")
+            .and_then(|f| f.get_subfield('a'))
+            .or_else(|| {
+                self.get_fields("264").and_then(|fields| {
+                    fields
+                        .iter()
+                        .find(|f| f.indicator2 == '1')
+                        .and_then(|f| f.get_subfield('a'))
+                })
+            })
     }
 
     /// Get all location fields (field 852)
@@ -517,6 +554,134 @@ mod tests {
         record.add_field(issnl_field);
 
         assert_eq!(record.issnl(), Some("1234-5678"));
+    }
+
+    #[test]
+    fn test_publisher_from_260() {
+        let mut record = create_test_record();
+        let mut f260 = Field::new("260".to_string(), ' ', ' ');
+        f260.subfields.push(Subfield {
+            code: 'b',
+            value: "Addison-Wesley,".to_string(),
+        });
+        record.add_field(f260);
+
+        assert_eq!(record.publisher(), Some("Addison-Wesley,"));
+    }
+
+    #[test]
+    fn test_publisher_from_264_rda() {
+        let mut record = create_test_record();
+        // 264 with ind2='1' (publication)
+        let mut f264 = Field::new("264".to_string(), ' ', '1');
+        f264.subfields.push(Subfield {
+            code: 'b',
+            value: "The MIT Press,".to_string(),
+        });
+        record.add_field(f264);
+
+        assert_eq!(record.publisher(), Some("The MIT Press,"));
+    }
+
+    #[test]
+    fn test_publisher_prefers_260_over_264() {
+        let mut record = create_test_record();
+        let mut f260 = Field::new("260".to_string(), ' ', ' ');
+        f260.subfields.push(Subfield {
+            code: 'b',
+            value: "Old Publisher,".to_string(),
+        });
+        record.add_field(f260);
+
+        let mut f264 = Field::new("264".to_string(), ' ', '1');
+        f264.subfields.push(Subfield {
+            code: 'b',
+            value: "New Publisher,".to_string(),
+        });
+        record.add_field(f264);
+
+        assert_eq!(record.publisher(), Some("Old Publisher,"));
+    }
+
+    #[test]
+    fn test_publisher_ignores_264_non_publication() {
+        let mut record = create_test_record();
+        // 264 with ind2='3' (manufacture), should be ignored
+        let mut f264_mfg = Field::new("264".to_string(), ' ', '3');
+        f264_mfg.subfields.push(Subfield {
+            code: 'b',
+            value: "Some Printer,".to_string(),
+        });
+        record.add_field(f264_mfg);
+
+        assert_eq!(record.publisher(), None);
+    }
+
+    #[test]
+    fn test_place_of_publication_from_264_rda() {
+        let mut record = create_test_record();
+        let mut f264 = Field::new("264".to_string(), ' ', '1');
+        f264.subfields.push(Subfield {
+            code: 'a',
+            value: "Cambridge, Massachusetts :".to_string(),
+        });
+        record.add_field(f264);
+
+        assert_eq!(
+            record.place_of_publication(),
+            Some("Cambridge, Massachusetts :")
+        );
+    }
+
+    #[test]
+    fn test_publication_date_from_264_rda() {
+        let mut record = create_test_record();
+        let mut f264 = Field::new("264".to_string(), ' ', '1');
+        f264.subfields.push(Subfield {
+            code: 'c',
+            value: "[2022]".to_string(),
+        });
+        record.add_field(f264);
+
+        assert_eq!(record.publication_date(), Some("[2022]"));
+    }
+
+    #[test]
+    fn test_publication_info_from_264_rda() {
+        let mut record = create_test_record();
+        let mut f264 = Field::new("264".to_string(), ' ', '1');
+        f264.subfields.push(Subfield {
+            code: 'a',
+            value: "Cambridge, Massachusetts :".to_string(),
+        });
+        f264.subfields.push(Subfield {
+            code: 'b',
+            value: "The MIT Press,".to_string(),
+        });
+        f264.subfields.push(Subfield {
+            code: 'c',
+            value: "[2022]".to_string(),
+        });
+        record.add_field(f264);
+
+        let info = record.publication_info().unwrap();
+        assert_eq!(info.place, Some("Cambridge, Massachusetts :".to_string()));
+        assert_eq!(info.publisher, Some("The MIT Press,".to_string()));
+        assert_eq!(info.date, Some("[2022]".to_string()));
+        assert_eq!(info.publication_year(), Some(2022));
+    }
+
+    #[test]
+    fn test_publication_year_from_264_rda() {
+        let mut record = create_test_record();
+        let mut f264 = Field::new("264".to_string(), ' ', '1');
+        f264.subfields.push(Subfield {
+            code: 'c',
+            value: "[2022]".to_string(),
+        });
+        record.add_field(f264);
+
+        assert_eq!(record.publication_year(), Some(2022));
     }
 
     #[test]

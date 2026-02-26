@@ -252,20 +252,53 @@ class TestRecordPublisher:
         assert 'Villars' in record.publisher()
 
 
+    def test_publisher_from_264_rda_field(self):
+        """Test getting publisher from 264 field (RDA cataloging)."""
+        record = Record()
+        record.add_field(create_field('264', ' ', '1',
+                                      a='Cambridge, Massachusetts :',
+                                      b='The MIT Press,',
+                                      c='[2022]'))
+        assert record.publisher() == 'The MIT Press,'
+
+    def test_publisher_prefers_260_over_264(self):
+        """Test that 260 is preferred when both 260 and 264 exist."""
+        record = Record()
+        record.add_field(create_field('260', ' ', ' ',
+                                      b='Old Publisher,'))
+        record.add_field(create_field('264', ' ', '1',
+                                      b='New Publisher,'))
+        assert record.publisher() == 'Old Publisher,'
+
+    def test_publisher_ignores_264_non_publication(self):
+        """Test that 264 with ind2 != '1' is not used for publisher."""
+        record = Record()
+        record.add_field(create_field('264', ' ', '3',
+                                      b='Some Printer,'))
+        assert record.publisher() is None
+
+
 class TestRecordPublicationYear:
     """PYMARC COMPAT: test_pubyear"""
-    
+
     def test_publication_year_from_260_field(self):
         """Test getting publication year from 260 field."""
         record = Record()
         assert record.pubyear() is None
-        
+
         record.add_field(create_field('260', ' ', ' ',
                                       a='Paris :',
                                       b='Gauthier-Villars ;',
                                       c='1955.'))
         year = record.pubyear()
         assert year is not None
+
+    def test_publication_year_from_264_rda_field(self):
+        """Test getting publication year from 264 field (RDA cataloging)."""
+        record = Record()
+        record.add_field(create_field('264', ' ', '1',
+                                      c='[2022]'))
+        assert record.pubyear() == 2022
 
 
 class TestRecordISBN:

@@ -832,20 +832,40 @@ impl Record {
         self.get_field("110").and_then(|f| f.get_subfield('a'))
     }
 
-    /// Get the publisher from field 260, subfield 'b'
+    /// Get the publisher from field 260 or 264 (RDA), subfield 'b'
+    ///
+    /// Checks field 260$b first. If absent, falls back to field 264 with
+    /// indicator2='1' (publication) to support RDA-cataloged records.
     #[must_use]
     pub fn publisher(&self) -> Option<&str> {
-        self.get_field("260").and_then(|f| f.get_subfield('b'))
+        self.get_field("260")
+            .and_then(|f| f.get_subfield('b'))
+            .or_else(|| {
+                self.get_fields("264").and_then(|fields| {
+                    fields
+                        .iter()
+                        .find(|f| f.indicator2 == '1')
+                        .and_then(|f| f.get_subfield('b'))
+                })
+            })
     }
 
-    /// Get the publication date from field 260, subfield 'c'
+    /// Get the publication date from field 260 or 264 (RDA), subfield 'c'
     ///
-    /// Falls back to the publication year extracted from field 008 (positions 7-10)
-    /// if field 260$c is not available.
+    /// Checks field 260$c first, then 264 (ind2='1') $c, then falls back to
+    /// the publication year extracted from field 008 (positions 7-10).
     #[must_use]
     pub fn publication_date(&self) -> Option<&str> {
         self.get_field("260")
             .and_then(|f| f.get_subfield('c'))
+            .or_else(|| {
+                self.get_fields("264").and_then(|fields| {
+                    fields
+                        .iter()
+                        .find(|f| f.indicator2 == '1')
+                        .and_then(|f| f.get_subfield('c'))
+                })
+            })
             .or_else(|| {
                 self.get_control_field("008").and_then(|field_008| {
                     if field_008.len() >= 11 {
@@ -956,7 +976,10 @@ impl Record {
         self.leader.record_type == 'g'
     }
 
-    /// Extract publication information from field 260
+    /// Extract publication information from field 260 or 264 (RDA)
+    ///
+    /// Checks field 260 first. If absent, falls back to field 264 with
+    /// indicator2='1' (publication) to support RDA-cataloged records.
     ///
     /// Returns a `PublicationInfo` struct containing place of publication (subfield 'a'),
     /// publisher (subfield 'b'), and date (subfield 'c').
@@ -973,16 +996,20 @@ impl Record {
     /// ```
     #[must_use]
     pub fn publication_info(&self) -> Option<PublicationInfo> {
-        self.get_field("260").map(|field| {
+        let field = self.get_field("260").or_else(|| {
+            self.get_fields("264")
+                .and_then(|fields| fields.iter().find(|f| f.indicator2 == '1'))
+        });
+        field.map(|f| {
             PublicationInfo::new(
-                field.get_subfield('a').map(ToString::to_string),
-                field.get_subfield('b').map(ToString::to_string),
-                field.get_subfield('c').map(ToString::to_string),
+                f.get_subfield('a').map(ToString::to_string),
+                f.get_subfield('b').map(ToString::to_string),
+                f.get_subfield('c').map(ToString::to_string),
             )
         })
     }
 
-    /// Get the publication year extracted from field 260$c or field 008
+    /// Get the publication year extracted from field 260$c / 264$c or field 008
     ///
     /// Attempts to extract a 4-digit year from the publication date statement.
     /// Falls back to field 008 (positions 7-10) if field 260 is not available.
@@ -1013,12 +1040,22 @@ impl Record {
         })
     }
 
-    /// Get the place of publication from field 260, subfield 'a'
+    /// Get the place of publication from field 260 or 264 (RDA), subfield 'a'
     ///
-    /// Alias for accessing the 'a' subfield of field 260.
+    /// Checks field 260$a first. If absent, falls back to field 264 with
+    /// indicator2='1' (publication) to support RDA-cataloged records.
     #[must_use]
     pub fn place_of_publication(&self) -> Option<&str> {
-        self.get_field("260").and_then(|f| f.get_subfield('a'))
+        self.get_field("260")
+            .and_then(|f| f.get_subfield('a'))
+            .or_else(|| {
+                self.get_fields("264").and_then(|fields| {
+                    fields
+                        .iter()
+                        .find(|f| f.indicator2 == '1')
+                        .and_then(|f| f.get_subfield('a'))
+                })
+            })
     }
 }
 
