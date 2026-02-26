@@ -3,7 +3,7 @@
 //! This example demonstrates the recommended patterns for creating MARC records using the builder API.
 //! The builder pattern provides a fluent, idiomatic Rust interface for record construction.
 
-use mrrc::{Field, Leader, Record};
+use mrrc::{Field, Leader, Record, RecordHelpers};
 
 fn main() {
     // Example 1: Creating a simple bibliographic record

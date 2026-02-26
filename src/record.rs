@@ -887,25 +887,6 @@ impl Record {
         self.get_field("022").and_then(|f| f.get_subfield('a'))
     }
 
-    /// Get all subject headings from 6XX fields, subfield 'a'
-    ///
-    /// Covers the same tags as pymarc's `subjects()`: 600, 610, 611, 630, 648,
-    /// 650, 651, 653, 654, 655, 656, 657, 658, 662, 690, 691, 696, 697, 698, 699.
-    #[must_use]
-    pub fn subjects(&self) -> Vec<&str> {
-        let mut result = Vec::new();
-        for tag in crate::record_helpers::SUBJECT_TAGS {
-            if let Some(fields) = self.get_fields(tag) {
-                for field in fields {
-                    if let Some(val) = field.get_subfield('a') {
-                        result.push(val);
-                    }
-                }
-            }
-        }
-        result
-    }
-
     /// Get the language code from field 008 (positions 35-37)
     ///
     /// Returns a 3-character language code (e.g., "eng" for English).
@@ -1533,6 +1514,7 @@ impl FieldBuilder {
 mod tests {
     use super::*;
     use crate::leader::Leader;
+    use crate::record_helpers::RecordHelpers;
 
     fn make_leader() -> Leader {
         Leader {
