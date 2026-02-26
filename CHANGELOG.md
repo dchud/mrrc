@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-02-26
+
 ### Added
 
 - **Standard MARCXML support** ([#15](https://github.com/dchud/mrrc/issues/15)): `xml_to_record()` and `record_to_xml()` / `to_xml()` now produce and parse standard LOC MARCXML. Output includes XML declaration, `xmlns="http://www.loc.gov/MARC21/slim"` namespace, and `tag`/`ind1`/`ind2`/`code` as XML attributes (not child elements). Parsing accepts all three namespace forms: default namespace (`<record xmlns="...">`), prefix namespace (`<marc:record xmlns:marc="...">`), and no namespace (`<record>`). New `xml_to_records()` function parses `<collection>` wrappers containing multiple records. Rust module renamed from `xml` to `marcxml` (`record_to_marcxml()`, `marcxml_to_record()`, `marcxml_to_records()`); Python API names unchanged for pymarc compatibility.
@@ -24,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **thiserror 1.0 → 2.0** ([#6](https://github.com/dchud/mrrc/pull/6)): Updated error derive macro.
 - **nom 7.1 → 8.0** ([#5](https://github.com/dchud/mrrc/pull/5)): Updated parser combinator library.
 - **ruff 0.14.14 → 0.15.2** ([#9](https://github.com/dchud/mrrc/pull/9)): Updated Python linter.
-- **GitHub Actions updates**: actions/checkout 4 → 6 ([#14](https://github.com/dchud/mrrc/pull/14)), codecov/codecov-action 4 → 5 ([#13](https://github.com/dchud/mrrc/pull/13)), astral-sh/setup-uv 4 → 7 ([#12](https://github.com/dchud/mrrc/pull/12)), actions/download-artifact 4 → 7 ([#11](https://github.com/dchud/mrrc/pull/11)), moonrepo/setup-rust 0 → 1 ([#10](https://github.com/dchud/mrrc/pull/10)).
+- **GitHub Actions updates**: actions/checkout 4 → 6 ([#14](https://github.com/dchud/mrrc/pull/14)), codecov/codecov-action 4 → 5 ([#13](https://github.com/dchud/mrrc/pull/13)), astral-sh/setup-uv 4 → 7 ([#12](https://github.com/dchud/mrrc/pull/12)), actions/download-artifact 4 → 7 ([#11](https://github.com/dchud/mrrc/pull/11)), moonrepo/setup-rust 0 → 1 ([#10](https://github.com/dchud/mrrc/pull/10)), actions/setup-python 5 → 6 ([#24](https://github.com/dchud/mrrc/pull/24)), actions/upload-artifact 4 → 6 ([#23](https://github.com/dchud/mrrc/pull/23)), actions/upload-pages-artifact 3 → 4 ([#22](https://github.com/dchud/mrrc/pull/22)), actions/cache 4 → 5 ([#21](https://github.com/dchud/mrrc/pull/21)), softprops/action-gh-release 1 → 2 ([#20](https://github.com/dchud/mrrc/pull/20)).
 
 ### Fixed
 
@@ -32,8 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`publisher()` now checks 264 (RDA) as fallback** ([#17](https://github.com/dchud/mrrc/issues/17)): Previously only returned $b from field 260. Now falls back to field 264 with indicator2='1' (publication) for RDA-cataloged records. Also updated `place_of_publication()`, `publication_date()`, `publication_info()`, and `publication_year()` / `pubyear()` to check 264 as fallback, matching pymarc behavior.
 - **`subjects()` now covers all 6XX fields** ([#18](https://github.com/dchud/mrrc/issues/18)): Previously only returned $a values from field 650 (topical term). Now matches pymarc's `subjects()` coverage: 600, 610, 611, 630, 648, 650, 651, 653, 654, 655, 656, 657, 658, 662, 690-691, 696-699. Also updated `subjects_with_subdivision()` and `subjects_with_note()` to search all subject fields.
 - **Removed flaky timing assertion from `test_backend_comparison_1k`**: The benchmark's `assert median_rustfile < median_pythonfile * 2` failed intermittently on shared CI runners due to disk I/O variance. Timing data is still printed for informational purposes.
-
-### Performance
 
 ### Documentation
 
