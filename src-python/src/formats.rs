@@ -10,7 +10,7 @@
 
 use crate::error::marc_error_to_py_err;
 use crate::wrappers::PyRecord;
-use mrrc::{csv, dublin_core, json, marcjson, mods, xml};
+use mrrc::{csv, dublin_core, json, marcjson, marcxml, mods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use serde_json::Value;
@@ -59,13 +59,13 @@ pub fn json_to_record(json_str: &str) -> PyResult<PyRecord> {
         .map_err(marc_error_to_py_err)
 }
 
-/// Convert a MARC record to XML.
+/// Convert a MARC record to MARCXML.
 ///
 /// # Arguments
 /// * `record` - A PyRecord instance
 ///
 /// # Returns
-/// An XML string representation of the record
+/// A MARCXML string representation of the record
 ///
 /// # Example
 /// ```python
@@ -75,13 +75,13 @@ pub fn json_to_record(json_str: &str) -> PyResult<PyRecord> {
 /// ```
 #[pyfunction]
 pub fn record_to_xml(record: &PyRecord) -> PyResult<String> {
-    xml::record_to_xml(&record.inner).map_err(marc_error_to_py_err)
+    marcxml::record_to_marcxml(&record.inner).map_err(marc_error_to_py_err)
 }
 
-/// Convert XML back to a MARC record.
+/// Convert MARCXML back to a MARC record.
 ///
 /// # Arguments
-/// * `xml_str` - An XML string representing a MARC record
+/// * `xml_str` - A MARCXML string representing a MARC record
 ///
 /// # Returns
 /// A PyRecord instance
@@ -89,13 +89,38 @@ pub fn record_to_xml(record: &PyRecord) -> PyResult<String> {
 /// # Example
 /// ```python
 /// import mrrc
-/// xml_str = '...'  # XML representation of a record
+/// xml_str = '...'  # MARCXML representation of a record
 /// record = mrrc.xml_to_record(xml_str)
 /// ```
 #[pyfunction]
 pub fn xml_to_record(xml_str: &str) -> PyResult<PyRecord> {
-    xml::xml_to_record(xml_str)
+    marcxml::marcxml_to_record(xml_str)
         .map(|inner| PyRecord { inner })
+        .map_err(marc_error_to_py_err)
+}
+
+/// Convert a MARCXML collection to multiple MARC records.
+///
+/// # Arguments
+/// * `xml_str` - A MARCXML string containing a `<collection>` element
+///
+/// # Returns
+/// A list of PyRecord instances
+///
+/// # Example
+/// ```python
+/// import mrrc
+/// records = mrrc.xml_to_records(xml_collection_str)
+/// ```
+#[pyfunction]
+pub fn xml_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
+    marcxml::marcxml_to_records(xml_str)
+        .map(|records| {
+            records
+                .into_iter()
+                .map(|inner| PyRecord { inner })
+                .collect()
+        })
         .map_err(marc_error_to_py_err)
 }
 

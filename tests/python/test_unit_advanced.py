@@ -329,6 +329,196 @@ class TestFormatConversionWrapping:
         assert fields[0]['a'] == 'Test Title'
 
 
+class TestMarcxmlConformance:
+    """MARCXML conformance tests against standard LOC format."""
+
+    def test_output_has_xml_declaration(self):
+        """Verify output starts with XML declaration."""
+        record = Record()
+        record.add_control_field('001', 'test')
+        xml_str = record.to_xml()
+        assert xml_str.startswith('<?xml version="1.0" encoding="UTF-8"?>')
+
+    def test_output_has_xmlns(self):
+        """Verify output contains xmlns namespace declaration."""
+        record = Record()
+        record.add_control_field('001', 'test')
+        xml_str = record.to_xml()
+        assert 'xmlns="http://www.loc.gov/MARC21/slim"' in xml_str
+
+    def test_tag_ind_code_are_attributes(self):
+        """Verify tag, ind1, ind2, code are XML attributes (not child elements)."""
+        record = Record()
+        record.add_control_field('001', '12345')
+        record.add_field(create_field('245', '1', '0', a='Title'))
+        xml_str = record.to_xml()
+        assert '<controlfield tag="001">' in xml_str
+        assert '<datafield tag="245" ind1="1" ind2="0">' in xml_str
+        assert '<subfield code="a">' in xml_str
+
+    def test_parse_standard_marcxml_no_namespace(self):
+        """Parse MARCXML without namespace."""
+        from mrrc import xml_to_record
+        xml = '''<record>
+            <leader>01234nam a2200289 a 4500</leader>
+            <controlfield tag="001">12345</controlfield>
+            <datafield tag="245" ind1="1" ind2="0">
+                <subfield code="a">Test title</subfield>
+            </datafield>
+        </record>'''
+        record = xml_to_record(xml)
+        assert record.control_field('001') == '12345'
+        assert record.title() == 'Test title'
+
+    def test_parse_marcxml_with_default_namespace(self):
+        """Parse MARCXML with default xmlns."""
+        from mrrc import xml_to_record
+        xml = '''<record xmlns="http://www.loc.gov/MARC21/slim">
+            <leader>01234nam a2200289 a 4500</leader>
+            <controlfield tag="001">99999</controlfield>
+            <datafield tag="245" ind1="0" ind2="0">
+                <subfield code="a">Namespaced title</subfield>
+            </datafield>
+        </record>'''
+        record = xml_to_record(xml)
+        assert record.control_field('001') == '99999'
+        assert record.title() == 'Namespaced title'
+
+    def test_parse_marcxml_with_prefix_namespace(self):
+        """Parse MARCXML with marc: prefix namespace."""
+        from mrrc import xml_to_record
+        xml = '''<marc:record xmlns:marc="http://www.loc.gov/MARC21/slim">
+            <marc:leader>01234nam a2200289 a 4500</marc:leader>
+            <marc:controlfield tag="001">88888</marc:controlfield>
+            <marc:datafield tag="245" ind1="1" ind2="0">
+                <marc:subfield code="a">Prefixed title</marc:subfield>
+            </marc:datafield>
+        </marc:record>'''
+        record = xml_to_record(xml)
+        assert record.control_field('001') == '88888'
+        assert record.title() == 'Prefixed title'
+
+    def test_parse_collection_with_default_namespace(self):
+        """Parse <collection> wrapper with default namespace."""
+        from mrrc import xml_to_records
+        xml = '''<collection xmlns="http://www.loc.gov/MARC21/slim">
+            <record>
+                <leader>01234nam a2200289 a 4500</leader>
+                <controlfield tag="001">rec1</controlfield>
+            </record>
+            <record>
+                <leader>01234nam a2200289 a 4500</leader>
+                <controlfield tag="001">rec2</controlfield>
+            </record>
+        </collection>'''
+        records = xml_to_records(xml)
+        assert len(records) == 2
+        assert records[0].control_field('001') == 'rec1'
+        assert records[1].control_field('001') == 'rec2'
+
+    def test_parse_collection_with_prefix_namespace(self):
+        """Parse <marc:collection> wrapper with prefix namespace."""
+        from mrrc import xml_to_records
+        xml = '''<marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim">
+            <marc:record>
+                <marc:leader>01234nam a2200289 a 4500</marc:leader>
+                <marc:controlfield tag="001">pfx1</marc:controlfield>
+            </marc:record>
+            <marc:record>
+                <marc:leader>01234nam a2200289 a 4500</marc:leader>
+                <marc:controlfield tag="001">pfx2</marc:controlfield>
+            </marc:record>
+        </marc:collection>'''
+        records = xml_to_records(xml)
+        assert len(records) == 2
+        assert records[0].control_field('001') == 'pfx1'
+        assert records[1].control_field('001') == 'pfx2'
+
+    def test_parse_loc_collection_fixture(self):
+        """Parse the LOC collection.xml fixture (marc: prefix, 2 records)."""
+        import os
+        from mrrc import xml_to_records
+        fixture = os.path.join(os.path.dirname(__file__), '..', 'data', 'loc_collection.marcxml')
+        with open(fixture, 'r', encoding='utf-8') as f:
+            xml = f.read()
+        records = xml_to_records(xml)
+        assert len(records) == 2
+        # First record: "The Great Ray Charles"
+        assert records[0].control_field('001') == '5637241'
+        assert 'The Great Ray Charles' in (records[0].title() or '')
+        # Second record: "The White House"
+        assert records[1].control_field('001') == '12149120'
+        assert 'The White House' in (records[1].title() or '')
+
+    def test_marcxml_roundtrip_preserves_data(self):
+        """Roundtrip: record → MARCXML → record preserves all data."""
+        from mrrc import xml_to_record
+        record = Record()
+        record.add_control_field('001', 'roundtrip-001')
+        record.add_control_field('008', '230601s2023    xxu||||||||||||eng d')
+        record.add_field(create_field('245', '1', '0', a='Roundtrip Title /', c='Author.'))
+        record.add_field(create_field('650', ' ', '0', a='Testing.'))
+        record.add_field(create_field('650', ' ', '0', a='Software.'))
+        xml_str = record.to_xml()
+        restored = xml_to_record(xml_str)
+        assert restored.control_field('001') == 'roundtrip-001'
+        assert restored.title() == 'Roundtrip Title /'
+        fields = restored.get_fields('245')
+        assert fields[0]['c'] == 'Author.'
+        subjects = restored.get_fields('650')
+        assert len(subjects) == 2
+
+    def test_parse_issue_15_example(self):
+        """Parse the exact MARCXML from issue #15 (Introduction to Algorithms)."""
+        from mrrc import xml_to_record
+        xml = '''<?xml version="1.0" encoding="UTF-8"?>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+            <leader>01142cam  2200301 a 4500</leader>
+            <controlfield tag="001">92005291</controlfield>
+            <controlfield tag="008">920219s1990    mau           001 0 eng  </controlfield>
+            <datafield tag="020" ind1=" " ind2=" ">
+                <subfield code="a">0262031418</subfield>
+            </datafield>
+            <datafield tag="245" ind1="1" ind2="0">
+                <subfield code="a">Introduction to algorithms /</subfield>
+                <subfield code="c">Thomas H. Cormen ... [et al.].</subfield>
+            </datafield>
+            <datafield tag="650" ind1=" " ind2="0">
+                <subfield code="a">Computer programming.</subfield>
+            </datafield>
+            <datafield tag="650" ind1=" " ind2="0">
+                <subfield code="a">Computer algorithms.</subfield>
+            </datafield>
+        </record>'''
+        record = xml_to_record(xml)
+        assert record.control_field('001') == '92005291'
+        assert record.title() == 'Introduction to algorithms /'
+        fields = record.get_fields('245')
+        assert fields[0]['c'] == 'Thomas H. Cormen ... [et al.].'
+        isbn = record.isbn()
+        assert isbn == '0262031418'
+        subjects = record.get_fields('650')
+        assert len(subjects) == 2
+
+    def test_xml_to_records_returns_wrapped_records(self):
+        """Verify xml_to_records returns properly wrapped Python Records."""
+        from mrrc import xml_to_records
+        xml = '''<collection>
+            <record>
+                <leader>01234nam a2200289 a 4500</leader>
+                <controlfield tag="001">wrap1</controlfield>
+                <datafield tag="245" ind1="1" ind2="0">
+                    <subfield code="a">Title One</subfield>
+                </datafield>
+            </record>
+        </collection>'''
+        records = xml_to_records(xml)
+        assert len(records) == 1
+        assert type(records[0]).__name__ == 'Record'
+        assert type(records[0]).__module__ == 'mrrc'
+        assert records[0].title() == 'Title One'
+
+
 class TestControlFields:
     """Test control field operations."""
 

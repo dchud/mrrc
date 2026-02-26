@@ -193,8 +193,10 @@ with MARCWriter("output.mrc") as writer:
 json_str = record.to_json()
 marcjson_str = record.to_marcjson()
 
-# XML formats
+# MARCXML
 xml_str = record.to_xml()
+
+# Other XML-based formats
 mods_str = record.to_mods()
 dc_str = record.to_dublin_core()
 ```
@@ -206,6 +208,12 @@ import mrrc
 
 # Parse from JSON
 record = mrrc.json_to_record(json_str)
+
+# Parse from MARCXML
+record = mrrc.xml_to_record(xml_str)
+
+# Parse MARCXML collection (multiple records)
+records = mrrc.xml_to_records(collection_xml_str)
 
 # Parse from MODS XML
 record = mrrc.mods_to_record(mods_xml)

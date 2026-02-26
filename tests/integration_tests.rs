@@ -157,24 +157,25 @@ fn test_json_serialization_with_file_data() {
 }
 
 #[test]
-fn test_xml_serialization_with_file_data() {
-    use mrrc::xml;
+fn test_marcxml_serialization_with_file_data() {
+    use mrrc::marcxml;
 
     let file = File::open("tests/data/simple_book.mrc").expect("Could not open test file");
     let mut reader = MarcReader::new(file);
     let record = reader.read_record().expect("Failed to read record");
     let record = record.expect("No record found");
 
-    // Convert to XML
-    let xml_str = xml::record_to_xml(&record).expect("Failed to convert to XML");
+    // Convert to MARCXML
+    let xml_str = marcxml::record_to_marcxml(&record).expect("Failed to convert to MARCXML");
 
-    // Verify XML has expected elements
+    // Verify MARCXML has expected elements with attributes
     assert!(xml_str.contains("<leader>"));
-    assert!(xml_str.contains("245"));
+    assert!(xml_str.contains("<datafield tag=\"245\""));
     assert!(xml_str.contains("The Great Gatsby"));
+    assert!(xml_str.contains("xmlns=\"http://www.loc.gov/MARC21/slim\""));
 
-    // Convert back from XML
-    let restored = xml::xml_to_record(&xml_str).expect("Failed to restore from XML");
+    // Convert back from MARCXML
+    let restored = marcxml::marcxml_to_record(&xml_str).expect("Failed to restore from MARCXML");
 
     // Verify data
     assert_eq!(record.leader.record_type, restored.leader.record_type);

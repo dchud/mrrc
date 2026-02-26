@@ -77,7 +77,7 @@
 //! - [`leader`] — MARC record leader (24-byte header)
 //! - [`json`] — JSON serialization/deserialization
 //! - [`marcjson`] — MARCJSON format (standard JSON-LD format for MARC)
-//! - [`xml`] — XML serialization/deserialization
+//! - [`marcxml`] — MARCXML serialization/deserialization
 //! - [`csv`] — CSV (Comma-Separated Values) export format
 //! - [`dublin_core`] — Dublin Core metadata serialization
 //! - [`mods`] — MODS (Metadata Object Description Schema) bidirectional conversion
@@ -90,7 +90,7 @@
 //! - **BIBFRAME** — LOC linked data format for bibliographic description
 //! - **JSON** — Generic JSON representation of records
 //! - **MARCJSON** — Standard JSON-LD format for MARC records
-//! - **XML** — XML representation with proper field/subfield structure
+//! - **MARCXML** — Standard LOC MARCXML with proper attributes and namespace
 //! - **CSV** — Tabular export format for spreadsheet applications
 //! - **Dublin Core** — Simplified metadata schema for discovery
 //! - **MODS** — Detailed metadata description schema for libraries
@@ -127,6 +127,7 @@ pub mod macros;
 pub mod marc8_tables;
 pub mod marc_record;
 pub mod marcjson;
+pub mod marcxml;
 pub mod mods;
 pub mod producer_consumer_pipeline;
 pub mod rayon_parser_pool;
@@ -139,7 +140,6 @@ pub mod record_validation;
 pub mod recovery;
 pub mod validation;
 pub mod writer;
-pub mod xml;
 
 pub use authority_queries::AuthorityQueries;
 pub use authority_reader::AuthorityMarcReader;

@@ -1082,15 +1082,15 @@ impl PyRecord {
             .map_err(crate::error::marc_error_to_py_err)
     }
 
-    /// Convert record to XML string
+    /// Convert record to MARCXML string
     ///
     /// # Example
     /// ```python
     /// xml_str = record.to_xml()
     /// ```
     pub fn to_xml(&self) -> PyResult<String> {
-        use mrrc::xml;
-        xml::record_to_xml(&self.inner).map_err(crate::error::marc_error_to_py_err)
+        use mrrc::marcxml;
+        marcxml::record_to_marcxml(&self.inner).map_err(crate::error::marc_error_to_py_err)
     }
 
     /// Convert record to MARCJSON format

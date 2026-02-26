@@ -28,14 +28,17 @@ marcjson_str = record.to_marcjson()
 restored = mrrc.marcjson_to_record(marcjson_str)
 ```
 
-## XML Conversion
+## MARCXML Conversion
 
 ```python
 # Convert to MARCXML
 xml_str = record.to_xml()
 
-# Parse back
+# Parse back from MARCXML
 restored = mrrc.xml_to_record(xml_str)
+
+# Parse a MARCXML collection (multiple records)
+records = mrrc.xml_to_records(collection_xml_str)
 ```
 
 ## CSV Export
@@ -118,7 +121,7 @@ convert_file("library.mrc")
 | ISO 2709 | Library system interchange |
 | JSON | Web APIs, debugging |
 | MARCJSON | LOC compatibility |
-| XML | MARCXML pipelines |
+| MARCXML | MARCXML pipelines |
 | CSV | Spreadsheet analysis |
 | Dublin Core | Simple metadata exchange |
 | MODS | Detailed metadata crosswalks |

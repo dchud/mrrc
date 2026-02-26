@@ -232,13 +232,13 @@ def format_conversions(record):
     except Exception as e:
         print(f"MARCJSON conversion: {e}")
     
-    # Convert to XML
+    # Convert to MARCXML
     try:
         xml_str = record.to_xml()
-        print("\nXML format (first 100 chars):")
+        print("\nMARCXML format (first 100 chars):")
         print(f"  {xml_str[:100]}...")
     except Exception as e:
-        print(f"XML conversion: {e}")
+        print(f"MARCXML conversion: {e}")
     
     print()
 

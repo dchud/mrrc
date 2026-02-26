@@ -26,6 +26,7 @@ from ._mrrc import (
     json_to_record as _json_to_record,
     record_to_xml,
     xml_to_record as _xml_to_record,
+    xml_to_records as _xml_to_records,
     record_to_marcjson,
     marcjson_to_record as _marcjson_to_record,
     record_to_dublin_core,
@@ -1079,7 +1080,7 @@ class Record:
         return self._inner.to_json()
     
     def to_xml(self) -> str:
-        """Serialize to XML."""
+        """Serialize to MARCXML."""
         return self._inner.to_xml()
     
     def to_dublin_core(self) -> str:
@@ -1268,6 +1269,11 @@ def json_to_record(json_str: str) -> Record:
 def xml_to_record(xml_str: str) -> Record:
     """Convert a MARCXML string to a Record."""
     return _wrap_record(_xml_to_record(xml_str))
+
+
+def xml_to_records(xml_str: str) -> List[Record]:
+    """Convert a MARCXML collection string to a list of Records."""
+    return [_wrap_record(r) for r in _xml_to_records(xml_str)]
 
 
 def marcjson_to_record(marcjson_str: str) -> Record:
@@ -1573,6 +1579,7 @@ __all__ = [
     "json_to_record",
     "record_to_xml",
     "xml_to_record",
+    "xml_to_records",
     "record_to_marcjson",
     "marcjson_to_record",
     "record_to_dublin_core",

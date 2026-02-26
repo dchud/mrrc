@@ -24,9 +24,9 @@ fn main() {
         println!("{json}");
     }
 
-    // XML format
-    println!("\n=== XML Format ===\n");
-    if let Ok(xml) = mrrc::xml::record_to_xml(&record) {
+    // MARCXML format
+    println!("\n=== MARCXML Format ===\n");
+    if let Ok(xml) = mrrc::marcxml::record_to_marcxml(&record) {
         println!("{xml}");
     }
 

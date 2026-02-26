@@ -7,15 +7,19 @@ Learn to convert MARC records between different formats.
 All formats are available without feature flags:
 
 ```rust
-use mrrc::formats::{to_json, to_xml, to_marcjson, from_json, from_xml};
+use mrrc::formats::{to_json, to_marcjson, from_json};
+use mrrc::marcxml::{record_to_marcxml, marcxml_to_record, marcxml_to_records};
 
 // Convert to JSON
 let json = to_json(&record)?;
 let restored = from_json(&json)?;
 
-// Convert to XML
-let xml = to_xml(&record)?;
-let restored = from_xml(&xml)?;
+// Convert to MARCXML
+let xml = record_to_marcxml(&record)?;
+let restored = marcxml_to_record(&xml)?;
+
+// Parse a MARCXML collection (multiple records)
+let records = marcxml_to_records(&collection_xml)?;
 
 // Convert to MARCJSON (LOC standard)
 let marcjson = to_marcjson(&record)?;
@@ -75,7 +79,7 @@ fn convert_to_json(input: &str, output: &str) -> mrrc::Result<()> {
 |--------|----------|
 | ISO 2709 | Library system interchange |
 | JSON | Web APIs, debugging |
-| XML | MARCXML pipelines |
+| MARCXML | MARCXML pipelines |
 | CSV | Spreadsheet export |
 | Dublin Core | Simple metadata exchange |
 | MODS | Detailed metadata crosswalks |
@@ -85,7 +89,8 @@ fn convert_to_json(input: &str, output: &str) -> mrrc::Result<()> {
 
 ```rust
 use mrrc::{MarcReader, Record};
-use mrrc::formats::{to_json, to_xml};
+use mrrc::formats::to_json;
+use mrrc::marcxml::record_to_marcxml;
 use std::fs::File;
 use std::io::Write;
 
@@ -103,8 +108,8 @@ fn convert_file(input: &str) -> mrrc::Result<()> {
         let json = to_json(&record)?;
         writeln!(json_out, "{}", json)?;
 
-        // XML
-        let xml = to_xml(&record)?;
+        // MARCXML
+        let xml = record_to_marcxml(&record)?;
         writeln!(xml_out, "{}", xml)?;
 
         count += 1;

@@ -378,13 +378,13 @@ def format_conversions():
     
     print()
     
-    # XML
+    # MARCXML
     try:
         xml_str = record.to_xml()
-        print("XML (first 150 chars):")
+        print("MARCXML (first 150 chars):")
         print(f"  {xml_str[:150]}...")
     except Exception as e:
-        print(f"XML conversion failed: {e}")
+        print(f"MARCXML conversion failed: {e}")
     
     print()
 
