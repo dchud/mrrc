@@ -46,13 +46,13 @@ writer.close()
 ```python
 import mrrc
 
-# Reading records - 100% compatible with pymarc syntax
-with open('records.mrc', 'rb') as f:
-    reader = mrrc.MARCReader(f)
-    for record in reader:
-        # Access fields using pymarc dictionary syntax
-        print(record['245']['a'])  # Works!
-        print(record.title())      # Also available as convenience method
+# Reading records — pass a file path for best performance.
+# Path input uses Rust-native file I/O, which releases the GIL
+# and enables true multi-thread parallelism.
+reader = mrrc.MARCReader('records.mrc')
+for record in reader:
+    print(record['245']['a'])  # pymarc dictionary syntax works!
+    print(record.title())      # Also available as convenience method
 
 # Writing records - inline construction (similar to pymarc)
 with open('output.mrc', 'wb') as f:
@@ -89,6 +89,7 @@ with open('output.mrc', 'wb') as f:
 
 | Operation | pymarc | mrrc | Same? |
 |-----------|--------|------|-------|
+| Create reader | `MARCReader(file_obj)` | `MARCReader('path.mrc')` (recommended) or `MARCReader(file_obj)` | Enhanced |
 | Read record | `reader.next()` or `next(reader)` | `next(reader)` | **Same** |
 | Write record | `writer.write(record)` | `writer.write(record)` | **Same** |
 | Iterate | `for record in reader:` | `for record in reader:` | **Same** |
@@ -196,12 +197,20 @@ leader.record_status = 'd'
 assert leader[5] == 'd'             # Position-based access reflects property change
 ```
 
-### Reader/Writer Interface (Identical to pymarc)
+### Reader/Writer Interface
 ```python
-# Reading (identical to pymarc)
-reader = mrrc.MARCReader(f)
+# Reading — pass a path string or pathlib.Path for best performance.
+# This uses Rust-native file I/O, which releases the Python GIL during
+# parsing and enables true multi-thread parallelism.
+reader = mrrc.MARCReader('records.mrc')
 for record in reader:              # Standard iteration
     print(record.title())
+
+# Python file objects and in-memory bytes also work, but hold the GIL
+# during reads, so they won't benefit from multi-threading.
+with open('records.mrc', 'rb') as f:
+    reader = mrrc.MARCReader(f)         # Works, but slower under threading
+reader = mrrc.MARCReader(marc_bytes)    # Also works for in-memory data
 
 # Writing (identical to pymarc, with context manager support)
 with mrrc.MARCWriter(f) as writer:
@@ -257,6 +266,7 @@ record.is_music()          # Check if music
 
 **Optional enhancements:**
 
+- [ ] Pass file paths to `MARCReader('file.mrc')` instead of file objects (releases the GIL, enables multi-thread parallelism)
 - [ ] Use additional convenience methods like `record.issn()`, `record.sudoc()`, etc. for specialized use cases
 - [ ] Update writers to use context managers: `with mrrc.MARCWriter(f) as w:` (better resource management)
 
