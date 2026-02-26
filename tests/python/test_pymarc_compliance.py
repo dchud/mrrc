@@ -199,17 +199,41 @@ class TestRecordUniformTitle:
 
 class TestRecordSubjects:
     """PYMARC COMPAT: test_subjects"""
-    
+
     def test_subjects_from_650_fields(self):
         """Test getting subjects from 650 fields."""
         record = Record()
-        
+
         record.add_field(create_field('650', ' ', '0', a='Computer science'))
         record.add_field(create_field('650', ' ', '0', a='Python language'))
-        
+
         subjects = record.subjects()
         assert len(subjects) >= 2
         assert any('Computer' in s for s in subjects)
+
+    def test_subjects_from_all_6xx_fields(self):
+        """Test that subjects() returns entries from all 6xx fields, matching pymarc."""
+        record = Record()
+
+        record.add_field(create_field('600', '1', '0', a='Maimonides, Moses,'))
+        record.add_field(create_field('610', '2', '0', a='United Nations'))
+        record.add_field(create_field('611', '2', '0', a='Vatican Council'))
+        record.add_field(create_field('630', '0', '4', a='Talmud Bavli.'))
+        record.add_field(create_field('648', ' ', '0', a='20th century'))
+        record.add_field(create_field('650', ' ', '0', a='Jewish law.'))
+        record.add_field(create_field('651', ' ', '0', a='Jerusalem'))
+        record.add_field(create_field('655', ' ', '7', a='Commentaries.'))
+
+        subjects = record.subjects()
+        assert len(subjects) == 8
+        assert 'Maimonides, Moses,' in subjects
+        assert 'United Nations' in subjects
+        assert 'Vatican Council' in subjects
+        assert 'Talmud Bavli.' in subjects
+        assert '20th century' in subjects
+        assert 'Jewish law.' in subjects
+        assert 'Jerusalem' in subjects
+        assert 'Commentaries.' in subjects
 
 
 class TestRecordPublisher:

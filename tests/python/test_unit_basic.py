@@ -171,17 +171,29 @@ class TestConvenienceMethods:
         assert '0201616165' in isbn
     
     def test_subjects_method(self):
-        """Test the subjects() convenience method."""
+        """Test the subjects() convenience method with multiple 6xx field types."""
         leader = Leader()
         record = Record(leader)
-        
-        # Add multiple subject fields (650)
+
+        # Add 650 — Topical Term
         for i in range(3):
             record.add_field(create_field('650', ' ', '0', a=f'Subject {i}'))
-        
+
+        # Add 600 — Personal Name Subject
+        record.add_field(create_field('600', '1', '0', a='Maimonides, Moses,'))
+
+        # Add 630 — Uniform Title Subject
+        record.add_field(create_field('630', '0', '4', a='Talmud Bavli.'))
+
+        # Add 655 — Genre/Form
+        record.add_field(create_field('655', ' ', '7', a='Commentaries.'))
+
         subjects = record.subjects()
-        assert len(subjects) == 3
+        assert len(subjects) == 6
         assert 'Subject 0' in subjects
+        assert 'Maimonides, Moses,' in subjects
+        assert 'Talmud Bavli.' in subjects
+        assert 'Commentaries.' in subjects
     
     def test_location_method(self):
         """Test the location() convenience method."""

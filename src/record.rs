@@ -887,14 +887,6 @@ impl Record {
         self.get_field("022").and_then(|f| f.get_subfield('a'))
     }
 
-    /// Get all subject headings from field 650, subfield 'a'
-    #[must_use]
-    pub fn subjects(&self) -> Vec<&str> {
-        self.get_fields("650")
-            .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
-            .unwrap_or_default()
-    }
-
     /// Get the language code from field 008 (positions 35-37)
     ///
     /// Returns a 3-character language code (e.g., "eng" for English).
@@ -1522,6 +1514,7 @@ impl FieldBuilder {
 mod tests {
     use super::*;
     use crate::leader::Leader;
+    use crate::record_helpers::RecordHelpers;
 
     fn make_leader() -> Leader {
         Leader {
@@ -1742,6 +1735,51 @@ mod tests {
         let subjects = record.subjects();
         assert_eq!(subjects.len(), 3);
         assert_eq!(subjects[0], "Subject 0");
+    }
+
+    #[test]
+    fn test_helper_subjects_all_6xx() {
+        let leader = make_leader();
+        let mut record = Record::new(leader);
+
+        // 600 — Personal Name Subject
+        let mut f600 = Field::new("600".to_string(), '1', '0');
+        f600.add_subfield('a', "Maimonides, Moses,".to_string());
+        record.add_field(f600);
+
+        // 610 — Corporate Name Subject
+        let mut f610 = Field::new("610".to_string(), '2', '0');
+        f610.add_subfield('a', "United Nations".to_string());
+        record.add_field(f610);
+
+        // 630 — Uniform Title Subject
+        let mut f630 = Field::new("630".to_string(), '0', '4');
+        f630.add_subfield('a', "Talmud Bavli.".to_string());
+        record.add_field(f630);
+
+        // 650 — Topical Term
+        let mut f650 = Field::new("650".to_string(), ' ', '0');
+        f650.add_subfield('a', "Jewish law.".to_string());
+        record.add_field(f650);
+
+        // 651 — Geographic Name
+        let mut f651 = Field::new("651".to_string(), ' ', '0');
+        f651.add_subfield('a', "Jerusalem".to_string());
+        record.add_field(f651);
+
+        // 655 — Genre/Form
+        let mut f655 = Field::new("655".to_string(), ' ', '7');
+        f655.add_subfield('a', "Commentaries.".to_string());
+        record.add_field(f655);
+
+        let subjects = record.subjects();
+        assert_eq!(subjects.len(), 6);
+        assert!(subjects.contains(&"Maimonides, Moses,"));
+        assert!(subjects.contains(&"United Nations"));
+        assert!(subjects.contains(&"Talmud Bavli."));
+        assert!(subjects.contains(&"Jewish law."));
+        assert!(subjects.contains(&"Jerusalem"));
+        assert!(subjects.contains(&"Commentaries."));
     }
 
     #[test]
