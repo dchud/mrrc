@@ -80,7 +80,7 @@ record.isbns()           # 020 $a (all)
 record.issn()            # 022 $a
 record.publisher()       # 260 $b
 record.pubyear()         # Publication year
-record.subjects()        # All 650 $a values
+record.subjects()        # All 6XX $a values
 ```
 
 ## Working with Subfields

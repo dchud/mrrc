@@ -766,7 +766,7 @@ class Record:
         return self._inner.issn()
     
     def subjects(self) -> List[str]:
-        """Get all subject headings from 650 field."""
+        """Get all subject headings from 6XX subject fields."""
         return self._inner.subjects()
     
     def location(self) -> List[str]:

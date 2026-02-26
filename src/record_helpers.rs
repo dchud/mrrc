@@ -19,6 +19,15 @@
 use crate::bibliographic_helpers::PublicationInfo;
 use crate::marc_record::MarcRecord;
 
+/// MARC 6XX subject tags matching pymarc's `subjects()` coverage.
+///
+/// Includes standard subject fields (600-662) and local subject fields (690-699)
+/// that appear frequently in OCLC and RLIN records.
+pub const SUBJECT_TAGS: &[&str] = &[
+    "600", "610", "611", "630", "648", "650", "651", "653", "654", "655", "656", "657", "658",
+    "662", "690", "691", "696", "697", "698", "699",
+];
+
 /// Extension trait providing convenient helper methods for MARC records.
 ///
 /// This trait is automatically implemented for all types that implement `MarcRecord`,
@@ -149,12 +158,23 @@ pub trait RecordHelpers: MarcRecord {
         self.get_field("022").and_then(|f| f.get_subfield('a'))
     }
 
-    /// Get all subject headings from field 650, subfield 'a'
+    /// Get all subject headings from 6XX fields, subfield 'a'
+    ///
+    /// Covers the same tags as pymarc's `subjects()`: 600, 610, 611, 630, 648,
+    /// 650, 651, 653, 654, 655, 656, 657, 658, 662, 690, 691, 696, 697, 698, 699.
     #[must_use]
     fn subjects(&self) -> Vec<&str> {
-        self.get_fields("650")
-            .map(|fields| fields.iter().filter_map(|f| f.get_subfield('a')).collect())
-            .unwrap_or_default()
+        let mut result = Vec::new();
+        for tag in SUBJECT_TAGS {
+            if let Some(fields) = self.get_fields(tag) {
+                for field in fields {
+                    if let Some(val) = field.get_subfield('a') {
+                        result.push(val);
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// Get the language code from field 008 (positions 35-37)
@@ -662,5 +682,49 @@ mod tests {
         record.add_field(f264);
 
         assert_eq!(record.publication_year(), Some(2022));
+    }
+
+    #[test]
+    fn test_trait_subjects_all_6xx() {
+        let mut record = create_test_record();
+
+        // 600 — Personal Name Subject
+        let mut f600 = Field::new("600".to_string(), '1', '0');
+        f600.subfields.push(Subfield {
+            code: 'a',
+            value: "Maimonides, Moses,".to_string(),
+        });
+        record.add_field(f600);
+
+        // 650 — Topical Term
+        let mut f650 = Field::new("650".to_string(), ' ', '0');
+        f650.subfields.push(Subfield {
+            code: 'a',
+            value: "Jewish law.".to_string(),
+        });
+        record.add_field(f650);
+
+        // 655 — Genre/Form
+        let mut f655 = Field::new("655".to_string(), ' ', '7');
+        f655.subfields.push(Subfield {
+            code: 'a',
+            value: "Commentaries.".to_string(),
+        });
+        record.add_field(f655);
+
+        // 690 — Local Subject
+        let mut f690 = Field::new("690".to_string(), ' ', ' ');
+        f690.subfields.push(Subfield {
+            code: 'a',
+            value: "Local topic".to_string(),
+        });
+        record.add_field(f690);
+
+        let subjects = record.subjects();
+        assert_eq!(subjects.len(), 4);
+        assert!(subjects.contains(&"Maimonides, Moses,"));
+        assert!(subjects.contains(&"Jewish law."));
+        assert!(subjects.contains(&"Commentaries."));
+        assert!(subjects.contains(&"Local topic"));
     }
 }
