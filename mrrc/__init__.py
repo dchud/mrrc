@@ -826,6 +826,95 @@ class Record:
         return self._inner.is_audiovisual()
     
     # =========================================================================
+    # Linked field navigation (880 alternate graphic representation)
+    # =========================================================================
+
+    def get_linked_fields(self, field: 'Field') -> List['Field']:
+        """Find all 880 fields linked to a given field via subfield $6.
+
+        Given a non-880 field that has a $6 linkage subfield, returns all 880
+        fields whose $6 occurrence number matches.  This is pymarc-compatible.
+
+        Args:
+            field: A Field object with a $6 linkage subfield.
+
+        Returns:
+            List of linked 880 Field objects (empty if no linkage or no match).
+
+        Example:
+            >>> f245 = record.get_fields('245')[0]
+            >>> linked = record.get_linked_fields(f245)
+            >>> if linked:
+            ...     print(f"Vernacular title: {linked[0]['a']}")
+        """
+        result = []
+        for f in self._inner.get_linked_fields(field._inner):
+            wrapper = Field(f.tag, f.indicator1, f.indicator2)
+            wrapper._inner = f
+            result.append(wrapper)
+        return result
+
+    def get_linked_field(self, field: 'Field') -> Optional['Field']:
+        """Find the single 880 field linked to a given field via subfield $6.
+
+        Like get_linked_fields() but returns only the first match.
+
+        Args:
+            field: A Field object with a $6 linkage subfield.
+
+        Returns:
+            The linked 880 Field, or None.
+        """
+        f = self._inner.get_linked_field(field._inner)
+        if f is not None:
+            wrapper = Field(f.tag, f.indicator1, f.indicator2)
+            wrapper._inner = f
+            return wrapper
+        return None
+
+    def get_original_field(self, field_880: 'Field') -> Optional['Field']:
+        """Find the original field linked from a given 880 field.
+
+        Args:
+            field_880: An 880 Field object.
+
+        Returns:
+            The linked original Field, or None.
+        """
+        f = self._inner.get_original_field(field_880._inner)
+        if f is not None:
+            wrapper = Field(f.tag, f.indicator1, f.indicator2)
+            wrapper._inner = f
+            return wrapper
+        return None
+
+    def get_field_pairs(self, tag: str) -> List[Tuple['Field', Optional['Field']]]:
+        """Get field pairs of original fields with their linked 880 counterparts.
+
+        Args:
+            tag: The field tag to pair (e.g., '245', '100').
+
+        Returns:
+            List of (original Field, linked 880 Field or None) tuples.
+
+        Example:
+            >>> for orig, linked in record.get_field_pairs('245'):
+            ...     print(f"Romanized: {orig['a']}")
+            ...     if linked:
+            ...         print(f"Vernacular: {linked['a']}")
+        """
+        result = []
+        for orig, linked in self._inner.get_field_pairs(tag):
+            orig_wrapper = Field(orig.tag, orig.indicator1, orig.indicator2)
+            orig_wrapper._inner = orig
+            linked_wrapper = None
+            if linked is not None:
+                linked_wrapper = Field(linked.tag, linked.indicator1, linked.indicator2)
+                linked_wrapper._inner = linked
+            result.append((orig_wrapper, linked_wrapper))
+        return result
+
+    # =========================================================================
     # Query DSL Methods - Advanced field searching beyond pymarc's get_fields()
     # =========================================================================
 

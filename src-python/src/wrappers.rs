@@ -875,6 +875,98 @@ impl PyRecord {
             .collect()
     }
 
+    // =========================================================================
+    // Linked field navigation (880 alternate graphic representation)
+    // =========================================================================
+
+    /// Find all 880 fields linked to a given field via subfield $6.
+    ///
+    /// Given a non-880 field that has a $6 linkage subfield, returns all 880
+    /// fields whose $6 occurrence number matches. This is the pymarc-compatible
+    /// API for navigating alternate graphic representations (Hebrew, Arabic,
+    /// CJK, Cyrillic, etc.).
+    ///
+    /// Args:
+    ///     field: A Field object with a $6 linkage subfield.
+    ///
+    /// Returns:
+    ///     List of linked 880 Field objects (empty if no linkage or no match).
+    ///
+    /// Example:
+    ///     >>> f245 = record.get_fields('245')\[0\]
+    ///     >>> linked = record.get_linked_fields(f245)
+    ///     >>> if linked:
+    ///     ...     print(linked\[0\]\['a'\])
+    pub fn get_linked_fields(&self, field: &PyField) -> Vec<PyField> {
+        self.inner
+            .get_linked_fields(&field.inner)
+            .into_iter()
+            .map(|f| PyField { inner: f.clone() })
+            .collect()
+    }
+
+    /// Find the single 880 field linked to a given field via subfield $6.
+    ///
+    /// Like get_linked_fields() but returns only the first match. Use this
+    /// when you expect exactly one linked 880 (the common case).
+    ///
+    /// Args:
+    ///     field: A Field object with a $6 linkage subfield.
+    ///
+    /// Returns:
+    ///     The linked 880 Field, or None if no linkage or no match.
+    pub fn get_linked_field(&self, field: &PyField) -> Option<PyField> {
+        self.inner
+            .get_linked_field(&field.inner)
+            .map(|f| PyField { inner: f.clone() })
+    }
+
+    /// Find the original field linked from a given 880 field.
+    ///
+    /// Given an 880 field, finds its linked original field by parsing the
+    /// tag and occurrence from its $6 subfield.
+    ///
+    /// Args:
+    ///     field_880: An 880 Field object.
+    ///
+    /// Returns:
+    ///     The linked original Field, or None.
+    pub fn get_original_field(&self, field_880: &PyField) -> Option<PyField> {
+        self.inner
+            .get_original_field(&field_880.inner)
+            .map(|f| PyField { inner: f.clone() })
+    }
+
+    /// Get field pairs of original fields with their linked 880 counterparts.
+    ///
+    /// For a given tag, returns tuples of (original_field, linked_880_or_None).
+    ///
+    /// Args:
+    ///     tag: The field tag to pair (e.g., '245', '100').
+    ///
+    /// Returns:
+    ///     List of (Field, Optional[Field]) tuples.
+    ///
+    /// Example:
+    ///     >>> for orig, linked in record.get_field_pairs('245'):
+    ///     ...     print(orig\['a'\])
+    ///     ...     if linked:
+    ///     ...         print(linked\['a'\])
+    pub fn get_field_pairs(&self, tag: &str) -> Vec<(PyField, Option<PyField>)> {
+        self.inner
+            .get_field_pairs(tag)
+            .into_iter()
+            .map(|(orig, linked)| {
+                (
+                    PyField {
+                        inner: orig.clone(),
+                    },
+                    linked.map(|f| PyField { inner: f.clone() }),
+                )
+            })
+            .collect()
+    }
+
     /// Get fields matching a FieldQuery.
     ///
     /// This method enables complex field matching using the Query DSL.

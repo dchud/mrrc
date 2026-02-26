@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`get_linked_fields()` for 880 alternate script field linkage** ([#19](https://github.com/dchud/mrrc/issues/19)): New pymarc-compatible `record.get_linked_fields(field)` returns all 880 fields linked via subfield $6 occurrence matching. Also adds `get_linked_field()` (singular), `get_original_field()` (reverse lookup from 880 to original), and `get_field_pairs(tag)` (original + 880 tuples). Fixed `LinkageInfo` parser to handle real MARC script identification codes: `(2` (Hebrew), `(3` (Arabic), `$1` (CJK), `(N` (Cyrillic), `(S` (Greek). Includes tests for Hebrew, Arabic, Chinese, Russian, and Greek scripts plus linkage across multiple field types (title, author, publisher, subject, series, notes, added entries).
 - **`MARCReader.backend_type` property**: Exposes the reader's I/O backend as a string (`"rust_file"`, `"cursor"`, or `"python_file"`) for diagnostics and testing.
 - **Dependabot configuration**: Enabled automated dependency updates for `cargo`, `uv`, and `github-actions` ecosystems (weekly schedule).
 - **GIL release verification tests**: Deterministic tests proving `py.detach()` actually releases the GIL during record parsing. Uses `sys.setswitchinterval(100.0)` to suppress automatic GIL switching, then verifies a background counter thread makes progress — which can only happen if the GIL is explicitly released. Covers all three backends: `rust_file`, `cursor`, and `python_file`.

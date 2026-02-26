@@ -43,10 +43,14 @@ use regex::Regex;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkageInfo {
-    /// Occurrence number (001-999) linking fields together
+    /// The 3-digit field tag from the linkage (e.g., "880", "245")
+    pub tag: String,
+
+    /// Occurrence number (01-999) linking fields together
     pub occurrence: String,
 
-    /// Script identification code (e.g., "01" for Hebrew, "02" for Arabic)
+    /// Script identification code (e.g., "(2" for Hebrew, "(3" for Arabic,
+    /// "$1" for CJK, "(N" for Cyrillic, "(S" for Greek)
     pub script_id: String,
 
     /// Whether reverse script is flagged (after `/r`)
@@ -83,28 +87,38 @@ impl LinkageInfo {
     /// `None` if the format is invalid.
     #[must_use]
     pub fn parse(value: &str) -> Option<Self> {
-        // Pattern: TAG-OCC[/script][/r]
-        // TAG = 3 digit field tag (e.g., 880, 100, 245)
+        // Pattern: TAG-OCC[/SCRIPT][/r]
+        // TAG = 3-digit field tag (e.g., 880, 100, 245)
         // OCC = 2-3 digit occurrence number (e.g., 01, 02, 001)
-        // /script = optional script id code
-        // /r = optional reverse flag
-        let pattern = Regex::new(r"^(\d{3})-(\d{2,3})(?:/[a-z]{2})?(?:/r)?$").ok()?;
+        // SCRIPT = optional MARC script identification code:
+        //   - Parenthesized: (2 (Hebrew), (3 (Arabic), (B (Latin),
+        //     (N (Cyrillic), (S (Greek), (4 (Devanagari), etc.
+        //   - Dollar-sign: $1 (CJK)
+        // /r = optional field orientation (right-to-left)
+        let pattern = Regex::new(r"^(\d{3})-(\d{2,3})(?:/([\(\$][A-Za-z0-9]))?(?:/r)?$").ok()?;
 
         let caps = pattern.captures(value)?;
 
-        let _tag = caps.get(1)?.as_str(); // First part (field tag)
-        let occurrence = caps.get(2)?.as_str().to_string(); // The occurrence number
-
-        // Extract script id if present (between first and second /)
-        // For now we keep it simple - just track occurrence number
-        let script_id = String::new();
-        let is_reverse = value.contains("/r");
+        let tag = caps.get(1)?.as_str().to_string();
+        let occurrence = caps.get(2)?.as_str().to_string();
+        let script_id = caps
+            .get(3)
+            .map(|m| m.as_str().to_string())
+            .unwrap_or_default();
+        let is_reverse = value.ends_with("/r");
 
         Some(LinkageInfo {
+            tag,
             occurrence,
             script_id,
             is_reverse,
         })
+    }
+
+    /// Get the linked field tag (e.g., "880", "245").
+    #[must_use]
+    pub fn tag(&self) -> &str {
+        &self.tag
     }
 
     /// Get the occurrence number as a string.
@@ -148,16 +162,23 @@ impl LinkageInfo {
 mod tests {
     use super::*;
 
+    // ------------------------------------------------------------------
+    // Basic parsing
+    // ------------------------------------------------------------------
+
     #[test]
     fn test_parse_basic_linkage() {
         let info = LinkageInfo::parse("100-01").unwrap();
+        assert_eq!(info.tag, "100");
         assert_eq!(info.occurrence, "01");
+        assert_eq!(info.script_id, "");
         assert!(!info.is_reverse);
     }
 
     #[test]
     fn test_parse_with_reverse_flag() {
         let info = LinkageInfo::parse("100-01/r").unwrap();
+        assert_eq!(info.tag, "100");
         assert_eq!(info.occurrence, "01");
         assert!(info.is_reverse);
     }
@@ -165,11 +186,98 @@ mod tests {
     #[test]
     fn test_parse_different_occurrences() {
         let info = LinkageInfo::parse("245-02").unwrap();
+        assert_eq!(info.tag, "245");
         assert_eq!(info.occurrence, "02");
 
         let info = LinkageInfo::parse("650-03").unwrap();
+        assert_eq!(info.tag, "650");
         assert_eq!(info.occurrence, "03");
     }
+
+    #[test]
+    fn test_parse_880_tag() {
+        let info = LinkageInfo::parse("880-01").unwrap();
+        assert_eq!(info.tag, "880");
+        assert_eq!(info.occurrence, "01");
+    }
+
+    // ------------------------------------------------------------------
+    // Real MARC script identification codes
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_parse_hebrew_script_code() {
+        // (2 = Hebrew, /r = right-to-left
+        let info = LinkageInfo::parse("245-01/(2/r").unwrap();
+        assert_eq!(info.tag, "245");
+        assert_eq!(info.occurrence, "01");
+        assert_eq!(info.script_id, "(2");
+        assert!(info.is_reverse);
+    }
+
+    #[test]
+    fn test_parse_arabic_script_code() {
+        // (3 = Arabic, /r = right-to-left
+        let info = LinkageInfo::parse("100-02/(3/r").unwrap();
+        assert_eq!(info.tag, "100");
+        assert_eq!(info.occurrence, "02");
+        assert_eq!(info.script_id, "(3");
+        assert!(info.is_reverse);
+    }
+
+    #[test]
+    fn test_parse_cjk_script_code() {
+        // $1 = CJK (Chinese, Japanese, Korean)
+        let info = LinkageInfo::parse("245-01/$1").unwrap();
+        assert_eq!(info.tag, "245");
+        assert_eq!(info.occurrence, "01");
+        assert_eq!(info.script_id, "$1");
+        assert!(!info.is_reverse);
+    }
+
+    #[test]
+    fn test_parse_cyrillic_script_code() {
+        // (N = Cyrillic
+        let info = LinkageInfo::parse("245-01/(N").unwrap();
+        assert_eq!(info.tag, "245");
+        assert_eq!(info.occurrence, "01");
+        assert_eq!(info.script_id, "(N");
+        assert!(!info.is_reverse);
+    }
+
+    #[test]
+    fn test_parse_greek_script_code() {
+        // (S = Greek
+        let info = LinkageInfo::parse("245-01/(S").unwrap();
+        assert_eq!(info.tag, "245");
+        assert_eq!(info.occurrence, "01");
+        assert_eq!(info.script_id, "(S");
+        assert!(!info.is_reverse);
+    }
+
+    #[test]
+    fn test_parse_latin_script_code() {
+        // (B = Latin
+        let info = LinkageInfo::parse("245-01/(B").unwrap();
+        assert_eq!(info.tag, "245");
+        assert_eq!(info.occurrence, "01");
+        assert_eq!(info.script_id, "(B");
+        assert!(!info.is_reverse);
+    }
+
+    #[test]
+    fn test_parse_script_code_without_reverse() {
+        // Script code present but no /r
+        let info = LinkageInfo::parse("260-03/(2").unwrap();
+        assert_eq!(info.tag, "260");
+        assert_eq!(info.occurrence, "03");
+        assert_eq!(info.script_id, "(2");
+        assert!(!info.is_reverse);
+    }
+
+    // ------------------------------------------------------------------
+    // Invalid formats
+    // ------------------------------------------------------------------
 
     #[test]
     fn test_parse_invalid_format_no_dash() {
@@ -193,6 +301,10 @@ mod tests {
         assert!(LinkageInfo::parse("").is_none());
     }
 
+    // ------------------------------------------------------------------
+    // Occurrence handling
+    // ------------------------------------------------------------------
+
     #[test]
     fn test_parse_leading_zeros() {
         let info = LinkageInfo::parse("100-01").unwrap();
@@ -203,6 +315,16 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_three_digit_occurrence() {
+        let info = LinkageInfo::parse("100-001").unwrap();
+        assert_eq!(info.occurrence, "001");
+    }
+
+    // ------------------------------------------------------------------
+    // Accessors and identity
+    // ------------------------------------------------------------------
+
+    #[test]
     fn test_for_reverse_link() {
         let info = LinkageInfo::parse("100-01").unwrap();
         assert_eq!(info.for_reverse_link(), "01");
@@ -210,8 +332,10 @@ mod tests {
 
     #[test]
     fn test_accessors() {
-        let info = LinkageInfo::parse("245-02/r").unwrap();
+        let info = LinkageInfo::parse("245-02/(2/r").unwrap();
+        assert_eq!(info.tag(), "245");
         assert_eq!(info.occurrence(), "02");
+        assert_eq!(info.script_id(), "(2");
         assert!(info.is_reverse());
     }
 

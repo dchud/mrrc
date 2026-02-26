@@ -586,5 +586,434 @@ class TestFieldConveniences:
         assert len(all_fields) >= 3
 
 
+class TestLinkedFields:
+    """Test 880 alternate graphic representation field linkage."""
+
+    def _build_record_with_880(self, tag, ind1, ind2, occurrence,
+                                romanized_subfields, script_subfields,
+                                script_code=None):
+        """Helper: build a record with one original field and one linked 880.
+
+        Args:
+            tag: Original field tag (e.g., '245')
+            ind1, ind2: Indicators for both original and 880
+            occurrence: Two-digit occurrence string (e.g., '01')
+            romanized_subfields: dict of code->value for the original field
+            script_subfields: dict of code->value for the 880 field
+            script_code: Optional MARC script code (e.g., '(2/r' for Hebrew RTL)
+        """
+        record = Record()
+        record.add_control_field('001', 'test-linked')
+
+        # Build $6 values
+        orig_6 = f'880-{occurrence}'
+        if script_code:
+            linked_6 = f'{tag}-{occurrence}/{script_code}'
+        else:
+            linked_6 = f'{tag}-{occurrence}'
+
+        # Original field with $6 linkage
+        orig = Field(tag, ind1, ind2)
+        orig.add_subfield('6', orig_6)
+        for code, value in romanized_subfields.items():
+            orig.add_subfield(code, value)
+        record.add_field(orig)
+
+        # Linked 880 field
+        linked = Field('880', ind1, ind2)
+        linked.add_subfield('6', linked_6)
+        for code, value in script_subfields.items():
+            linked.add_subfield(code, value)
+        record.add_field(linked)
+
+        return record
+
+    # ------------------------------------------------------------------
+    # Hebrew (RTL) – Soncino Mishneh Torah example from the issue
+    # ------------------------------------------------------------------
+
+    def test_hebrew_title_linkage(self):
+        """Test 880 linkage for Hebrew title (RTL script)."""
+        record = self._build_record_with_880(
+            '245', '1', '0', '01',
+            romanized_subfields={'a': 'Mishneh Torah.'},
+            script_subfields={'a': 'משנה תורה.'},
+            script_code='(2/r',
+        )
+        f245 = record.get_fields('245')[0]
+        linked = record.get_linked_fields(f245)
+        assert len(linked) == 1
+        assert linked[0].tag == '880'
+        assert linked[0]['a'] == 'משנה תורה.'
+
+    def test_hebrew_publisher_linkage(self):
+        """Test 880 linkage for Hebrew publisher (RTL script)."""
+        record = self._build_record_with_880(
+            '260', ' ', ' ', '03',
+            romanized_subfields={
+                'a': 'Śontsino :',
+                'b': 'Gershom ben Mosheh ish Śontsino,',
+            },
+            script_subfields={
+                'a': 'שונצינו :',
+                'b': 'גרשם בן משה איש שונצינו,',
+            },
+            script_code='(2/r',
+        )
+        f260 = record.get_fields('260')[0]
+        linked = record.get_linked_fields(f260)
+        assert len(linked) == 1
+        assert 'שונצינו' in linked[0]['a']
+
+    # ------------------------------------------------------------------
+    # Arabic (RTL) – An Arabic novel
+    # ------------------------------------------------------------------
+
+    def test_arabic_title_linkage(self):
+        """Test 880 linkage for Arabic title (RTL script)."""
+        record = self._build_record_with_880(
+            '245', '1', '0', '01',
+            romanized_subfields={'a': 'Awlād ḥāratinā /'},
+            script_subfields={'a': 'أولاد حارتنا /'},
+            script_code='(3/r',
+        )
+        f245 = record.get_fields('245')[0]
+        linked = record.get_linked_fields(f245)
+        assert len(linked) == 1
+        assert linked[0]['a'] == 'أولاد حارتنا /'
+
+    def test_arabic_author_linkage(self):
+        """Test 880 linkage for Arabic author (RTL script)."""
+        record = self._build_record_with_880(
+            '100', '1', ' ', '02',
+            romanized_subfields={'a': 'Maḥfūẓ, Najīb,'},
+            script_subfields={'a': 'محفوظ، نجيب،'},
+            script_code='(3/r',
+        )
+        f100 = record.get_fields('100')[0]
+        linked = record.get_linked_fields(f100)
+        assert len(linked) == 1
+        assert 'محفوظ' in linked[0]['a']
+
+    # ------------------------------------------------------------------
+    # CJK – Chinese book
+    # ------------------------------------------------------------------
+
+    def test_cjk_title_linkage(self):
+        """Test 880 linkage for CJK (Chinese) title."""
+        record = self._build_record_with_880(
+            '245', '1', '0', '01',
+            romanized_subfields={'a': 'Hong lou meng /'},
+            script_subfields={'a': '紅樓夢 /'},
+            script_code='$1',
+        )
+        f245 = record.get_fields('245')[0]
+        linked = record.get_linked_fields(f245)
+        assert len(linked) == 1
+        assert linked[0]['a'] == '紅樓夢 /'
+
+    def test_cjk_author_linkage(self):
+        """Test 880 linkage for CJK (Chinese) author."""
+        record = self._build_record_with_880(
+            '100', '1', ' ', '02',
+            romanized_subfields={'a': 'Cao, Xueqin,'},
+            script_subfields={'a': '曹雪芹,'},
+            script_code='$1',
+        )
+        f100 = record.get_fields('100')[0]
+        linked = record.get_linked_fields(f100)
+        assert len(linked) == 1
+        assert '曹雪芹' in linked[0]['a']
+
+    # ------------------------------------------------------------------
+    # Cyrillic – Russian novel
+    # ------------------------------------------------------------------
+
+    def test_cyrillic_title_linkage(self):
+        """Test 880 linkage for Cyrillic (Russian) title."""
+        record = self._build_record_with_880(
+            '245', '1', '0', '01',
+            romanized_subfields={'a': 'Voĭna i mir /'},
+            script_subfields={'a': 'Война и мир /'},
+            script_code='(N',
+        )
+        f245 = record.get_fields('245')[0]
+        linked = record.get_linked_fields(f245)
+        assert len(linked) == 1
+        assert linked[0]['a'] == 'Война и мир /'
+
+    def test_cyrillic_author_linkage(self):
+        """Test 880 linkage for Cyrillic (Russian) author."""
+        record = self._build_record_with_880(
+            '100', '1', ' ', '02',
+            romanized_subfields={'a': 'Tolstoĭ, Lev Nikolaevich,'},
+            script_subfields={'a': 'Толстой, Лев Николаевич,'},
+            script_code='(N',
+        )
+        f100 = record.get_fields('100')[0]
+        linked = record.get_linked_fields(f100)
+        assert len(linked) == 1
+        assert 'Толстой' in linked[0]['a']
+
+    # ------------------------------------------------------------------
+    # Linkage WITHOUT script identification code
+    # (valid MARC — just occurrence number, no script/direction)
+    # ------------------------------------------------------------------
+
+    def test_linkage_without_script_code(self):
+        """Test 880 linkage using bare occurrence numbers (no script code)."""
+        record = self._build_record_with_880(
+            '245', '1', '0', '01',
+            romanized_subfields={'a': 'Romanized title'},
+            script_subfields={'a': 'Vernacular title'},
+            script_code=None,  # No script identification
+        )
+        f245 = record.get_fields('245')[0]
+        linked = record.get_linked_fields(f245)
+        assert len(linked) == 1
+        assert linked[0]['a'] == 'Vernacular title'
+
+    # ------------------------------------------------------------------
+    # Subject field linkage (650)
+    # ------------------------------------------------------------------
+
+    def test_subject_field_linkage(self):
+        """Test 880 linkage for subject headings (650)."""
+        record = self._build_record_with_880(
+            '650', ' ', '0', '04',
+            romanized_subfields={'a': 'Filosofiyah Yehudit'},
+            script_subfields={'a': 'פילוסופיה יהודית'},
+            script_code='(2/r',
+        )
+        f650 = record.get_fields('650')[0]
+        linked = record.get_linked_fields(f650)
+        assert len(linked) == 1
+        assert 'פילוסופיה' in linked[0]['a']
+
+    # ------------------------------------------------------------------
+    # Series field linkage (490)
+    # ------------------------------------------------------------------
+
+    def test_series_field_linkage(self):
+        """Test 880 linkage for series statement (490)."""
+        record = self._build_record_with_880(
+            '490', '1', ' ', '05',
+            romanized_subfields={'a': 'Mif ha-sifrut ha-ʻIvrit'},
+            script_subfields={'a': 'מיף הספרות העברית'},
+            script_code='(2/r',
+        )
+        f490 = record.get_fields('490')[0]
+        linked = record.get_linked_fields(f490)
+        assert len(linked) == 1
+
+    # ------------------------------------------------------------------
+    # Notes field linkage (500)
+    # ------------------------------------------------------------------
+
+    def test_notes_field_linkage(self):
+        """Test 880 linkage for general note (500)."""
+        record = self._build_record_with_880(
+            '500', ' ', ' ', '06',
+            romanized_subfields={'a': 'Includes index.'},
+            script_subfields={'a': 'כולל מפתח.'},
+            script_code='(2/r',
+        )
+        f500 = record.get_fields('500')[0]
+        linked = record.get_linked_fields(f500)
+        assert len(linked) == 1
+        assert linked[0]['a'] == 'כולל מפתח.'
+
+    # ------------------------------------------------------------------
+    # Multiple linked pairs in one record
+    # ------------------------------------------------------------------
+
+    def test_multiple_linked_pairs(self):
+        """Test record with multiple 880-linked field pairs."""
+        record = Record()
+        record.add_control_field('001', 'multi-link')
+
+        # Pair 1: Title (245 <-> 880, occurrence 01)
+        f245 = Field('245', '1', '0')
+        f245.add_subfield('6', '880-01')
+        f245.add_subfield('a', 'Mishneh Torah.')
+        record.add_field(f245)
+
+        f880_title = Field('880', '1', '0')
+        f880_title.add_subfield('6', '245-01/(2/r')
+        f880_title.add_subfield('a', 'משנה תורה.')
+        record.add_field(f880_title)
+
+        # Pair 2: Author (100 <-> 880, occurrence 02)
+        f100 = Field('100', '1', ' ')
+        f100.add_subfield('6', '880-02')
+        f100.add_subfield('a', 'Maimonides,')
+        record.add_field(f100)
+
+        f880_author = Field('880', '1', ' ')
+        f880_author.add_subfield('6', '100-02/(2/r')
+        f880_author.add_subfield('a', 'רמב״ם,')
+        record.add_field(f880_author)
+
+        # Pair 3: Publisher (260 <-> 880, occurrence 03)
+        f260 = Field('260', ' ', ' ')
+        f260.add_subfield('6', '880-03')
+        f260.add_subfield('a', 'Śontsino :')
+        record.add_field(f260)
+
+        f880_pub = Field('880', ' ', ' ')
+        f880_pub.add_subfield('6', '260-03/(2/r')
+        f880_pub.add_subfield('a', 'שונצינו :')
+        record.add_field(f880_pub)
+
+        # Verify each pair resolves correctly
+        title_fields = record.get_fields('245')
+        linked_title = record.get_linked_fields(title_fields[0])
+        assert len(linked_title) == 1
+        assert 'משנה' in linked_title[0]['a']
+
+        author_fields = record.get_fields('100')
+        linked_author = record.get_linked_fields(author_fields[0])
+        assert len(linked_author) == 1
+        assert 'רמב' in linked_author[0]['a']
+
+        pub_fields = record.get_fields('260')
+        linked_pub = record.get_linked_fields(pub_fields[0])
+        assert len(linked_pub) == 1
+        assert 'שונצינו' in linked_pub[0]['a']
+
+    # ------------------------------------------------------------------
+    # Edge cases
+    # ------------------------------------------------------------------
+
+    def test_field_without_subfield_6_returns_empty(self):
+        """Field with no $6 linkage should return empty list."""
+        record = Record()
+        f245 = Field('245', '1', '0')
+        f245.add_subfield('a', 'A plain title.')
+        record.add_field(f245)
+
+        result = record.get_linked_fields(record.get_fields('245')[0])
+        assert result == []
+
+    def test_subfield_6_with_no_matching_880_returns_empty(self):
+        """Field with $6 but no matching 880 should return empty list."""
+        record = Record()
+        f245 = Field('245', '1', '0')
+        f245.add_subfield('6', '880-01')
+        f245.add_subfield('a', 'Orphan title.')
+        record.add_field(f245)
+        # No 880 field added
+
+        result = record.get_linked_fields(record.get_fields('245')[0])
+        assert result == []
+
+    def test_linked_field_is_wrapped_python_field(self):
+        """Returned linked fields should be wrapped Python Field objects."""
+        record = self._build_record_with_880(
+            '245', '1', '0', '01',
+            romanized_subfields={'a': 'Romanized'},
+            script_subfields={'a': 'Vernacular'},
+        )
+        f245 = record.get_fields('245')[0]
+        linked = record.get_linked_fields(f245)
+
+        assert len(linked) == 1
+        # Must be a wrapped Field (supports subscript access)
+        assert linked[0]['a'] == 'Vernacular'
+        assert linked[0].tag == '880'
+        assert hasattr(linked[0], 'subfields')
+
+    def test_get_linked_fields_returns_list(self):
+        """get_linked_fields always returns a list, even for single match."""
+        record = self._build_record_with_880(
+            '245', '1', '0', '01',
+            romanized_subfields={'a': 'Title'},
+            script_subfields={'a': 'כותרת'},
+            script_code='(2/r',
+        )
+        f245 = record.get_fields('245')[0]
+        result = record.get_linked_fields(f245)
+        assert isinstance(result, list)
+
+    # ------------------------------------------------------------------
+    # Added-entry name linkage (700) — e.g., translator in original script
+    # ------------------------------------------------------------------
+
+    def test_added_entry_linkage(self):
+        """Test 880 linkage for 700 added entry (translator)."""
+        record = self._build_record_with_880(
+            '700', '1', ' ', '07',
+            romanized_subfields={'a': 'Ibn Tibbon, Shemuel,', 'e': 'translator.'},
+            script_subfields={'a': 'אבן תבון, שמואל,', 'e': 'מתרגם.'},
+            script_code='(2/r',
+        )
+        f700 = record.get_fields('700')[0]
+        linked = record.get_linked_fields(f700)
+        assert len(linked) == 1
+        assert 'אבן תבון' in linked[0]['a']
+
+    # ------------------------------------------------------------------
+    # Greek script
+    # ------------------------------------------------------------------
+
+    def test_greek_title_linkage(self):
+        """Test 880 linkage for Greek script."""
+        record = self._build_record_with_880(
+            '245', '1', '0', '01',
+            romanized_subfields={'a': 'Politeia /'},
+            script_subfields={'a': 'Πολιτεία /'},
+            script_code='(S',
+        )
+        f245 = record.get_fields('245')[0]
+        linked = record.get_linked_fields(f245)
+        assert len(linked) == 1
+        assert linked[0]['a'] == 'Πολιτεία /'
+
+
+class TestLinkedFieldMARCJSON:
+    """Test get_linked_fields with records loaded via marcjson_to_record."""
+
+    def test_soncino_mishneh_torah(self):
+        """Full Soncino Mishneh Torah example from issue #19."""
+        import json
+        from mrrc import marcjson_to_record
+
+        marcjson = json.dumps([
+            {"leader": "05723cam a22006251a 4500"},
+            {"001": "2018751272"},
+            {"245": {"ind1": "1", "ind2": "0", "subfields": [
+                {"6": "880-01"}, {"a": "Mishneh Torah."}
+            ]}},
+            {"260": {"ind1": " ", "ind2": " ", "subfields": [
+                {"6": "880-03"},
+                {"a": "Śontsino :"},
+                {"b": "Gershom ben Mosheh ish Śontsino,"},
+                {"c": "r.ḥ. Nisan shenat 250 [March 23, 1490]"}
+            ]}},
+            {"880": {"ind1": "1", "ind2": "0", "subfields": [
+                {"6": "245-01/(2/r"}, {"a": "משנה תורה."}
+            ]}},
+            {"880": {"ind1": " ", "ind2": " ", "subfields": [
+                {"6": "260-03/(2/r"},
+                {"a": "שונצינו :"},
+                {"b": "גרשם בן משה איש שונצינו,"},
+                {"c": "ר\"ח ניסן שנת נ\"ר"}
+            ]}}
+        ])
+        record = marcjson_to_record(marcjson)
+
+        # Look up linked 880 for title
+        f245 = record.get_fields('245')[0]
+        linked_title = record.get_linked_fields(f245)
+        assert len(linked_title) == 1
+        assert linked_title[0]['a'] == 'משנה תורה.'
+
+        # Look up linked 880 for publisher
+        f260 = record.get_fields('260')[0]
+        linked_pub = record.get_linked_fields(f260)
+        assert len(linked_pub) == 1
+        assert 'שונצינו' in linked_pub[0]['a']
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
