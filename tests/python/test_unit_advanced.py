@@ -254,6 +254,81 @@ class TestFormatConversions:
         assert 'publisher' in dc
 
 
+class TestFormatConversionWrapping:
+    """Test that format conversion functions return properly wrapped Python objects."""
+
+    def _make_marcjson(self):
+        """Create a MARCJSON string for testing."""
+        import json
+        return json.dumps([
+            {"leader": "01826cam a2200421 a 4500"},
+            {"001": "12345"},
+            {"245": {"ind1": "1", "ind2": "0", "subfields": [{"a": "Test title /"}]}},
+            {"650": {"ind1": " ", "ind2": "0", "subfields": [{"a": "Testing."}]}},
+        ])
+
+    def test_marcjson_to_record_returns_wrapped_record(self):
+        """Test that marcjson_to_record returns a Python Record, not a raw Rust object."""
+        from mrrc import marcjson_to_record
+        record = marcjson_to_record(self._make_marcjson())
+        assert type(record).__name__ == 'Record'
+        assert type(record).__module__ == 'mrrc'
+
+    def test_marcjson_to_record_fields_are_wrapped(self):
+        """Test that fields from marcjson_to_record records support subscript access."""
+        from mrrc import marcjson_to_record
+        record = marcjson_to_record(self._make_marcjson())
+        fields = record.get_fields('245')
+        assert len(fields) == 1
+        f = fields[0]
+        assert type(f).__name__ == 'Field'
+        assert type(f).__module__ == 'mrrc'
+        # Subscript access should work
+        assert f['a'] == 'Test title /'
+
+    def test_marcjson_to_record_leader_is_wrapped(self):
+        """Test that leader from marcjson_to_record records supports indexing."""
+        from mrrc import marcjson_to_record
+        record = marcjson_to_record(self._make_marcjson())
+        ldr = record.leader()
+        assert type(ldr).__name__ == 'Leader'
+        assert type(ldr).__module__ == 'mrrc'
+        assert ldr[9] is not None
+
+    def test_marcjson_to_record_helper_methods_work(self):
+        """Test that helper methods work on marcjson_to_record records."""
+        from mrrc import marcjson_to_record
+        record = marcjson_to_record(self._make_marcjson())
+        assert record.title() == 'Test title /'
+        assert record.subjects() == ['Testing.']
+
+    def test_json_to_record_returns_wrapped_record(self):
+        """Test that json_to_record returns a wrapped Python Record."""
+        from mrrc import json_to_record
+        record = Record()
+        record.add_field(create_field('245', '1', '0', a='Test Title'))
+        json_str = record.to_json()
+        restored = json_to_record(json_str)
+        assert type(restored).__name__ == 'Record'
+        assert type(restored).__module__ == 'mrrc'
+        assert restored.title() == 'Test Title'
+        fields = restored.get_fields('245')
+        assert fields[0]['a'] == 'Test Title'
+
+    def test_xml_to_record_returns_wrapped_record(self):
+        """Test that xml_to_record returns a wrapped Python Record."""
+        from mrrc import xml_to_record
+        record = Record()
+        record.add_field(create_field('245', '1', '0', a='Test Title'))
+        xml_str = record.to_xml()
+        restored = xml_to_record(xml_str)
+        assert type(restored).__name__ == 'Record'
+        assert type(restored).__module__ == 'mrrc'
+        assert restored.title() == 'Test Title'
+        fields = restored.get_fields('245')
+        assert fields[0]['a'] == 'Test Title'
+
+
 class TestControlFields:
     """Test control field operations."""
 

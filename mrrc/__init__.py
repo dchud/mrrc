@@ -23,15 +23,15 @@ from ._mrrc import (
     parse_batch_parallel,
     parse_batch_parallel_limited,
     record_to_json,
-    json_to_record,
+    json_to_record as _json_to_record,
     record_to_xml,
-    xml_to_record,
+    xml_to_record as _xml_to_record,
     record_to_marcjson,
-    marcjson_to_record,
+    marcjson_to_record as _marcjson_to_record,
     record_to_dublin_core,
     record_to_mods,
-    mods_to_record,
-    mods_collection_to_records,
+    mods_to_record as _mods_to_record,
+    mods_collection_to_records as _mods_collection_to_records,
     dublin_core_to_xml,
     record_to_csv,
     records_to_csv,
@@ -1157,6 +1157,43 @@ class MARCWriter:
 # Aliases for Authority and Holdings records
 AuthorityRecord = _AuthorityRecord
 HoldingsRecord = _HoldingsRecord
+
+
+def _wrap_record(rust_record) -> Record:
+    """Wrap a raw Rust PyRecord in the Python Record wrapper."""
+    wrapper = Record(None)
+    wrapper._inner = rust_record
+    leader = Leader()
+    leader._rust_leader = rust_record.leader()
+    leader._parent_record = wrapper
+    wrapper._leader = leader
+    wrapper._leader_modified = False
+    return wrapper
+
+
+def json_to_record(json_str: str) -> Record:
+    """Convert a MARC JSON string to a Record."""
+    return _wrap_record(_json_to_record(json_str))
+
+
+def xml_to_record(xml_str: str) -> Record:
+    """Convert a MARCXML string to a Record."""
+    return _wrap_record(_xml_to_record(xml_str))
+
+
+def marcjson_to_record(marcjson_str: str) -> Record:
+    """Convert a MARCJSON string to a Record."""
+    return _wrap_record(_marcjson_to_record(marcjson_str))
+
+
+def mods_to_record(mods_str: str) -> Record:
+    """Convert a MODS XML string to a Record."""
+    return _wrap_record(_mods_to_record(mods_str))
+
+
+def mods_collection_to_records(mods_str: str) -> List[Record]:
+    """Convert a MODS collection XML string to a list of Records."""
+    return [_wrap_record(r) for r in _mods_collection_to_records(mods_str)]
 
 
 def get_leader_valid_values(position: int) -> Optional[dict]:
