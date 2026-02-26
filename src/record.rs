@@ -476,6 +476,36 @@ impl Record {
         found
     }
 
+    /// Find all 880 fields linked to a given original field (pymarc-compatible).
+    ///
+    /// Like [`Self::get_linked_field`] but returns all matching 880 fields
+    /// rather than just the first. In practice MARC records typically have one
+    /// 880 per occurrence, but the spec allows multiple.
+    ///
+    /// Returns an empty `Vec` when the field has no subfield 6 or no matching
+    /// 880 fields exist.
+    #[must_use]
+    pub fn get_linked_fields(&self, field: &Field) -> Vec<&Field> {
+        let Some(subfield_6) = field.get_subfield('6') else {
+            return Vec::new();
+        };
+        let Some(linkage) = crate::field_linkage::LinkageInfo::parse(subfield_6) else {
+            return Vec::new();
+        };
+
+        let mut results = Vec::new();
+        for field_880 in self.fields_by_tag("880") {
+            if let Some(sf6) = field_880.get_subfield('6') {
+                if let Some(linkage_880) = crate::field_linkage::LinkageInfo::parse(sf6) {
+                    if linkage_880.occurrence == linkage.occurrence {
+                        results.push(field_880);
+                    }
+                }
+            }
+        }
+        results
+    }
+
     /// Find the original field linked from a given 880 field.
     ///
     /// If an 880 field is provided, finds its linked original field.
@@ -505,14 +535,8 @@ impl Record {
         // Parse the linkage information
         let linkage = crate::field_linkage::LinkageInfo::parse(subfield_6)?;
 
-        // The linkage tells us which field and occurrence to find
-        // Subfield 6 in 880 has format: "TAG-OCC[/r]"
-        // We need to extract the TAG part
-        let original_tag = if subfield_6.len() >= 3 {
-            &subfield_6[0..3]
-        } else {
-            return None;
-        };
+        // Use the parsed tag from linkage info
+        let original_tag = &linkage.tag;
 
         // Find the original field with matching tag and occurrence
         for field_orig in self.fields_by_tag(original_tag) {
