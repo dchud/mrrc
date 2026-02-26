@@ -9,7 +9,7 @@ MRRC supports multiple serialization formats for MARC records. This page provide
 | ISO 2709 | Yes | Yes | Yes | Yes | Standard MARC binary interchange |
 | JSON | Yes | Yes | Yes | Yes | Generic JSON representation |
 | MARCJSON | Yes | Yes | Yes | Yes | LOC standard JSON-LD format |
-| XML | Yes | Yes | Yes | Yes | MARCXML format |
+| MARCXML | Yes | Yes | Yes | Yes | MARC21 XML schema |
 | CSV | - | Yes | Yes | Yes | Tabular export |
 | Dublin Core | - | Yes | Yes | Yes | 15-element metadata |
 | MODS | Yes | Yes | Yes | Yes | Metadata Object Description Schema |
@@ -79,13 +79,19 @@ Library of Congress standard JSON format for MARC.
 marcjson_str = record.to_marcjson()
 ```
 
-### XML (MARCXML)
+### MARCXML
 
-XML representation following MARCXML schema.
+MARCXML representation following the MARC21 XML schema.
 
 **Python**:
 ```python
 xml_str = record.to_xml()
+
+# Parse a single record from MARCXML
+record = mrrc.xml_to_record(xml_str)
+
+# Parse a MARCXML collection (multiple records)
+records = mrrc.xml_to_records(collection_xml_str)
 ```
 
 ### CSV

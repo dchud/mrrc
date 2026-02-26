@@ -235,11 +235,18 @@ let matches = query.find_all(&record);
 ### Core Formats (Always Available)
 
 ```rust
-use mrrc::formats::{to_json, to_xml, to_marcjson};
+use mrrc::formats::{to_json, to_marcjson};
+use mrrc::marcxml::{record_to_marcxml, marcxml_to_record, marcxml_to_records};
 
 let json = to_json(&record)?;
-let xml = to_xml(&record)?;
 let marcjson = to_marcjson(&record)?;
+
+// MARCXML conversion (bidirectional)
+let xml = record_to_marcxml(&record)?;
+let restored = marcxml_to_record(&xml)?;
+
+// Parse a MARCXML collection (multiple records)
+let records = marcxml_to_records(&collection_xml)?;
 
 // MODS conversion (bidirectional)
 let mods = mrrc::mods::record_to_mods_xml(&record)?;

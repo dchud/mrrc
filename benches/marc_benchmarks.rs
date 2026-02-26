@@ -5,7 +5,7 @@
 //! MARC records using Criterion.rs for statistical analysis.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mrrc::{json, xml, MarcReader, MarcWriter, RecordHelpers};
+use mrrc::{json, marcxml, MarcReader, MarcWriter, RecordHelpers};
 use std::io::Cursor;
 
 /// Load test fixtures from the test data directory.
@@ -116,7 +116,7 @@ fn benchmark_serialization_to_xml_1k(c: &mut Criterion) {
             let mut reader = MarcReader::new(cursor);
             let mut count = 0;
             while let Ok(Some(record)) = reader.read_record() {
-                let _ = xml::record_to_xml(&record);
+                let _ = marcxml::record_to_marcxml(&record);
                 count += 1;
             }
             count

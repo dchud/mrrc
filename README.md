@@ -14,7 +14,7 @@ A Rust library for reading, writing, and manipulating MARC bibliographic records
 
 - Reads and writes ISO 2709 (MARC21) binary format
 - Python bindings with pymarc-compatible API (minor differences documented)
-- Multiple serialization formats: JSON, XML, MARCJSON, CSV, Dublin Core, MODS, BIBFRAME
+- Multiple serialization formats: JSON, MARCXML, MARCJSON, CSV, Dublin Core, MODS, BIBFRAME
 - MARC-8 and UTF-8 character encoding support
 - Benchmarked at ~4x pymarc throughput in Python, ~1M records/sec in Rust
 
@@ -78,7 +78,7 @@ while let Some(record) = reader.read_record()? {
 | ISO 2709 | Yes | Yes |
 | JSON | Yes | Yes |
 | MARCJSON | Yes | Yes |
-| XML | Yes | Yes |
+| MARCXML | Yes | Yes |
 | CSV | - | Yes |
 | Dublin Core | - | Yes |
 | MODS | Yes | Yes |

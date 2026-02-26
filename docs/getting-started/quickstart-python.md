@@ -79,7 +79,7 @@ with MARCWriter("output.mrc") as writer:
 # To JSON
 json_str = record.to_json()
 
-# To XML
+# To MARCXML
 xml_str = record.to_xml()
 
 # To MARCJSON (LOC standard)

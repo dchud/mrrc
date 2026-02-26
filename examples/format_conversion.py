@@ -6,7 +6,7 @@ This example demonstrates how to convert MARC records to various
 serialization formats using the mrrc Python wrapper:
 - JSON (mrrc-specific format)
 - MARCJSON (standard MARC-JSON format)
-- XML (MARCXML format)
+- MARCXML (standard LOC MARCXML format)
 - CSV (tabular format)
 
 These conversions are useful for:
@@ -233,8 +233,8 @@ def convert_to_marcjson(record):
 
 def convert_to_xml(record):
     """
-    Convert record to XML format (MARCXML).
-    
+    Convert record to MARCXML format.
+
     MARCXML is the standard XML representation for MARC records.
     Useful for:
     - XML-based processing pipelines
@@ -243,7 +243,7 @@ def convert_to_xml(record):
     - Web service integration
     """
     print("=" * 70)
-    print("3. XML FORMAT (MARCXML)")
+    print("3. MARCXML FORMAT (MARCXML)")
     print("=" * 70 + "\n")
     
     try:
@@ -263,7 +263,7 @@ def convert_to_xml(record):
             tag = elem.tag.split('}')[-1]  # Remove namespace
             element_counts[tag] = element_counts.get(tag, 0) + 1
         
-        print("XML structure breakdown:")
+        print("MARCXML structure breakdown:")
         for tag in sorted(element_counts.keys()):
             print(f"  <{tag}>: {element_counts[tag]} element(s)")
         
@@ -405,7 +405,7 @@ FORMAT       | NATIVE | SIZE    | USE CASE
 ─────────────┼────────┼─────────┼──────────────────────────────────
 JSON         | mrrc   | Medium  | API responses, document stores
 MARCJSON     | Std    | Medium  | Library system integration
-XML          | Std    | Large   | XML pipelines, XSLT transforms
+MARCXML      | Std    | Large   | XML pipelines, XSLT transforms
 CSV          | N/A    | Varies  | Spreadsheets, data analysis
 ISO 2709     | Binary | Small   | Archive storage, interchange
 ─────────────┼────────┼─────────┼──────────────────────────────────
@@ -418,7 +418,7 @@ MARCJSON:
   Pros: Standard MARC JSON format, widely supported
   Cons: Slightly larger than binary
   
-XML:
+MARCXML:
   Pros: Standard format, XSLT support, widely supported
   Cons: Larger file size, slower parsing
   
@@ -471,14 +471,14 @@ CHOOSE YOUR FORMAT BASED ON YOUR USE CASE:
    → CSV (simple, spreadsheet-friendly)
 
 4. XML Processing / XSLT:
-   → XML/MARCXML (standard, tool support)
+   → MARCXML (standard, tool support)
 
 5. Linked Data / RDF:
    → MARCJSON or custom RDF conversion
 
 PERFORMANCE TIPS:
 - JSON conversions are fastest
-- XML is slower due to parsing overhead
+- MARCXML is slower due to parsing overhead
 - CSV generation can be done incrementally
 - Keep ISO 2709 for long-term storage
 
