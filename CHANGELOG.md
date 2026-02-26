@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- Updated migration guide (`docs/guides/migration-from-pymarc.md`) to recommend path-based `MARCReader` input instead of Python file objects, with comments explaining GIL release and multi-thread parallelism benefits.
+
 ## [0.7.3] - 2026-02-26
 
 ### Added
