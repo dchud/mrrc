@@ -726,7 +726,7 @@ impl PyRecord {
         self.inner.isbn().map(|s| s.to_string())
     }
 
-    /// Get all subject headings from 650 field
+    /// Get all subject headings from 6XX subject fields
     pub fn subjects(&self) -> Vec<String> {
         self.inner
             .subjects()

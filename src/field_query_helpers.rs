@@ -50,8 +50,12 @@ pub trait FieldQueryHelpers {
     /// }
     /// ```
     fn subjects_with_subdivision(&self, code: char, value: &str) -> Vec<&Field> {
-        let query = SubfieldValueQuery::new("650", code, value);
-        self.fields_matching_value(&query)
+        let mut results = Vec::new();
+        for tag in crate::record_helpers::SUBJECT_TAGS {
+            let query = SubfieldValueQuery::new(*tag, code, value);
+            results.extend(self.fields_matching_value(&query));
+        }
+        results
     }
 
     /// Find all ISBNs matching a regex pattern.
@@ -130,7 +134,11 @@ pub trait FieldQueryHelpers {
     /// }
     /// ```
     fn subjects_with_note(&self, subdivision: &str) -> Vec<&Field> {
-        let query = SubfieldValueQuery::partial("650", 'x', subdivision);
-        self.fields_matching_value(&query)
+        let mut results = Vec::new();
+        for tag in crate::record_helpers::SUBJECT_TAGS {
+            let query = SubfieldValueQuery::partial(*tag, 'x', subdivision);
+            results.extend(self.fields_matching_value(&query));
+        }
+        results
     }
 }
