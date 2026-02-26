@@ -11,7 +11,7 @@
 mod common;
 
 use common::make_leader;
-use mrrc::{Field, FieldQueryHelpers, Record};
+use mrrc::{Field, FieldQueryHelpers, Record, RecordHelpers};
 
 /// Create a realistic bibliographic record for testing
 fn create_realistic_record() -> Record {

@@ -3,7 +3,7 @@
 //! This example demonstrates how to convert MARC records to various serialization formats:
 //! JSON, MARCJSON, XML, CSV, Dublin Core, and MODS.
 
-use mrrc::{Field, Leader, Record};
+use mrrc::{Field, Leader, Record, RecordHelpers};
 
 fn main() {
     let record = create_sample_record();
