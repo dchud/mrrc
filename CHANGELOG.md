@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`publisher()` now checks 264 (RDA) as fallback** ([#17](https://github.com/dchud/mrrc/issues/17)): Previously only returned $b from field 260. Now falls back to field 264 with indicator2='1' (publication) for RDA-cataloged records. Also updated `place_of_publication()`, `publication_date()`, `publication_info()`, and `publication_year()` / `pubyear()` to check 264 as fallback, matching pymarc behavior.
 - **Removed flaky timing assertion from `test_backend_comparison_1k`**: The benchmark's `assert median_rustfile < median_pythonfile * 2` failed intermittently on shared CI runners due to disk I/O variance. Timing data is still printed for informational purposes.
 
 ### Performance

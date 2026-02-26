@@ -749,7 +749,7 @@ impl PyRecord {
         self.inner.notes().iter().map(|s| s.to_string()).collect()
     }
 
-    /// Get publisher from 260 field
+    /// Get publisher from 260 or 264 (RDA) field
     pub fn publisher(&self) -> Option<String> {
         self.inner.publisher().map(|s| s.to_string())
     }

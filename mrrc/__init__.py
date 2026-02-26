@@ -778,7 +778,7 @@ class Record:
         return self._inner.notes()
     
     def publisher(self) -> Optional[str]:
-        """Get publisher from 260 field."""
+        """Get publisher from 260 or 264 (RDA) field."""
         return self._inner.publisher()
     
     def uniform_title(self) -> Optional[str]:
