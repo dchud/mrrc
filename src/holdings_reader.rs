@@ -101,6 +101,7 @@ impl<R: Read> HoldingsMarcReader<R> {
         }
 
         let leader = Leader::from_bytes(&leader_bytes)?;
+        leader.validate_for_reading()?;
 
         // Verify this is a holdings record (Type x/y/v/u)
         if !matches!(leader.record_type, 'x' | 'y' | 'v' | 'u') {

@@ -253,6 +253,31 @@ impl Leader {
         })
     }
 
+    /// Validate that the leader is suitable for binary record reading.
+    ///
+    /// Checks that `record_length` and `data_base_address` are at least 24,
+    /// which is required before performing arithmetic on these fields during
+    /// binary ISO 2709 parsing.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `record_length` or `data_base_address` is less than 24.
+    pub fn validate_for_reading(&self) -> Result<()> {
+        if self.record_length < 24 {
+            return Err(MarcError::InvalidLeader(format!(
+                "Record length must be at least 24, got {}",
+                self.record_length
+            )));
+        }
+        if self.data_base_address < 24 {
+            return Err(MarcError::InvalidLeader(format!(
+                "Base address of data must be at least 24, got {}",
+                self.data_base_address
+            )));
+        }
+        Ok(())
+    }
+
     /// Serialize leader to 24-byte array
     ///
     /// # Errors
@@ -462,5 +487,33 @@ mod tests {
             let desc = Leader::describe_value(7, code);
             assert_eq!(desc, Some(expected_desc));
         }
+    }
+
+    #[test]
+    fn test_validate_for_reading_rejects_small_record_length() {
+        // Leader with record_length=00010 (< 24)
+        let bytes = b"00010nam a2200025 i 4500";
+        let leader = Leader::from_bytes(bytes).unwrap();
+        let result = leader.validate_for_reading();
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Record length must be at least 24"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_validate_for_reading_rejects_small_base_address() {
+        // Leader with valid record_length=00050 but base_address=00010 (< 24)
+        let bytes = b"00050nam a2200010 i 4500";
+        let leader = Leader::from_bytes(bytes).unwrap();
+        let result = leader.validate_for_reading();
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Base address of data must be at least 24"),
+            "got: {err}"
+        );
     }
 }

@@ -163,6 +163,7 @@ impl<R: Read> MarcReader<R> {
         }
 
         let leader = Leader::from_bytes(&leader_bytes)?;
+        leader.validate_for_reading()?;
 
         // Calculate the size of the directory and data areas
         let record_length = leader.record_length as usize;
@@ -682,5 +683,35 @@ mod tests {
         }
         assert_eq!(count, 3);
         assert_eq!(reader.records_read(), Some(3));
+    }
+
+    #[test]
+    fn test_malformed_leader_record_length_too_small() {
+        // Build a 24-byte leader where record_length (bytes 0-4) = 00010 (< 24)
+        let leader = b"00010nam a2200025 i 4500";
+        let cursor = Cursor::new(leader.to_vec());
+        let mut reader = MarcReader::new(cursor);
+        let result = reader.read_record();
+        assert!(result.is_err(), "expected Err for record_length < 24");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Record length must be at least 24"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_malformed_leader_base_address_too_small() {
+        // Build a 24-byte leader where base_address (bytes 12-16) = 00010 (< 24)
+        let leader = b"00050nam a2200010 i 4500";
+        let cursor = Cursor::new(leader.to_vec());
+        let mut reader = MarcReader::new(cursor);
+        let result = reader.read_record();
+        assert!(result.is_err(), "expected Err for base_address < 24");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Base address of data must be at least 24"),
+            "got: {err}"
+        );
     }
 }
