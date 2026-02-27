@@ -171,19 +171,10 @@ finally:
     signal.alarm(0)  # Cancel timeout
 ```
 
-## Limitations and Future Work
+## Future Work
 
-### Current Limitations
-
-- No async/await support
-- No background thread safety for record modifications
-- No distributed processing built-in
-
-### Planned Improvements
-
-- `async` reader/writer support
-- Convenience functions for ProducerConsumerPipeline configuration
-- Memory-mapped file support
+- Convenience functions for `ProducerConsumerPipeline` configuration
+- Integration of formal verification methods (in development at [mrrc-testbed](https://github.com/dchud/mrrc-testbed))
 
 ## References
 

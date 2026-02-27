@@ -51,7 +51,7 @@ MRRC uses **Beads** (`bd`) for issue tracking. This provides dependency-aware is
 
 **Install Beads**:
 ```bash
-# Follow instructions at https://github.com/dchud/beads
+# Follow instructions at https://github.com/steveyegge/beads
 ```
 
 **Check for ready work**:
