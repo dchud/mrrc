@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Arithmetic overflow panic on malformed leaders** ([#32](https://github.com/dchud/mrrc/issues/32)): `MarcReader`, `AuthorityReader`, and `HoldingsReader` now return `Err(MarcError::InvalidLeader)` instead of panicking when `record_length` or `data_base_address` in the leader is less than 24. New `Leader::validate_for_reading()` method performs the check in all three binary readers.
+
 ### Documentation
 
 - Updated migration guide (`docs/guides/migration-from-pymarc.md`) to recommend path-based `MARCReader` input instead of Python file objects, with comments explaining GIL release and multi-thread parallelism benefits.
