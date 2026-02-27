@@ -103,6 +103,7 @@ impl<R: Read> AuthorityMarcReader<R> {
         }
 
         let leader = Leader::from_bytes(&leader_bytes)?;
+        leader.validate_for_reading()?;
 
         // Verify this is an authority record (Type Z)
         if leader.record_type != 'z' {
