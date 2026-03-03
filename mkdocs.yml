@@ -99,9 +99,9 @@ nav:
     - Testing: contributing/testing.md
     - Release Procedure: contributing/release-procedure.md
     - Architecture: contributing/architecture.md
+    - Design: design/index.md
+    - History: history/index.md
   - Benchmarks:
     - benchmarks/index.md
     - Results: benchmarks/results.md
     - FAQ: benchmarks/faq.md
-  - Design: design/index.md
-  - History: history/index.md
