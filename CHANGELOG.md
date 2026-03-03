@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Skip rayon tests under Miri** ([#47](https://github.com/dchud/mrrc/issues/47), [#49](https://github.com/dchud/mrrc/pull/49)): Annotate 4 `rayon_parser_pool` tests with `#[cfg_attr(miri, ignore)]` to work around a known stacked borrows violation in `crossbeam-epoch` 0.9.18 ([crossbeam-rs/crossbeam#1181](https://github.com/crossbeam-rs/crossbeam/issues/1181)). Tracking re-enablement in [#48](https://github.com/dchud/mrrc/issues/48).
 - **Arithmetic overflow panic on malformed leaders** ([#32](https://github.com/dchud/mrrc/issues/32)): `MarcReader`, `AuthorityReader`, and `HoldingsReader` now return `Err(MarcError::InvalidLeader)` instead of panicking when `record_length` or `data_base_address` in the leader is less than 24. New `Leader::validate_for_reading()` method performs the check in all three binary readers.
 
 ### Documentation
