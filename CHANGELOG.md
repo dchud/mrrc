@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Proptest binary round-trip property test** ([#39](https://github.com/dchud/mrrc/issues/39), [#42](https://github.com/dchud/mrrc/pull/42)): New `tests/properties.rs` uses proptest to generate arbitrary structurally valid MARC records and verify that serialization to ISO 2709 and parsing back produces identical results. Covers leader fields, control fields, and data fields with indicators and subfields.
+- **Cargo-semver-checks CI workflow** ([#37](https://github.com/dchud/mrrc/issues/37), [#40](https://github.com/dchud/mrrc/pull/40)): New `.github/workflows/semver.yml` runs `cargo-semver-checks` on PRs that touch `src/` or `Cargo.toml` to catch accidental semver-breaking changes.
+- **Nightly Miri CI workflow** ([#38](https://github.com/dchud/mrrc/issues/38), [#41](https://github.com/dchud/mrrc/pull/41)): New `.github/workflows/miri.yml` runs `cargo +nightly miri test --lib` on a daily schedule to detect undefined behavior.
+
 ### Fixed
 
 - **Arithmetic overflow panic on malformed leaders** ([#32](https://github.com/dchud/mrrc/issues/32)): `MarcReader`, `AuthorityReader`, and `HoldingsReader` now return `Err(MarcError::InvalidLeader)` instead of panicking when `record_length` or `data_base_address` in the leader is less than 24. New `Leader::validate_for_reading()` method performs the check in all three binary readers.
