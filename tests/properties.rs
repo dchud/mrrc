@@ -166,8 +166,11 @@ fn arb_record() -> impl Strategy<Value = Record> {
     )
         .prop_map(|(leader, control_fields, data_fields)| {
             let mut record = Record::new(leader);
+            let mut seen_tags = std::collections::HashSet::new();
             for (tag, value) in control_fields {
-                record.add_control_field(tag, value);
+                if seen_tags.insert(tag.clone()) {
+                    record.add_control_field(tag, value);
+                }
             }
             for field in data_fields {
                 record.add_field(field);
