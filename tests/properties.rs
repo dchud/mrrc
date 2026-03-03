@@ -245,4 +245,14 @@ proptest! {
         let next = reader.read_record().expect("read should succeed");
         prop_assert!(next.is_none(), "expected exactly one record in buffer");
     }
+
+    /// Serialization should always produce valid bytes (no panic, no error).
+    #[test]
+    fn serialization_never_panics(record in arb_record()) {
+        let mut buf = Vec::new();
+        let mut writer = MarcWriter::new(&mut buf);
+        let result = writer.write_record(&record);
+        prop_assert!(result.is_ok(), "MarcWriter failed: {:?}", result.err());
+        prop_assert!(!buf.is_empty(), "Serialized record is empty");
+    }
 }

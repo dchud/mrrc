@@ -67,6 +67,7 @@ build/
 
 # Agent skills and configuration
 .agents/
+.abacus/
 
 # External tools (LOC converters, etc.)
 tools/
