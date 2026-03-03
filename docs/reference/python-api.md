@@ -2,6 +2,11 @@
 
 Complete Python API reference for MRRC.
 
+!!! tip "Canonical Type Stubs"
+    The file `mrrc/_mrrc.pyi` is the ground-truth type reference for the
+    Python extension module. IDEs use it for autocompletion and type checking.
+    If this page and the stub file disagree, the stub file is authoritative.
+
 ## Core Classes
 
 ### Record
