@@ -1,0 +1,8 @@
+{
+  "projectTitle": "MRRC: MARC Rust Crate",
+  "description": "Rust library for MARC bibliographic records (ISO 2709) with pymarc-compatible Python bindings. Supports JSON, MARCXML, CSV, Dublin Core, MODS, BIBFRAME formats.",
+  "folders": ["src", "src-python/src", "mrrc", "docs/getting-started", "docs/tutorials", "docs/guides", "docs/reference", "docs/contributing", "examples"],
+  "excludeFolders": ["docs/history", "docs/design", "target", ".beads", ".claude", "tests/data", "benches", "scripts"],
+  "excludeFiles": ["Cargo.lock"],
+  "rules": "mrrc/_mrrc.pyi is the canonical Python API reference. Python MARCReader wraps Rust _MARCReader via self._inner delegation in mrrc/__init__.py."
+}
