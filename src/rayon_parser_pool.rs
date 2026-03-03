@@ -150,7 +150,12 @@ pub fn parse_batch_parallel_limited(
 mod tests {
     use super::*;
 
+    // Skip rayon tests under Miri: crossbeam-epoch 0.9.18 has a known stacked borrows
+    // violation (crossbeam-rs/crossbeam#1181). Re-enable when crossbeam-epoch 0.10 ships.
+    // Tracking: https://github.com/dchud/mrrc/issues/48
+
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_parse_batch_parallel_single_record() {
         // Create a minimal valid MARC record (leader + terminator)
         let mut record_data = vec![0u8; 24]; // Leader is 24 bytes
@@ -169,6 +174,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_parse_batch_parallel_empty_boundaries() {
         let buffer = vec![1, 2, 3];
         let boundaries = vec![];
@@ -179,6 +185,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_parse_batch_parallel_boundary_out_of_bounds() {
         let buffer = vec![1, 2, 3];
         let boundaries = vec![(0, 10)]; // Exceeds buffer
@@ -190,6 +197,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_parse_batch_parallel_limited() {
         let mut record_data = vec![];
         // Add multiple dummy record boundaries
