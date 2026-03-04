@@ -994,7 +994,7 @@ If you have identified planned work items for the next release, create beads iss
 
 Example workflow:
 1. After release, review roadmap and open issues
-2. Create new issues for planned work: `bd create "Feature: ..." -p 2`
+2. Create new issues for planned work: `br create "Feature: ..." -p 2`
 3. Link major items in README roadmap or docs/RELEASES.md (but NOT in CHANGELOG [Unreleased])
 4. The [Unreleased] section fills up organically as work is completed during development
 
