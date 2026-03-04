@@ -15,16 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`serialization_never_panics` property test** ([#44](https://github.com/dchud/mrrc/issues/44), [#46](https://github.com/dchud/mrrc/pull/46)): New proptest verifying `MarcWriter` never panics or errors on any generated record, catching serialization bugs the round-trip test might miss.
 - **Deduplicate control field tags in proptest** ([#43](https://github.com/dchud/mrrc/issues/43), [#45](https://github.com/dchud/mrrc/pull/45)): `arb_record()` now uses a `HashSet` to skip duplicate control field tags, ensuring generated records are structurally valid per MARC.
 
+### Changed
+
+- **`check.sh --quick` now skips Python tests** ([#53](https://github.com/dchud/mrrc/issues/53), [#56](https://github.com/dchud/mrrc/pull/56)): `--quick` previously skipped the maturin build but still ran Python tests against a stale extension. Now `--quick` runs rustfmt, clippy, ruff, Rust tests, and doc tests (~10s). Full mode adds doc check, audit, maturin build, and Python tests (~16s).
+
 ### Fixed
 
 - **Skip rayon tests under Miri** ([#47](https://github.com/dchud/mrrc/issues/47), [#49](https://github.com/dchud/mrrc/pull/49)): Annotate 4 `rayon_parser_pool` tests with `#[cfg_attr(miri, ignore)]` to work around a known stacked borrows violation in `crossbeam-epoch` 0.9.18 ([crossbeam-rs/crossbeam#1181](https://github.com/crossbeam-rs/crossbeam/issues/1181)). Tracking re-enablement in [#48](https://github.com/dchud/mrrc/issues/48).
 - **Arithmetic overflow panic on malformed leaders** ([#32](https://github.com/dchud/mrrc/issues/32)): `MarcReader`, `AuthorityReader`, and `HoldingsReader` now return `Err(MarcError::InvalidLeader)` instead of panicking when `record_length` or `data_base_address` in the leader is less than 24. New `Leader::validate_for_reading()` method performs the check in all three binary readers.
+- **Python examples used Python file I/O instead of Rust I/O** ([#53](https://github.com/dchud/mrrc/issues/53), [#54](https://github.com/dchud/mrrc/pull/54)): All Python examples now pass file path strings to `MARCReader`/`MARCWriter` instead of `open()` file objects, using the Rust I/O backend which releases the GIL. Updated type stub docstring examples to match.
 
 ### Documentation
 
 - **Agent docs overhaul** ([#50](https://github.com/dchud/mrrc/pull/50)): New `CLAUDE.md` with project overview, key files, build/test commands, and architecture reference. Rewritten `AGENTS.md` replaces inception-era framing, migrates all `bd` references to `br`.
 - **Docs navigability improvements** ([#51](https://github.com/dchud/mrrc/pull/51)): Added `_mrrc.pyi` type stub admonition to Python API reference page. Moved Design and History under Contributing in mkdocs nav.
 - **Context7 configuration** ([#52](https://github.com/dchud/mrrc/pull/52)): New `context7.json` configuring documentation indexing for source, bindings, Python package, docs, and examples.
+- **Migrate bd references to br** ([#55](https://github.com/dchud/mrrc/pull/55)): Migrated `.github/copilot-instructions.md` and `docs/contributing/release-procedure.md` from `bd` to `br` commands, with explicit `br sync --flush-only` + git commit workflow.
 - Updated migration guide (`docs/guides/migration-from-pymarc.md`) to recommend path-based `MARCReader` input instead of Python file objects, with comments explaining GIL release and multi-thread parallelism benefits.
 
 ## [0.7.3] - 2026-02-26
