@@ -7,6 +7,7 @@ reading, writing, and manipulation of MARC bibliographic records.
 The Python wrapper aims for API compatibility with pymarc.
 """
 
+from . import _mrrc
 from ._mrrc import (
     AuthorityMARCReader,
     AuthorityRecord as _AuthorityRecord,
@@ -51,7 +52,7 @@ from ._mrrc import (
 )
 from typing import Optional, List, Union, Any, Tuple
 
-__version__ = "0.1.0"
+__version__ = _mrrc.__version__
 __author__ = "MRRC Contributors"
 
 
@@ -124,6 +125,10 @@ class ControlField:
         """Hash based on tag and value."""
         return hash((self.tag, self.value))
 
+    def is_control_field(self) -> bool:
+        """Returns True (pymarc compatibility)."""
+        return True
+
 
 class Field:
     """Enhanced Field wrapper with pymarc-compatible API."""
@@ -194,6 +199,10 @@ class Field:
             return len(values) > 0
         except Exception:
             return False
+
+    def is_control_field(self) -> bool:
+        """Returns False (pymarc compatibility)."""
+        return False
 
     def get_subfields(self, *codes: str) -> List[str]:
         """Get all subfield values for given codes (pymarc compatibility).
@@ -643,7 +652,13 @@ class Record:
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Record."""
         return getattr(self._inner, name)
-    
+
+    def __repr__(self) -> str:
+        return repr(self._inner)
+
+    def __str__(self) -> str:
+        return str(self._inner)
+
     def __contains__(self, tag: str) -> bool:
         """Check if a field with given tag exists in record."""
         return self.get_field(tag) is not None
@@ -698,6 +713,11 @@ class Record:
         """Add a field to the record."""
         self._inner.add_field(field._inner)
     
+    def get(self, tag: str, default=None):
+        """Get first field with given tag, or default (pymarc compatibility)."""
+        result = self.get_field(tag)
+        return result if result is not None else default
+
     def get_field(self, tag: str) -> Optional['Field']:
         """Get first field with given tag."""
         field = self._inner.get_field(tag)
