@@ -10,9 +10,29 @@
 
 use crate::error::marc_error_to_py_err;
 use crate::wrappers::PyRecord;
-use mrrc::{csv, dublin_core, json, marcjson, marcxml, mods};
-use pyo3::exceptions::PyValueError;
+use mrrc::{csv, dublin_core, json, marcjson, marcxml, mods, Record};
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
+
+/// Extract a Rust `Record` from either a raw `PyRecord` or a wrapped Python `Record`
+/// (which stores the inner `PyRecord` as `self._inner`).
+fn extract_record(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<Record> {
+    // Try to extract as PyRecord directly
+    if let Ok(py_record) = record.extract::<pyo3::PyRef<'_, PyRecord>>() {
+        return Ok(py_record.inner.clone());
+    }
+
+    // Otherwise, try to get the _inner attribute (wrapped Record)
+    if let Ok(inner) = record.getattr("_inner") {
+        if let Ok(py_record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
+            return Ok(py_record.inner.clone());
+        }
+    }
+
+    Err(PyTypeError::new_err(
+        "argument 'record': expected a Record instance",
+    ))
+}
 use serde_json::Value;
 
 /// Convert a MARC record to JSON.
@@ -30,8 +50,9 @@ use serde_json::Value;
 /// json_str = mrrc.record_to_json(record)
 /// ```
 #[pyfunction]
-pub fn record_to_json(record: &PyRecord) -> PyResult<String> {
-    json::record_to_json(&record.inner)
+pub fn record_to_json(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> {
+    let inner = extract_record(record)?;
+    json::record_to_json(&inner)
         .map(|v| v.to_string())
         .map_err(marc_error_to_py_err)
 }
@@ -74,8 +95,9 @@ pub fn json_to_record(json_str: &str) -> PyResult<PyRecord> {
 /// xml_str = mrrc.record_to_xml(record)
 /// ```
 #[pyfunction]
-pub fn record_to_xml(record: &PyRecord) -> PyResult<String> {
-    marcxml::record_to_marcxml(&record.inner).map_err(marc_error_to_py_err)
+pub fn record_to_xml(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> {
+    let inner = extract_record(record)?;
+    marcxml::record_to_marcxml(&inner).map_err(marc_error_to_py_err)
 }
 
 /// Convert MARCXML back to a MARC record.
@@ -139,8 +161,9 @@ pub fn xml_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
 /// marcjson_str = mrrc.record_to_marcjson(record)
 /// ```
 #[pyfunction]
-pub fn record_to_marcjson(record: &PyRecord) -> PyResult<String> {
-    marcjson::record_to_marcjson(&record.inner)
+pub fn record_to_marcjson(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> {
+    let inner = extract_record(record)?;
+    marcjson::record_to_marcjson(&inner)
         .map(|v| v.to_string())
         .map_err(marc_error_to_py_err)
 }
@@ -187,9 +210,10 @@ pub fn marcjson_to_record(marcjson_str: &str) -> PyResult<PyRecord> {
 /// ```
 #[pyfunction]
 pub fn record_to_dublin_core(
-    record: &PyRecord,
+    record: &pyo3::Bound<'_, pyo3::PyAny>,
 ) -> PyResult<std::collections::HashMap<String, Vec<String>>> {
-    dublin_core::record_to_dublin_core(&record.inner)
+    let inner = extract_record(record)?;
+    dublin_core::record_to_dublin_core(&inner)
         .map(|dc| {
             let mut map = std::collections::HashMap::new();
             map.insert("title".to_string(), dc.title);
@@ -230,8 +254,9 @@ pub fn record_to_dublin_core(
 /// mods_xml = mrrc.record_to_mods(record)
 /// ```
 #[pyfunction]
-pub fn record_to_mods(record: &PyRecord) -> PyResult<String> {
-    mods::record_to_mods_xml(&record.inner).map_err(marc_error_to_py_err)
+pub fn record_to_mods(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> {
+    let inner = extract_record(record)?;
+    mods::record_to_mods_xml(&inner).map_err(marc_error_to_py_err)
 }
 
 /// Parse a MODS XML string into a MARC record.
@@ -298,8 +323,9 @@ pub fn mods_collection_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
 /// print(dc_xml)
 /// ```
 #[pyfunction]
-pub fn record_to_dublin_core_xml(record: &PyRecord) -> PyResult<String> {
-    dublin_core::record_to_dublin_core_xml(&record.inner).map_err(marc_error_to_py_err)
+pub fn record_to_dublin_core_xml(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> {
+    let inner = extract_record(record)?;
+    dublin_core::record_to_dublin_core_xml(&inner).map_err(marc_error_to_py_err)
 }
 
 /// Convert Dublin Core metadata to XML.
@@ -368,21 +394,8 @@ pub fn dublin_core_to_xml(
 /// ```
 #[pyfunction]
 pub fn record_to_csv(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> {
-    // Try to extract as PyRecord directly first
-    if let Ok(py_record) = record.extract::<pyo3::PyRef<'_, PyRecord>>() {
-        return csv::record_to_csv(&py_record.inner).map_err(marc_error_to_py_err);
-    }
-
-    // Otherwise, try to get the _inner attribute (wrapped Record)
-    if let Ok(inner) = record.getattr("_inner") {
-        if let Ok(py_record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
-            return csv::record_to_csv(&py_record.inner).map_err(marc_error_to_py_err);
-        }
-    }
-
-    Err(pyo3::exceptions::PyTypeError::new_err(
-        "record must be a PyRecord or wrapped Record",
-    ))
+    let inner = extract_record(record)?;
+    csv::record_to_csv(&inner).map_err(marc_error_to_py_err)
 }
 
 /// Convert multiple MARC records to CSV format.
