@@ -4,6 +4,7 @@ Tests for edge cases, format conversions, and comprehensive API coverage.
 """
 
 import pytest
+import mrrc
 from mrrc import MARCReader, MARCWriter, Record, Field, Leader
 import io
 
@@ -1203,6 +1204,110 @@ class TestLinkedFieldMARCJSON:
         linked_pub = record.get_linked_fields(f260)
         assert len(linked_pub) == 1
         assert 'שונצינו' in linked_pub[0]['a']
+
+
+class TestSerializationRoundTrip:
+    """Test that records from deserialization functions can be re-serialized.
+
+    Regression tests for GitHub issue #57: record_to_json/xml fail on records
+    returned by xml_to_record() with 'Record' object is not an instance of 'Record'.
+    """
+
+    def test_xml_to_record_then_record_to_json(self):
+        """xml_to_record() result can be passed to record_to_json()."""
+        xml = '''<record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>00000cam a2200000 a 4500</leader>
+          <controlfield tag="001">test123</controlfield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">Test title</subfield>
+          </datafield>
+        </record>'''
+        rec = mrrc.xml_to_record(xml)
+        json_str = mrrc.record_to_json(rec)
+        assert '"245"' in json_str
+        assert 'Test title' in json_str
+
+    def test_xml_to_record_then_record_to_xml(self):
+        """xml_to_record() result can be passed to record_to_xml()."""
+        xml = '''<record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>00000cam a2200000 a 4500</leader>
+          <controlfield tag="001">test123</controlfield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">Test title</subfield>
+          </datafield>
+        </record>'''
+        rec = mrrc.xml_to_record(xml)
+        xml_out = mrrc.record_to_xml(rec)
+        assert 'Test title' in xml_out
+
+    def test_xml_to_record_then_record_to_marcjson(self):
+        """xml_to_record() result can be passed to record_to_marcjson()."""
+        xml = '''<record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>00000cam a2200000 a 4500</leader>
+          <controlfield tag="001">test123</controlfield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">Test title</subfield>
+          </datafield>
+        </record>'''
+        rec = mrrc.xml_to_record(xml)
+        mj = mrrc.record_to_marcjson(rec)
+        assert 'Test title' in mj
+
+    def test_xml_to_record_then_record_to_mods(self):
+        """xml_to_record() result can be passed to record_to_mods()."""
+        xml = '''<record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>00000cam a2200000 a 4500</leader>
+          <controlfield tag="001">test123</controlfield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">Test title</subfield>
+          </datafield>
+        </record>'''
+        rec = mrrc.xml_to_record(xml)
+        mods = mrrc.record_to_mods(rec)
+        assert 'Test title' in mods
+
+    def test_xml_to_record_then_record_to_dublin_core(self):
+        """xml_to_record() result can be passed to record_to_dublin_core()."""
+        xml = '''<record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>00000cam a2200000 a 4500</leader>
+          <controlfield tag="001">test123</controlfield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">Test title</subfield>
+          </datafield>
+        </record>'''
+        rec = mrrc.xml_to_record(xml)
+        dc = mrrc.record_to_dublin_core(rec)
+        assert 'Test title' in dc['title'][0]
+
+    def test_xml_to_record_then_record_to_dublin_core_xml(self):
+        """xml_to_record() result can be passed to _mrrc.record_to_dublin_core_xml()."""
+        from mrrc._mrrc import record_to_dublin_core_xml
+        xml = '''<record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>00000cam a2200000 a 4500</leader>
+          <controlfield tag="001">test123</controlfield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">Test title</subfield>
+          </datafield>
+        </record>'''
+        rec = mrrc.xml_to_record(xml)
+        dc_xml = record_to_dublin_core_xml(rec)
+        assert 'Test title' in dc_xml
+
+    def test_json_to_record_then_record_to_xml(self):
+        """json_to_record() result can be passed to record_to_xml()."""
+        record = Record()
+        record.add_field(create_field('245', '1', '0', a='JSON Test'))
+        json_str = mrrc.record_to_json(record)
+        restored = mrrc.json_to_record(json_str)
+        xml_out = mrrc.record_to_xml(restored)
+        assert 'JSON Test' in xml_out
+
+    def test_raw_record_still_works(self):
+        """Direct _mrrc.Record (unwrapped) still works with serialization."""
+        from mrrc._mrrc import Record as _Record, Leader as _Leader
+        raw = _Record(_Leader())
+        # Should not raise
+        mrrc.record_to_json(raw)
 
 
 if __name__ == '__main__':
