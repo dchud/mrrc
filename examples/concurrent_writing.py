@@ -50,17 +50,17 @@ def copy_records(input_file: str, output_file: str) -> dict:
     errors = 0
     
     try:
-        with open(input_file, 'rb') as infile:
-            with open(output_file, 'wb') as outfile:
-                # Create separate reader and writer for this thread
-                reader = MARCReader(infile)
-                writer = MARCWriter(outfile)
-                
-                for record in reader:
-                    records_read += 1
-                    writer.write_record(record)
-                    records_written += 1
-                    
+        # Pass path strings so mrrc uses Rust I/O with GIL released
+        reader = MARCReader(input_file)
+        writer = MARCWriter(output_file)
+
+        for record in reader:
+            records_read += 1
+            writer.write_record(record)
+            records_written += 1
+
+        writer.close()
+
         # Verify file was created
         if not os.path.exists(output_file):
             errors = 1

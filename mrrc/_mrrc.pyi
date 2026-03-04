@@ -326,21 +326,19 @@ class MARCReader:
         GIL is released during record parsing (Phase 2).
 
     Examples:
-        Simple sequential reading::
+        Simple sequential reading (path string uses Rust I/O, releases GIL)::
 
-            with open('records.mrc', 'rb') as f:
-                reader = mrrc.MARCReader(f)
-                for record in reader:
-                    print(record.title())
+            reader = mrrc.MARCReader('records.mrc')
+            for record in reader:
+                print(record.title())
 
         Parallel processing with ThreadPoolExecutor::
 
             from concurrent.futures import ThreadPoolExecutor
 
             def process_file(filename):
-                with open(filename, 'rb') as f:
-                    reader = mrrc.MARCReader(f)  # New reader per thread
-                    return sum(1 for _ in reader)
+                reader = mrrc.MARCReader(filename)  # New reader per thread
+                return sum(1 for _ in reader)
 
             with ThreadPoolExecutor(max_workers=4) as executor:
                 futures = [executor.submit(process_file, f) for f in file_list]
