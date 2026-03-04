@@ -36,6 +36,9 @@ beads.right.meta.json
 # Export state (local-only, generated during bd sync)
 export-state/
 
+# History snapshots (local-only, generated during br sync)
+.br_history/
+
 # Sync state (local-only, per-machine)
 # These files are machine-specific and should not be shared across clones
 .sync.lock
