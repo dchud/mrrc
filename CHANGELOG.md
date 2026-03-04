@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **Agent docs overhaul** ([#50](https://github.com/dchud/mrrc/pull/50)): New `CLAUDE.md` with project overview, key files, build/test commands, and architecture reference. Rewritten `AGENTS.md` replaces inception-era framing, migrates all `bd` references to `br`.
+- **Docs navigability improvements** ([#51](https://github.com/dchud/mrrc/pull/51)): Added `_mrrc.pyi` type stub admonition to Python API reference page. Moved Design and History under Contributing in mkdocs nav.
+- **Context7 configuration** ([#52](https://github.com/dchud/mrrc/pull/52)): New `context7.json` configuring documentation indexing for source, bindings, Python package, docs, and examples.
 - Updated migration guide (`docs/guides/migration-from-pymarc.md`) to recommend path-based `MARCReader` input instead of Python file objects, with comments explaining GIL release and multi-thread parallelism benefits.
 
 ## [0.7.3] - 2026-02-26
