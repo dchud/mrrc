@@ -39,6 +39,18 @@ echo ""
 echo "=== Clippy check (mrrc-python) ==="
 cargo clippy --package mrrc-python --all-targets -- -D warnings
 
+echo ""
+echo "=== Python lint (ruff) ==="
+uv run ruff check mrrc/ tests/python/
+
+echo ""
+echo "=== Rust library + integration tests ==="
+cargo test --lib --tests --package mrrc -q
+
+echo ""
+echo "=== Rust doc tests ==="
+cargo test --doc --package mrrc -q
+
 if [ "$QUICK" = false ]; then
     echo ""
     echo "=== Documentation check ==="
@@ -51,23 +63,11 @@ if [ "$QUICK" = false ]; then
     echo ""
     echo "=== Maturin Python extension build ==="
     uv run maturin develop
+
+    echo ""
+    echo "=== Python tests (core functionality, excludes benchmarks) ==="
+    uv run python -m pytest tests/python/ -m "not benchmark" -q
 fi
-
-echo ""
-echo "=== Rust library + integration tests ==="
-cargo test --lib --tests --package mrrc -q
-
-echo ""
-echo "=== Rust doc tests ==="
-cargo test --doc --package mrrc -q
-
-echo ""
-echo "=== Python tests (core functionality, excludes benchmarks) ==="
-uv run python -m pytest tests/python/ -m "not benchmark" -q
-
-echo ""
-echo "=== Python lint (ruff) ==="
-uv run ruff check mrrc/ tests/python/
 
 # ASAN memory safety checks (optional, nightly feature)
 if [ "$MEMORY_CHECKS" = true ]; then
