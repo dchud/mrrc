@@ -123,6 +123,10 @@ field = record['999']                      # Returns None if field doesn't exist
 if '245' in record:
     title_field = record['245']
 
+# Dict-like .get() method (identical to pymarc)
+field = record.get('245')                  # Get first field, None if missing
+field = record.get('999', default_field)   # With default value
+
 # Alternative method-based access also available
 field = record.get_field('245')            # Get first field
 ```
@@ -156,6 +160,7 @@ field.get_subfields('a')           # Get list of values - identical to pymarc
 field.delete_subfield('a')         # Delete subfield by code
 field.subfields_as_dict()          # Get all subfields as dict
 field.subfields()                  # Get all Subfield objects
+field.is_control_field()           # False for data fields (identical to pymarc)
 ```
 
 ### Record Operations (Identical to pymarc + Extensions)
