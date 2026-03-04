@@ -34,9 +34,8 @@ def create_sample_record_from_binary():
     if test_dir.exists():
         marc_files = list(test_dir.glob('*.mrc'))
         if marc_files:
-            with open(marc_files[0], 'rb') as f:
-                reader = MARCReader(f)
-                return reader.read_record()
+            reader = MARCReader(str(marc_files[0]))
+            return reader.read_record()
     
     # If no test file available, return None
     return None

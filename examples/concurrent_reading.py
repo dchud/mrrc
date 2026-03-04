@@ -50,18 +50,18 @@ def process_file(filename: str) -> dict:
     errors = 0
     
     try:
-        with open(filename, 'rb') as f:
-            # Create a NEW reader for this thread
-            reader = MARCReader(f)
-            
-            for record in reader:
-                record_count += 1
-                
-                # Extract some data to demonstrate processing
-                if record.title():
-                    title_count += 1
-                if record.author():
-                    author_count += 1
+        # Create a NEW reader for this thread — pass path string
+        # so mrrc uses Rust I/O with GIL released
+        reader = MARCReader(filename)
+
+        for record in reader:
+            record_count += 1
+
+            # Extract some data to demonstrate processing
+            if record.title():
+                title_count += 1
+            if record.author():
+                author_count += 1
                     
     except Exception as e:
         errors = 1

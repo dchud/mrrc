@@ -296,23 +296,24 @@ def writing_records():
     import tempfile
     import os
     
-    with tempfile.NamedTemporaryFile(mode='wb', suffix='.mrc', delete=False) as f:
-        temp_file = f.name
-        writer = MARCWriter(f)
-        for record in records:
-            writer.write_record(record)
-    
+    temp_file = tempfile.mktemp(suffix='.mrc')
+
+    # Pass path string so mrrc uses Rust I/O with GIL released
+    writer = MARCWriter(temp_file)
+    for record in records:
+        writer.write_record(record)
+    writer.close()
+
     try:
         # Read back and verify
         print(f"Wrote {len(records)} records to {temp_file}")
-        
-        with open(temp_file, 'rb') as f:
-            reader = MARCReader(f)
-            read_count = 0
-            print("\nRecords read back:")
-            for record in reader:
-                print(f"  {read_count + 1}. {record.title()}")
-                read_count += 1
+
+        reader = MARCReader(temp_file)
+        read_count = 0
+        print("\nRecords read back:")
+        for record in reader:
+            print(f"  {read_count + 1}. {record.title()}")
+            read_count += 1
         
         print(f"\nVerification: {read_count}/{len(records)} records successfully round-tripped")
         
@@ -435,10 +436,10 @@ def main():
    ])
    record.add_control_field('001', 'my-control-number')
 
-   # Write
-   with open('output.mrc', 'wb') as f:
-       writer = MARCWriter(f)
-       writer.write_record(record)
+   # Write — pass path string for Rust I/O (releases GIL)
+   writer = MARCWriter('output.mrc')
+   writer.write_record(record)
+   writer.close()
    ```
 
 5. PYMARC COMPATIBILITY:

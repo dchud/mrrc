@@ -88,14 +88,13 @@ def main():
     title_count = 0
     author_count = 0
     
-    with open(marc_file, 'rb') as f:
-        reader = MARCReader(f)
-        for record in reader:
-            record_count += 1
-            if record.title():
-                title_count += 1
-            if record.author():
-                author_count += 1
+    reader = MARCReader(str(marc_file))
+    for record in reader:
+        record_count += 1
+        if record.title():
+            title_count += 1
+        if record.author():
+            author_count += 1
     
     seq_time = time.time() - start
     print(f"Time:           {seq_time:.3f}s")
