@@ -611,8 +611,9 @@ class TestRecordRemoval:
         # Remove the field
         record.remove_field('245')
         
-        # Verify it's gone
-        assert record['245'] is None
+        # Verify it's gone (pymarc raises KeyError for missing tags)
+        with pytest.raises(KeyError):
+            record['245']
 
 
 class TestFieldSerialization:
