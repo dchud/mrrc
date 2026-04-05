@@ -103,47 +103,31 @@ class Indicators:
         return iter([self.ind1, self.ind2])
 
 
-class ControlField:
-    """Wrapper for MARC control fields (001-009) with pymarc-compatible .value property."""
-    
-    def __init__(self, tag: str, value: str):
-        """Create a new ControlField."""
-        self.tag = tag
-        self.value = value
-    
-    def __eq__(self, other: Any) -> bool:
-        """Compare control fields by tag and value."""
-        if isinstance(other, ControlField):
-            return self.tag == other.tag and self.value == other.value
-        return False
-    
-    def __repr__(self) -> str:
-        """String representation."""
-        return f"ControlField(tag='{self.tag}', value='{self.value}')"
-    
-    def __hash__(self) -> int:
-        """Hash based on tag and value."""
-        return hash((self.tag, self.value))
-
-    def is_control_field(self) -> bool:
-        """Returns True (pymarc compatibility)."""
-        return True
-
-
 class Field:
-    """Enhanced Field wrapper with pymarc-compatible API."""
-    
-    def __init__(self, tag: str, indicator1: str = '0', indicator2: str = '0', *, subfields=None, indicators=None):
+    """Enhanced Field wrapper with pymarc-compatible API.
+
+    Supports both control fields and data fields (like pymarc.Field).
+    Control fields are created with ``data=``: ``Field('001', data='12345')``.
+    Data fields use indicators and subfields as before.
+    """
+
+    def __init__(self, tag: str, indicator1: str = ' ', indicator2: str = ' ', *, subfields=None, indicators=None, data=None):
         """Create a new Field.
 
         Args:
             tag: 3-character field tag.
-            indicator1: First indicator (default '0').
-            indicator2: Second indicator (default '0').
+            indicator1: First indicator (default ' ').
+            indicator2: Second indicator (default ' ').
             subfields: Optional list of Subfield objects to add.
             indicators: Optional list/tuple of [ind1, ind2], overrides indicator1/indicator2.
+            data: For control fields, the data string value.
         """
-        self._inner = _Field(tag, indicator1, indicator2, subfields=subfields, indicators=indicators)
+        self._data = data
+        if data is not None:
+            # Control field: create a minimal _inner for tag access only
+            self._inner = _Field(tag, ' ', ' ')
+        else:
+            self._inner = _Field(tag, indicator1, indicator2, subfields=subfields, indicators=indicators)
     
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Field."""
@@ -200,9 +184,22 @@ class Field:
         except Exception:
             return False
 
+    @property
+    def data(self) -> Optional[str]:
+        """Control field data value (pymarc compatibility).
+
+        Returns the data string for control fields, None for data fields.
+        """
+        return self._data
+
+    @property
+    def value(self) -> Optional[str]:
+        """Alias for data (backward compatibility with ControlField)."""
+        return self._data
+
     def is_control_field(self) -> bool:
-        """Returns False (pymarc compatibility)."""
-        return False
+        """Check if this is a control field (pymarc compatibility)."""
+        return self._data is not None
 
     def get_subfields(self, *codes: str) -> List[str]:
         """Get all subfield values for given codes (pymarc compatibility).
@@ -328,14 +325,26 @@ class Field:
         """Compare fields by content."""
         if not isinstance(other, Field):
             return False
-        return (self.tag == other.tag and 
+        if self.is_control_field() or other.is_control_field():
+            return (self.tag == other.tag and
+                    self._data == other._data)
+        return (self.tag == other.tag and
                 self.indicator1 == other.indicator1 and
                 self.indicator2 == other.indicator2 and
                 self.subfields() == other.subfields())
     
     def __hash__(self) -> int:
         """Hash based on tag and first subfield."""
+        if self._data is not None:
+            return hash((self.tag, self._data))
         return hash((self.tag, self.indicator1, self.indicator2))
+
+
+class ControlField(Field):
+    """Backward-compatible alias. In pymarc, both control and data fields are Field."""
+
+    def __init__(self, tag: str, value: str):
+        super().__init__(tag, data=value)
 
 
 class Leader:
@@ -661,62 +670,80 @@ class Record:
 
     def __contains__(self, tag: str) -> bool:
         """Check if a field with given tag exists in record."""
+        if tag < '010':
+            return self._inner.control_field(tag) is not None
         return self.get_field(tag) is not None
     
-    def __getitem__(self, tag: str) -> Union[Optional['Field'], 'ControlField']:
+    def __getitem__(self, tag: str) -> 'Field':
          """Get first field with given tag (pymarc compatibility).
-         
-         For control fields (001-009), returns ControlField with .value property.
-         For data fields, returns Field wrapper.
-         Returns None if field doesn't exist.
+
+         Returns a Field instance for both control and data fields.
+         Raises KeyError if the tag is not present in the record.
          """
          # Check if this is a control field (001-009)
-         if tag in ('001', '002', '003', '004', '005', '006', '007', '008', '009'):
+         if tag < '010':
              value = self._inner.control_field(tag)
              if value is not None:
-                 return ControlField(tag, value)
-             return None
-         
+                 return Field(tag, data=value)
+             raise KeyError(tag)
+
          # For data fields, return Field wrapper
          field = self._inner.get_field(tag)
          if field:
-             wrapper = Field(field.tag, field.indicator1, field.indicator2)
+             wrapper = Field.__new__(Field)
+             wrapper._data = None
              wrapper._inner = field
              return wrapper
-         return None
+         raise KeyError(tag)
     
     def get_fields(self, *tags: str) -> List['Field']:
         """Get all fields with given tags.
-        
-        If no tags provided, returns all fields.
+
+        If no tags provided, returns all fields (control + data).
         Supports multiple tags: record.get_fields('245', '260')
         """
         result = []
-        
+
         if not tags:
-            # Return all fields
+            # Return all control fields, then all data fields
+            for tag in ('001', '002', '003', '004', '005', '006', '007', '008', '009'):
+                value = self._inner.control_field(tag)
+                if value is not None:
+                    result.append(Field(tag, data=value))
             for field in self._inner.fields():
-                wrapper = Field(field.tag, field.indicator1, field.indicator2)
+                wrapper = Field.__new__(Field)
+                wrapper._data = None
                 wrapper._inner = field
                 result.append(wrapper)
         else:
             # Return fields for specified tags
             for tag in tags:
-                for field in self._inner.get_fields(tag):
-                    wrapper = Field(field.tag, field.indicator1, field.indicator2)
-                    wrapper._inner = field
-                    result.append(wrapper)
-        
+                if tag < '010':
+                    value = self._inner.control_field(tag)
+                    if value is not None:
+                        result.append(Field(tag, data=value))
+                else:
+                    for field in self._inner.get_fields(tag):
+                        wrapper = Field.__new__(Field)
+                        wrapper._data = None
+                        wrapper._inner = field
+                        result.append(wrapper)
+
         return result
     
     def add_field(self, field: 'Field') -> None:
         """Add a field to the record."""
-        self._inner.add_field(field._inner)
+        if field.is_control_field():
+            self._inner.add_control_field(field.tag, field.data)
+        else:
+            self._inner.add_field(field._inner)
     
     def get(self, tag: str, default=None):
         """Get first field with given tag, or default (pymarc compatibility)."""
-        result = self.get_field(tag)
-        return result if result is not None else default
+        try:
+            return self[tag]
+        except KeyError:
+            return default
 
     def get_field(self, tag: str) -> Optional['Field']:
         """Get first field with given tag."""
@@ -763,10 +790,17 @@ class Record:
         return self._inner.control_field(tag)
     
     def fields(self) -> List['Field']:
-        """Get all fields."""
+        """Get all fields (control + data)."""
         result = []
+        # Include control fields
+        for tag in ('001', '002', '003', '004', '005', '006', '007', '008', '009'):
+            value = self._inner.control_field(tag)
+            if value is not None:
+                result.append(Field(tag, data=value))
+        # Include data fields
         for field in self._inner.fields():
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
+            wrapper = Field.__new__(Field)
+            wrapper._data = None
             wrapper._inner = field
             result.append(wrapper)
         return result

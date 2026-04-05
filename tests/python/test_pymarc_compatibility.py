@@ -97,35 +97,37 @@ class TestRecordFieldOperations:
          record = Record(Leader())
          record.add_control_field('001', '12345')
          record.add_control_field('003', 'DLC')
-         
-         # Access via dict notation should return ControlField
+
+         # Access via dict notation should return Field with is_control_field()
          field_001 = record['001']
-         assert isinstance(field_001, ControlField)
-         assert field_001.value == '12345'
+         assert isinstance(field_001, Field)
+         assert field_001.data == '12345'
          assert field_001.tag == '001'
 
     def test_control_field_value_property(self):
-         """Test ControlField.value property (pymarc compatibility)."""
+         """Test control field .data property (pymarc compatibility)."""
          record = Record(Leader())
          record.add_control_field('005', '20210315120000.0')
-         
-         # Access via dict notation and .value property
-         assert record['005'].value == '20210315120000.0'
+
+         # Access via dict notation and .data property
+         assert record['005'].data == '20210315120000.0'
 
     def test_control_field_backward_compat(self):
          """Test that record.control_field() still works after adding dict access."""
          record = Record(Leader())
          record.add_control_field('001', 'test-id')
-         
-         # Both access patterns should work and return same value
-         assert record['001'].value == record.control_field('001')
-         assert record['001'].value == 'test-id'
 
-    def test_missing_control_field_returns_none(self):
-         """Test that missing control fields return None via dict access."""
+         # Both access patterns should work and return same value
+         assert record['001'].data == record.control_field('001')
+         assert record['001'].data == 'test-id'
+
+    def test_missing_control_field_raises_keyerror(self):
+         """Test that missing control fields raise KeyError via dict access."""
          record = Record(Leader())
-         assert record['001'] is None
-         assert record['008'] is None
+         with pytest.raises(KeyError):
+             record['001']
+         with pytest.raises(KeyError):
+             record['008']
 
     def test_get_nonexistent_field(self):
         """Test getting a field that doesn't exist."""
@@ -604,11 +606,12 @@ class TestRecordAdvanced:
         assert record['245'] == title
 
     def test_record_getitem_missing_tag(self):
-        """Test Record.__getitem__ returns None for missing tag (pymarc compatibility)."""
+        """Test Record.__getitem__ raises KeyError for missing tag (pymarc compatibility)."""
         record = Record(Leader())
-        # Should return None, not raise KeyError
-        assert record['999'] is None
-        assert record['245'] is None
+        with pytest.raises(KeyError):
+            record['999']
+        with pytest.raises(KeyError):
+            record['245']
 
     def test_record_membership(self):
         """Test checking if tag exists in record."""
@@ -996,6 +999,110 @@ class TestConstructorKwargs:
         ])
         assert record.leader().record_type == 'a'
         assert record.title() == 'Title'
+
+
+class TestFieldUnification:
+    """Test unified Field class for both control and data fields (pymarc compatibility)."""
+
+    def test_field_with_data_creates_control_field(self):
+        """Field('001', data='12345') creates a control field."""
+        field = Field('001', data='12345')
+        assert field.is_control_field()
+        assert field.tag == '001'
+        assert field.data == '12345'
+
+    def test_data_field_is_not_control(self):
+        """Field('245', '1', '0') is not a control field."""
+        field = Field('245', '1', '0')
+        assert not field.is_control_field()
+        assert field.data is None
+
+    def test_control_field_isinstance(self):
+        """ControlField is a subclass of Field."""
+        cf = ControlField('001', '12345')
+        assert isinstance(cf, Field)
+        assert cf.is_control_field()
+
+    def test_control_field_backward_compat_class(self):
+        """ControlField class still works as backward-compatible alias."""
+        cf = ControlField('003', 'DLC')
+        assert cf.tag == '003'
+        assert cf.data == 'DLC'
+        assert cf.is_control_field()
+
+    def test_record_getitem_returns_field_for_control(self):
+        """Record['001'] returns a Field instance (not ControlField)."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        field = record['001']
+        assert isinstance(field, Field)
+        assert field.data == 'test-id'
+
+    def test_record_getitem_raises_keyerror(self):
+        """Record['999'] raises KeyError."""
+        record = Record(Leader())
+        with pytest.raises(KeyError):
+            record['999']
+
+    def test_record_get_returns_none_for_missing(self):
+        """record.get('999') returns None."""
+        record = Record(Leader())
+        assert record.get('999') is None
+        assert record.get('001') is None
+
+    def test_record_get_returns_field_for_existing(self):
+        """record.get('001') returns a Field for existing control fields."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        field = record.get('001')
+        assert isinstance(field, Field)
+        assert field.data == 'test-id'
+
+    def test_get_fields_includes_control_fields(self):
+        """get_fields() returns Field instances for both control and data fields."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        record.add_control_field('003', 'DLC')
+        record.add_field(Field('245', '1', '0', subfields=[Subfield('a', 'Title')]))
+
+        all_fields = record.get_fields()
+        tags = [f.tag for f in all_fields]
+        assert '001' in tags
+        assert '003' in tags
+        assert '245' in tags
+        for f in all_fields:
+            assert isinstance(f, Field)
+
+    def test_get_fields_by_control_tag(self):
+        """get_fields('001') returns a list with the control field."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        fields = record.get_fields('001')
+        assert len(fields) == 1
+        assert fields[0].data == 'test-id'
+
+    def test_add_field_with_control_field(self):
+        """add_field() accepts a Field created with data=."""
+        record = Record(Leader())
+        record.add_field(Field('001', data='12345'))
+        assert record.control_field('001') == '12345'
+
+    def test_fields_method_includes_control_fields(self):
+        """record.fields() includes control fields as Field instances."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        record.add_field(Field('245', '1', '0', subfields=[Subfield('a', 'Title')]))
+
+        all_fields = record.fields()
+        tags = [f.tag for f in all_fields]
+        assert '001' in tags
+        assert '245' in tags
+
+    def test_default_indicators_are_spaces(self):
+        """Default indicators should be spaces (matching pymarc)."""
+        field = Field('245')
+        assert field.indicator1 == ' '
+        assert field.indicator2 == ' '
 
 
 if __name__ == '__main__':
