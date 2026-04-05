@@ -1585,6 +1585,20 @@ class TestFieldBinarySerialization:
         assert b'Author' in result
 
 
+class TestLegacySubfields:
+    def test_convert_legacy_subfields(self):
+        result = Field.convert_legacy_subfields(['a', 'Title', 'b', 'Subtitle'])
+        assert len(result) == 2
+        assert result[0].code == 'a'
+        assert result[0].value == 'Title'
+        assert result[1].code == 'b'
+        assert result[1].value == 'Subtitle'
+
+    def test_convert_empty_list(self):
+        result = Field.convert_legacy_subfields([])
+        assert result == []
+
+
 class TestParseXmlToArray:
     def test_parse_xml_from_string(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>

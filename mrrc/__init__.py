@@ -404,6 +404,19 @@ class Field:
             return hash((self.tag, self._data))
         return hash((self.tag, self.indicator1, self.indicator2))
 
+    @classmethod
+    def convert_legacy_subfields(cls, subfields: list) -> list:
+        """Convert legacy pymarc subfield list to Subfield objects.
+
+        Converts the old format ['code', 'value', 'code', 'value', ...]
+        to a list of Subfield objects.
+        """
+        result = []
+        for i in range(0, len(subfields), 2):
+            if i + 1 < len(subfields):
+                result.append(Subfield(subfields[i], subfields[i + 1]))
+        return result
+
 
 class ControlField(Field):
     """Backward-compatible alias. In pymarc, both control and data fields are Field."""
