@@ -46,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+### Dependencies
+
+- Bump pygments from 2.19.2 to 2.20.0 ([#67](https://github.com/dchud/mrrc/pull/67))
+
 ### Fixed
 
 - **`mrrc.__version__` now reports the correct version**: Previously hardcoded as `"0.1.0"` in both `mrrc/__init__.py` and `src-python/src/lib.rs`. Now derived from `Cargo.toml` at compile time via `env!("CARGO_PKG_VERSION")`, eliminating the need to manually update version strings during releases.
