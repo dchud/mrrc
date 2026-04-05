@@ -1365,6 +1365,34 @@ class TestOrderedFieldInsertion:
         assert data_tags == ['100', '245', '650']
 
 
+class TestSubfieldPositionalInsert:
+    def test_add_subfield_default_appends(self):
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Title')
+        field.add_subfield('c', 'Author')
+        subs = field.subfields()
+        assert subs[0].code == 'a'
+        assert subs[1].code == 'c'
+
+    def test_add_subfield_at_position(self):
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Title')
+        field.add_subfield('c', 'Author')
+        field.add_subfield('b', 'Subtitle', pos=1)
+        subs = field.subfields()
+        assert subs[0].code == 'a'
+        assert subs[1].code == 'b'
+        assert subs[2].code == 'c'
+
+    def test_add_subfield_at_zero(self):
+        field = Field('245', '1', '0')
+        field.add_subfield('c', 'Author')
+        field.add_subfield('a', 'Title', pos=0)
+        subs = field.subfields()
+        assert subs[0].code == 'a'
+        assert subs[1].code == 'c'
+
+
 class TestFieldValueMethods:
     def test_value_data_field(self):
         field = Field('245', '1', '0', subfields=[

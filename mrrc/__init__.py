@@ -285,9 +285,20 @@ class Field:
             pass
         return result
     
-    def add_subfield(self, code: str, value: str) -> None:
-        """Add a subfield."""
-        self._inner.add_subfield(code, value)
+    def add_subfield(self, code: str, value: str, pos: Optional[int] = None) -> None:
+        """Add a subfield, optionally at a specific position (pymarc compatibility)."""
+        if pos is None:
+            self._inner.add_subfield(code, value)
+        else:
+            current = list(self._inner.subfields())
+            new_sf = Subfield(code, value)
+            tag = self._inner.tag
+            ind1 = self._inner.indicator1
+            ind2 = self._inner.indicator2
+            self._inner = _Field(tag, ind1, ind2)
+            current.insert(pos, new_sf)
+            for sf in current:
+                self._inner.add_subfield(sf.code, sf.value)
     
     def subfields(self) -> List[Any]:
         """Get all subfields."""
