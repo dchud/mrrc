@@ -1585,5 +1585,44 @@ class TestFieldBinarySerialization:
         assert b'Author' in result
 
 
+class TestParseXmlToArray:
+    def test_parse_xml_from_string(self):
+        xml = '''<?xml version="1.0" encoding="UTF-8"?>
+        <collection xmlns="http://www.loc.gov/MARC21/slim">
+          <record>
+            <leader>00000nam a2200000 a 4500</leader>
+            <controlfield tag="001">test-id</controlfield>
+            <datafield tag="245" ind1="1" ind2="0">
+              <subfield code="a">Test Title</subfield>
+            </datafield>
+          </record>
+        </collection>'''
+        from mrrc import parse_xml_to_array
+        records = parse_xml_to_array(xml)
+        assert len(records) >= 1
+        assert isinstance(records[0], Record)
+
+    def test_parse_xml_from_file_object(self):
+        import io
+        xml = '''<?xml version="1.0" encoding="UTF-8"?>
+        <collection xmlns="http://www.loc.gov/MARC21/slim">
+          <record>
+            <leader>00000nam a2200000 a 4500</leader>
+            <controlfield tag="001">test-id</controlfield>
+          </record>
+        </collection>'''
+        from mrrc import parse_xml_to_array
+        records = parse_xml_to_array(io.StringIO(xml))
+        assert len(records) >= 1
+
+    def test_parse_xml_returns_list(self):
+        xml = '''<?xml version="1.0" encoding="UTF-8"?>
+        <collection xmlns="http://www.loc.gov/MARC21/slim">
+        </collection>'''
+        from mrrc import parse_xml_to_array
+        records = parse_xml_to_array(xml)
+        assert isinstance(records, list)
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

@@ -1504,6 +1504,26 @@ def mods_collection_to_records(mods_str: str) -> List[Record]:
     return [_wrap_record(r) for r in _mods_collection_to_records(mods_str)]
 
 
+def parse_xml_to_array(xml_file) -> List[Record]:
+    """Parse MARCXML to a list of Records (pymarc compatibility).
+
+    Accepts file paths (str/Path), open file handles, or XML strings.
+    """
+    import os
+    if isinstance(xml_file, (str, os.PathLike)):
+        path = str(xml_file)
+        if os.path.isfile(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                xml_str = f.read()
+        else:
+            xml_str = path
+    elif hasattr(xml_file, 'read'):
+        xml_str = xml_file.read()
+    else:
+        xml_str = str(xml_file)
+    return xml_to_records(xml_str)
+
+
 def get_leader_valid_values(position: int) -> Optional[dict]:
     """Get valid values for a specific leader position (MARC 21 spec reference).
     
@@ -1793,6 +1813,7 @@ __all__ = [
     "record_to_xml",
     "xml_to_record",
     "xml_to_records",
+    "parse_xml_to_array",
     "record_to_marcjson",
     "marcjson_to_record",
     "record_to_dublin_core",
