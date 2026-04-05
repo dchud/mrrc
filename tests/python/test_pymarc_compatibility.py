@@ -914,6 +914,94 @@ class TestRecordBinarySerialization:
         assert recovered.title == 'Roundtrip Test'
 
 
+class TestPymarcJsonSchema:
+    def test_as_dict_structure(self):
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        record.add_field(Field('245', '1', '0', subfields=[
+            Subfield('a', 'Title'),
+            Subfield('c', 'Author'),
+        ]))
+        d = record.as_dict()
+        assert 'leader' in d
+        assert 'fields' in d
+        assert isinstance(d['fields'], list)
+
+    def test_as_dict_control_field_format(self):
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        d = record.as_dict()
+        # Find the 001 field in the list
+        cf = None
+        for f in d['fields']:
+            if '001' in f:
+                cf = f
+                break
+        assert cf == {'001': 'test-id'}
+
+    def test_as_dict_data_field_format(self):
+        record = Record(fields=[
+            Field('245', '1', '0', subfields=[
+                Subfield('a', 'Title'),
+                Subfield('c', 'Author'),
+            ]),
+        ])
+        d = record.as_dict()
+        # Find 245 in fields list
+        df = None
+        for f in d['fields']:
+            if '245' in f:
+                df = f
+                break
+        assert df is not None
+        inner = df['245']
+        assert inner['ind1'] == '1'
+        assert inner['ind2'] == '0'
+        assert isinstance(inner['subfields'], list)
+        assert inner['subfields'][0] == {'a': 'Title'}
+        assert inner['subfields'][1] == {'c': 'Author'}
+
+    def test_as_dict_duplicate_subfield_codes_preserved(self):
+        record = Record(fields=[
+            Field('650', ' ', '0', subfields=[
+                Subfield('a', 'Topic 1'),
+                Subfield('a', 'Topic 2'),
+            ]),
+        ])
+        d = record.as_dict()
+        df = None
+        for f in d['fields']:
+            if '650' in f:
+                df = f
+                break
+        sfs = df['650']['subfields']
+        assert len(sfs) == 2
+        assert sfs[0] == {'a': 'Topic 1'}
+        assert sfs[1] == {'a': 'Topic 2'}
+
+    def test_as_json_returns_string(self):
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        result = record.as_json()
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert 'leader' in parsed
+
+    def test_as_json_kwargs_forwarded(self):
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        result = record.as_json(indent=2)
+        assert '\n' in result
+
+    def test_to_json_unchanged(self):
+        """to_json() should still return mrrc's native format."""
+        record = Record(Leader())
+        record.add_control_field('001', 'test-id')
+        native = record.to_json()
+        pymarc_compat = record.as_json()
+        assert json.loads(native) != json.loads(pymarc_compat)
+
+
 class TestSerialization:
     """Test serialization formats (from pymarc test_json.py, test_xml.py)."""
 

@@ -1309,6 +1309,30 @@ class Record:
                 else:
                     raise
     
+    def as_dict(self) -> dict:
+        """Return pymarc-compatible MARC-in-JSON dict (code4lib schema)."""
+        fields_list = []
+        for tag, value in self._inner.control_fields():
+            fields_list.append({tag: value})
+        for field in self._inner.fields():
+            subfields_list = [{sf.code: sf.value} for sf in field.subfields()]
+            fields_list.append({
+                field.tag: {
+                    'ind1': field.indicator1,
+                    'ind2': field.indicator2,
+                    'subfields': subfields_list,
+                }
+            })
+        return {
+            'leader': self.leader()._get_leader_as_string(),
+            'fields': fields_list,
+        }
+
+    def as_json(self, **kwargs) -> str:
+        """Serialize to pymarc-compatible MARC-in-JSON string."""
+        import json as _json
+        return _json.dumps(self.as_dict(), **kwargs)
+
     def as_marc(self) -> bytes:
         """Serialize record to ISO 2709 binary MARC (pymarc compatibility)."""
         self._sync_leader()
