@@ -388,6 +388,16 @@ class Field:
                 self.indicator2 == other.indicator2 and
                 self.subfields() == other.subfields())
     
+    def as_marc(self) -> bytes:
+        """Serialize field to ISO 2709 binary format (pymarc compatibility)."""
+        if self.is_control_field():
+            return (self.data or '').encode('utf-8') + b'\x1e'
+        return bytes(self._inner.to_marc21())
+
+    def as_marc21(self) -> bytes:
+        """Alias for as_marc() (pymarc compatibility)."""
+        return self.as_marc()
+
     def __hash__(self) -> int:
         """Hash based on tag and first subfield."""
         if self._data is not None:

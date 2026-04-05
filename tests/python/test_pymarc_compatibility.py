@@ -1558,5 +1558,32 @@ class TestFieldValueMethods:
         assert field.format_field() == '12345'
 
 
+class TestFieldBinarySerialization:
+    def test_field_as_marc_returns_bytes(self):
+        field = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        result = field.as_marc()
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+
+    def test_control_field_as_marc(self):
+        field = Field('001', data='12345')
+        result = field.as_marc()
+        assert isinstance(result, bytes)
+        assert b'12345' in result
+
+    def test_field_as_marc21_alias(self):
+        field = Field('245', '1', '0', subfields=[Subfield('a', 'Test')])
+        assert field.as_marc() == field.as_marc21()
+
+    def test_field_as_marc_contains_subfield_data(self):
+        field = Field('245', '1', '0', subfields=[
+            Subfield('a', 'Title'),
+            Subfield('c', 'Author'),
+        ])
+        result = field.as_marc()
+        assert b'Title' in result
+        assert b'Author' in result
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

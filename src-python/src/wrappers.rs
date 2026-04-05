@@ -577,6 +577,20 @@ impl PyField {
     fn __eq__(&self, other: &PyField) -> bool {
         self.inner == other.inner
     }
+
+    /// Serialize field to ISO 2709 binary format.
+    pub fn to_marc21(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.push(self.inner.indicator1 as u8);
+        buf.push(self.inner.indicator2 as u8);
+        for sf in &self.inner.subfields {
+            buf.push(0x1F); // subfield delimiter
+            buf.push(sf.code as u8);
+            buf.extend_from_slice(sf.value.as_bytes());
+        }
+        buf.push(0x1E); // field terminator
+        buf
+    }
 }
 
 /// Python wrapper for a Record
