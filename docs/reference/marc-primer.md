@@ -82,9 +82,8 @@ Control fields contain unstructured data—no indicators or subfields.
 
 **Python:**
 ```python
-control_number = record.get("001")
-if control_number:
-    print(control_number.data)  # "ocm12345678"
+control_number = record["001"]
+print(control_number.data)  # "ocm12345678"
 ```
 
 **Rust:**
@@ -136,8 +135,8 @@ if title_field:
     print(title_field["a"])  # "Programming in Rust :"
     print(title_field["b"])  # "a comprehensive guide /"
     print(title_field["c"])  # "by Jane Smith."
-    print(title_field.ind1)  # "1"
-    print(title_field.ind2)  # "0"
+    print(title_field.indicator1)  # "1"
+    print(title_field.indicator2)  # "0"
 ```
 
 **Rust:**
