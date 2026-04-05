@@ -56,6 +56,48 @@ __version__ = _mrrc.__version__
 __author__ = "MRRC Contributors"
 
 
+# Exception hierarchy (pymarc compatibility)
+class MrrcException(Exception):
+    """Base exception for mrrc errors."""
+    pass
+
+class RecordLengthInvalid(MrrcException):
+    """Record length in leader is invalid."""
+    pass
+
+class RecordLeaderInvalid(MrrcException):
+    """Record leader is malformed."""
+    pass
+
+class BaseAddressInvalid(MrrcException):
+    """Base address of data in leader is invalid."""
+    pass
+
+class BaseAddressNotFound(MrrcException):
+    """Base address of data not found in leader."""
+    pass
+
+class RecordDirectoryInvalid(MrrcException):
+    """Record directory entries are malformed."""
+    pass
+
+class EndOfRecordNotFound(MrrcException):
+    """End-of-record marker not found."""
+    pass
+
+class FieldNotFound(MrrcException):
+    """Expected field not found in record."""
+    pass
+
+class FatalReaderError(MrrcException):
+    """Unrecoverable error during record reading."""
+    pass
+
+class BadSubfieldCodeWarning(UserWarning):
+    """Warning for invalid subfield codes."""
+    pass
+
+
 class Indicators:
     """Tuple-like wrapper for field indicators (pymarc compatibility)."""
     
@@ -1798,6 +1840,17 @@ def bibframe_to_marc(graph: RdfGraph) -> 'Record':
 
 
 __all__ = [
+    # Exception hierarchy
+    "MrrcException",
+    "RecordLengthInvalid",
+    "RecordLeaderInvalid",
+    "BaseAddressInvalid",
+    "BaseAddressNotFound",
+    "RecordDirectoryInvalid",
+    "EndOfRecordNotFound",
+    "FieldNotFound",
+    "FatalReaderError",
+    "BadSubfieldCodeWarning",
     # Core classes
     "AuthorityMARCReader",
     "AuthorityRecord",

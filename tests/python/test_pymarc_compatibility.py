@@ -1585,6 +1585,40 @@ class TestFieldBinarySerialization:
         assert b'Author' in result
 
 
+class TestExceptionHierarchy:
+    def test_exception_classes_importable(self):
+        from mrrc import (
+            MrrcException,
+            RecordLengthInvalid,
+            RecordLeaderInvalid,
+            BaseAddressInvalid,
+            BaseAddressNotFound,
+            RecordDirectoryInvalid,
+            EndOfRecordNotFound,
+            FieldNotFound,
+            FatalReaderError,
+        )
+        assert issubclass(RecordLengthInvalid, MrrcException)
+        assert issubclass(RecordLeaderInvalid, MrrcException)
+        assert issubclass(BaseAddressInvalid, MrrcException)
+        assert issubclass(BaseAddressNotFound, MrrcException)
+        assert issubclass(RecordDirectoryInvalid, MrrcException)
+        assert issubclass(EndOfRecordNotFound, MrrcException)
+        assert issubclass(FieldNotFound, MrrcException)
+        assert issubclass(FatalReaderError, MrrcException)
+
+    def test_exception_hierarchy(self):
+        from mrrc import MrrcException, RecordLengthInvalid
+        try:
+            raise RecordLengthInvalid("bad length")
+        except MrrcException as e:
+            assert "bad length" in str(e)
+
+    def test_exceptions_are_exceptions(self):
+        from mrrc import MrrcException
+        assert issubclass(MrrcException, Exception)
+
+
 class TestLegacySubfields:
     def test_convert_legacy_subfields(self):
         result = Field.convert_legacy_subfields(['a', 'Title', 'b', 'Subtitle'])
