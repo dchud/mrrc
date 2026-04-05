@@ -172,13 +172,13 @@ class TestRecordAuthor:
     def test_author_from_100_field(self):
         """Test getting author from 100 field."""
         record = Record()
-        assert record.author() is None
+        assert record.author is None
         
         record.add_field(create_field('100', '1', ' ', 
                                       a='Bletch, Foobie,',
                                       d='1979-1981.'))
-        assert record.author() is not None
-        assert 'Bletch' in record.author()
+        assert record.author is not None
+        assert 'Bletch' in record.author
 
 
 class TestRecordUniformTitle:
@@ -187,13 +187,13 @@ class TestRecordUniformTitle:
     def test_uniform_title_from_130_field(self):
         """Test getting uniform title from 130 field."""
         record = Record()
-        assert record.uniform_title() is None
+        assert record.uniform_title is None
         
         record.add_field(create_field('130', '0', ' ',
                                       a='Tosefta.',
                                       l='English.',
                                       f='1977.'))
-        uniform_title = record.uniform_title()
+        uniform_title = record.uniform_title
         assert uniform_title is not None
 
 
@@ -207,7 +207,7 @@ class TestRecordSubjects:
         record.add_field(create_field('650', ' ', '0', a='Computer science'))
         record.add_field(create_field('650', ' ', '0', a='Python language'))
 
-        subjects = record.subjects()
+        subjects = record.subjects
         assert len(subjects) >= 2
         assert any('Computer' in s for s in subjects)
 
@@ -224,7 +224,7 @@ class TestRecordSubjects:
         record.add_field(create_field('651', ' ', '0', a='Jerusalem'))
         record.add_field(create_field('655', ' ', '7', a='Commentaries.'))
 
-        subjects = record.subjects()
+        subjects = record.subjects
         assert len(subjects) == 8
         assert 'Maimonides, Moses,' in subjects
         assert 'United Nations' in subjects
@@ -242,14 +242,14 @@ class TestRecordPublisher:
     def test_publisher_from_260_field(self):
         """Test getting publisher from 260 field."""
         record = Record()
-        assert record.publisher() is None
+        assert record.publisher is None
         
         record.add_field(create_field('260', ' ', ' ',
                                       a='Paris :',
                                       b='Gauthier-Villars ;',
                                       c='1955.'))
-        assert record.publisher() is not None
-        assert 'Villars' in record.publisher()
+        assert record.publisher is not None
+        assert 'Villars' in record.publisher
 
 
     def test_publisher_from_264_rda_field(self):
@@ -259,7 +259,7 @@ class TestRecordPublisher:
                                       a='Cambridge, Massachusetts :',
                                       b='The MIT Press,',
                                       c='[2022]'))
-        assert record.publisher() == 'The MIT Press,'
+        assert record.publisher == 'The MIT Press,'
 
     def test_publisher_prefers_260_over_264(self):
         """Test that 260 is preferred when both 260 and 264 exist."""
@@ -268,14 +268,14 @@ class TestRecordPublisher:
                                       b='Old Publisher,'))
         record.add_field(create_field('264', ' ', '1',
                                       b='New Publisher,'))
-        assert record.publisher() == 'Old Publisher,'
+        assert record.publisher == 'Old Publisher,'
 
     def test_publisher_ignores_264_non_publication(self):
         """Test that 264 with ind2 != '1' is not used for publisher."""
         record = Record()
         record.add_field(create_field('264', ' ', '3',
                                       b='Some Printer,'))
-        assert record.publisher() is None
+        assert record.publisher is None
 
 
 class TestRecordPublicationYear:
@@ -284,13 +284,13 @@ class TestRecordPublicationYear:
     def test_publication_year_from_260_field(self):
         """Test getting publication year from 260 field."""
         record = Record()
-        assert record.pubyear() is None
+        assert record.pubyear is None
 
         record.add_field(create_field('260', ' ', ' ',
                                       a='Paris :',
                                       b='Gauthier-Villars ;',
                                       c='1955.'))
-        year = record.pubyear()
+        year = record.pubyear
         assert year is not None
 
     def test_publication_year_from_264_rda_field(self):
@@ -298,7 +298,7 @@ class TestRecordPublicationYear:
         record = Record()
         record.add_field(create_field('264', ' ', '1',
                                       c='[2022]'))
-        assert record.pubyear() == 2022
+        assert record.pubyear == '2022'
 
 
 class TestRecordISBN:
@@ -307,10 +307,10 @@ class TestRecordISBN:
     def test_isbn_from_020_field(self):
         """Test getting ISBN from 020 field."""
         record = Record()
-        assert record.isbn() is None
+        assert record.isbn is None
         
         record.add_field(create_field('020', ' ', ' ', a='0914378287'))
-        assert record.isbn() is not None
+        assert record.isbn is not None
 
 
 class TestRecordISSN:
@@ -319,10 +319,10 @@ class TestRecordISSN:
     def test_issn_from_022_field(self):
         """Test getting ISSN from 022 field."""
         record = Record()
-        assert record.issn() is None
+        assert record.issn is None
         
         record.add_field(create_field('022', ' ', ' ', a='0028-0836'))
-        issn = record.issn()
+        issn = record.issn
         assert issn is not None
         assert '0028-0836' in issn
 
@@ -333,10 +333,10 @@ class TestRecordTitle:
     def test_title_from_245_field(self):
         """Test getting title from 245 field."""
         record = Record()
-        assert record.title() is None
+        assert record.title is None
         
         record.add_field(create_field('245', '1', '0', a='Python Programming'))
-        title = record.title()
+        title = record.title
         assert title is not None
         assert 'Python' in title
 
@@ -390,13 +390,13 @@ class TestRecordPhysicalDescription:
     def test_physical_description(self):
         """Test physical description property."""
         record = Record()
-        assert record.physical_description() is None
+        assert record.physical_description is None
         
         record.add_field(create_field('300', ' ', ' ',
                                       a='1 photographic print :',
                                       b='gelatin silver ;',
                                       c='10 x 56 in.'))
-        desc = record.physical_description()
+        desc = record.physical_description
         assert desc is not None
 
 
@@ -406,12 +406,12 @@ class TestRecordLocation:
     def test_location_field(self):
         """Test location fields (852)."""
         record = Record()
-        assert record.location() == []
+        assert record.location == []
         
         record.add_field(create_field('852', ' ', ' ',
                                       a='Main Library',
                                       b='Reference'))
-        locs = record.location()
+        locs = record.location
         assert len(locs) >= 1
 
 
@@ -421,11 +421,11 @@ class TestRecordNotes:
     def test_notes_field(self):
         """Test notes from 5xx fields."""
         record = Record()
-        assert record.notes() == []
+        assert record.notes == []
         
         record.add_field(create_field('500', ' ', ' ',
                                       a='This is a general note.'))
-        notes = record.notes()
+        notes = record.notes
         assert len(notes) >= 1
 
 
@@ -566,8 +566,8 @@ class TestRoundTripSerialization:
         restored = reader.read_record()
         
         assert restored is not None
-        assert restored.title() is not None
-        assert restored.author() is not None
+        assert restored.title is not None
+        assert restored.author is not None
 
 
 class TestMultipleFormats:

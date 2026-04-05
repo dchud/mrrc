@@ -118,7 +118,7 @@ class TestProducerConsumerPipelineWithExtraction:
             for _ in range(4):
                 pipeline = ProducerConsumerPipeline.from_file(fixture_path)
                 for record in pipeline:
-                    _ = record.title()
+                    _ = record.title
                     _ = record.get_fields("100")
                     total += 1
             return total
@@ -141,7 +141,7 @@ class TestProducerConsumerPipelineWithExtraction:
                 pipeline = ProducerConsumerPipeline.from_file(fixture_path)
                 count = 0
                 for record in pipeline:
-                    _ = record.title()
+                    _ = record.title
                     _ = record.get_fields("100")
                     count += 1
                 return count

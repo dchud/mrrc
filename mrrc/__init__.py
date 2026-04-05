@@ -824,65 +824,96 @@ class Record:
             result.append(wrapper)
         return result
     
+    @property
     def title(self) -> Optional[str]:
-        """Get title from 245 field."""
+        """Title from 245 field."""
         return self._inner.title()
-    
+
+    @property
     def author(self) -> Optional[str]:
-        """Get author from 100/110/111 field."""
+        """Author from 100/110/111 field."""
         return self._inner.author()
-    
+
+    @property
     def isbn(self) -> Optional[str]:
-        """Get ISBN from 020 field."""
+        """ISBN from 020 field."""
         return self._inner.isbn()
-    
+
+    @property
     def issn(self) -> Optional[str]:
-        """Get ISSN from 022 field."""
+        """ISSN from 022 field."""
         return self._inner.issn()
-    
+
+    @property
     def subjects(self) -> List[str]:
-        """Get all subject headings from 6XX subject fields."""
+        """All subject headings from 6XX subject fields."""
         return self._inner.subjects()
-    
+
+    @property
     def location(self) -> List[str]:
-        """Get all location fields (852)."""
+        """All location fields (852)."""
         return self._inner.location()
-    
+
+    @property
     def notes(self) -> List[str]:
-        """Get all notes from 5xx fields."""
+        """All notes from 5xx fields."""
         return self._inner.notes()
-    
+
+    @property
     def publisher(self) -> Optional[str]:
-        """Get publisher from 260 or 264 (RDA) field."""
+        """Publisher from 260 or 264 (RDA) field."""
         return self._inner.publisher()
-    
+
+    @property
     def uniform_title(self) -> Optional[str]:
-        """Get uniform title from 130 field."""
+        """Uniform title from 130 field."""
         return self._inner.uniform_title()
-    
+
+    @property
     def sudoc(self) -> Optional[str]:
-        """Get SuDoc from 086 field."""
+        """SuDoc from 086 field."""
         return self._inner.sudoc()
-    
+
+    @property
     def issn_title(self) -> Optional[str]:
-        """Get ISSN title from 222 field."""
+        """ISSN title from 222 field."""
         return self._inner.issn_title()
-    
+
+    @property
     def issnl(self) -> Optional[str]:
-        """Get ISSN-L from 024 field."""
+        """ISSN-L from 024 field."""
         return self._inner.issnl()
-    
-    def pubyear(self) -> Optional[int]:
-        """Get publication year."""
-        return self._inner.pubyear()
-    
+
+    @property
+    def pubyear(self) -> Optional[str]:
+        """Publication year (returns str, matching pymarc)."""
+        result = self._inner.pubyear()
+        return str(result) if result is not None else None
+
+    @property
     def series(self) -> Optional[str]:
-        """Get series from 490 field."""
+        """Series from 490 field."""
         return self._inner.series()
-    
+
+    @property
     def physical_description(self) -> Optional[str]:
-        """Get physical description from 300 field."""
+        """Physical description from 300 field."""
         return self._inner.physical_description()
+
+    @property
+    def physicaldescription(self) -> Optional[str]:
+        """Physical description (pymarc-compatible name)."""
+        return self.physical_description
+
+    @property
+    def uniformtitle(self) -> Optional[str]:
+        """Uniform title (pymarc-compatible name)."""
+        return self.uniform_title
+
+    @property
+    def addedentries(self) -> list:
+        """Added entries from 700/710/711/730 fields (pymarc compatibility)."""
+        return self.get_fields('700', '710', '711', '730')
     
     def is_book(self) -> bool:
         """Check if this is a book."""

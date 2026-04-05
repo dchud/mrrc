@@ -263,31 +263,31 @@ class TestConvenienceMethods:
         """Test title() convenience method."""
         record = Record(Leader())
         record.add_field(create_field('245', '1', '0', a='Test Title'))
-        assert record.title() == 'Test Title'
+        assert record.title == 'Test Title'
 
     def test_author(self):
         """Test author() convenience method."""
         record = Record(Leader())
         record.add_field(create_field('100', '1', ' ', a='Author, Test'))
-        assert 'Author' in record.author()
+        assert 'Author' in record.author
 
     def test_isbn(self):
         """Test isbn() convenience method."""
         record = Record(Leader())
         record.add_field(create_field('020', ' ', ' ', a='0201616165'))
-        assert record.isbn() == '0201616165'
+        assert record.isbn == '0201616165'
 
     def test_issn(self):
         """Test issn() convenience method."""
         record = Record(Leader())
         record.add_field(create_field('022', ' ', ' ', a='0028-0836'))
-        assert record.issn() == '0028-0836'
+        assert record.issn == '0028-0836'
 
     def test_publisher(self):
         """Test publisher() convenience method."""
         record = Record(Leader())
         record.add_field(create_field('260', ' ', ' ', b='Test Publisher'))
-        assert 'Publisher' in record.publisher() or 'Test' in record.publisher()
+        assert 'Publisher' in record.publisher or 'Test' in record.publisher
 
     def test_subjects(self):
         """Test subjects() convenience method."""
@@ -295,7 +295,7 @@ class TestConvenienceMethods:
         for i in range(3):
             record.add_field(create_field('650', ' ', '0', a=f'Subject {i}'))
 
-        subjects = record.subjects()
+        subjects = record.subjects
         assert len(subjects) == 3
 
     def test_location(self):
@@ -303,7 +303,7 @@ class TestConvenienceMethods:
         record = Record(Leader())
         record.add_field(create_field('852', ' ', ' ', a='Main Library'))
 
-        locations = record.location()
+        locations = record.location
         assert 'Main Library' in locations
 
     def test_notes(self):
@@ -311,7 +311,7 @@ class TestConvenienceMethods:
         record = Record(Leader())
         record.add_field(create_field('500', ' ', ' ', a='General note'))
 
-        notes = record.notes()
+        notes = record.notes
         assert 'General note' in notes
 
     def test_series(self):
@@ -319,7 +319,7 @@ class TestConvenienceMethods:
         record = Record(Leader())
         record.add_field(create_field('490', ' ', ' ', a='Series Name'))
 
-        series = record.series()
+        series = record.series
         assert series is not None
 
     def test_physical_description(self):
@@ -327,7 +327,7 @@ class TestConvenienceMethods:
         record = Record(Leader())
         record.add_field(create_field('300', ' ', ' ', a='256 pages'))
 
-        phys_desc = record.physical_description()
+        phys_desc = record.physical_description
         assert '256' in phys_desc or phys_desc is not None
 
     def test_uniform_title(self):
@@ -335,7 +335,7 @@ class TestConvenienceMethods:
         record = Record(Leader())
         record.add_field(create_field('130', ' ', '0', a='Uniform Title'))
 
-        uniform = record.uniform_title()
+        uniform = record.uniform_title
         assert 'Uniform' in uniform
 
     def test_sudoc(self):
@@ -343,7 +343,7 @@ class TestConvenienceMethods:
         record = Record(Leader())
         record.add_field(create_field('086', ' ', ' ', a='I 19.2:En 3'))
 
-        sudoc = record.sudoc()
+        sudoc = record.sudoc
         assert sudoc == 'I 19.2:En 3'
 
     def test_issn_title(self):
@@ -351,7 +351,7 @@ class TestConvenienceMethods:
         record = Record(Leader())
         record.add_field(create_field('222', ' ', ' ', a='Key Title'))
 
-        issn_title = record.issn_title()
+        issn_title = record.issn_title
         assert 'Key Title' in issn_title
 
     def test_pubyear(self):
@@ -359,8 +359,8 @@ class TestConvenienceMethods:
         record = Record(Leader())
         record.add_field(create_field('260', ' ', ' ', c='2023'))
 
-        year = record.pubyear()
-        assert year == 2023
+        year = record.pubyear
+        assert year == '2023'
 
 
 class TestRecordSerialization:
@@ -498,7 +498,7 @@ class TestEdgeCases:
         for i in range(20):
             record.add_field(create_field('650', ' ', '0', a=f'Subject {i}'))
 
-        subjects = record.subjects()
+        subjects = record.subjects
         assert len(subjects) == 20
 
     def test_field_with_many_subfields(self):
@@ -958,7 +958,7 @@ class TestConstructorKwargs:
         title = Field('245', '1', '0', subfields=[Subfield('a', 'My Book')])
         author = Field('100', '1', ' ', subfields=[Subfield('a', 'Doe, John')])
         record = Record(fields=[title, author])
-        assert record.title() == 'My Book'
+        assert record.title == 'My Book'
         assert record.get_field('100') is not None
 
     def test_full_inline_construction(self):
@@ -974,7 +974,7 @@ class TestConstructorKwargs:
                 Subfield('a', 'Computer programming'),
             ]),
         ])
-        assert record.title() == 'Pragmatic Programmer'
+        assert record.title == 'Pragmatic Programmer'
         assert len(record.get_fields('650')) == 1
 
     def test_field_backward_compat_positional_indicators(self):
@@ -998,7 +998,7 @@ class TestConstructorKwargs:
             Field('245', '1', '0', subfields=[Subfield('a', 'Title')]),
         ])
         assert record.leader().record_type == 'a'
-        assert record.title() == 'Title'
+        assert record.title == 'Title'
 
 
 class TestFieldUnification:
@@ -1137,6 +1137,122 @@ class TestFieldStringRepresentation:
         field = Field('001', data='12345')
         r = repr(field)
         assert '001' in r
+
+
+class TestRecordPropertyAccessors:
+    """Verify Record convenience accessors are properties (not methods)."""
+
+    def _make_record(self):
+        """Create a record with various fields for testing."""
+        record = Record()
+        record.add_field(create_field('245', '1', '0', a='Test Title'))
+        record.add_field(create_field('100', '1', ' ', a='Smith, John'))
+        record.add_field(create_field('020', ' ', ' ', a='0201616165'))
+        record.add_field(create_field('022', ' ', ' ', a='0028-0836'))
+        record.add_field(create_field('260', ' ', ' ', a='Place :', b='Publisher,', c='2023'))
+        record.add_field(create_field('650', ' ', '0', a='Testing.'))
+        record.add_field(create_field('852', ' ', ' ', a='Library'))
+        record.add_field(create_field('500', ' ', ' ', a='A note.'))
+        record.add_field(create_field('130', ' ', ' ', a='Uniform'))
+        record.add_field(create_field('086', ' ', ' ', a='Y 1.1/2:'))
+        record.add_field(create_field('222', ' ', ' ', a='ISSN Title'))
+        record.add_field(create_field('024', '8', ' ', a='1234-5678'))
+        record.add_field(create_field('490', '1', ' ', a='Series Name'))
+        record.add_field(create_field('300', ' ', ' ', a='100 p.'))
+        record.add_field(create_field('700', '1', ' ', a='Jones, Mary'))
+        return record
+
+    def test_title_is_property(self):
+        """record.title returns a value, not a bound method."""
+        record = self._make_record()
+        assert record.title == 'Test Title'
+        assert not callable(record.title) or isinstance(record.title, str)
+
+    def test_author_is_property(self):
+        record = self._make_record()
+        assert 'Smith' in record.author
+
+    def test_isbn_is_property(self):
+        record = self._make_record()
+        assert record.isbn == '0201616165'
+
+    def test_issn_is_property(self):
+        record = self._make_record()
+        assert record.issn == '0028-0836'
+
+    def test_subjects_is_property(self):
+        record = self._make_record()
+        assert isinstance(record.subjects, list)
+        assert 'Testing.' in record.subjects
+
+    def test_publisher_is_property(self):
+        record = self._make_record()
+        assert record.publisher is not None
+
+    def test_location_is_property(self):
+        record = self._make_record()
+        assert isinstance(record.location, list)
+
+    def test_notes_is_property(self):
+        record = self._make_record()
+        assert isinstance(record.notes, list)
+
+    def test_uniform_title_is_property(self):
+        record = self._make_record()
+        assert record.uniform_title is not None
+
+    def test_sudoc_is_property(self):
+        record = self._make_record()
+        assert record.sudoc is not None
+
+    def test_issn_title_is_property(self):
+        record = self._make_record()
+        assert record.issn_title is not None
+
+    def test_issnl_is_property(self):
+        record = self._make_record()
+        # issnl may or may not match based on how 024 is parsed
+        result = record.issnl
+        assert result is None or isinstance(result, str)
+
+    def test_pubyear_returns_str(self):
+        """pubyear must return str, not int, matching pymarc."""
+        record = self._make_record()
+        year = record.pubyear
+        assert year is not None
+        assert isinstance(year, str)
+        assert year == '2023'
+
+    def test_pubyear_none_returns_none(self):
+        """pubyear returns None when no year field exists."""
+        record = Record()
+        assert record.pubyear is None
+
+    def test_series_is_property(self):
+        record = self._make_record()
+        assert record.series is not None
+
+    def test_physical_description_is_property(self):
+        record = self._make_record()
+        assert record.physical_description is not None
+
+    def test_physicaldescription_alias(self):
+        """physicaldescription is an alias for physical_description."""
+        record = self._make_record()
+        assert record.physicaldescription == record.physical_description
+
+    def test_uniformtitle_alias(self):
+        """uniformtitle is an alias for uniform_title."""
+        record = self._make_record()
+        assert record.uniformtitle == record.uniform_title
+
+    def test_addedentries(self):
+        """addedentries returns 700/710/711/730 fields."""
+        record = self._make_record()
+        entries = record.addedentries
+        assert isinstance(entries, list)
+        assert len(entries) >= 1
+        assert any('Jones' in str(e) for e in entries)
 
 
 if __name__ == '__main__':

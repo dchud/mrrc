@@ -68,7 +68,7 @@ class TestMemoryBenchmarks:
             count = 0
             while record := reader.read_record():
                 # Process but don't store
-                _ = record.title()
+                _ = record.title
                 count += 1
             return count
 
@@ -213,9 +213,9 @@ class TestMemoryBenchmarks:
             
             while record := reader.read_record():
                 # Various access patterns
-                title = record.title()
-                author = record.author()
-                subjects = record.subjects()
+                title = record.title
+                author = record.author
+                subjects = record.subjects
                 fields_245 = record.get_fields('245')
                 
                 results.append((title, author, len(subjects), len(fields_245)))

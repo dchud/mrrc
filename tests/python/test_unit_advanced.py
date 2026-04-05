@@ -48,7 +48,7 @@ class TestRecordMultipleFields:
             field.add_subfield('a', f'Subject {i}')
             record.add_field(field)
         
-        subjects = record.subjects()
+        subjects = record.subjects
         assert len(subjects) >= 5
 
 
@@ -175,10 +175,10 @@ class TestRecordRoundTrip:
         restored = reader.read_record()
         
         assert restored is not None
-        assert restored.title() is not None
-        assert restored.author() is not None
-        assert restored.isbn() is not None
-        assert len(restored.subjects()) >= 2
+        assert restored.title is not None
+        assert restored.author is not None
+        assert restored.isbn is not None
+        assert len(restored.subjects) >= 2
 
 
     def test_roundtrip_preserves_indicators(self):
@@ -300,8 +300,8 @@ class TestFormatConversionWrapping:
         """Test that helper methods work on marcjson_to_record records."""
         from mrrc import marcjson_to_record
         record = marcjson_to_record(self._make_marcjson())
-        assert record.title() == 'Test title /'
-        assert record.subjects() == ['Testing.']
+        assert record.title == 'Test title /'
+        assert record.subjects == ['Testing.']
 
     def test_json_to_record_returns_wrapped_record(self):
         """Test that json_to_record returns a wrapped Python Record."""
@@ -312,7 +312,7 @@ class TestFormatConversionWrapping:
         restored = json_to_record(json_str)
         assert type(restored).__name__ == 'Record'
         assert type(restored).__module__ == 'mrrc'
-        assert restored.title() == 'Test Title'
+        assert restored.title == 'Test Title'
         fields = restored.get_fields('245')
         assert fields[0]['a'] == 'Test Title'
 
@@ -325,7 +325,7 @@ class TestFormatConversionWrapping:
         restored = xml_to_record(xml_str)
         assert type(restored).__name__ == 'Record'
         assert type(restored).__module__ == 'mrrc'
-        assert restored.title() == 'Test Title'
+        assert restored.title == 'Test Title'
         fields = restored.get_fields('245')
         assert fields[0]['a'] == 'Test Title'
 
@@ -369,7 +369,7 @@ class TestMarcxmlConformance:
         </record>'''
         record = xml_to_record(xml)
         assert record.control_field('001') == '12345'
-        assert record.title() == 'Test title'
+        assert record.title == 'Test title'
 
     def test_parse_marcxml_with_default_namespace(self):
         """Parse MARCXML with default xmlns."""
@@ -383,7 +383,7 @@ class TestMarcxmlConformance:
         </record>'''
         record = xml_to_record(xml)
         assert record.control_field('001') == '99999'
-        assert record.title() == 'Namespaced title'
+        assert record.title == 'Namespaced title'
 
     def test_parse_marcxml_with_prefix_namespace(self):
         """Parse MARCXML with marc: prefix namespace."""
@@ -397,7 +397,7 @@ class TestMarcxmlConformance:
         </marc:record>'''
         record = xml_to_record(xml)
         assert record.control_field('001') == '88888'
-        assert record.title() == 'Prefixed title'
+        assert record.title == 'Prefixed title'
 
     def test_parse_collection_with_default_namespace(self):
         """Parse <collection> wrapper with default namespace."""
@@ -446,10 +446,10 @@ class TestMarcxmlConformance:
         assert len(records) == 2
         # First record: "The Great Ray Charles"
         assert records[0].control_field('001') == '5637241'
-        assert 'The Great Ray Charles' in (records[0].title() or '')
+        assert 'The Great Ray Charles' in (records[0].title or '')
         # Second record: "The White House"
         assert records[1].control_field('001') == '12149120'
-        assert 'The White House' in (records[1].title() or '')
+        assert 'The White House' in (records[1].title or '')
 
     def test_marcxml_roundtrip_preserves_data(self):
         """Roundtrip: record → MARCXML → record preserves all data."""
@@ -463,7 +463,7 @@ class TestMarcxmlConformance:
         xml_str = record.to_xml()
         restored = xml_to_record(xml_str)
         assert restored.control_field('001') == 'roundtrip-001'
-        assert restored.title() == 'Roundtrip Title /'
+        assert restored.title == 'Roundtrip Title /'
         fields = restored.get_fields('245')
         assert fields[0]['c'] == 'Author.'
         subjects = restored.get_fields('650')
@@ -493,10 +493,10 @@ class TestMarcxmlConformance:
         </record>'''
         record = xml_to_record(xml)
         assert record.control_field('001') == '92005291'
-        assert record.title() == 'Introduction to algorithms /'
+        assert record.title == 'Introduction to algorithms /'
         fields = record.get_fields('245')
         assert fields[0]['c'] == 'Thomas H. Cormen ... [et al.].'
-        isbn = record.isbn()
+        isbn = record.isbn
         assert isbn == '0262031418'
         subjects = record.get_fields('650')
         assert len(subjects) == 2
@@ -517,7 +517,7 @@ class TestMarcxmlConformance:
         assert len(records) == 1
         assert type(records[0]).__name__ == 'Record'
         assert type(records[0]).__module__ == 'mrrc'
-        assert records[0].title() == 'Title One'
+        assert records[0].title == 'Title One'
 
 
 class TestControlFields:
@@ -696,7 +696,7 @@ class TestUnicodeAndEncoding:
         field.add_subfield('a', '日本語タイトル')
         record.add_field(field)
         
-        title = record.title()
+        title = record.title
         assert title is not None
         assert '日本語' in title
 
