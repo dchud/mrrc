@@ -219,9 +219,8 @@ print(record.title)
 # Instead of checking 100, 110, 111:
 print(record.author)
 
-# Gets all ISBNs from 020$a:
-for isbn in record.isbns():
-    print(isbn)
+# ISBN from 020$a:
+print(record.isbn)
 ```
 
 **Rust:**
