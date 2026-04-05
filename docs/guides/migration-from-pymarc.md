@@ -34,7 +34,7 @@ with open('records.mrc', 'rb') as f:
 writer = pymarc.MARCWriter(open('output.mrc', 'wb'))
 field = pymarc.Field('245', ['1', '0'], [('a', 'Title')])
 record = pymarc.Record(to_utf8=True)
-record.append(field)
+record.add_field(field)
 writer.write(record)
 writer.close()
 ```
@@ -74,7 +74,7 @@ with open('output.mrc', 'wb') as f:
 | Create empty record | `pymarc.Record()` | `mrrc.Record()` | **Same** |
 | Create with leader | `pymarc.Record(leader)` | `mrrc.Record(leader)` | **Same** |
 | Add control field | `record.add_field(Field('001', data='value'))` | `record.add_control_field('001', 'value')` or `record.add_field(Field('001', data='value'))` | Similar |
-| Add data field | `record.append(field)` | `record.add_field(field)` | Different |
+| Add data field | `record.add_field(field)` | `record.add_field(field)` | **Same** |
 
 ### Field Creation
 
@@ -171,7 +171,7 @@ record.remove_field(field1, field2)    # Remove specific field objects
 record.remove_fields('245', '650')    # Remove all fields with matching tags
 record.add_ordered_field(field)        # Insert in tag-sorted position
 record.add_grouped_field(field)        # Insert after same-tag group
-record.append(field)                   # Add field (same as add_field for compatibility)
+record.add_field(field)                # Add field (accepts multiple: add_field(f1, f2, f3))
 record.get_fields('650', '651')        # Get fields for multiple tags
 
 # Record accessors (all are @property, matching pymarc)
