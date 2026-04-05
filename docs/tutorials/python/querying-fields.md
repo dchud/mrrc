@@ -122,7 +122,7 @@ def find_lcsh_subjects(path, search_term):
         for field in record.fields_by_indicator("650", indicator2="0"):
             if search_term.lower() in (field["a"] or "").lower():
                 results.append({
-                    "title": record.title(),
+                    "title": record.title,
                     "subject": field["a"]
                 })
 

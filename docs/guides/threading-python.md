@@ -110,13 +110,13 @@ Be careful with `str` objects in tight loops:
 ```python
 # Not ideal: Frequent Python operations
 while record := reader.read_record():
-    title = record.title()  # GIL released
+    title = record.title  # GIL released
     msg = f"Processing: {title}"  # GIL re-acquired
     print(msg)  # GIL re-acquired
 
 # Better: Minimize Python work per iteration
 while record := reader.read_record():
-    title = record.title()
+    title = record.title
     do_heavy_processing(title)  # Batch Python work
 ```
 

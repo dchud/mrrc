@@ -27,7 +27,7 @@ from mrrc import MARCReader
 
 # Recommended: file path (GIL released during I/O)
 for record in MARCReader("records.mrc"):
-    print(record.title())
+    print(record.title)
 ```
 
 Avoid file objects when possible—they hold the GIL during Python I/O:
@@ -36,7 +36,7 @@ Avoid file objects when possible—they hold the GIL during Python I/O:
 # Slower: file object (GIL held for Python I/O)
 with open("records.mrc", "rb") as f:
     for record in MARCReader(f):
-        print(record.title())
+        print(record.title)
 ```
 
 Use file objects only when needed (e.g., network streams, custom I/O).
@@ -53,7 +53,7 @@ def process_file(path):
     """Process a single MARC file."""
     count = 0
     for record in MARCReader(path):
-        if record.title():
+        if record.title:
             count += 1
     return count
 
@@ -79,7 +79,7 @@ pipeline = ProducerConsumerPipeline.from_file("large_file.mrc")
 
 # Process records (arrives in order)
 for record in pipeline:
-    print(record.title())
+    print(record.title)
 ```
 
 The pipeline achieves ~3.7x speedup on 4 cores by splitting work:
@@ -117,7 +117,7 @@ def extract_titles(path):
     """Extract all titles from a MARC file."""
     titles = []
     for record in MARCReader(path):
-        if title := record.title():
+        if title := record.title:
             titles.append(title)
     return path.name, titles
 

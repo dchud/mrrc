@@ -37,7 +37,7 @@ from mrrc import MARCReader, MARCWriter
 
 # Reading
 for record in MARCReader("records.mrc"):
-    print(record.title())
+    print(record.title)
 
 # Writing
 with MARCWriter("output.mrc") as writer:

@@ -59,7 +59,7 @@ What's your primary goal?
 # Reading
 with open("records.mrc", "rb") as f:
     for record in mrrc.MARCReader(f):
-        print(record.title())
+        print(record.title)
 
 # Writing
 with open("output.mrc", "wb") as f:

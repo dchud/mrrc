@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`Record.get(tag)` for pymarc compatibility**: Dict-like `record.get('245')` returns the first matching field or a default value, mirroring pymarc's `Record.get()`. Delegates to existing `get_field()`.
 - **`Field.is_control_field()` and `ControlField.is_control_field()` for pymarc compatibility**: Returns `False` on data fields and `True` on control fields, matching pymarc's unified `Field.is_control_field()` API.
 - **`Record.__str__` and `Record.__repr__`**: The Python `Record` wrapper now delegates to the Rust implementation instead of showing the default `<mrrc.Record object at 0x...>`. `str(rec)` returns `Record(type=a)` and `repr(rec)` returns `<Record type=a fields=N>`.
+- **Comprehensive pymarc API compatibility**: Full drop-in replacement for pymarc with the following changes:
+  - **Record accessors as `@property`**: All 17 record accessors (`title`, `author`, `isbn`, `issn`, `subjects`, `location`, `notes`, `publisher`, `uniform_title`, `sudoc`, `issn_title`, `issnl`, `pubyear`, `series`, `physical_description`, plus aliases `physicaldescription`, `uniformtitle`, `addedentries`) are now properties, matching pymarc's `record.title` syntax.
+  - **Unified `ControlField` into `Field`**: `Field('001', data='12345')` creates a control field. `ControlField` remains as a backward-compatible subclass. Control field content accessed via `.data` attribute.
+  - **`Record['xxx']` raises `KeyError`** for missing tags (use `record.get(tag)` for safe access), matching pymarc behavior.
+  - **`Record.as_marc()` / `as_marc21()`**: Returns ISO 2709 bytes.
+  - **`Record.as_json()` / `as_dict()`**: pymarc-compatible MARC-in-JSON serialization.
+  - **`Field.value()`**: Space-joined subfield values.
+  - **`Field.format_field()`**: Human-readable text representation.
+  - **`Field.as_marc()` / `as_marc21()`**: Field-level binary serialization.
+  - **`Field.add_subfield(code, value, pos=N)`**: Positional insert support.
+  - **`Field.linkage_occurrence_num()`**: Extract $6 linkage info.
+  - **`Field.convert_legacy_subfields()`**: Classmethod for old flat-list format.
+  - **`add_field(*fields)`**: Accepts multiple fields at once.
+  - **`remove_field(*fields)`**: Accepts multiple fields, returns None.
+  - **`remove_fields(*tags)`**: Bulk removal by tag.
+  - **`add_ordered_field(*fields)`**: Tag-sorted insert.
+  - **`add_grouped_field(*fields)`**: Insert after same-tag group.
+  - **`parse_xml_to_array()`**, **`parse_json_to_array()`**, **`map_records()`**: Module-level convenience functions.
+  - **MARC constants**: `LEADER_LEN`, `DIRECTORY_ENTRY_LEN`, `END_OF_FIELD`, `END_OF_RECORD`, `SUBFIELD_INDICATOR`, `MARC_XML_NS`, `MARC_XML_SCHEMA`.
+  - **Exception hierarchy**: `MrrcException` base class with `MarcError` subclass.
+  - **`pubyear` returns `str`** (not `int`), matching pymarc.
 
 ### Changed
 
@@ -24,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - **Migration guide updated**: Added `record.get()` and `field.is_control_field()` examples to `docs/guides/migration-from-pymarc.md`, reflecting closer pymarc API parity.
+- **All docs and examples updated for pymarc API compatibility**: Record accessors now shown as properties (`record.title` not `record.title()`), control field access uses `.data`, missing-field access patterns use `record.get()` or try/except, and new methods/constants/exceptions are documented throughout the API reference, migration guide, quickstart, tutorials, and runnable examples.
 
 ## [0.7.4] - 2026-03-04
 

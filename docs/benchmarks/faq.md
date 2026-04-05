@@ -46,7 +46,7 @@ from mrrc import MARCReader
 with open("records.mrc", "rb") as f:
     reader = MARCReader(f)
     while record := reader.read_record():
-        title = record.title()
+        title = record.title
         # ... process record ...
 ```
 

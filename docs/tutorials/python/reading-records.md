@@ -10,7 +10,7 @@ Pass a filename directly for best performance—this uses pure Rust I/O and full
 from mrrc import MARCReader
 
 for record in MARCReader("records.mrc"):
-    print(record.title())
+    print(record.title)
 ```
 
 You can also use a file object if needed (e.g., for network streams), though this holds the GIL during I/O:
@@ -18,7 +18,7 @@ You can also use a file object if needed (e.g., for network streams), though thi
 ```python
 with open("records.mrc", "rb") as f:
     for record in MARCReader(f):
-        print(record.title())
+        print(record.title)
 ```
 
 See [Threading in Python](../../guides/threading-python.md) for details on GIL behavior and multi-threaded performance.
@@ -29,7 +29,7 @@ See [Threading in Python](../../guides/threading-python.md) for details on GIL b
 # Read from bytes
 data = open("records.mrc", "rb").read()
 for record in mrrc.MARCReader(data):
-    print(record.title())
+    print(record.title)
 ```
 
 ## Accessing Fields
@@ -59,28 +59,28 @@ for field in record.fields_by_tag("650"):
 Control fields (001-009) contain unstructured data:
 
 ```python
-# Access control field value
-control_number = record["001"]
+# Access control field data
+control_number = record.get("001")
 if control_number:
-    print(control_number.value)
+    print(control_number.data)
 
 # Or use the convenience method
 control_number = record.control_field("001")
 ```
 
-## Convenience Methods
+## Convenience Properties
 
-MRRC provides shortcuts for common data:
+MRRC provides property shortcuts for common data (no parentheses needed):
 
 ```python
-record.title()           # 245 $a
-record.author()          # 100/110/111 $a
-record.isbn()            # 020 $a (first)
+record.title           # 245 $a
+record.author          # 100/110/111 $a
+record.isbn            # 020 $a (first)
 record.isbns()           # 020 $a (all)
-record.issn()            # 022 $a
-record.publisher()       # 260 $b
-record.pubyear()         # Publication year
-record.subjects()        # All 6XX $a values
+record.issn            # 022 $a
+record.publisher       # 260 $b
+record.pubyear         # Publication year
+record.subjects        # All 6XX $a values
 ```
 
 ## Working with Subfields
@@ -121,7 +121,7 @@ from mrrc import MARCReader
 try:
     for record in MARCReader("records.mrc"):
         try:
-            print(record.title())
+            print(record.title)
         except Exception as e:
             print(f"Error processing record: {e}")
 except FileNotFoundError:

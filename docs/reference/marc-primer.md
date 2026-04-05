@@ -82,9 +82,9 @@ Control fields contain unstructured data—no indicators or subfields.
 
 **Python:**
 ```python
-control_number = record["001"]
+control_number = record.get("001")
 if control_number:
-    print(control_number.value)  # "ocm12345678"
+    print(control_number.data)  # "ocm12345678"
 ```
 
 **Rust:**
@@ -214,10 +214,10 @@ MRRC provides shortcuts for common fields:
 **Python:**
 ```python
 # Instead of parsing 245$a yourself:
-print(record.title())
+print(record.title)
 
 # Instead of checking 100, 110, 111:
-print(record.author())
+print(record.author)
 
 # Gets all ISBNs from 020$a:
 for isbn in record.isbns():
