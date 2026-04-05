@@ -34,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Exception hierarchy**: `MrrcException` base class with `MarcError` subclass.
   - **`pubyear` returns `str`** (not `int`), matching pymarc.
 
+### Breaking Changes
+
+- **Record accessors are now `@property`**: `record.title()` → `record.title`. Affects all 17 accessors: `title`, `author`, `isbn`, `issn`, `issn_title`, `issnl`, `subjects`, `notes`, `location`, `series`, `sudoc`, `publisher`, `pubyear`, `physical_description`, `uniform_title`, plus new `physicaldescription`, `uniformtitle`, `addedentries`.
+- **`pubyear` returns `str`**: Previously returned `Optional[int]`, now returns `Optional[str]` to match pymarc.
+- **`Record['xxx']` raises `KeyError` for missing tags**: Previously returned `None`. Use `record.get(tag)` for safe access that returns `None`.
+- **`ControlField` unified into `Field`**: `ControlField` is now a subclass of `Field`. Control field content is in `.data` (not `.value`). `Field('001', data='12345')` is the preferred constructor.
+- **`remove_field()` returns `None`**: Previously returned a list of removed fields.
+- **`add_field()` / `remove_field()` accept `*args`**: Signature changed from single field to `*fields`. Existing single-arg calls still work.
+- **Default Field indicators changed from `'0'` to `' '`**: Matches pymarc. Only affects fields created without explicit indicators.
+
 ### Changed
 
 ### Fixed
