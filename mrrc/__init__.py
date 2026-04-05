@@ -1309,6 +1309,15 @@ class Record:
                 else:
                     raise
     
+    def as_marc(self) -> bytes:
+        """Serialize record to ISO 2709 binary MARC (pymarc compatibility)."""
+        self._sync_leader()
+        return bytes(self._inner.to_marc21())
+
+    def as_marc21(self) -> bytes:
+        """Alias for as_marc() (pymarc compatibility)."""
+        return self.as_marc()
+
     def __eq__(self, other: Any) -> bool:
         """Compare records by content."""
         if not isinstance(other, Record):

@@ -883,6 +883,35 @@ class TestEncoding:
         record.add_field(field)
         encoded = record.to_marc21()
         assert encoded is not None
+        assert record.as_marc() == encoded
+
+
+class TestRecordBinarySerialization:
+    def test_as_marc_returns_bytes(self):
+        record = Record(fields=[
+            Field('245', '1', '0', subfields=[Subfield('a', 'Test Title')]),
+        ])
+        record.add_control_field('001', 'test-id')
+        result = record.as_marc()
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+
+    def test_as_marc21_alias(self):
+        record = Record(fields=[
+            Field('245', '1', '0', subfields=[Subfield('a', 'Test')]),
+        ])
+        record.add_control_field('001', 'test-id')
+        assert record.as_marc() == record.as_marc21()
+
+    def test_as_marc_roundtrip(self):
+        record = Record(fields=[
+            Field('245', '1', '0', subfields=[Subfield('a', 'Roundtrip Test')]),
+        ])
+        record.add_control_field('001', 'rt-001')
+        marc_bytes = record.as_marc()
+        reader = MARCReader(io.BytesIO(marc_bytes))
+        recovered = next(reader)
+        assert recovered.title == 'Roundtrip Test'
 
 
 class TestSerialization:
