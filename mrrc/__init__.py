@@ -98,6 +98,16 @@ class BadSubfieldCodeWarning(UserWarning):
     pass
 
 
+# MARC format constants (pymarc compatibility)
+LEADER_LEN = 24
+DIRECTORY_ENTRY_LEN = 12
+END_OF_FIELD = '\x1e'
+END_OF_RECORD = '\x1d'
+SUBFIELD_INDICATOR = '\x1f'
+MARC_XML_NS = 'http://www.loc.gov/MARC21/slim'
+MARC_XML_SCHEMA = 'http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd'
+
+
 class Indicators:
     """Tuple-like wrapper for field indicators (pymarc compatibility)."""
     
@@ -1840,6 +1850,14 @@ def bibframe_to_marc(graph: RdfGraph) -> 'Record':
 
 
 __all__ = [
+    # MARC format constants
+    "LEADER_LEN",
+    "DIRECTORY_ENTRY_LEN",
+    "END_OF_FIELD",
+    "END_OF_RECORD",
+    "SUBFIELD_INDICATOR",
+    "MARC_XML_NS",
+    "MARC_XML_SCHEMA",
     # Exception hierarchy
     "MrrcException",
     "RecordLengthInvalid",

@@ -1585,6 +1585,24 @@ class TestFieldBinarySerialization:
         assert b'Author' in result
 
 
+class TestMarcConstants:
+    def test_constants_importable(self):
+        from mrrc import (
+            LEADER_LEN, DIRECTORY_ENTRY_LEN,
+            END_OF_FIELD, END_OF_RECORD, SUBFIELD_INDICATOR,
+        )
+        assert LEADER_LEN == 24
+        assert DIRECTORY_ENTRY_LEN == 12
+        assert END_OF_FIELD == '\x1e'
+        assert END_OF_RECORD == '\x1d'
+        assert SUBFIELD_INDICATOR == '\x1f'
+
+    def test_xml_constants(self):
+        from mrrc import MARC_XML_NS, MARC_XML_SCHEMA
+        assert 'loc.gov' in MARC_XML_NS
+        assert 'loc.gov' in MARC_XML_SCHEMA
+
+
 class TestExceptionHierarchy:
     def test_exception_classes_importable(self):
         from mrrc import (
