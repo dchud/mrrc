@@ -85,6 +85,11 @@ for field in record.fields_matching_pattern(query):
 query = mrrc.SubfieldPatternQuery("856", "u", r"@.*\.")
 for field in record.fields_matching_pattern(query):
     print(field["u"])
+
+# Negated: find ISBNs that are NOT ISBN-13
+query = mrrc.SubfieldPatternQuery("020", "a", r"^97[89]", negate=True)
+for field in record.fields_matching_pattern(query):
+    print(field["a"])
 ```
 
 ## Value Matching
