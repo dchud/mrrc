@@ -10,6 +10,12 @@
 
 **Bead:** bd-sgwi | **GitHub Issue:** #71
 
+**Quality Gates:**
+- **Gate 1 (after Task 1):** Full test suite. ControlField unification and KeyError are the riskiest, most foundational changes.
+- **Gate 2 (after Task 5):** Full test suite. All Record-level API changes complete (properties, bulk operations, ordered insertion).
+- **Gate 3 (after Task 11):** Full test suite + verify as_json() output matches pymarc's MARC-in-JSON schema. All serialization work complete.
+- **Gate 4 (after Task 19):** Full `.cargo/check.sh`. Final verification before merge. Delete plan file from repo.
+
 ---
 
 ## Task 1: Unify ControlField into Field
@@ -240,6 +246,14 @@ ControlField is now a subclass of Field. Control fields use .data
 attribute (matching pymarc). Record.__getitem__ raises KeyError for
 missing tags. is_control_field() dispatches based on tag/data."
 ```
+
+---
+
+### QUALITY GATE 1
+
+**Run:** `uv run python -m pytest tests/python/ -m "not benchmark" -q`
+
+Stop and review results before proceeding. This is the riskiest change — ControlField unification and KeyError behavior touch every part of the wrapper. All tests must pass.
 
 ---
 
@@ -857,6 +871,14 @@ add_ordered_field inserts maintaining tag sort order.
 add_grouped_field inserts after the last field with the same tag,
 falling back to add_ordered_field when no match exists."
 ```
+
+---
+
+### QUALITY GATE 2
+
+**Run:** `uv run python -m pytest tests/python/ -m "not benchmark" -q`
+
+Stop and review. All Record-level API changes are done: property accessors, bulk add/remove, ordered insertion. Verify everything works together before moving to Field-level and serialization changes.
 
 ---
 
@@ -1520,6 +1542,14 @@ as mrrc's native format."
 
 ---
 
+### QUALITY GATE 3
+
+**Run:** `uv run python -m pytest tests/python/ -m "not benchmark" -q`
+
+Stop and review. All serialization work is done: as_marc(), as_json(), as_dict() with pymarc-compatible JSON schema. Verify JSON output structure matches pymarc's MARC-in-JSON format (code4lib schema) with subfields as array of single-key dicts.
+
+---
+
 ## Task 12: parse_xml_to_array()
 
 pymarc exports `parse_xml_to_array(xml_file)` accepting file paths, open file handles, and StringIO. mrrc has `xml_to_records(str)` only.
@@ -2068,7 +2098,82 @@ classes added for pymarc compatibility."
 
 ---
 
-## Task 18: Full CI verification
+## Task 18: Update public-facing documentation
+
+Update all docs, guides, tutorials, and examples to reflect the API changes made in Tasks 1-17. Key changes to propagate: record accessors are now properties (not methods), ControlField is unified into Field, `.data` replaces `.value` on control fields, `Record['xxx']` raises KeyError for missing tags, new methods (as_marc, as_json, as_dict, value, format_field, etc.), new constants and exception classes.
+
+**Files (high impact — must update):**
+- Modify: `docs/reference/python-api.md` — full API reference, update all signatures and descriptions
+- Modify: `docs/guides/migration-from-pymarc.md` — update gap list, before/after examples
+- Modify: `docs/getting-started/quickstart-python.md` — update code examples
+- Modify: `examples/reading_and_querying.py` — update accessor calls
+- Modify: `examples/creating_records.py` — update Field/Record construction
+
+**Files (medium impact — check and update as needed):**
+- Modify: `docs/tutorials/python/reading-records.md`
+- Modify: `docs/tutorials/python/writing-records.md`
+- Modify: `docs/tutorials/python/querying-fields.md`
+- Modify: `docs/tutorials/python/format-conversion.md`
+- Modify: `docs/guides/query-dsl.md`
+- Modify: `docs/guides/bibframe-conversion.md`
+- Modify: `examples/format_conversion.py`
+- Modify: `examples/authority_records.py`
+- Modify: `CHANGELOG.md` — add entry for this release
+
+**Files (low impact — scan for broken patterns):**
+- Check: `docs/tutorials/python/concurrency.md`
+- Check: `docs/guides/working-with-large-files.md`
+- Check: `docs/guides/threading-python.md`
+- Check: `examples/concurrent_reading.py`
+- Check: `examples/multilingual_records.py`
+- Check: `examples/marc8_encoding.py`
+- Check: `examples/python/bibframe_roundtrip.py`
+- Check: `examples/python/marc_to_bibframe.py`
+
+- [ ] **Step 1: Update high-impact docs**
+
+For each file, search for patterns that changed:
+- `record.title()` → `record.title` (all 17 accessors)
+- `ControlField(` → `Field(tag, data=` or keep ControlField as alias
+- `.value` on control fields → `.data`
+- `record['xxx'] is None` → `try/except KeyError` or `record.get('xxx')`
+- Add examples of new methods: `as_marc()`, `as_json()`, `as_dict()`, `parse_xml_to_array()`, `Field.value()`, `Field.format_field()`
+- Document new constants and exception classes where relevant
+
+- [ ] **Step 2: Update medium-impact docs**
+
+Check each file for the same patterns. Update code examples and descriptions.
+
+- [ ] **Step 3: Scan low-impact docs**
+
+Grep for `\.title()`, `\.author()`, `\.isbn()`, `ControlField`, `.value` in remaining files. Fix any occurrences.
+
+- [ ] **Step 4: Update CHANGELOG.md**
+
+Add an entry summarizing all pymarc compatibility improvements.
+
+- [ ] **Step 5: Run examples to verify they work**
+
+Run each Python example to verify it still executes:
+```bash
+uv run python examples/reading_and_querying.py
+uv run python examples/creating_records.py
+uv run python examples/format_conversion.py
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add docs/ examples/ CHANGELOG.md
+git commit -m "Update docs and examples for pymarc API compatibility
+
+Reflects property accessors, unified Field class, new serialization
+methods, constants, and exception hierarchy."
+```
+
+---
+
+## Task 19: Full CI verification
 
 Run the full pre-push check to ensure everything passes.
 
