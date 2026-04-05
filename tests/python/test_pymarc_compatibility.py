@@ -1105,5 +1105,39 @@ class TestFieldUnification:
         assert field.indicator2 == ' '
 
 
+class TestFieldStringRepresentation:
+    """Test Field.__str__ and __repr__ match pymarc format."""
+
+    def test_data_field_str(self):
+        """str(field) returns pymarc MARC display format for data fields."""
+        field = Field('245', '1', '0', subfields=[
+            Subfield('a', 'The Great Gatsby'),
+            Subfield('c', 'F. Scott Fitzgerald'),
+        ])
+        assert str(field) == '=245  10$aThe Great Gatsby$cF. Scott Fitzgerald'
+
+    def test_control_field_str(self):
+        """str(field) returns pymarc format for control fields."""
+        field = Field('001', data='12345')
+        assert str(field) == '=001  12345'
+
+    def test_data_field_str_blank_indicators(self):
+        """Blank indicators display as backslash."""
+        field = Field('650', ' ', '0', subfields=[Subfield('a', 'Python')])
+        assert str(field) == '=650  \\0$aPython'
+
+    def test_field_repr(self):
+        """repr(field) should be informative."""
+        field = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        r = repr(field)
+        assert '245' in r
+
+    def test_control_field_repr(self):
+        """repr for control field."""
+        field = Field('001', data='12345')
+        r = repr(field)
+        assert '001' in r
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

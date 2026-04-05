@@ -201,6 +201,25 @@ class Field:
         """Check if this is a control field (pymarc compatibility)."""
         return self._data is not None
 
+    def __str__(self) -> str:
+        """MARC display format (pymarc compatibility).
+
+        Data fields: =TAG  IND1IND2$aCONTENT$bCONTENT
+        Control fields: =TAG  CONTENT
+        """
+        if self.is_control_field():
+            return f'={self.tag}  {self.data}'
+        ind1 = self.indicator1.replace(' ', '\\')
+        ind2 = self.indicator2.replace(' ', '\\')
+        subfield_str = ''.join(f'${sf.code}{sf.value}' for sf in self.subfields())
+        return f'={self.tag}  {ind1}{ind2}{subfield_str}'
+
+    def __repr__(self) -> str:
+        """Informative repr."""
+        if self.is_control_field():
+            return f"<Field {self.tag}={self.data!r}>"
+        return f"<Field {self.tag} {self.indicator1}{self.indicator2} {len(self.subfields())} subfields>"
+
     def get_subfields(self, *codes: str) -> List[str]:
         """Get all subfield values for given codes (pymarc compatibility).
 
