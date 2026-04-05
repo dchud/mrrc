@@ -1365,5 +1365,33 @@ class TestOrderedFieldInsertion:
         assert data_tags == ['100', '245', '650']
 
 
+class TestFieldValueMethods:
+    def test_value_data_field(self):
+        field = Field('245', '1', '0', subfields=[
+            Subfield('a', 'The Great Gatsby'),
+            Subfield('c', 'F. Scott Fitzgerald'),
+        ])
+        assert field.value() == 'The Great Gatsby F. Scott Fitzgerald'
+
+    def test_value_control_field(self):
+        field = Field('001', data='12345')
+        assert field.value() == '12345'
+
+    def test_value_single_subfield(self):
+        field = Field('020', ' ', ' ', subfields=[Subfield('a', '0201616165')])
+        assert field.value() == '0201616165'
+
+    def test_format_field_data(self):
+        field = Field('245', '1', '0', subfields=[
+            Subfield('a', 'The Great Gatsby'),
+            Subfield('c', 'F. Scott Fitzgerald'),
+        ])
+        assert field.format_field() == 'The Great Gatsby F. Scott Fitzgerald'
+
+    def test_format_field_control(self):
+        field = Field('001', data='12345')
+        assert field.format_field() == '12345'
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

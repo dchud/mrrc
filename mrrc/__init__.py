@@ -192,10 +192,20 @@ class Field:
         """
         return self._data
 
-    @property
-    def value(self) -> Optional[str]:
-        """Alias for data (backward compatibility with ControlField)."""
-        return self._data
+    def value(self) -> str:
+        """Return the field's value (pymarc compatibility).
+        For control fields, returns the data content.
+        For data fields, returns space-joined subfield values.
+        """
+        if self.is_control_field():
+            return self._data or ''
+        return ' '.join(sf.value for sf in self.subfields())
+
+    def format_field(self) -> str:
+        """Return human-readable text without indicators or subfield codes (pymarc compatibility)."""
+        if self.is_control_field():
+            return self._data or ''
+        return ' '.join(sf.value for sf in self.subfields())
 
     def is_control_field(self) -> bool:
         """Check if this is a control field (pymarc compatibility)."""
