@@ -56,6 +56,18 @@ __version__ = _mrrc.__version__
 __author__ = "MRRC Contributors"
 
 
+def _is_control_tag(tag: str) -> bool:
+    """Check if a tag is a control field tag (001-009).
+
+    Matches pymarc's logic: tag < '010' and tag.isdigit().
+    """
+    return tag < '010' and tag.isdigit()
+
+
+# Control field tags for enumeration (when we need to iterate all possible control fields)
+_CONTROL_TAGS = ('001', '002', '003', '004', '005', '006', '007', '008', '009')
+
+
 # Exception hierarchy (pymarc compatibility)
 class MrrcException(Exception):
     """Base exception for mrrc errors."""
@@ -800,7 +812,7 @@ class Record:
 
     def __contains__(self, tag: str) -> bool:
         """Check if a field with given tag exists in record."""
-        if tag < '010':
+        if _is_control_tag(tag):
             return self._inner.control_field(tag) is not None
         return self.get_field(tag) is not None
     
@@ -811,7 +823,7 @@ class Record:
          Raises KeyError if the tag is not present in the record.
          """
          # Check if this is a control field (001-009)
-         if tag < '010':
+         if _is_control_tag(tag):
              value = self._inner.control_field(tag)
              if value is not None:
                  return Field(tag, data=value)
@@ -836,7 +848,7 @@ class Record:
 
         if not tags:
             # Return all control fields, then all data fields
-            for tag in ('001', '002', '003', '004', '005', '006', '007', '008', '009'):
+            for tag in _CONTROL_TAGS:
                 value = self._inner.control_field(tag)
                 if value is not None:
                     result.append(Field(tag, data=value))
@@ -848,7 +860,7 @@ class Record:
         else:
             # Return fields for specified tags
             for tag in tags:
-                if tag < '010':
+                if _is_control_tag(tag):
                     value = self._inner.control_field(tag)
                     if value is not None:
                         result.append(Field(tag, data=value))
@@ -952,7 +964,7 @@ class Record:
         """Get all fields (control + data)."""
         result = []
         # Include control fields
-        for tag in ('001', '002', '003', '004', '005', '006', '007', '008', '009'):
+        for tag in _CONTROL_TAGS:
             value = self._inner.control_field(tag)
             if value is not None:
                 result.append(Field(tag, data=value))
