@@ -789,6 +789,46 @@ class Record:
         for tag in tags:
             self._inner.remove_field(tag)
 
+    def _rebuild_fields(self, field_list) -> None:
+        """Replace all data fields with the given list (internal helper)."""
+        existing_tags = set(f.tag for f in self._inner.fields())
+        for tag in existing_tags:
+            self._inner.remove_field(tag)
+        for f in field_list:
+            self._inner.add_field(f)
+
+    def add_ordered_field(self, *fields: 'Field') -> None:
+        """Add fields maintaining tag sort order (pymarc compatibility)."""
+        for field in fields:
+            if field.is_control_field():
+                self._inner.add_control_field(field.tag, field.data)
+            else:
+                existing = list(self._inner.fields())
+                insert_idx = len(existing)
+                for i, f in enumerate(existing):
+                    if f.tag > field.tag:
+                        insert_idx = i
+                        break
+                existing.insert(insert_idx, field._inner)
+                self._rebuild_fields(existing)
+
+    def add_grouped_field(self, *fields: 'Field') -> None:
+        """Add fields after the last field with the same tag (pymarc compatibility)."""
+        for field in fields:
+            if field.is_control_field():
+                self._inner.add_control_field(field.tag, field.data)
+                continue
+            existing = list(self._inner.fields())
+            last_idx = None
+            for i, f in enumerate(existing):
+                if f.tag == field.tag:
+                    last_idx = i
+            if last_idx is None:
+                self.add_ordered_field(field)
+            else:
+                existing.insert(last_idx + 1, field._inner)
+                self._rebuild_fields(existing)
+
     def add_control_field(self, tag: str, value: str) -> None:
         """Add a control field."""
         self._inner.add_control_field(tag, value)

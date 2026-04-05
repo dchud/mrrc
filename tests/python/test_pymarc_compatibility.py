@@ -1318,5 +1318,52 @@ class TestBulkFieldOperations:
         assert result is None
 
 
+class TestOrderedFieldInsertion:
+    """Test ordered and grouped field insertion (pymarc compatibility)."""
+
+    def test_add_ordered_field(self):
+        """add_ordered_field inserts field in tag-sorted position."""
+        record = Record(fields=[
+            Field('100', '1', ' ', subfields=[Subfield('a', 'Author')]),
+            Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')]),
+        ])
+        f245 = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        record.add_ordered_field(f245)
+        tags = [f.tag for f in record.get_fields()]
+        # Filter to just data field tags (not control fields)
+        data_tags = [t for t in tags if t >= '010']
+        assert data_tags == ['100', '245', '650']
+
+    def test_add_ordered_field_at_end(self):
+        record = Record(fields=[
+            Field('100', '1', ' ', subfields=[Subfield('a', 'Author')]),
+        ])
+        f650 = Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')])
+        record.add_ordered_field(f650)
+        data_tags = [f.tag for f in record.get_fields() if f.tag >= '010']
+        assert data_tags == ['100', '650']
+
+    def test_add_grouped_field(self):
+        record = Record(fields=[
+            Field('650', ' ', '0', subfields=[Subfield('a', 'Subject 1')]),
+            Field('650', ' ', '0', subfields=[Subfield('a', 'Subject 2')]),
+            Field('700', '1', ' ', subfields=[Subfield('a', 'Author')]),
+        ])
+        f650 = Field('650', ' ', '0', subfields=[Subfield('a', 'Subject 3')])
+        record.add_grouped_field(f650)
+        data_tags = [f.tag for f in record.get_fields() if f.tag >= '010']
+        assert data_tags == ['650', '650', '650', '700']
+
+    def test_add_grouped_field_no_existing(self):
+        record = Record(fields=[
+            Field('100', '1', ' ', subfields=[Subfield('a', 'Author')]),
+            Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')]),
+        ])
+        f245 = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        record.add_grouped_field(f245)
+        data_tags = [f.tag for f in record.get_fields() if f.tag >= '010']
+        assert data_tags == ['100', '245', '650']
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
