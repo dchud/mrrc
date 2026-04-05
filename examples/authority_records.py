@@ -255,8 +255,8 @@ def authority_control_example():
     record.add_field(geogr)
     
     print("Bibliographic Record with Authority Control")
-    print(f"Title: {record.title()}")
-    print(f"Author: {record.author()}")
+    print(f"Title: {record.title}")
+    print(f"Author: {record.author}")
     
     print(f"\nAuthority-Controlled Headings:")
     print(f"  Author authority #: {record['100'].get_subfield('0') if '100' in record else 'N/A'}")

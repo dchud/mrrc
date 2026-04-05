@@ -110,11 +110,11 @@ def demonstrate_record_structure(record):
     print("ORIGINAL RECORD")
     print("=" * 70 + "\n")
     
-    print(f"Title:           {record.title()}")
-    print(f"Author:          {record.author()}")
+    print(f"Title:           {record.title}")
+    print(f"Author:          {record.author}")
     print(f"All Authors:     {', '.join(record.authors())}")
     print(f"ISBN:            {', '.join(record.isbns())}")
-    print(f"Subjects:        {', '.join(record.subjects()[:2])}... ({len(record.subjects())} total)")
+    print(f"Subjects:        {', '.join(record.subjects[:2])}... ({len(record.subjects)} total)")
     
     if record.publication_info():
         pub = record.publication_info()
@@ -379,13 +379,13 @@ def round_trip_conversion(record):
         print()
         
         # Verify field counts
-        original_title = record.title()
-        restored_title = record2.title()
+        original_title = record.title
+        restored_title = record2.title
         
         print(f"Fidelity verification:")
         print(f"  Title match: {original_title == restored_title}")
-        print(f"  Author match: {record.author() == record2.author()}")
-        print(f"  Subject count: {len(record.subjects())} → {len(record2.subjects())}")
+        print(f"  Author match: {record.author == record2.author}")
+        print(f"  Subject count: {len(record.subjects)} → {len(record2.subjects)}")
         
     except Exception as e:
         print(f"Round-trip conversion not fully supported: {e}")

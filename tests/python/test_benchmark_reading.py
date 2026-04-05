@@ -49,7 +49,7 @@ class TestReadingBenchmarks:
             titles = []
             while (record := reader.read_record()) is not None:
                 # Try to get title from field 245
-                title = record.title() or "Unknown"
+                title = record.title or "Unknown"
                 titles.append(title)
             return titles
         
@@ -64,7 +64,7 @@ class TestReadingBenchmarks:
             reader = MARCReader(data)
             titles = []
             while (record := reader.read_record()) is not None:
-                title = record.title() or "Unknown"
+                title = record.title or "Unknown"
                 titles.append(title)
             return titles
 

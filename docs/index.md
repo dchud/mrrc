@@ -24,7 +24,7 @@ In benchmarks (see [methodology](benchmarks/results.md)):
     from mrrc import MARCReader
 
     for record in MARCReader("records.mrc"):
-        print(record.title())
+        print(record.title)
     ```
 
 === "Rust"

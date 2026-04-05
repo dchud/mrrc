@@ -148,8 +148,8 @@ def create_utf8_encoded_record():
     
     # Display the record
     print(f"Record Encoding: UTF-8")
-    print(f"Title: {record.title()}")
-    print(f"Author: {record.author()}")
+    print(f"Title: {record.title}")
+    print(f"Author: {record.author}")
     print()
     
     print("Language Information:")

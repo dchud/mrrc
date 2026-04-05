@@ -29,7 +29,7 @@ UTF-8 is the recommended encoding for new records. It supports all Unicode chara
 
     for record in MARCReader("utf8_records.mrc"):
         # All strings are already UTF-8
-        print(record.title())
+        print(record.title)
     ```
 
 === "Rust"

@@ -113,8 +113,8 @@ def hebrew_language_record():
     record.add_field(script_note)
     
     # Display
-    print(f"Title (English): {record.title()}")
-    print(f"Author (English): {record.author()}")
+    print(f"Title (English): {record.title}")
+    print(f"Author (English): {record.author}")
     print(f"Language: Hebrew (heb)")
     print(f"Encoding: UTF-8")
     print()
@@ -190,7 +190,7 @@ def arabic_language_record():
     record.add_field(note)
     
     # Display
-    print(f"Title (Transliterated): {record.title()}")
+    print(f"Title (Transliterated): {record.title}")
     print(f"Language: Arabic (ara)")
     print(f"Encoding: UTF-8")
     print()
@@ -271,8 +271,8 @@ def cyrillic_language_record():
     record.add_field(subject)
     
     # Display
-    print(f"Title (Transliterated): {record.title()}")
-    print(f"Author (Transliterated): {record.author()}")
+    print(f"Title (Transliterated): {record.title}")
+    print(f"Author (Transliterated): {record.author}")
     print(f"Language: Russian (rus)")
     print(f"Encoding: UTF-8")
     print()
@@ -346,7 +346,7 @@ def mixed_language_record():
     record.add_field(lang_note)
     
     # Display
-    print(f"Title: {record.title()}")
+    print(f"Title: {record.title}")
     print(f"Content: Parallel text in Hebrew, Arabic, and English")
     print()
     

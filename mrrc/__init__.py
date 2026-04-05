@@ -56,6 +56,70 @@ __version__ = _mrrc.__version__
 __author__ = "MRRC Contributors"
 
 
+def _is_control_tag(tag: str) -> bool:
+    """Check if a tag is a control field tag (001-009).
+
+    Matches pymarc's logic: tag < '010' and tag.isdigit().
+    """
+    return tag < '010' and tag.isdigit()
+
+
+# Control field tags for enumeration (when we need to iterate all possible control fields)
+_CONTROL_TAGS = ('001', '002', '003', '004', '005', '006', '007', '008', '009')
+
+
+# Exception hierarchy (pymarc compatibility)
+class MrrcException(Exception):
+    """Base exception for mrrc errors."""
+    pass
+
+class RecordLengthInvalid(MrrcException):
+    """Record length in leader is invalid."""
+    pass
+
+class RecordLeaderInvalid(MrrcException):
+    """Record leader is malformed."""
+    pass
+
+class BaseAddressInvalid(MrrcException):
+    """Base address of data in leader is invalid."""
+    pass
+
+class BaseAddressNotFound(MrrcException):
+    """Base address of data not found in leader."""
+    pass
+
+class RecordDirectoryInvalid(MrrcException):
+    """Record directory entries are malformed."""
+    pass
+
+class EndOfRecordNotFound(MrrcException):
+    """End-of-record marker not found."""
+    pass
+
+class FieldNotFound(MrrcException):
+    """Expected field not found in record."""
+    pass
+
+class FatalReaderError(MrrcException):
+    """Unrecoverable error during record reading."""
+    pass
+
+class BadSubfieldCodeWarning(UserWarning):
+    """Warning for invalid subfield codes."""
+    pass
+
+
+# MARC format constants (pymarc compatibility)
+LEADER_LEN = 24
+DIRECTORY_ENTRY_LEN = 12
+END_OF_FIELD = '\x1e'
+END_OF_RECORD = '\x1d'
+SUBFIELD_INDICATOR = '\x1f'
+MARC_XML_NS = 'http://www.loc.gov/MARC21/slim'
+MARC_XML_SCHEMA = 'http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd'
+
+
 class Indicators:
     """Tuple-like wrapper for field indicators (pymarc compatibility)."""
     
@@ -103,47 +167,31 @@ class Indicators:
         return iter([self.ind1, self.ind2])
 
 
-class ControlField:
-    """Wrapper for MARC control fields (001-009) with pymarc-compatible .value property."""
-    
-    def __init__(self, tag: str, value: str):
-        """Create a new ControlField."""
-        self.tag = tag
-        self.value = value
-    
-    def __eq__(self, other: Any) -> bool:
-        """Compare control fields by tag and value."""
-        if isinstance(other, ControlField):
-            return self.tag == other.tag and self.value == other.value
-        return False
-    
-    def __repr__(self) -> str:
-        """String representation."""
-        return f"ControlField(tag='{self.tag}', value='{self.value}')"
-    
-    def __hash__(self) -> int:
-        """Hash based on tag and value."""
-        return hash((self.tag, self.value))
-
-    def is_control_field(self) -> bool:
-        """Returns True (pymarc compatibility)."""
-        return True
-
-
 class Field:
-    """Enhanced Field wrapper with pymarc-compatible API."""
-    
-    def __init__(self, tag: str, indicator1: str = '0', indicator2: str = '0', *, subfields=None, indicators=None):
+    """Enhanced Field wrapper with pymarc-compatible API.
+
+    Supports both control fields and data fields (like pymarc.Field).
+    Control fields are created with ``data=``: ``Field('001', data='12345')``.
+    Data fields use indicators and subfields as before.
+    """
+
+    def __init__(self, tag: str, indicator1: str = ' ', indicator2: str = ' ', *, subfields=None, indicators=None, data=None):
         """Create a new Field.
 
         Args:
             tag: 3-character field tag.
-            indicator1: First indicator (default '0').
-            indicator2: Second indicator (default '0').
+            indicator1: First indicator (default ' ').
+            indicator2: Second indicator (default ' ').
             subfields: Optional list of Subfield objects to add.
             indicators: Optional list/tuple of [ind1, ind2], overrides indicator1/indicator2.
+            data: For control fields, the data string value.
         """
-        self._inner = _Field(tag, indicator1, indicator2, subfields=subfields, indicators=indicators)
+        self._data = data
+        if data is not None:
+            # Control field: create a minimal _inner for tag access only
+            self._inner = _Field(tag, ' ', ' ')
+        else:
+            self._inner = _Field(tag, indicator1, indicator2, subfields=subfields, indicators=indicators)
     
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Field."""
@@ -200,9 +248,51 @@ class Field:
         except Exception:
             return False
 
+    @property
+    def data(self) -> Optional[str]:
+        """Control field data value (pymarc compatibility).
+
+        Returns the data string for control fields, None for data fields.
+        """
+        return self._data
+
+    def value(self) -> str:
+        """Return the field's value (pymarc compatibility).
+        For control fields, returns the data content.
+        For data fields, returns space-joined subfield values.
+        """
+        if self.is_control_field():
+            return self._data or ''
+        return ' '.join(sf.value for sf in self.subfields())
+
+    def format_field(self) -> str:
+        """Return human-readable text without indicators or subfield codes (pymarc compatibility)."""
+        if self.is_control_field():
+            return self._data or ''
+        return ' '.join(sf.value for sf in self.subfields())
+
     def is_control_field(self) -> bool:
-        """Returns False (pymarc compatibility)."""
-        return False
+        """Check if this is a control field (pymarc compatibility)."""
+        return self._data is not None
+
+    def __str__(self) -> str:
+        """MARC display format (pymarc compatibility).
+
+        Data fields: =TAG  IND1IND2$aCONTENT$bCONTENT
+        Control fields: =TAG  CONTENT
+        """
+        if self.is_control_field():
+            return f'={self.tag}  {self.data}'
+        ind1 = self.indicator1.replace(' ', '\\')
+        ind2 = self.indicator2.replace(' ', '\\')
+        subfield_str = ''.join(f'${sf.code}{sf.value}' for sf in self.subfields())
+        return f'={self.tag}  {ind1}{ind2}{subfield_str}'
+
+    def __repr__(self) -> str:
+        """Informative repr."""
+        if self.is_control_field():
+            return f"<Field {self.tag}={self.data!r}>"
+        return f"<Field {self.tag} {self.indicator1}{self.indicator2} {len(self.subfields())} subfields>"
 
     def get_subfields(self, *codes: str) -> List[str]:
         """Get all subfield values for given codes (pymarc compatibility).
@@ -259,9 +349,20 @@ class Field:
             pass
         return result
     
-    def add_subfield(self, code: str, value: str) -> None:
-        """Add a subfield."""
-        self._inner.add_subfield(code, value)
+    def add_subfield(self, code: str, value: str, pos: Optional[int] = None) -> None:
+        """Add a subfield, optionally at a specific position (pymarc compatibility)."""
+        if pos is None:
+            self._inner.add_subfield(code, value)
+        else:
+            current = list(self._inner.subfields())
+            new_sf = Subfield(code, value)
+            tag = self._inner.tag
+            ind1 = self._inner.indicator1
+            ind2 = self._inner.indicator2
+            self._inner = _Field(tag, ind1, ind2)
+            current.insert(pos, new_sf)
+            for sf in current:
+                self._inner.add_subfield(sf.code, sf.value)
     
     def subfields(self) -> List[Any]:
         """Get all subfields."""
@@ -323,19 +424,69 @@ class Field:
         """Check if this is a subject field (6xx)."""
         tag = self.tag
         return tag.startswith('6') and len(tag) >= 2
-    
+
+    def linkage_occurrence_num(self) -> Optional[str]:
+        """Extract the occurrence number from subfield $6 linkage (pymarc compatibility)."""
+        if self.is_control_field():
+            return None
+        sub6 = self['6']
+        if sub6 is None:
+            return None
+        if '-' not in sub6:
+            return None
+        parts = sub6.split('-', 1)
+        occ = parts[1]
+        if '/' in occ:
+            occ = occ.split('/')[0]
+        return occ if occ else None
+
     def __eq__(self, other: Any) -> bool:
         """Compare fields by content."""
         if not isinstance(other, Field):
             return False
-        return (self.tag == other.tag and 
+        if self.is_control_field() or other.is_control_field():
+            return (self.tag == other.tag and
+                    self._data == other._data)
+        return (self.tag == other.tag and
                 self.indicator1 == other.indicator1 and
                 self.indicator2 == other.indicator2 and
                 self.subfields() == other.subfields())
     
+    def as_marc(self) -> bytes:
+        """Serialize field to ISO 2709 binary format (pymarc compatibility)."""
+        if self.is_control_field():
+            return (self.data or '').encode('utf-8') + b'\x1e'
+        return bytes(self._inner.to_marc21())
+
+    def as_marc21(self) -> bytes:
+        """Alias for as_marc() (pymarc compatibility)."""
+        return self.as_marc()
+
     def __hash__(self) -> int:
         """Hash based on tag and first subfield."""
+        if self._data is not None:
+            return hash((self.tag, self._data))
         return hash((self.tag, self.indicator1, self.indicator2))
+
+    @classmethod
+    def convert_legacy_subfields(cls, subfields: list) -> list:
+        """Convert legacy pymarc subfield list to Subfield objects.
+
+        Converts the old format ['code', 'value', 'code', 'value', ...]
+        to a list of Subfield objects.
+        """
+        result = []
+        for i in range(0, len(subfields), 2):
+            if i + 1 < len(subfields):
+                result.append(Subfield(subfields[i], subfields[i + 1]))
+        return result
+
+
+class ControlField(Field):
+    """Backward-compatible alias. In pymarc, both control and data fields are Field."""
+
+    def __init__(self, tag: str, value: str):
+        super().__init__(tag, data=value)
 
 
 class Leader:
@@ -661,62 +812,81 @@ class Record:
 
     def __contains__(self, tag: str) -> bool:
         """Check if a field with given tag exists in record."""
+        if _is_control_tag(tag):
+            return self._inner.control_field(tag) is not None
         return self.get_field(tag) is not None
     
-    def __getitem__(self, tag: str) -> Union[Optional['Field'], 'ControlField']:
+    def __getitem__(self, tag: str) -> 'Field':
          """Get first field with given tag (pymarc compatibility).
-         
-         For control fields (001-009), returns ControlField with .value property.
-         For data fields, returns Field wrapper.
-         Returns None if field doesn't exist.
+
+         Returns a Field instance for both control and data fields.
+         Raises KeyError if the tag is not present in the record.
          """
          # Check if this is a control field (001-009)
-         if tag in ('001', '002', '003', '004', '005', '006', '007', '008', '009'):
+         if _is_control_tag(tag):
              value = self._inner.control_field(tag)
              if value is not None:
-                 return ControlField(tag, value)
-             return None
-         
+                 return Field(tag, data=value)
+             raise KeyError(tag)
+
          # For data fields, return Field wrapper
          field = self._inner.get_field(tag)
          if field:
-             wrapper = Field(field.tag, field.indicator1, field.indicator2)
+             wrapper = Field.__new__(Field)
+             wrapper._data = None
              wrapper._inner = field
              return wrapper
-         return None
+         raise KeyError(tag)
     
     def get_fields(self, *tags: str) -> List['Field']:
         """Get all fields with given tags.
-        
-        If no tags provided, returns all fields.
+
+        If no tags provided, returns all fields (control + data).
         Supports multiple tags: record.get_fields('245', '260')
         """
         result = []
-        
+
         if not tags:
-            # Return all fields
+            # Return all control fields, then all data fields
+            for tag in _CONTROL_TAGS:
+                value = self._inner.control_field(tag)
+                if value is not None:
+                    result.append(Field(tag, data=value))
             for field in self._inner.fields():
-                wrapper = Field(field.tag, field.indicator1, field.indicator2)
+                wrapper = Field.__new__(Field)
+                wrapper._data = None
                 wrapper._inner = field
                 result.append(wrapper)
         else:
             # Return fields for specified tags
             for tag in tags:
-                for field in self._inner.get_fields(tag):
-                    wrapper = Field(field.tag, field.indicator1, field.indicator2)
-                    wrapper._inner = field
-                    result.append(wrapper)
-        
+                if _is_control_tag(tag):
+                    value = self._inner.control_field(tag)
+                    if value is not None:
+                        result.append(Field(tag, data=value))
+                else:
+                    for field in self._inner.get_fields(tag):
+                        wrapper = Field.__new__(Field)
+                        wrapper._data = None
+                        wrapper._inner = field
+                        result.append(wrapper)
+
         return result
     
-    def add_field(self, field: 'Field') -> None:
-        """Add a field to the record."""
-        self._inner.add_field(field._inner)
+    def add_field(self, *fields: 'Field') -> None:
+        """Add one or more fields to the record."""
+        for field in fields:
+            if field.is_control_field():
+                self._inner.add_control_field(field.tag, field.data)
+            else:
+                self._inner.add_field(field._inner)
     
     def get(self, tag: str, default=None):
         """Get first field with given tag, or default (pymarc compatibility)."""
-        result = self.get_field(tag)
-        return result if result is not None else default
+        try:
+            return self[tag]
+        except KeyError:
+            return default
 
     def get_field(self, tag: str) -> Optional['Field']:
         """Get first field with given tag."""
@@ -727,33 +897,61 @@ class Record:
             return wrapper
         return None
     
-    def remove_field(self, field: Union['Field', str]) -> List['Field']:
-        """Remove a field from record.
-        
-        Can accept either a Field object or a tag string.
-        Returns list of removed fields.
+    def remove_field(self, *fields: Union['Field', str]) -> None:
+        """Remove one or more fields from the record (pymarc compatibility).
+
+        Each argument can be a Field object or a tag string.
+        Returns None.
         """
-        if isinstance(field, str):
-            # Remove by tag
-            tag = field
-        else:
-            # Remove by tag (using Field object)
-            tag = field.tag
-        
-        # Get fields before removal
-        fields_before = self._inner.get_fields(tag)
-        
-        # Remove
-        self._inner.remove_field(tag)
-        
-        # Convert to wrapped Fields
-        result = []
-        for field_obj in fields_before:
-            wrapper = Field(field_obj.tag, field_obj.indicator1, field_obj.indicator2)
-            wrapper._inner = field_obj
-            result.append(wrapper)
-        return result
-    
+        for field in fields:
+            tag = field.tag if isinstance(field, Field) else field
+            self._inner.remove_field(tag)
+
+    def remove_fields(self, *tags: str) -> None:
+        """Remove all fields with the given tags (pymarc compatibility)."""
+        for tag in tags:
+            self._inner.remove_field(tag)
+
+    def _rebuild_fields(self, field_list) -> None:
+        """Replace all data fields with the given list (internal helper)."""
+        existing_tags = set(f.tag for f in self._inner.fields())
+        for tag in existing_tags:
+            self._inner.remove_field(tag)
+        for f in field_list:
+            self._inner.add_field(f)
+
+    def add_ordered_field(self, *fields: 'Field') -> None:
+        """Add fields maintaining tag sort order (pymarc compatibility)."""
+        for field in fields:
+            if field.is_control_field():
+                self._inner.add_control_field(field.tag, field.data)
+            else:
+                existing = list(self._inner.fields())
+                insert_idx = len(existing)
+                for i, f in enumerate(existing):
+                    if f.tag > field.tag:
+                        insert_idx = i
+                        break
+                existing.insert(insert_idx, field._inner)
+                self._rebuild_fields(existing)
+
+    def add_grouped_field(self, *fields: 'Field') -> None:
+        """Add fields after the last field with the same tag (pymarc compatibility)."""
+        for field in fields:
+            if field.is_control_field():
+                self._inner.add_control_field(field.tag, field.data)
+                continue
+            existing = list(self._inner.fields())
+            last_idx = None
+            for i, f in enumerate(existing):
+                if f.tag == field.tag:
+                    last_idx = i
+            if last_idx is None:
+                self.add_ordered_field(field)
+            else:
+                existing.insert(last_idx + 1, field._inner)
+                self._rebuild_fields(existing)
+
     def add_control_field(self, tag: str, value: str) -> None:
         """Add a control field."""
         self._inner.add_control_field(tag, value)
@@ -763,73 +961,111 @@ class Record:
         return self._inner.control_field(tag)
     
     def fields(self) -> List['Field']:
-        """Get all fields."""
+        """Get all fields (control + data)."""
         result = []
+        # Include control fields
+        for tag in _CONTROL_TAGS:
+            value = self._inner.control_field(tag)
+            if value is not None:
+                result.append(Field(tag, data=value))
+        # Include data fields
         for field in self._inner.fields():
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
+            wrapper = Field.__new__(Field)
+            wrapper._data = None
             wrapper._inner = field
             result.append(wrapper)
         return result
     
+    @property
     def title(self) -> Optional[str]:
-        """Get title from 245 field."""
+        """Title from 245 field."""
         return self._inner.title()
-    
+
+    @property
     def author(self) -> Optional[str]:
-        """Get author from 100/110/111 field."""
+        """Author from 100/110/111 field."""
         return self._inner.author()
-    
+
+    @property
     def isbn(self) -> Optional[str]:
-        """Get ISBN from 020 field."""
+        """ISBN from 020 field."""
         return self._inner.isbn()
-    
+
+    @property
     def issn(self) -> Optional[str]:
-        """Get ISSN from 022 field."""
+        """ISSN from 022 field."""
         return self._inner.issn()
-    
+
+    @property
     def subjects(self) -> List[str]:
-        """Get all subject headings from 6XX subject fields."""
+        """All subject headings from 6XX subject fields."""
         return self._inner.subjects()
-    
+
+    @property
     def location(self) -> List[str]:
-        """Get all location fields (852)."""
+        """All location fields (852)."""
         return self._inner.location()
-    
+
+    @property
     def notes(self) -> List[str]:
-        """Get all notes from 5xx fields."""
+        """All notes from 5xx fields."""
         return self._inner.notes()
-    
+
+    @property
     def publisher(self) -> Optional[str]:
-        """Get publisher from 260 or 264 (RDA) field."""
+        """Publisher from 260 or 264 (RDA) field."""
         return self._inner.publisher()
-    
+
+    @property
     def uniform_title(self) -> Optional[str]:
-        """Get uniform title from 130 field."""
+        """Uniform title from 130 field."""
         return self._inner.uniform_title()
-    
+
+    @property
     def sudoc(self) -> Optional[str]:
-        """Get SuDoc from 086 field."""
+        """SuDoc from 086 field."""
         return self._inner.sudoc()
-    
+
+    @property
     def issn_title(self) -> Optional[str]:
-        """Get ISSN title from 222 field."""
+        """ISSN title from 222 field."""
         return self._inner.issn_title()
-    
+
+    @property
     def issnl(self) -> Optional[str]:
-        """Get ISSN-L from 024 field."""
+        """ISSN-L from 024 field."""
         return self._inner.issnl()
-    
-    def pubyear(self) -> Optional[int]:
-        """Get publication year."""
-        return self._inner.pubyear()
-    
+
+    @property
+    def pubyear(self) -> Optional[str]:
+        """Publication year (returns str, matching pymarc)."""
+        result = self._inner.pubyear()
+        return str(result) if result is not None else None
+
+    @property
     def series(self) -> Optional[str]:
-        """Get series from 490 field."""
+        """Series from 490 field."""
         return self._inner.series()
-    
+
+    @property
     def physical_description(self) -> Optional[str]:
-        """Get physical description from 300 field."""
+        """Physical description from 300 field."""
         return self._inner.physical_description()
+
+    @property
+    def physicaldescription(self) -> Optional[str]:
+        """Physical description (pymarc-compatible name)."""
+        return self.physical_description
+
+    @property
+    def uniformtitle(self) -> Optional[str]:
+        """Uniform title (pymarc-compatible name)."""
+        return self.uniform_title
+
+    @property
+    def addedentries(self) -> list:
+        """Added entries from 700/710/711/730 fields (pymarc compatibility)."""
+        return self.get_fields('700', '710', '711', '730')
     
     def is_book(self) -> bool:
         """Check if this is a book."""
@@ -1160,6 +1396,39 @@ class Record:
                 else:
                     raise
     
+    def as_dict(self) -> dict:
+        """Return pymarc-compatible MARC-in-JSON dict (code4lib schema)."""
+        fields_list = []
+        for tag, value in self._inner.control_fields():
+            fields_list.append({tag: value})
+        for field in self._inner.fields():
+            subfields_list = [{sf.code: sf.value} for sf in field.subfields()]
+            fields_list.append({
+                field.tag: {
+                    'ind1': field.indicator1,
+                    'ind2': field.indicator2,
+                    'subfields': subfields_list,
+                }
+            })
+        return {
+            'leader': self.leader()._get_leader_as_string(),
+            'fields': fields_list,
+        }
+
+    def as_json(self, **kwargs) -> str:
+        """Serialize to pymarc-compatible MARC-in-JSON string."""
+        import json as _json
+        return _json.dumps(self.as_dict(), **kwargs)
+
+    def as_marc(self) -> bytes:
+        """Serialize record to ISO 2709 binary MARC (pymarc compatibility)."""
+        self._sync_leader()
+        return bytes(self._inner.to_marc21())
+
+    def as_marc21(self) -> bytes:
+        """Alias for as_marc() (pymarc compatibility)."""
+        return self.as_marc()
+
     def __eq__(self, other: Any) -> bool:
         """Compare records by content."""
         if not isinstance(other, Record):
@@ -1310,6 +1579,26 @@ def mods_to_record(mods_str: str) -> Record:
 def mods_collection_to_records(mods_str: str) -> List[Record]:
     """Convert a MODS collection XML string to a list of Records."""
     return [_wrap_record(r) for r in _mods_collection_to_records(mods_str)]
+
+
+def parse_xml_to_array(xml_file) -> List[Record]:
+    """Parse MARCXML to a list of Records (pymarc compatibility).
+
+    Accepts file paths (str/Path), open file handles, or XML strings.
+    """
+    import os
+    if isinstance(xml_file, (str, os.PathLike)):
+        path = str(xml_file)
+        if os.path.isfile(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                xml_str = f.read()
+        else:
+            xml_str = path
+    elif hasattr(xml_file, 'read'):
+        xml_str = xml_file.read()
+    else:
+        xml_str = str(xml_file)
+    return xml_to_records(xml_str)
 
 
 def get_leader_valid_values(position: int) -> Optional[dict]:
@@ -1572,7 +1861,63 @@ def bibframe_to_marc(graph: RdfGraph) -> 'Record':
     return wrapped
 
 
+def map_records(func, *files: str) -> None:
+    """Apply a function to each record in one or more MARC files (pymarc compatibility)."""
+    for path in files:
+        reader = MARCReader(open(path, 'rb'))
+        for record in reader:
+            func(record)
+
+
+def parse_json_to_array(json_str: str) -> List[Record]:
+    """Parse a JSON array of pymarc-format records (pymarc compatibility)."""
+    import json as _json
+    data = _json.loads(json_str)
+    if not isinstance(data, list):
+        data = [data]
+    records = []
+    for item in data:
+        record = Record()
+        if 'leader' in item:
+            record.leader()._update_leader_from_string(str(item['leader']))
+        if 'fields' in item:
+            for field_dict in item['fields']:
+                for tag, value in field_dict.items():
+                    if isinstance(value, str):
+                        record.add_control_field(tag, value)
+                    elif isinstance(value, dict):
+                        ind1 = value.get('ind1', ' ')
+                        ind2 = value.get('ind2', ' ')
+                        subfields = []
+                        for sf_dict in value.get('subfields', []):
+                            for code, val in sf_dict.items():
+                                subfields.append(Subfield(code, val))
+                        f = Field(tag, ind1, ind2, subfields=subfields)
+                        record.add_field(f)
+        records.append(record)
+    return records
+
+
 __all__ = [
+    # MARC format constants
+    "LEADER_LEN",
+    "DIRECTORY_ENTRY_LEN",
+    "END_OF_FIELD",
+    "END_OF_RECORD",
+    "SUBFIELD_INDICATOR",
+    "MARC_XML_NS",
+    "MARC_XML_SCHEMA",
+    # Exception hierarchy
+    "MrrcException",
+    "RecordLengthInvalid",
+    "RecordLeaderInvalid",
+    "BaseAddressInvalid",
+    "BaseAddressNotFound",
+    "RecordDirectoryInvalid",
+    "EndOfRecordNotFound",
+    "FieldNotFound",
+    "FatalReaderError",
+    "BadSubfieldCodeWarning",
     # Core classes
     "AuthorityMARCReader",
     "AuthorityRecord",
@@ -1601,6 +1946,7 @@ __all__ = [
     "record_to_xml",
     "xml_to_record",
     "xml_to_records",
+    "parse_xml_to_array",
     "record_to_marcjson",
     "marcjson_to_record",
     "record_to_dublin_core",
@@ -1623,4 +1969,7 @@ __all__ = [
     # Format-agnostic helpers
     "read",
     "write",
+    # Convenience functions
+    "map_records",
+    "parse_json_to_array",
 ]

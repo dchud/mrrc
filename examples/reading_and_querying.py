@@ -70,7 +70,7 @@ def basic_field_access(record):
     
     # Get control number (001 field)
     if '001' in record:
-        control_num = record['001'].value
+        control_num = record['001'].data
         print(f"\nControl number: {control_num}")
     
     print()
@@ -85,21 +85,21 @@ def convenience_methods(record):
     """
     print("=== Using Convenience Methods ===\n")
     
-    # Title convenience method
-    if record.title():
-        print(f"Title (via method): {record.title()}")
-    
-    # Author convenience method
-    if record.author():
-        print(f"Author (via method): {record.author()}")
-    
-    # Subjects convenience method
-    subjects = record.subjects()
+    # Title convenience property
+    if record.title:
+        print(f"Title (via property): {record.title}")
+
+    # Author convenience property
+    if record.author:
+        print(f"Author (via property): {record.author}")
+
+    # Subjects convenience property
+    subjects = record.subjects
     if subjects:
-        print(f"\nSubjects (via method, {len(subjects)} found):")
+        print(f"\nSubjects (via property, {len(subjects)} found):")
         for subject in subjects:
             print(f"  - {subject}")
-    
+
     # Authors (plural) convenience method
     authors = record.authors()
     if authors:
@@ -307,7 +307,7 @@ KEY COMPATIBILITY FEATURES:
 1. Dictionary-style field access: record['245']['a']
 2. Field existence checking: '245' in record
 3. Subfield methods: field.get_subfield('a')
-4. Convenience methods: record.title(), record.author()
+4. Convenience properties: record.title, record.author
 5. Iterator support: for record in reader:
 6. Indicator access: field.indicators[0]
 

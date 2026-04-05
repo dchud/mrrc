@@ -98,7 +98,7 @@ with mrrc.MARCWriter("output.mrc") as writer:
 # Filter records while copying
 with mrrc.MARCWriter("output.mrc") as writer:
     for record in mrrc.MARCReader("input.mrc"):
-        if record.title():  # Only write records with titles
+        if record.title:  # Only write records with titles
             writer.write(record)
 ```
 

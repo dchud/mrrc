@@ -71,9 +71,9 @@ def simple_record():
     # Display results
     print(f"Record Type:    {record.leader.record_type}")
     print(f"Control Number: {record.get_control_field('001')}")
-    print(f"Title:          {record.title()}")
-    print(f"Author:         {record.author()}")
-    print(f"Subjects:       {', '.join(record.subjects())}")
+    print(f"Title:          {record.title}")
+    print(f"Author:         {record.author}")
+    print(f"Subjects:       {', '.join(record.subjects)}")
     print()
 
 
@@ -150,8 +150,8 @@ def record_with_complex_fields():
     record.add_field(subject2)
     
     # Display results
-    print(f"Title:        {record.title()}")
-    print(f"Author:       {record.author()}")
+    print(f"Title:        {record.title}")
+    print(f"Author:       {record.author}")
     print(f"ISBN:         {', '.join(record.isbns())}")
     
     if record.publication_info():
@@ -161,7 +161,7 @@ def record_with_complex_fields():
             print(f"Publisher:    {pub.publisher}")
     
     print(f"\nSubjects:")
-    for subject in record.subjects():
+    for subject in record.subjects:
         print(f"  - {subject}")
     print()
 
@@ -239,7 +239,7 @@ def record_with_multiple_entries():
     record.add_field(genre)
     
     # Display results
-    print(f"Main Author:     {record.author()}")
+    print(f"Main Author:     {record.author}")
     
     print(f"\nAll Authors and Contributors:")
     all_authors = record.authors()
@@ -247,9 +247,9 @@ def record_with_multiple_entries():
         print(f"  - {author}")
     
     print(f"\nSubjects:")
-    for subject in record.subjects():
+    for subject in record.subjects:
         print(f"  - {subject}")
-    
+
     print(f"\nGenre/Form:")
     if '655' in record:
         for field in record.get_fields('655'):
@@ -312,7 +312,7 @@ def writing_records():
         read_count = 0
         print("\nRecords read back:")
         for record in reader:
-            print(f"  {read_count + 1}. {record.title()}")
+            print(f"  {read_count + 1}. {record.title}")
             read_count += 1
         
         print(f"\nVerification: {read_count}/{len(records)} records successfully round-tripped")
@@ -355,8 +355,8 @@ def format_conversions():
     
     # Convert to various formats
     print("Original record:")
-    print(f"  Title: {record.title()}")
-    print(f"  Author: {record.author()}")
+    print(f"  Title: {record.title}")
+    print(f"  Author: {record.author}")
     print()
     
     # JSON

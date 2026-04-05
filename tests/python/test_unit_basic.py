@@ -146,7 +146,7 @@ class TestConvenienceMethods:
         field.add_subfield('b', 'from journeyman to master /')
         record.add_field(field)
         
-        title = record.title()
+        title = record.title
         assert title is not None
         assert 'pragmatic' in title.lower()
     
@@ -156,7 +156,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('100', '1', ' ', a='Hunt, Andrew'))
         
-        author = record.author()
+        author = record.author
         assert author is not None
         assert 'Hunt' in author
     
@@ -166,7 +166,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('020', ' ', ' ', a='0201616165'))
         
-        isbn = record.isbn()
+        isbn = record.isbn
         assert isbn is not None
         assert '0201616165' in isbn
     
@@ -188,7 +188,7 @@ class TestConvenienceMethods:
         # Add 655 — Genre/Form
         record.add_field(create_field('655', ' ', '7', a='Commentaries.'))
 
-        subjects = record.subjects()
+        subjects = record.subjects
         assert len(subjects) == 6
         assert 'Subject 0' in subjects
         assert 'Maimonides, Moses,' in subjects
@@ -201,7 +201,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('852', ' ', ' ', a='Main Library'))
         
-        locations = record.location()
+        locations = record.location
         assert len(locations) >= 1
         assert 'Main Library' in locations
     
@@ -211,7 +211,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('500', ' ', ' ', a='General note'))
         
-        notes = record.notes()
+        notes = record.notes
         assert len(notes) >= 1
         assert 'General note' in notes
     
@@ -221,7 +221,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('130', ' ', '0', a='Standardized Title'))
         
-        uniform_title = record.uniform_title()
+        uniform_title = record.uniform_title
         assert uniform_title is not None
         assert uniform_title == 'Standardized Title'
     
@@ -231,7 +231,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('086', ' ', ' ', a='I 19.2:En 3'))
         
-        sudoc = record.sudoc()
+        sudoc = record.sudoc
         assert sudoc is not None
         assert sudoc == 'I 19.2:En 3'
     
@@ -241,7 +241,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('222', ' ', ' ', a='Key Title'))
         
-        issn_title = record.issn_title()
+        issn_title = record.issn_title
         assert issn_title is not None
         assert issn_title == 'Key Title'
     
@@ -251,7 +251,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('024', ' ', ' ', a='1234-5678'))
         
-        issnl = record.issnl()
+        issnl = record.issnl
         assert issnl is not None
         assert issnl == '1234-5678'
     
@@ -268,9 +268,9 @@ class TestConvenienceMethods:
         record.add_field(field)
         
         # pubyear() should work as alias
-        year = record.pubyear()
+        year = record.pubyear
         assert year is not None
-        assert year == 2023
+        assert year == '2023'
     
     def test_publisher_method(self):
         """Test the publisher() convenience method."""
@@ -283,7 +283,7 @@ class TestConvenienceMethods:
         field.add_subfield('c', '2000')
         record.add_field(field)
         
-        publisher = record.publisher()
+        publisher = record.publisher
         assert publisher is not None
         assert 'Addison-Wesley' in publisher
     
@@ -293,7 +293,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('022', ' ', ' ', a='0028-0836'))
         
-        issn = record.issn()
+        issn = record.issn
         assert issn is not None
         assert issn == '0028-0836'
     
@@ -303,7 +303,7 @@ class TestConvenienceMethods:
         record = Record(leader)
         record.add_field(create_field('490', ' ', ' ', a='Programming Patterns'))
         
-        series = record.series()
+        series = record.series
         assert series is not None
         assert 'Programming' in series
     
@@ -317,7 +317,7 @@ class TestConvenienceMethods:
         field.add_subfield('c', '24 cm')
         record.add_field(field)
         
-        phys_desc = record.physical_description()
+        phys_desc = record.physical_description
         assert phys_desc is not None
         assert '256' in phys_desc
 

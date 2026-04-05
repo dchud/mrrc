@@ -242,7 +242,7 @@ class TestParallelWithFieldAccess:
             reader = MARCReader(data)
             titles = []
             while (record := reader.read_record()) is not None:
-                title = record.title() or "Unknown"
+                title = record.title or "Unknown"
                 titles.append(title)
             return len(titles)
 
@@ -257,7 +257,7 @@ class TestParallelWithFieldAccess:
                 reader = MARCReader(io.BytesIO(data))
                 titles = []
                 while (record := reader.read_record()) is not None:
-                    title = record.title() or "Unknown"
+                    title = record.title or "Unknown"
                     titles.append(title)
                 return len(titles)
 
@@ -276,7 +276,7 @@ class TestParallelWithFieldAccess:
                 reader = MARCReader(io.BytesIO(data))
                 titles = []
                 while (record := reader.read_record()) is not None:
-                    title = record.title() or "Unknown"
+                    title = record.title or "Unknown"
                     titles.append(title)
                 return len(titles)
 
@@ -320,7 +320,7 @@ class TestIndividualOperationParallel:
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
                 while (record := reader.read_record()) is not None:
-                    _ = record.title()
+                    _ = record.title
                     _ = record.get_fields("100")
                     count += 1
                 return count
@@ -358,7 +358,7 @@ class TestIndividualOperationParallel:
                 reader = MARCReader(io.BytesIO(data))
                 count = 0
                 while (record := reader.read_record()) is not None:
-                    _ = record.title()
+                    _ = record.title
                     _ = record.get_fields("100")
                     count += 1
                 return count
@@ -501,7 +501,7 @@ class TestFileBatchParallelBenchmarks:
                 reader = MARCReader(filepath)
                 count = 0
                 while (record := reader.read_record()) is not None:
-                    _ = record.title()
+                    _ = record.title
                     _ = record.get_fields("100")
                     count += 1
                 return count

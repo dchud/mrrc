@@ -15,7 +15,7 @@ from mrrc import MARCReader
 
 # Pass filename for best performance
 for record in MARCReader("records.mrc"):
-    print(record.title())
+    print(record.title)
 ```
 
 This approach uses pure Rust I/O and releases Python's GIL, enabling multi-threaded speedups.
@@ -23,8 +23,8 @@ This approach uses pure Rust I/O and releases Python's GIL, enabling multi-threa
 ## Access Fields
 
 ```python
-# Get a specific field
-field = record["245"]  # Title field
+# Get a specific field (raises KeyError if missing; use .get() for safe access)
+field = record.get("245")  # Title field (returns None if missing)
 if field:
     print(field["a"])  # Title proper
 
@@ -32,10 +32,10 @@ if field:
 for field in record.fields_by_tag("650"):
     print(field["a"])  # Subject heading
 
-# Use convenience methods
-print(record.title())
-print(record.author())
-print(record.isbn())
+# Use convenience properties (not methods — no parentheses)
+print(record.title)
+print(record.author)
+print(record.isbn)
 ```
 
 ## Create Records

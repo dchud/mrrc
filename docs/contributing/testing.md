@@ -125,7 +125,7 @@ def test_read_simple_record():
     with open("tests/data/simple_book.mrc", "rb") as f:
         reader = MARCReader(f)
         record = next(reader)
-        assert record.title() is not None
+        assert record.title is not None
 ```
 
 ## CI Integration

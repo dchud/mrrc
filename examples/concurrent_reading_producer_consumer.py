@@ -91,9 +91,9 @@ def main():
     reader = MARCReader(str(marc_file))
     for record in reader:
         record_count += 1
-        if record.title():
+        if record.title:
             title_count += 1
-        if record.author():
+        if record.author:
             author_count += 1
     
     seq_time = time.time() - start
@@ -122,9 +122,9 @@ def main():
         # Iterate over records from pipeline
         for record in pipeline:
             record_count_pc += 1
-            if record.title():
+            if record.title:
                 title_count_pc += 1
-            if record.author():
+            if record.author:
                 author_count_pc += 1
         
         pc_time = time.time() - start

@@ -215,14 +215,14 @@ class TestRoundTrip:
              assert orig.leader().bibliographic_level == rt.leader().bibliographic_level
 
              # Title (245) should match
-             orig_title = orig.title()
-             rt_title = rt.title()
+             orig_title = orig.title
+             rt_title = rt.title
              if orig_title:
                  assert rt_title == orig_title
 
              # Author (100/110) should match
-             orig_author = orig.author()
-             rt_author = rt.author()
+             orig_author = orig.author
+             rt_author = rt.author
              if orig_author:
                  assert rt_author == orig_author
 

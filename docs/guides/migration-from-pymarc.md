@@ -34,7 +34,7 @@ with open('records.mrc', 'rb') as f:
 writer = pymarc.MARCWriter(open('output.mrc', 'wb'))
 field = pymarc.Field('245', ['1', '0'], [('a', 'Title')])
 record = pymarc.Record(to_utf8=True)
-record.append(field)
+record.add_field(field)
 writer.write(record)
 writer.close()
 ```
@@ -52,7 +52,7 @@ import mrrc
 reader = mrrc.MARCReader('records.mrc')
 for record in reader:
     print(record['245']['a'])  # pymarc dictionary syntax works!
-    print(record.title())      # Also available as convenience method
+    print(record.title)        # Property access (same as pymarc)
 
 # Writing records - inline construction (similar to pymarc)
 with open('output.mrc', 'wb') as f:
@@ -73,15 +73,17 @@ with open('output.mrc', 'wb') as f:
 |-----------|--------|------|-------|
 | Create empty record | `pymarc.Record()` | `mrrc.Record()` | **Same** |
 | Create with leader | `pymarc.Record(leader)` | `mrrc.Record(leader)` | **Same** |
-| Add control field | `record.add_field(Field('001', data='value'))` | `record.add_control_field('001', 'value')` | Different |
-| Add data field | `record.append(field)` | `record.add_field(field)` | Different |
+| Add control field | `record.add_field(Field('001', data='value'))` | `record.add_control_field('001', 'value')` or `record.add_field(Field('001', data='value'))` | Similar |
+| Add data field | `record.add_field(field)` | `record.add_field(field)` | **Same** |
 
 ### Field Creation
 
 | Operation | pymarc | mrrc | Same? |
 |-----------|--------|------|-------|
 | Create field | `Field('245', ['1','0'], [('a', 'Title')])` | `Field('245', indicators=['1','0'], subfields=[Subfield('a', 'Title')])` | Similar |
+| Create control field | `Field('001', data='12345')` | `Field('001', data='12345')` | **Same** |
 | Add subfield | `field.add_subfield('a', 'value')` | `field.add_subfield('a', 'value')` | **Same** |
+| Add subfield at position | `field.add_subfield('a', 'value', pos=2)` | `field.add_subfield('a', 'value', pos=2)` | **Same** |
 | Get subfields | `field.get_subfields('a')` | `field.get_subfields('a')` | **Same** |
 | Access subfield | `field['a']` | `field['a']` | **Same** |
 
@@ -99,11 +101,13 @@ with open('output.mrc', 'wb') as f:
 
 | Operation | pymarc | mrrc | Same? |
 |-----------|--------|------|-------|
-| Get title | `record['245']['a']` | `record['245']['a']` or `record.title()` | **Same** |
+| Get title | `record.title` | `record.title` | **Same** |
 | Get field | `record['650']` | `record['650']` or `record.fields_by_tag('650')` | **Same** |
 | Check if field exists | `'245' in record` | `'245' in record` | **Same** |
 | Get all fields | `for field in record:` | `for field in record:` | **Same** |
-| Control field | `record['001'].value` | `record['001'].value` or `record.control_field('001')` | **Same** |
+| Control field data | `record['001'].data` | `record['001'].data` or `record.control_field('001')` | **Same** |
+| Missing field | `record['999']` raises KeyError | `record['999']` raises KeyError | **Same** |
+| Safe field access | `record.get('999')` returns None | `record.get('999')` returns None | **Same** |
 
 ## API Compatibility
 
@@ -112,23 +116,16 @@ with open('output.mrc', 'wb') as f:
 ### Record Field Access - Dictionary-Style (Identical to pymarc)
 ```python
 # Dictionary-style access works exactly like pymarc
-field = record['245']                      # Get first 245 field (or None if missing)
+field = record['245']                      # Get first 245 field (raises KeyError if missing)
 all_fields = record.fields_by_tag('245')   # Get all 245 fields
 
-# Missing fields return None (matching pymarc behavior)
-field = record['999']                      # Returns None if field doesn't exist
-                                           # (does NOT raise KeyError)
+# Safe access with .get() (returns None if missing)
+field = record.get('245')                  # Get first field, None if missing
+field = record.get('999', default_field)   # With default value
 
 # Check if field exists (identical to pymarc)
 if '245' in record:
     title_field = record['245']
-
-# Dict-like .get() method (identical to pymarc)
-field = record.get('245')                  # Get first field, None if missing
-field = record.get('999', default_field)   # With default value
-
-# Alternative method-based access also available
-field = record.get_field('245')            # Get first field
 ```
 
 ### Field Subfield Access - Dictionary-Style (Identical to pymarc)
@@ -155,36 +152,70 @@ subfield_dict = field.subfields_as_dict()
 
 ### Field Operations (Identical to pymarc)
 ```python
-field.add_subfield('a', 'value')   # Identical to pymarc
-field.get_subfields('a')           # Get list of values - identical to pymarc
-field.delete_subfield('a')         # Delete subfield by code
-field.subfields_as_dict()          # Get all subfields as dict
-field.subfields()                  # Get all Subfield objects
-field.is_control_field()           # False for data fields (identical to pymarc)
+field.add_subfield('a', 'value')       # Identical to pymarc
+field.add_subfield('a', 'val', pos=2)  # Positional insert
+field.get_subfields('a')               # Get list of values - identical to pymarc
+field.delete_subfield('a')             # Delete subfield by code
+field.subfields_as_dict()              # Get all subfields as dict
+field.subfields()                      # Get all Subfield objects
+field.is_control_field()               # False for data fields (identical to pymarc)
+field.value()                          # Space-joined subfield values
+field.format_field()                   # Human-readable field text
 ```
 
 ### Record Operations (Identical to pymarc + Extensions)
 ```python
 # Standard pymarc operations
-record.remove_field('245')         # Remove field(s) by tag
-record.append(field)               # Add field (same as add_field for compatibility)
-record.get_fields('650', '651')    # Get fields for multiple tags
+record.add_field(field1, field2)       # Add one or more fields
+record.remove_field(field1, field2)    # Remove specific field objects
+record.remove_fields('245', '650')    # Remove all fields with matching tags
+record.add_ordered_field(field)        # Insert in tag-sorted position
+record.add_grouped_field(field)        # Insert after same-tag group
+record.add_field(field)                # Add field (accepts multiple: add_field(f1, f2, f3))
+record.get_fields('650', '651')        # Get fields for multiple tags
 
-# Convenience methods (identical to pymarc)
-record.title()                     # Get title (245 $a)
-record.author()                    # Get author (100/110/111 $a)
-record.isbn()                      # Get ISBN (020 $a)
-record.issn()                      # Get ISSN (022 $a)
-record.subjects()                  # Get all subjects (6XX $a)
-record.publisher()                 # Get publisher (260 $b)
-record.physical_description()      # Get extent (300 $a)
-record.series()                    # Get series (490 $a)
+# Record accessors (all are @property, matching pymarc)
+record.title                           # Get title (245 $a)
+record.author                          # Get author (100/110/111 $a)
+record.isbn                            # Get ISBN (020 $a)
+record.issn                            # Get ISSN (022 $a)
+record.subjects                        # Get all subjects (6XX $a)
+record.publisher                       # Get publisher (260 $b)
+record.physical_description            # Get extent (300 $a)
+record.series                          # Get series (490 $a)
+record.pubyear                         # Get publication year (str, not int)
+record.notes                           # Get all notes (5XX)
+record.location                        # Get location (852 $a)
+record.uniform_title                   # Get uniform title (130 $a)
+record.sudoc                           # Get SuDoc classification (086 $a)
+record.issn_title                      # Get ISSN title (222 $a)
+record.issnl                           # Get ISSN-L (024 $a)
+record.addedentries                    # Get added entries (7XX fields)
+
+# Serialization (pymarc-compatible)
+record.as_marc()                       # ISO 2709 bytes
+record.as_json()                       # pymarc MARC-in-JSON string
+record.as_dict()                       # pymarc-compatible dict
+```
+
+### Control Fields (Unified with Field)
+```python
+# Control fields are now Field instances (matching pymarc)
+cf = Field('001', data='12345')
+print(cf.data)                  # '12345'
+print(cf.is_control_field())    # True
+print(isinstance(cf, Field))    # True
+
+# ControlField still works as backward-compatible alias
+from mrrc import ControlField
+cf = ControlField('001', '12345')
+print(cf.data)                  # '12345'
 ```
 
 ### Leader Access - Property-Based and Position-Based
 ```python
 # Property-based access (recommended for clarity)
-leader = record.leader()
+leader = record.leader
 leader.record_status = 'c'          # Set record status
 leader.record_type = 'a'            # Set record type
 leader.bibliographic_level = 'd'    # Set bibliographic level
@@ -209,7 +240,7 @@ assert leader[5] == 'd'             # Position-based access reflects property ch
 # parsing and enables true multi-thread parallelism.
 reader = mrrc.MARCReader('records.mrc')
 for record in reader:              # Standard iteration
-    print(record.title())
+    print(record.title)
 
 # Python file objects and in-memory bytes also work, but hold the GIL
 # during reads, so they won't benefit from multi-threading.
@@ -240,24 +271,55 @@ record = mrrc.Record(mrrc.Leader())     # Explicit leader
 print(record['245']['a'])  # Works exactly like pymarc
 ```
 
-### 2. Optional: Extended Convenience Methods
-mrrc extends pymarc with additional convenience methods:
+### 2. Optional: Extended Convenience Properties
+mrrc extends pymarc with additional convenience properties:
 ```python
-# All pymarc methods work:
-record.title()             # Get title
-record.author()            # Get author
-record.isbn()              # Get ISBN
+# All pymarc properties work:
+record.title               # Get title
+record.author              # Get author
+record.isbn                # Get ISBN
 
-# Plus many additional methods:
-record.issn()              # Get ISSN
-record.issn_title()        # Get ISSN title
-record.sudoc()             # Get SuDoc classification
-record.issnl()             # Get ISSN-L
-record.pubyear()           # Get publication year
-record.physical_description()  # Get extent/pages
+# Plus many additional properties:
+record.issn                # Get ISSN
+record.issn_title          # Get ISSN title
+record.sudoc               # Get SuDoc classification
+record.issnl               # Get ISSN-L
+record.pubyear             # Get publication year (str)
+record.physical_description  # Get extent/pages
 record.is_book()           # Check if book
 record.is_serial()         # Check if serial
 record.is_music()          # Check if music
+```
+
+## New Features Beyond pymarc
+
+### Serialization Methods
+```python
+record.as_marc()           # ISO 2709 bytes
+record.as_json()           # pymarc-compatible MARC-in-JSON
+record.as_dict()           # pymarc-compatible dict
+field.as_marc()            # Field-level binary
+field.value()              # Space-joined subfield values
+field.format_field()       # Human-readable text
+```
+
+### Module-Level Functions
+```python
+import mrrc
+
+records = mrrc.parse_xml_to_array(xml_str)
+records = mrrc.parse_json_to_array(json_str)
+mrrc.map_records(func, reader)
+```
+
+### Constants
+```python
+from mrrc import LEADER_LEN, END_OF_FIELD, END_OF_RECORD, SUBFIELD_INDICATOR
+```
+
+### Exception Hierarchy
+```python
+from mrrc import MrrcException, MarcError
 ```
 
 ## Migration Checklist
@@ -265,15 +327,16 @@ record.is_music()          # Check if music
 **Minimal changes needed:**
 
 - [ ] Replace `import pymarc` with `import mrrc`
-- [ ] Update record creation: `pymarc.Record()` → `mrrc.Record()` (or `mrrc.Record(mrrc.Leader())`)
+- [ ] Update record creation: `pymarc.Record()` to `mrrc.Record()` (or `mrrc.Record(mrrc.Leader())`)
 - [ ] Update field creation to use `indicators=` and `subfields=` kwargs if desired
-- [ ] Everything else works the same - dictionary access, method names, iteration all identical
+- [ ] Everything else works the same - dictionary access, property names, iteration all identical
 
 **Optional enhancements:**
 
 - [ ] Pass file paths to `MARCReader('file.mrc')` instead of file objects (releases the GIL, enables multi-thread parallelism)
-- [ ] Use additional convenience methods like `record.issn()`, `record.sudoc()`, etc. for specialized use cases
+- [ ] Use additional convenience properties like `record.issn`, `record.sudoc`, etc. for specialized use cases
 - [ ] Update writers to use context managers: `with mrrc.MARCWriter(f) as w:` (better resource management)
+- [ ] Use `record.as_marc()`, `record.as_json()`, `record.as_dict()` for serialization
 
 ## Known Differences from pymarc
 

@@ -58,9 +58,9 @@ def process_file(filename: str) -> dict:
             record_count += 1
 
             # Extract some data to demonstrate processing
-            if record.title():
+            if record.title:
                 title_count += 1
-            if record.author():
+            if record.author:
                 author_count += 1
                     
     except Exception as e:

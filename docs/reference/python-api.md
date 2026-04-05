@@ -31,35 +31,81 @@ field.add_subfield("a", "Title")
 record.add_field(field)
 ```
 
-**Properties and Methods:**
+**Properties (read-only):**
+
+All record accessors are properties (not methods), matching pymarc:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `leader` | `Leader` | The record's leader |
+| `title` | `str \| None` | Title from 245$a |
+| `author` | `str \| None` | Author from 100/110/111 |
+| `isbn` | `str \| None` | ISBN from 020$a |
+| `issn` | `str \| None` | ISSN from 022$a |
+| `publisher` | `str \| None` | Publisher from 260$b |
+| `pubyear` | `str \| None` | Publication year (returns str) |
+| `subjects` | `list[str]` | All subjects from 6XX$a |
+| `location` | `str \| None` | Location from 852$a |
+| `notes` | `list[str]` | All notes from 5XX |
+| `series` | `str \| None` | Series from 490$a |
+| `uniform_title` | `str \| None` | Uniform title from 130$a |
+| `physical_description` | `str \| None` | Extent from 300$a |
+| `sudoc` | `str \| None` | SuDoc classification from 086$a |
+| `issn_title` | `str \| None` | ISSN title from 222$a |
+| `issnl` | `str \| None` | ISSN-L from 024$a |
+| `addedentries` | `list[Field]` | Added entries (7XX fields) |
+| `physicaldescription` | `str \| None` | Alias for `physical_description` |
+| `uniformtitle` | `str \| None` | Alias for `uniform_title` |
+
+**Methods:**
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `leader()` | `Leader` | Get the record's leader |
 | `add_control_field(tag, value)` | `None` | Add a control field (001-009) |
 | `control_field(tag)` | `str \| None` | Get a control field value |
 | `control_fields()` | `list[tuple[str, str]]` | Get all control fields |
-| `add_field(field)` | `None` | Add a data field |
+| `add_field(*fields)` | `None` | Add one or more data fields |
+| `add_ordered_field(*fields)` | `None` | Add fields in tag-sorted order |
+| `add_grouped_field(*fields)` | `None` | Add fields after same tag group |
+| `remove_field(*fields)` | `None` | Remove specific field objects |
+| `remove_fields(*tags)` | `None` | Remove all fields matching tags |
 | `fields()` | `list[Field]` | Get all data fields |
 | `fields_by_tag(tag)` | `list[Field]` | Get fields matching a tag |
-| `title()` | `str \| None` | Get title from 245$a |
-| `author()` | `str \| None` | Get author from 100/110/111 |
-| `isbn()` | `str \| None` | Get ISBN from 020$a |
+| `get(tag, default=None)` | `Field \| None` | Get first field (safe, returns None) |
+| `get_fields(*tags)` | `list[Field]` | Get fields for multiple tags |
 | `isbns()` | `list[str]` | Get all ISBNs |
+| `authors()` | `list[str]` | Get all authors |
+| `as_marc()` | `bytes` | Serialize to ISO 2709 binary |
+| `as_marc21()` | `bytes` | Alias for `as_marc()` |
+| `as_json(**kwargs)` | `str` | Serialize to pymarc-compatible MARC-in-JSON |
+| `as_dict()` | `dict` | Convert to pymarc-compatible dict |
+
+**Dictionary access:**
+
+```python
+# record['xxx'] raises KeyError if tag is missing
+field = record['245']      # Returns Field or raises KeyError
+
+# Use record.get() for safe access (returns None if missing)
+field = record.get('245')  # Returns Field or None
+```
 
 ### Field
 
-A MARC data field with tag, indicators, and subfields.
+A MARC field — both control fields and data fields use this class.
 
 ```python
 from mrrc import Field, Subfield
 
-# Create field with indicators and subfields inline
+# Create a data field with indicators and subfields inline
 field = Field("245", indicators=["1", "0"], subfields=[
     Subfield("a", "Main title :"),
     Subfield("b", "subtitle /"),
     Subfield("c", "by Author."),
 ])
+
+# Create a control field
+field = Field("001", data="12345")
 
 # Or build incrementally
 field = Field("245", "1", "0")
@@ -78,10 +124,33 @@ for sf in field.subfields():
 | `tag` | `str` | 3-character field tag |
 | `indicator1` | `str` | First indicator |
 | `indicator2` | `str` | Second indicator |
-| `add_subfield(code, value)` | `None` | Add a subfield |
+| `data` | `str \| None` | Control field content (None for data fields) |
+| `is_control_field()` | `bool` | True for control fields (001-009) |
+| `add_subfield(code, value, pos=None)` | `None` | Add a subfield (optional positional insert) |
 | `subfields()` | `list[Subfield]` | Get all subfields |
 | `subfields_by_code(code)` | `list[str]` | Get values for a subfield code |
+| `get_subfields(*codes)` | `list[str]` | Get values for one or more subfield codes |
+| `value()` | `str` | Space-joined subfield values |
+| `format_field()` | `str` | Human-readable text representation |
+| `as_marc()` | `bytes` | Serialize to ISO 2709 binary |
+| `as_marc21()` | `bytes` | Alias for `as_marc()` |
+| `linkage_occurrence_num()` | `tuple[str, str] \| None` | Extract $6 linkage info |
+| `convert_legacy_subfields(tag, *args)` | `Field` | Classmethod: create from flat list |
 | `__getitem__(code)` | `str \| None` | Get first subfield value by code |
+
+### ControlField
+
+A backward-compatible subclass of `Field` for control fields. Prefer `Field(tag, data=value)` for new code.
+
+```python
+from mrrc import ControlField
+
+# Still works for backward compatibility
+cf = ControlField("001", "12345")
+print(cf.data)              # "12345"
+print(cf.is_control_field())  # True
+print(isinstance(cf, Field))  # True
+```
 
 ### Subfield
 
@@ -144,17 +213,17 @@ from mrrc import MARCReader
 
 # From file path (recommended for performance)
 for record in MARCReader("records.mrc"):
-    print(record.title())
+    print(record.title)
 
 # From file object
 with open("records.mrc", "rb") as f:
     for record in MARCReader(f):
-        print(record.title())
+        print(record.title)
 
 # From bytes
 data = open("records.mrc", "rb").read()
 for record in MARCReader(data):
-    print(record.title())
+    print(record.title)
 ```
 
 **Input Types:**
@@ -198,12 +267,20 @@ with MARCWriter("output.mrc") as writer:
 json_str = record.to_json()
 marcjson_str = record.to_marcjson()
 
+# pymarc-compatible serialization
+json_str = record.as_json()     # pymarc MARC-in-JSON format
+record_dict = record.as_dict()  # pymarc-compatible dict
+
 # MARCXML
 xml_str = record.to_xml()
 
 # Other XML-based formats
 mods_str = record.to_mods()
 dc_str = record.to_dublin_core()
+
+# Binary (ISO 2709)
+marc_bytes = record.as_marc()   # returns bytes
+marc_bytes = record.as_marc21() # alias
 ```
 
 ### Module Functions
@@ -229,6 +306,25 @@ records = mrrc.mods_collection_to_records(mods_collection_xml)
 # Convert to CSV
 csv_str = mrrc.record_to_csv(record)
 csv_str = mrrc.records_to_csv(records)
+
+# Convenience functions
+records = mrrc.parse_xml_to_array(xml_str)
+records = mrrc.parse_json_to_array(json_str)
+mrrc.map_records(func, reader)
+```
+
+## Constants
+
+```python
+from mrrc import (
+    LEADER_LEN,           # 24
+    DIRECTORY_ENTRY_LEN,  # 12
+    END_OF_FIELD,         # '\x1e'
+    END_OF_RECORD,        # '\x1d'
+    SUBFIELD_INDICATOR,   # '\x1f'
+    MARC_XML_NS,          # MARCXML namespace URI
+    MARC_XML_SCHEMA,      # MARCXML schema URI
+)
 ```
 
 ## BIBFRAME Conversion
@@ -269,14 +365,21 @@ ntriples = graph.serialize("ntriples")
 ## Exceptions
 
 ```python
-from mrrc import MarcError
+from mrrc import MrrcException, MarcError
 
 try:
     for record in MARCReader("bad.mrc"):
         pass
+except MrrcException as e:
+    print(f"MRRC error: {e}")
 except MarcError as e:
     print(f"MARC error: {e}")
 ```
+
+The exception hierarchy:
+
+- `MrrcException` — base exception for all mrrc errors
+  - `MarcError` — MARC-specific errors (parsing, validation)
 
 ## See Also
 
