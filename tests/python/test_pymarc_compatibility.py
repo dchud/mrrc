@@ -1585,6 +1585,30 @@ class TestFieldBinarySerialization:
         assert b'Author' in result
 
 
+class TestConvenienceFunctions:
+    def test_map_records(self):
+        """map_records applies a function to each record in a file."""
+        from pathlib import Path
+        test_file = Path(__file__).parent.parent / 'data' / 'simple_book.mrc'
+        titles = []
+        from mrrc import map_records
+        map_records(lambda r: titles.append(r.title), str(test_file))
+        assert len(titles) > 0
+
+    def test_parse_json_to_array(self):
+        """parse_json_to_array parses pymarc-format JSON."""
+        from mrrc import parse_json_to_array
+        record = Record(fields=[
+            Field('245', '1', '0', subfields=[Subfield('a', 'Title')]),
+        ])
+        record.add_control_field('001', 'test-id')
+        json_str = record.as_json()
+        json_array = '[' + json_str + ']'
+        records = parse_json_to_array(json_array)
+        assert len(records) == 1
+        assert isinstance(records[0], Record)
+
+
 class TestMarcConstants:
     def test_constants_importable(self):
         from mrrc import (

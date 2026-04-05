@@ -1849,6 +1849,43 @@ def bibframe_to_marc(graph: RdfGraph) -> 'Record':
     return wrapped
 
 
+def map_records(func, *files: str) -> None:
+    """Apply a function to each record in one or more MARC files (pymarc compatibility)."""
+    for path in files:
+        reader = MARCReader(open(path, 'rb'))
+        for record in reader:
+            func(record)
+
+
+def parse_json_to_array(json_str: str) -> List[Record]:
+    """Parse a JSON array of pymarc-format records (pymarc compatibility)."""
+    import json as _json
+    data = _json.loads(json_str)
+    if not isinstance(data, list):
+        data = [data]
+    records = []
+    for item in data:
+        record = Record()
+        if 'leader' in item:
+            record.leader()._update_leader_from_string(str(item['leader']))
+        if 'fields' in item:
+            for field_dict in item['fields']:
+                for tag, value in field_dict.items():
+                    if isinstance(value, str):
+                        record.add_control_field(tag, value)
+                    elif isinstance(value, dict):
+                        ind1 = value.get('ind1', ' ')
+                        ind2 = value.get('ind2', ' ')
+                        subfields = []
+                        for sf_dict in value.get('subfields', []):
+                            for code, val in sf_dict.items():
+                                subfields.append(Subfield(code, val))
+                        f = Field(tag, ind1, ind2, subfields=subfields)
+                        record.add_field(f)
+        records.append(record)
+    return records
+
+
 __all__ = [
     # MARC format constants
     "LEADER_LEN",
@@ -1920,4 +1957,7 @@ __all__ = [
     # Format-agnostic helpers
     "read",
     "write",
+    # Convenience functions
+    "map_records",
+    "parse_json_to_array",
 ]
