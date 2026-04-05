@@ -750,12 +750,13 @@ class Record:
 
         return result
     
-    def add_field(self, field: 'Field') -> None:
-        """Add a field to the record."""
-        if field.is_control_field():
-            self._inner.add_control_field(field.tag, field.data)
-        else:
-            self._inner.add_field(field._inner)
+    def add_field(self, *fields: 'Field') -> None:
+        """Add one or more fields to the record."""
+        for field in fields:
+            if field.is_control_field():
+                self._inner.add_control_field(field.tag, field.data)
+            else:
+                self._inner.add_field(field._inner)
     
     def get(self, tag: str, default=None):
         """Get first field with given tag, or default (pymarc compatibility)."""
@@ -773,33 +774,21 @@ class Record:
             return wrapper
         return None
     
-    def remove_field(self, field: Union['Field', str]) -> List['Field']:
-        """Remove a field from record.
-        
-        Can accept either a Field object or a tag string.
-        Returns list of removed fields.
+    def remove_field(self, *fields: Union['Field', str]) -> None:
+        """Remove one or more fields from the record (pymarc compatibility).
+
+        Each argument can be a Field object or a tag string.
+        Returns None.
         """
-        if isinstance(field, str):
-            # Remove by tag
-            tag = field
-        else:
-            # Remove by tag (using Field object)
-            tag = field.tag
-        
-        # Get fields before removal
-        fields_before = self._inner.get_fields(tag)
-        
-        # Remove
-        self._inner.remove_field(tag)
-        
-        # Convert to wrapped Fields
-        result = []
-        for field_obj in fields_before:
-            wrapper = Field(field_obj.tag, field_obj.indicator1, field_obj.indicator2)
-            wrapper._inner = field_obj
-            result.append(wrapper)
-        return result
-    
+        for field in fields:
+            tag = field.tag if isinstance(field, Field) else field
+            self._inner.remove_field(tag)
+
+    def remove_fields(self, *tags: str) -> None:
+        """Remove all fields with the given tags (pymarc compatibility)."""
+        for tag in tags:
+            self._inner.remove_field(tag)
+
     def add_control_field(self, tag: str, value: str) -> None:
         """Add a control field."""
         self._inner.add_control_field(tag, value)

@@ -154,9 +154,8 @@ class TestRecordFieldOperations:
         assert record.get_field('245') is not None
         
         # Remove the field
-        removed = record.remove_field('245')
-        assert len(removed) > 0
-        
+        record.remove_field('245')
+
         # Verify field is gone
         assert record.get_field('245') is None
 
@@ -1253,6 +1252,70 @@ class TestRecordPropertyAccessors:
         assert isinstance(entries, list)
         assert len(entries) >= 1
         assert any('Jones' in str(e) for e in entries)
+
+
+class TestBulkFieldOperations:
+    """Test bulk add/remove field operations (pymarc compatibility)."""
+
+    def test_add_multiple_fields(self):
+        """add_field(*fields) accepts multiple fields at once."""
+        record = Record(Leader())
+        f1 = Field('100', '1', ' ', subfields=[Subfield('a', 'Author')])
+        f2 = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        f3 = Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')])
+        record.add_field(f1, f2, f3)
+        assert record.get_field('100') is not None
+        assert record.get_field('245') is not None
+        assert record.get_field('650') is not None
+
+    def test_add_field_single_still_works(self):
+        """add_field still works with a single argument (backward compat)."""
+        record = Record(Leader())
+        f = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        record.add_field(f)
+        assert record.get_field('245') is not None
+
+    def test_remove_field_by_object(self):
+        """remove_field accepts a Field object."""
+        record = Record(Leader())
+        f = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        record.add_field(f)
+        record.remove_field(f)
+        assert record.get_field('245') is None
+
+    def test_remove_field_multiple(self):
+        """remove_field accepts multiple Field objects."""
+        record = Record(Leader())
+        f1 = Field('100', '1', ' ', subfields=[Subfield('a', 'Author')])
+        f2 = Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')])
+        record.add_field(f1, f2)
+        record.remove_field(f1, f2)
+        assert record.get_field('100') is None
+        assert record.get_field('650') is None
+
+    def test_remove_field_returns_none(self):
+        """remove_field returns None (not a list)."""
+        record = Record(Leader())
+        f = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        record.add_field(f)
+        result = record.remove_field(f)
+        assert result is None
+
+    def test_remove_fields_by_tags(self):
+        """remove_fields(*tags) removes all fields with given tags."""
+        record = Record(Leader())
+        record.add_field(Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')]))
+        record.add_field(Field('700', '1', ' ', subfields=[Subfield('a', 'Author')]))
+        record.remove_fields('650', '700')
+        assert record.get_field('650') is None
+        assert record.get_field('700') is None
+
+    def test_remove_fields_returns_none(self):
+        """remove_fields returns None."""
+        record = Record(Leader())
+        record.add_field(Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')]))
+        result = record.remove_fields('650')
+        assert result is None
 
 
 if __name__ == '__main__':
