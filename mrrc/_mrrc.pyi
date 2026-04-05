@@ -155,6 +155,14 @@ class Field:
             ValueError: If code is empty
         """
         ...
+    def to_marc21(self) -> bytes:
+        """Serialize field to ISO 2709 binary format.
+
+        Returns:
+            Bytes containing the field's binary MARC 21 representation
+            (indicators + subfield data + field terminator).
+        """
+        ...
 
 class Record:
     """A MARC bibliographic record.
