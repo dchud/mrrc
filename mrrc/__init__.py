@@ -360,7 +360,22 @@ class Field:
         """Check if this is a subject field (6xx)."""
         tag = self.tag
         return tag.startswith('6') and len(tag) >= 2
-    
+
+    def linkage_occurrence_num(self) -> Optional[str]:
+        """Extract the occurrence number from subfield $6 linkage (pymarc compatibility)."""
+        if self.is_control_field():
+            return None
+        sub6 = self['6']
+        if sub6 is None:
+            return None
+        if '-' not in sub6:
+            return None
+        parts = sub6.split('-', 1)
+        occ = parts[1]
+        if '/' in occ:
+            occ = occ.split('/')[0]
+        return occ if occ else None
+
     def __eq__(self, other: Any) -> bool:
         """Compare fields by content."""
         if not isinstance(other, Field):

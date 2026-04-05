@@ -1365,6 +1365,26 @@ class TestOrderedFieldInsertion:
         assert data_tags == ['100', '245', '650']
 
 
+class TestFieldLinkage:
+    def test_linkage_occurrence_num(self):
+        field = Field('245', '1', '0', subfields=[
+            Subfield('6', '880-03'),
+            Subfield('a', 'Title'),
+        ])
+        assert field.linkage_occurrence_num() == '03'
+
+    def test_linkage_occurrence_num_no_subfield_6(self):
+        field = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        assert field.linkage_occurrence_num() is None
+
+    def test_linkage_occurrence_num_no_dash(self):
+        field = Field('245', '1', '0', subfields=[
+            Subfield('6', '880'),
+            Subfield('a', 'Title'),
+        ])
+        assert field.linkage_occurrence_num() is None
+
+
 class TestSubfieldPositionalInsert:
     def test_add_subfield_default_appends(self):
         field = Field('245', '1', '0')
