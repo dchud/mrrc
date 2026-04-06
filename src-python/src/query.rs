@@ -451,9 +451,16 @@ impl PySubfieldValueQuery {
     /// Example:
     ///     >>> query = mrrc.SubfieldValueQuery("650", "a", "History")
     ///     >>> query = mrrc.SubfieldValueQuery("650", "a", "History", partial=True)
+    ///     >>> query = mrrc.SubfieldValueQuery("650", "a", "History", negate=True)
     #[new]
-    #[pyo3(signature = (tag, subfield_code, value, *, partial=false))]
-    pub fn new(tag: &str, subfield_code: &str, value: &str, partial: bool) -> PyResult<Self> {
+    #[pyo3(signature = (tag, subfield_code, value, *, partial=false, negate=false))]
+    pub fn new(
+        tag: &str,
+        subfield_code: &str,
+        value: &str,
+        partial: bool,
+        negate: bool,
+    ) -> PyResult<Self> {
         if subfield_code.is_empty() {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "Subfield code cannot be empty",
@@ -461,10 +468,11 @@ impl PySubfieldValueQuery {
         }
         let code_char = subfield_code.chars().next().unwrap();
 
-        let inner = if partial {
-            SubfieldValueQuery::partial(tag, code_char, value)
-        } else {
-            SubfieldValueQuery::new(tag, code_char, value)
+        let inner = match (partial, negate) {
+            (false, false) => SubfieldValueQuery::new(tag, code_char, value),
+            (true, false) => SubfieldValueQuery::partial(tag, code_char, value),
+            (false, true) => SubfieldValueQuery::negated(tag, code_char, value),
+            (true, true) => SubfieldValueQuery::partial_negated(tag, code_char, value),
         };
 
         Ok(PySubfieldValueQuery { inner })
@@ -494,16 +502,29 @@ impl PySubfieldValueQuery {
         self.inner.partial
     }
 
+    /// Whether this query is negated (matches fields that do NOT match the value).
+    #[getter]
+    pub fn negate(&self) -> bool {
+        self.inner.negate
+    }
+
     fn __repr__(&self) -> String {
         let match_type = if self.inner.partial {
             "partial"
         } else {
             "exact"
         };
-        format!(
-            "<SubfieldValueQuery tag={} subfield={} value={:?} match={}>",
-            self.inner.tag, self.inner.subfield_code, self.inner.value, match_type
-        )
+        if self.inner.negate {
+            format!(
+                "<SubfieldValueQuery tag={} subfield={} value={:?} match={} negate=true>",
+                self.inner.tag, self.inner.subfield_code, self.inner.value, match_type
+            )
+        } else {
+            format!(
+                "<SubfieldValueQuery tag={} subfield={} value={:?} match={}>",
+                self.inner.tag, self.inner.subfield_code, self.inner.value, match_type
+            )
+        }
     }
 
     fn __str__(&self) -> String {

@@ -309,8 +309,10 @@ class SubfieldPatternQuery:
 class SubfieldValueQuery:
     """Query for fields where a subfield matches a value."""
     def __init__(
-        self, tag: str, subfield_code: str, value: str, *, partial: bool = False
+        self, tag: str, subfield_code: str, value: str, *, partial: bool = False, negate: bool = False
     ) -> None: ...
+    @property
+    def negate(self) -> bool: ...
 
 # =============================================================================
 # ISO 2709 MARC Readers and Writers
