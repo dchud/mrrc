@@ -353,8 +353,10 @@ impl PySubfieldPatternQuery {
     /// Example:
     ///     >>> query = mrrc.SubfieldPatternQuery("020", "a", r"^978-")
     ///     >>> query = mrrc.SubfieldPatternQuery("100", "d", r"\d{4}-\d{4}")
+    ///     >>> query = mrrc.SubfieldPatternQuery("020", "a", r"^978-", negate=True)
     #[new]
-    pub fn new(tag: &str, subfield_code: &str, pattern: &str) -> PyResult<Self> {
+    #[pyo3(signature = (tag, subfield_code, pattern, *, negate=false))]
+    pub fn new(tag: &str, subfield_code: &str, pattern: &str, negate: bool) -> PyResult<Self> {
         if subfield_code.is_empty() {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "Subfield code cannot be empty",
@@ -362,7 +364,13 @@ impl PySubfieldPatternQuery {
         }
         let code_char = subfield_code.chars().next().unwrap();
 
-        match SubfieldPatternQuery::new(tag, code_char, pattern) {
+        let inner = if negate {
+            SubfieldPatternQuery::negated(tag, code_char, pattern)
+        } else {
+            SubfieldPatternQuery::new(tag, code_char, pattern)
+        };
+
+        match inner {
             Ok(query) => Ok(PySubfieldPatternQuery { inner: query }),
             Err(e) => Err(pyo3::exceptions::PyValueError::new_err(format!(
                 "Invalid regex pattern: {}",
@@ -383,11 +391,24 @@ impl PySubfieldPatternQuery {
         self.inner.subfield_code.to_string()
     }
 
+    /// Whether this query is negated (matches fields that do NOT match the pattern).
+    #[getter]
+    pub fn negate(&self) -> bool {
+        self.inner.negate
+    }
+
     fn __repr__(&self) -> String {
-        format!(
-            "<SubfieldPatternQuery tag={} subfield={}>",
-            self.inner.tag, self.inner.subfield_code
-        )
+        if self.inner.negate {
+            format!(
+                "<SubfieldPatternQuery tag={} subfield={} negate=true>",
+                self.inner.tag, self.inner.subfield_code
+            )
+        } else {
+            format!(
+                "<SubfieldPatternQuery tag={} subfield={}>",
+                self.inner.tag, self.inner.subfield_code
+            )
+        }
     }
 
     fn __str__(&self) -> String {

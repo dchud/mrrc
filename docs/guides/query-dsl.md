@@ -123,7 +123,15 @@ query = SubfieldPatternQuery("100", "d", r"^\d{4}-$")
 
 # URLs in notes
 query = SubfieldPatternQuery("856", "u", r"^https?://")
+
+# Negated: find ISBNs that are NOT ISBN-13
+query = SubfieldPatternQuery("020", "a", r"^97[89]-", negate=True)
+
+# Negated: subjects NOT starting with uppercase
+query = SubfieldPatternQuery("650", "a", r"^[A-Z]", negate=True)
 ```
+
+**Negation**: Use `negate=True` to find fields where the subfield exists but does NOT match the pattern. When negated, a missing subfield returns no match (negation means "exists but doesn't match," not "is absent").
 
 **Note**: The regex uses Rust's regex syntax, which is similar to Python's `re` module but not identical. Most common patterns work the same way.
 

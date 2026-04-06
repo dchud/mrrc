@@ -302,7 +302,9 @@ class TagRangeQuery:
 
 class SubfieldPatternQuery:
     """Query for fields where a subfield matches a regex pattern."""
-    def __init__(self, tag: str, subfield_code: str, pattern: str) -> None: ...
+    def __init__(self, tag: str, subfield_code: str, pattern: str, *, negate: bool = False) -> None: ...
+    @property
+    def negate(self) -> bool: ...
 
 class SubfieldValueQuery:
     """Query for fields where a subfield matches a value."""

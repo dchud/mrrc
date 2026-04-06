@@ -265,6 +265,8 @@ pub struct SubfieldPatternQuery {
     pub subfield_code: char,
     /// Regex pattern for subfield value
     pattern: Regex,
+    /// If true, match fields where the subfield does NOT match the pattern
+    pub negate: bool,
 }
 
 impl SubfieldPatternQuery {
@@ -298,6 +300,27 @@ impl SubfieldPatternQuery {
             tag: tag.into(),
             subfield_code,
             pattern: Regex::new(pattern)?,
+            negate: false,
+        })
+    }
+
+    /// Create a negated subfield pattern query.
+    ///
+    /// Matches fields where the subfield exists but does NOT match the pattern.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `regex::Error` if the pattern is not a valid regular expression.
+    pub fn negated(
+        tag: impl Into<String>,
+        subfield_code: char,
+        pattern: &str,
+    ) -> Result<Self, regex::Error> {
+        Ok(SubfieldPatternQuery {
+            tag: tag.into(),
+            subfield_code,
+            pattern: Regex::new(pattern)?,
+            negate: true,
         })
     }
 
@@ -310,7 +333,7 @@ impl SubfieldPatternQuery {
 
         field
             .get_subfield(self.subfield_code)
-            .is_some_and(|value| self.pattern.is_match(value))
+            .is_some_and(|value| self.pattern.is_match(value) != self.negate)
     }
 }
 
@@ -534,6 +557,30 @@ mod tests {
         // Match years in format YYYY-YYYY
         let query = SubfieldPatternQuery::new("100", 'd', r"\d{4}-\d{4}").unwrap();
         assert!(query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_pattern_query_negated_match() {
+        let field = create_test_field("020", ' ', ' ', &[('a', "978-0-12345-678-9")]);
+        // Negated: subfield matches pattern → should NOT match
+        let query = SubfieldPatternQuery::negated("020", 'a', r"^978-.*").unwrap();
+        assert!(!query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_pattern_query_negated_nonmatch() {
+        let field = create_test_field("020", ' ', ' ', &[('a', "978-0-12345-678-9")]);
+        // Negated: subfield doesn't match pattern → should match
+        let query = SubfieldPatternQuery::negated("020", 'a', r"^979-.*").unwrap();
+        assert!(query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_pattern_query_negated_missing_subfield() {
+        let field = create_test_field("020", ' ', ' ', &[('a', "978-0-12345-678-9")]);
+        // Negated with missing subfield → should NOT match (subfield must exist)
+        let query = SubfieldPatternQuery::negated("020", 'z', r".*").unwrap();
+        assert!(!query.matches(&field));
     }
 
     #[test]

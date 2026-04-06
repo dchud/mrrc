@@ -284,6 +284,47 @@ class TestSubfieldPatternQuery:
         assert query.tag == "020"
         assert query.subfield_code == "a"
 
+    def test_negated_pattern_excludes_match(self):
+        """Negated query excludes fields where subfield matches the pattern."""
+        record = create_test_record()
+        # Non-negated: finds ISBNs starting with 978
+        query = SubfieldPatternQuery("020", "a", r"^978-")
+        results = record.fields_matching_pattern(query)
+        assert len(results) == 1
+
+        # Negated: finds ISBNs NOT starting with 978
+        query_neg = SubfieldPatternQuery("020", "a", r"^978-", negate=True)
+        results_neg = record.fields_matching_pattern(query_neg)
+        # Should find the 979 and non-978 ISBNs but not the 978 one
+        assert len(results_neg) > 0
+        for f in results_neg:
+            assert not f['a'].startswith('978-')
+
+    def test_negated_pattern_includes_nonmatch(self):
+        """Negated query includes fields where subfield doesn't match."""
+        record = create_test_record()
+        # Negated: pattern that matches nothing → should include all 020 fields
+        query = SubfieldPatternQuery("020", "a", r"^NONEXISTENT", negate=True)
+        results = record.fields_matching_pattern(query)
+        all_020 = record.get_fields("020")
+        assert len(results) == len(all_020)
+
+    def test_negate_property(self):
+        """Test negate getter."""
+        query = SubfieldPatternQuery("020", "a", r"^978-")
+        assert query.negate is False
+
+        query_neg = SubfieldPatternQuery("020", "a", r"^978-", negate=True)
+        assert query_neg.negate is True
+
+    def test_negate_repr(self):
+        """Negated query shows negate=true in repr."""
+        query = SubfieldPatternQuery("020", "a", r"^978-", negate=True)
+        assert "negate=true" in repr(query)
+
+        query_pos = SubfieldPatternQuery("020", "a", r"^978-")
+        assert "negate" not in repr(query_pos)
+
 
 # =============================================================================
 # SubfieldValueQuery Tests
