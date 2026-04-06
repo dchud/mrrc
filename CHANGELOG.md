@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Documentation
+
+## [0.7.5] - 2026-04-05
+
+### Added
+
 - **`Record.get(tag)` for pymarc compatibility**: Dict-like `record.get('245')` returns the first matching field or a default value, mirroring pymarc's `Record.get()`. Delegates to existing `get_field()`.
 - **`Field.is_control_field()` and `ControlField.is_control_field()` for pymarc compatibility**: Returns `False` on data fields and `True` on control fields, matching pymarc's unified `Field.is_control_field()` API.
 - **`Record.__str__` and `Record.__repr__`**: The Python `Record` wrapper now delegates to the Rust implementation instead of showing the default `<mrrc.Record object at 0x...>`. `str(rec)` returns `Record(type=a)` and `repr(rec)` returns `<Record type=a fields=N>`.
@@ -60,8 +70,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **`mrrc.__version__` now reports the correct version**: Previously hardcoded as `"0.1.0"` in both `mrrc/__init__.py` and `src-python/src/lib.rs`. Now derived from `Cargo.toml` at compile time via `env!("CARGO_PKG_VERSION")`, eliminating the need to manually update version strings during releases.
-
-### Performance
 
 ### Documentation
 
