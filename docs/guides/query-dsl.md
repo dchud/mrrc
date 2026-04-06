@@ -149,7 +149,15 @@ query = SubfieldValueQuery("650", "a", "History")
 query = SubfieldValueQuery("650", "a", "History", partial=True)
 
 # Will match: "History", "World History", "History of Science"
+
+# Negated: find subjects that are NOT "History"
+query = SubfieldValueQuery("650", "a", "History", negate=True)
+
+# Negated partial: find subjects NOT containing "History"
+query = SubfieldValueQuery("650", "a", "History", partial=True, negate=True)
 ```
+
+**Negation**: Use `negate=True` to find fields where the subfield exists but does NOT match the value. Works with both exact and partial matching. A missing subfield returns no match.
 
 ## Record Methods
 

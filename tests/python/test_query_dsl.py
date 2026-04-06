@@ -377,6 +377,46 @@ class TestSubfieldValueQuery:
         assert query.value == "History"
         assert query.partial is True
 
+    def test_negated_exact_excludes_match(self):
+        """Negated exact query excludes fields where subfield equals the value."""
+        record = create_test_record()
+        # Non-negated: finds exact "History"
+        query = SubfieldValueQuery("650", "a", "History")
+        results = record.fields_matching_value(query)
+        assert len(results) == 1
+
+        # Negated: finds subjects that are NOT "History"
+        query_neg = SubfieldValueQuery("650", "a", "History", negate=True)
+        results_neg = record.fields_matching_value(query_neg)
+        assert len(results_neg) > 0
+        for f in results_neg:
+            assert f['a'] != 'History'
+
+    def test_negated_partial_excludes_match(self):
+        """Negated partial query excludes fields containing the value."""
+        record = create_test_record()
+        # Negated partial: finds subjects NOT containing "History"
+        query = SubfieldValueQuery("650", "a", "History", partial=True, negate=True)
+        results = record.fields_matching_value(query)
+        for f in results:
+            assert 'History' not in f['a']
+
+    def test_negate_property(self):
+        """Test negate getter."""
+        query = SubfieldValueQuery("650", "a", "History")
+        assert query.negate is False
+
+        query_neg = SubfieldValueQuery("650", "a", "History", negate=True)
+        assert query_neg.negate is True
+
+    def test_negate_repr(self):
+        """Negated query shows negate=true in repr."""
+        query = SubfieldValueQuery("650", "a", "History", negate=True)
+        assert "negate=true" in repr(query)
+
+        query_pos = SubfieldValueQuery("650", "a", "History")
+        assert "negate" not in repr(query_pos)
+
 
 # =============================================================================
 # Convenience Method Tests

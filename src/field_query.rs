@@ -350,6 +350,8 @@ pub struct SubfieldValueQuery {
     pub value: String,
     /// If true, match substrings (contains); if false, exact match
     pub partial: bool,
+    /// If true, match fields where the subfield does NOT match the value
+    pub negate: bool,
 }
 
 impl SubfieldValueQuery {
@@ -361,6 +363,7 @@ impl SubfieldValueQuery {
             subfield_code,
             value: value.into(),
             partial: false,
+            negate: false,
         }
     }
 
@@ -372,6 +375,39 @@ impl SubfieldValueQuery {
             subfield_code,
             value: value.into(),
             partial: true,
+            negate: false,
+        }
+    }
+
+    /// Create a negated exact subfield value query.
+    ///
+    /// Matches fields where the subfield exists but does NOT equal the value.
+    #[must_use]
+    pub fn negated(tag: impl Into<String>, subfield_code: char, value: impl Into<String>) -> Self {
+        SubfieldValueQuery {
+            tag: tag.into(),
+            subfield_code,
+            value: value.into(),
+            partial: false,
+            negate: true,
+        }
+    }
+
+    /// Create a negated partial/substring subfield value query.
+    ///
+    /// Matches fields where the subfield exists but does NOT contain the value.
+    #[must_use]
+    pub fn partial_negated(
+        tag: impl Into<String>,
+        subfield_code: char,
+        value: impl Into<String>,
+    ) -> Self {
+        SubfieldValueQuery {
+            tag: tag.into(),
+            subfield_code,
+            value: value.into(),
+            partial: true,
+            negate: true,
         }
     }
 
@@ -383,11 +419,12 @@ impl SubfieldValueQuery {
         }
 
         field.get_subfield(self.subfield_code).is_some_and(|value| {
-            if self.partial {
+            let matched = if self.partial {
                 value.contains(self.value.as_str())
             } else {
                 value == self.value.as_str()
-            }
+            };
+            matched != self.negate
         })
     }
 }
@@ -617,6 +654,36 @@ mod tests {
     fn test_subfield_value_query_no_subfield() {
         let field = create_test_field("650", ' ', '0', &[('a', "History")]);
         let query = SubfieldValueQuery::new("650", 'x', "Subdivision");
+        assert!(!query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_value_query_negated_exact() {
+        let field = create_test_field("650", ' ', '0', &[('a', "History")]);
+        // Negated: subfield equals value → should NOT match
+        let query = SubfieldValueQuery::negated("650", 'a', "History");
+        assert!(!query.matches(&field));
+        // Negated: subfield doesn't equal value → should match
+        let query = SubfieldValueQuery::negated("650", 'a', "Science");
+        assert!(query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_value_query_negated_partial() {
+        let field = create_test_field("650", ' ', '0', &[('a', "World History")]);
+        // Negated partial: subfield contains value → should NOT match
+        let query = SubfieldValueQuery::partial_negated("650", 'a', "History");
+        assert!(!query.matches(&field));
+        // Negated partial: subfield doesn't contain value → should match
+        let query = SubfieldValueQuery::partial_negated("650", 'a', "Science");
+        assert!(query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_value_query_negated_missing_subfield() {
+        let field = create_test_field("650", ' ', '0', &[('a', "History")]);
+        // Negated with missing subfield → should NOT match (subfield must exist)
+        let query = SubfieldValueQuery::negated("650", 'z', "anything");
         assert!(!query.matches(&field));
     }
 }

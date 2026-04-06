@@ -104,6 +104,10 @@ exact_matches = record.fields_matching_value(query)
 # Partial match (contains)
 query = mrrc.SubfieldValueQuery("650", "a", "History", partial=True)
 partial_matches = record.fields_matching_value(query)
+
+# Negated: find subjects that are NOT "History"
+query = mrrc.SubfieldValueQuery("650", "a", "History", negate=True)
+non_history = record.fields_matching_value(query)
 ```
 
 ## Complete Example
