@@ -258,6 +258,7 @@ impl TagRangeQuery {
 /// }
 /// ```
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct SubfieldPatternQuery {
     /// Tag to match
     pub tag: String,
@@ -341,6 +342,7 @@ impl SubfieldPatternQuery {
 ///
 /// Supports exact matches, partial matches, and wildcards.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct SubfieldValueQuery {
     /// Tag to match
     pub tag: String,
