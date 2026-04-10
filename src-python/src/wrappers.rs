@@ -705,13 +705,26 @@ impl PyRecord {
         result
     }
 
-    /// Get all control fields as a dict-like structure
+    /// Get all control fields as a list of (tag, value) tuples
+    ///
+    /// Repeated tags (e.g., multiple 007 fields) produce multiple entries.
     pub fn control_fields(&self) -> Vec<(String, String)> {
         self.inner
             .control_fields
             .iter()
-            .map(|(tag, value)| (tag.clone(), value.clone()))
+            .flat_map(|(tag, values)| values.iter().map(move |value| (tag.clone(), value.clone())))
             .collect()
+    }
+
+    /// Get all values for a control field tag
+    ///
+    /// Returns all values for tags that may be repeated (e.g., 006, 007).
+    pub fn control_field_values(&self, tag: &str) -> Vec<String> {
+        self.inner
+            .control_fields
+            .get(tag)
+            .map(|values| values.iter().map(String::clone).collect())
+            .unwrap_or_default()
     }
 
     /// Remove all fields with a given tag

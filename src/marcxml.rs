@@ -162,11 +162,13 @@ pub fn record_to_marcxml(record: &Record) -> Result<String> {
     let leader_str = String::from_utf8_lossy(&leader_bytes).to_string();
 
     let mut controlfields = Vec::new();
-    for (tag, value) in &record.control_fields {
-        controlfields.push(MarcxmlControlField {
-            tag: tag.clone(),
-            value: value.clone(),
-        });
+    for (tag, values) in &record.control_fields {
+        for value in values {
+            controlfields.push(MarcxmlControlField {
+                tag: tag.clone(),
+                value: value.clone(),
+            });
+        }
     }
 
     let mut datafields = Vec::new();

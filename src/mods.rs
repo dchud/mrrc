@@ -388,7 +388,7 @@ fn write_identifiers(xml: &mut String, record: &Record) {
     }
 
     // Control number (001)
-    if let Some(control_001) = record.control_fields.get("001") {
+    if let Some(control_001) = record.control_fields.get("001").and_then(|v| v.first()) {
         writeln!(
             xml,
             "  <mods:identifier type=\"local\">{}</mods:identifier>",

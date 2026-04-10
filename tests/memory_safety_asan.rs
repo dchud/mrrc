@@ -272,9 +272,7 @@ mod asan_memory_safety_tests {
         let mut record = Record::new(leader);
 
         // Add some control fields
-        record
-            .control_fields
-            .insert("008".to_string(), "Test008".to_string());
+        record.add_control_field("008".to_string(), "Test008".to_string());
 
         // Add variable fields using builder pattern
         let field = Field::builder("245".to_string(), '1', '4')

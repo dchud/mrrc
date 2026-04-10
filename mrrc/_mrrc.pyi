@@ -202,7 +202,17 @@ class Record:
         """
         ...
     def control_fields(self) -> List[tuple[str, str]]:
-        """Get all control fields as (tag, value) tuples."""
+        """Get all control fields as (tag, value) tuples.
+
+        Repeated tags (e.g., multiple 007 fields) produce multiple entries.
+        """
+        ...
+    def control_field_values(self, tag: str) -> List[str]:
+        """Get all values for a control field tag.
+
+        Returns all values for tags that may be repeated (e.g., 006, 007).
+        Returns an empty list if the tag doesn't exist.
+        """
         ...
     def get_field(self, tag: str) -> Optional[Field]: ...
     def get_fields(self, tag: str) -> List[Field]: ...

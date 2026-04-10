@@ -100,11 +100,17 @@ fn test_generic_builder_multiple_control_fields() {
 }
 
 #[test]
-fn test_generic_builder_overwrite_field() {
+fn test_generic_builder_repeated_control_field() {
     let record = GenericRecordBuilder::new(Record::new(make_leader()))
-        .control_field("001", "first_value")
-        .control_field("001", "second_value") // Overwrite
+        .control_field("007", "cr|nn ||||||aa")
+        .control_field("007", "fb|a bnnnn")
         .build();
 
-    assert_eq!(record.get_control_field("001"), Some("second_value"));
+    // get_control_field returns the first value
+    assert_eq!(record.get_control_field("007"), Some("cr|nn ||||||aa"));
+    // get_control_field_values returns all values
+    let values = record.get_control_field_values("007").unwrap();
+    assert_eq!(values.len(), 2);
+    assert_eq!(values[0], "cr|nn ||||||aa");
+    assert_eq!(values[1], "fb|a bnnnn");
 }

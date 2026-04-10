@@ -197,8 +197,8 @@ impl RecordStructureValidator {
     /// Returns `Err` if directory structure is invalid.
     pub fn validate_directory_structure(record: &Record) -> Result<()> {
         // Calculate expected directory length (12 bytes per field entry + 1 for terminator)
-        let total_fields =
-            record.control_fields.len() + record.fields.values().map(Vec::len).sum::<usize>();
+        let total_fields = record.control_fields.values().map(Vec::len).sum::<usize>()
+            + record.fields.values().map(Vec::len).sum::<usize>();
         let directory_length = (total_fields * 12) + 1;
 
         // Validate that base address would fit in 5-digit field
@@ -211,8 +211,10 @@ impl RecordStructureValidator {
 
         // Validate that record length would fit in 5-digit field
         let mut total_length = base_address;
-        for value in record.control_fields.values() {
-            total_length += value.len() + 1; // +1 for field terminator
+        for values in record.control_fields.values() {
+            for value in values {
+                total_length += value.len() + 1; // +1 for field terminator
+            }
         }
 
         for fields in record.fields.values() {

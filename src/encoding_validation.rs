@@ -46,13 +46,15 @@ impl EncodingValidator {
         let mut inconsistent_field_count = 0usize;
 
         // Check control fields
-        for value in record.control_fields.values() {
-            if Self::is_likely_different_encoding(value, primary_encoding) {
-                inconsistent_field_count += 1;
-                let detected = Self::detect_encoding_from_string(value);
-                if let Some(enc) = detected {
-                    if enc != primary_encoding && !mixed_encodings.contains(&enc) {
-                        mixed_encodings.push(enc);
+        for values in record.control_fields.values() {
+            for value in values {
+                if Self::is_likely_different_encoding(value, primary_encoding) {
+                    inconsistent_field_count += 1;
+                    let detected = Self::detect_encoding_from_string(value);
+                    if let Some(enc) = detected {
+                        if enc != primary_encoding && !mixed_encodings.contains(&enc) {
+                            mixed_encodings.push(enc);
+                        }
                     }
                 }
             }

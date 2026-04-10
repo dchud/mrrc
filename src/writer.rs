@@ -146,20 +146,22 @@ impl<W: Write> MarcWriter<W> {
         let mut current_position = 0;
 
         // Write control fields first (001-009)
-        for (tag, value) in &record.control_fields {
+        for (tag, values) in &record.control_fields {
             if tag.as_str() < "010" {
-                let field_data = value.as_bytes();
-                let field_length = field_data.len() + 1; // +1 for terminator
+                for value in values {
+                    let field_data = value.as_bytes();
+                    let field_length = field_data.len() + 1; // +1 for terminator
 
-                // Add directory entry
-                directory.extend_from_slice(tag.as_bytes());
-                directory.extend_from_slice(format!("{field_length:04}").as_bytes());
-                directory.extend_from_slice(format!("{current_position:05}").as_bytes());
+                    // Add directory entry
+                    directory.extend_from_slice(tag.as_bytes());
+                    directory.extend_from_slice(format!("{field_length:04}").as_bytes());
+                    directory.extend_from_slice(format!("{current_position:05}").as_bytes());
 
-                // Add data
-                data_area.extend_from_slice(field_data);
-                data_area.push(FIELD_TERMINATOR);
-                current_position += field_length;
+                    // Add data
+                    data_area.extend_from_slice(field_data);
+                    data_area.push(FIELD_TERMINATOR);
+                    current_position += field_length;
+                }
             }
         }
 

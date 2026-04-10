@@ -849,8 +849,7 @@ class Record:
         if not tags:
             # Return all control fields, then all data fields
             for tag in _CONTROL_TAGS:
-                value = self._inner.control_field(tag)
-                if value is not None:
+                for value in self._inner.control_field_values(tag):
                     result.append(Field(tag, data=value))
             for field in self._inner.fields():
                 wrapper = Field.__new__(Field)
@@ -861,8 +860,7 @@ class Record:
             # Return fields for specified tags
             for tag in tags:
                 if _is_control_tag(tag):
-                    value = self._inner.control_field(tag)
-                    if value is not None:
+                    for value in self._inner.control_field_values(tag):
                         result.append(Field(tag, data=value))
                 else:
                     for field in self._inner.get_fields(tag):
@@ -1453,11 +1451,10 @@ class Record:
                     return False
         
         # Compare control fields
-        for code, value in self._inner.control_fields():
-            if self._inner.control_field(code) != value:
-                return False
-            if other._inner.control_field(code) != value:
-                return False
+        self_cfs = self._inner.control_fields()
+        other_cfs = other._inner.control_fields()
+        if self_cfs != other_cfs:
+            return False
         
         return True
     

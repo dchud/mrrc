@@ -309,7 +309,7 @@ fn extract_identifiers(record: &Record, dc: &mut DublinCoreRecord) {
     }
 
     // Control number (001)
-    if let Some(control_001) = record.control_fields.get("001") {
+    if let Some(control_001) = record.control_fields.get("001").and_then(|v| v.first()) {
         dc.identifier.push(format!("Control#: {control_001}"));
     }
 }
