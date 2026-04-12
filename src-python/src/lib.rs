@@ -15,6 +15,7 @@ mod parse_error;
 mod producer_consumer_pipeline_wrapper;
 mod query;
 mod rayon_parser_pool_wrapper;
+mod reader_helpers;
 mod readers;
 mod unified_reader;
 mod wrappers;

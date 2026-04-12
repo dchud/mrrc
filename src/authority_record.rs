@@ -7,6 +7,7 @@
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
 use crate::record::Field;
+use crate::record_helpers::control_field_char_at;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
@@ -261,41 +262,29 @@ impl AuthorityRecord {
     /// Get kind of record from 008/09
     #[must_use]
     pub fn kind_of_record(&self) -> Option<KindOfRecord> {
-        self.get_control_field("008").and_then(|field| {
-            if field.len() > 9 {
-                match field.chars().nth(9) {
-                    Some('a') => Some(KindOfRecord::EstablishedHeading),
-                    Some('b') => Some(KindOfRecord::ReferenceUntracted),
-                    Some('c') => Some(KindOfRecord::ReferenceTraced),
-                    Some('d') => Some(KindOfRecord::Subdivision),
-                    Some('e') => Some(KindOfRecord::NodeLabel),
-                    Some('f') => Some(KindOfRecord::EstablishedHeadingAndSubdivision),
-                    Some('g') => Some(KindOfRecord::ReferenceAndSubdivision),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        })
+        match control_field_char_at(self, "008", 9)? {
+            'a' => Some(KindOfRecord::EstablishedHeading),
+            'b' => Some(KindOfRecord::ReferenceUntracted),
+            'c' => Some(KindOfRecord::ReferenceTraced),
+            'd' => Some(KindOfRecord::Subdivision),
+            'e' => Some(KindOfRecord::NodeLabel),
+            'f' => Some(KindOfRecord::EstablishedHeadingAndSubdivision),
+            'g' => Some(KindOfRecord::ReferenceAndSubdivision),
+            _ => None,
+        }
     }
 
     /// Get level of establishment from 008/33
     #[must_use]
     pub fn level_of_establishment(&self) -> Option<LevelOfEstablishment> {
-        self.get_control_field("008").and_then(|field| {
-            if field.len() > 33 {
-                match field.chars().nth(33) {
-                    Some('a') => Some(LevelOfEstablishment::FullyEstablished),
-                    Some('b') => Some(LevelOfEstablishment::Memorandum),
-                    Some('c') => Some(LevelOfEstablishment::Provisional),
-                    Some('d') => Some(LevelOfEstablishment::Preliminary),
-                    Some('n') => Some(LevelOfEstablishment::NotApplicable),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        })
+        match control_field_char_at(self, "008", 33)? {
+            'a' => Some(LevelOfEstablishment::FullyEstablished),
+            'b' => Some(LevelOfEstablishment::Memorandum),
+            'c' => Some(LevelOfEstablishment::Provisional),
+            'd' => Some(LevelOfEstablishment::Preliminary),
+            'n' => Some(LevelOfEstablishment::NotApplicable),
+            _ => None,
+        }
     }
 
     /// Check if this is an established heading

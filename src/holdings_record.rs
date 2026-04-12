@@ -7,6 +7,7 @@
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
 use crate::record::Field;
+use crate::record_helpers::control_field_char_at;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
@@ -298,58 +299,40 @@ impl HoldingsRecord {
     /// Get acquisition status from 008/06
     #[must_use]
     pub fn acquisition_status(&self) -> Option<AcquisitionStatus> {
-        self.get_control_field("008").and_then(|field| {
-            if field.len() > 6 {
-                match field.chars().nth(6) {
-                    Some('0') => Some(AcquisitionStatus::Other),
-                    Some('1') => Some(AcquisitionStatus::ReceivedAndComplete),
-                    Some('2') => Some(AcquisitionStatus::OnOrder),
-                    Some('3') => Some(AcquisitionStatus::ReceivedAndIncomplete),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        })
+        match control_field_char_at(self, "008", 6)? {
+            '0' => Some(AcquisitionStatus::Other),
+            '1' => Some(AcquisitionStatus::ReceivedAndComplete),
+            '2' => Some(AcquisitionStatus::OnOrder),
+            '3' => Some(AcquisitionStatus::ReceivedAndIncomplete),
+            _ => None,
+        }
     }
 
     /// Get method of acquisition from 008/07
     #[must_use]
     pub fn method_of_acquisition(&self) -> Option<MethodOfAcquisition> {
-        self.get_control_field("008").and_then(|field| {
-            if field.len() > 7 {
-                match field.chars().nth(7) {
-                    Some('u') => Some(MethodOfAcquisition::Unknown),
-                    Some('f') => Some(MethodOfAcquisition::Free),
-                    Some('g') => Some(MethodOfAcquisition::Gift),
-                    Some('l') => Some(MethodOfAcquisition::LegalDeposit),
-                    Some('m') => Some(MethodOfAcquisition::Membership),
-                    Some('p') => Some(MethodOfAcquisition::Purchase),
-                    Some('e') => Some(MethodOfAcquisition::Exchange),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        })
+        match control_field_char_at(self, "008", 7)? {
+            'u' => Some(MethodOfAcquisition::Unknown),
+            'f' => Some(MethodOfAcquisition::Free),
+            'g' => Some(MethodOfAcquisition::Gift),
+            'l' => Some(MethodOfAcquisition::LegalDeposit),
+            'm' => Some(MethodOfAcquisition::Membership),
+            'p' => Some(MethodOfAcquisition::Purchase),
+            'e' => Some(MethodOfAcquisition::Exchange),
+            _ => None,
+        }
     }
 
     /// Get completeness of holdings from 008/16
     #[must_use]
     pub fn completeness(&self) -> Option<Completeness> {
-        self.get_control_field("008").and_then(|field| {
-            if field.len() > 16 {
-                match field.chars().nth(16) {
-                    Some('1') => Some(Completeness::Complete),
-                    Some('2') => Some(Completeness::Incomplete),
-                    Some('3') => Some(Completeness::Scattered),
-                    Some('4') => Some(Completeness::NotApplicable),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        })
+        match control_field_char_at(self, "008", 16)? {
+            '1' => Some(Completeness::Complete),
+            '2' => Some(Completeness::Incomplete),
+            '3' => Some(Completeness::Scattered),
+            '4' => Some(Completeness::NotApplicable),
+            _ => None,
+        }
     }
 
     /// Check if this is a serial holdings record

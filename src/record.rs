@@ -1182,6 +1182,17 @@ impl Field {
         self.subfields.iter_mut().filter(move |sf| sf.code == code)
     }
 
+    /// Remove the first subfield with a given code
+    ///
+    /// Returns the removed subfield's value, or `None` if no match.
+    pub fn delete_subfield(&mut self, code: char) -> Option<String> {
+        if let Some(pos) = self.subfields.iter().position(|sf| sf.code == code) {
+            Some(self.subfields.remove(pos).value)
+        } else {
+            None
+        }
+    }
+
     /// Remove all subfields with a given code
     ///
     /// Returns the removed subfields.

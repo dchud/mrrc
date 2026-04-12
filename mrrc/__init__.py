@@ -64,6 +64,14 @@ def _is_control_tag(tag: str) -> bool:
     return tag < '010' and tag.isdigit()
 
 
+def _wrap_field(rust_field) -> 'Field':
+    """Wrap a Rust _Field in a Python Field wrapper."""
+    wrapper = Field.__new__(Field)
+    wrapper._data = None
+    wrapper._inner = rust_field
+    return wrapper
+
+
 # Control field tags for enumeration (when we need to iterate all possible control fields)
 _CONTROL_TAGS = ('001', '002', '003', '004', '005', '006', '007', '008', '009')
 
@@ -309,32 +317,13 @@ class Field:
         return result
 
     def delete_subfield(self, code: str) -> Optional[str]:
-        """Delete first subfield with given code and return its value."""
-        try:
-            values = self._inner.subfields_by_code(code)
-            if not values:
-                return None
+        """Delete first subfield with given code and return its value.
 
-            deleted_value = values[0]
-
-            # Find and remove the first occurrence
-            subfields = self._inner.subfields()
-            code_char = code[0] if code else ''
-
-            # Create a new list without the first occurrence
-            new_subfields = []
-            found = False
-            for sf in subfields:
-                if sf.code == code_char and not found:
-                    found = True
-                    continue
-                new_subfields.append(sf)
-
-            # Unfortunately, we can't easily replace subfields in the current API
-            # This is a limitation we'll note
-            return deleted_value
-        except Exception:
-            return None
+        Matches pymarc's ``Field.delete_subfield()`` behavior: removes the
+        first subfield with the given code and returns its value, or ``None``
+        if no subfield with that code exists.
+        """
+        return self._inner.delete_subfield(code)
 
     def subfields_as_dict(self) -> dict:
         """Return subfields as dictionary mapping code to list of values."""
@@ -832,10 +821,7 @@ class Record:
          # For data fields, return Field wrapper
          field = self._inner.get_field(tag)
          if field:
-             wrapper = Field.__new__(Field)
-             wrapper._data = None
-             wrapper._inner = field
-             return wrapper
+             return _wrap_field(field)
          raise KeyError(tag)
     
     def get_fields(self, *tags: str) -> List['Field']:
@@ -852,10 +838,7 @@ class Record:
                 for value in self._inner.control_field_values(tag):
                     result.append(Field(tag, data=value))
             for field in self._inner.fields():
-                wrapper = Field.__new__(Field)
-                wrapper._data = None
-                wrapper._inner = field
-                result.append(wrapper)
+                result.append(_wrap_field(field))
         else:
             # Return fields for specified tags
             for tag in tags:
@@ -864,10 +847,7 @@ class Record:
                         result.append(Field(tag, data=value))
                 else:
                     for field in self._inner.get_fields(tag):
-                        wrapper = Field.__new__(Field)
-                        wrapper._data = None
-                        wrapper._inner = field
-                        result.append(wrapper)
+                        result.append(_wrap_field(field))
 
         return result
     
@@ -890,9 +870,7 @@ class Record:
         """Get first field with given tag."""
         field = self._inner.get_field(tag)
         if field:
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
-            wrapper._inner = field
-            return wrapper
+            return _wrap_field(field)
         return None
     
     def remove_field(self, *fields: Union['Field', str]) -> None:
@@ -968,10 +946,7 @@ class Record:
                 result.append(Field(tag, data=value))
         # Include data fields
         for field in self._inner.fields():
-            wrapper = Field.__new__(Field)
-            wrapper._data = None
-            wrapper._inner = field
-            result.append(wrapper)
+            result.append(_wrap_field(field))
         return result
     
     @property
@@ -1198,9 +1173,7 @@ class Record:
         """
         result = []
         for field in self._inner.fields_by_indicator(tag, indicator1=indicator1, indicator2=indicator2):
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
-            wrapper._inner = field
-            result.append(wrapper)
+            result.append(_wrap_field(field))
         return result
     
     def fields_in_range(self, start_tag: str, end_tag: str) -> List['Field']:
@@ -1224,9 +1197,7 @@ class Record:
         """
         result = []
         for field in self._inner.fields_in_range(start_tag, end_tag):
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
-            wrapper._inner = field
-            result.append(wrapper)
+            result.append(_wrap_field(field))
         return result
     
     def fields_matching(self, query: 'FieldQuery') -> List['Field']:
@@ -1249,9 +1220,7 @@ class Record:
         """
         result = []
         for field in self._inner.fields_matching(query):
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
-            wrapper._inner = field
-            result.append(wrapper)
+            result.append(_wrap_field(field))
         return result
     
     def fields_matching_range(self, query: 'TagRangeQuery') -> List['Field']:
@@ -1273,9 +1242,7 @@ class Record:
         """
         result = []
         for field in self._inner.fields_matching_range(query):
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
-            wrapper._inner = field
-            result.append(wrapper)
+            result.append(_wrap_field(field))
         return result
     
     def fields_matching_pattern(self, query: 'SubfieldPatternQuery') -> List['Field']:
@@ -1297,9 +1264,7 @@ class Record:
         """
         result = []
         for field in self._inner.fields_matching_pattern(query):
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
-            wrapper._inner = field
-            result.append(wrapper)
+            result.append(_wrap_field(field))
         return result
     
     def fields_matching_value(self, query: 'SubfieldValueQuery') -> List['Field']:
@@ -1325,9 +1290,7 @@ class Record:
         """
         result = []
         for field in self._inner.fields_matching_value(query):
-            wrapper = Field(field.tag, field.indicator1, field.indicator2)
-            wrapper._inner = field
-            result.append(wrapper)
+            result.append(_wrap_field(field))
         return result
     
     def to_json(self) -> str:
@@ -1513,15 +1476,7 @@ class MARCReader:
             if self._permissive:
                 return None
             raise
-        wrapper = Record(None)
-        wrapper._inner = record
-        # Create a Leader wrapper from the Rust record's leader
-        leader = Leader()
-        leader._rust_leader = record.leader()
-        leader._parent_record = wrapper
-        wrapper._leader = leader
-        wrapper._leader_modified = False
-        return wrapper
+        return _wrap_record(record)
 
     @property
     def backend_type(self) -> str:
