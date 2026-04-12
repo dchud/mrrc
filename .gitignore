@@ -72,5 +72,5 @@ build/
 # External tools (LOC converters, etc.)
 tools/
 
-# Claude Code local settings (user-specific permissions)
-.claude/settings.local.json
+# Claude Code local data (user-specific permissions, memory, worktrees)
+.claude/
