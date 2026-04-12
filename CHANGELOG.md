@@ -7,13 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Fixed
+
+- **Repeated control fields silently dropped** ([#77](https://github.com/dchud/mrrc/issues/77), [#79](https://github.com/dchud/mrrc/pull/79)): Control fields (e.g., multiple 007s) were stored in `IndexMap<String, String>`, causing later values to overwrite earlier ones. Changed to `IndexMap<String, Vec<String>>` across all three record types (`Record`, `AuthorityRecord`, `HoldingsRecord`). Updated all 7 serialization formats (ISO 2709, JSON, MARCJSON, MARCXML, CSV, Dublin Core/MODS, BIBFRAME) to emit all values. The pymarc-compatible `get_fields()` API now correctly returns all repeated control fields, matching pymarc behavior.
 
 ### Changed
 
-### Fixed
-
-### Documentation
+- **Simplified control field API**: Removed `get_control_field_values()` accessor from `Record` — redundant with direct access to the public `control_fields` map. `get_control_field()` remains as a convenience for non-repeatable tags (001, 003, 005, 008).
 
 ## [0.7.5] - 2026-04-05
 
