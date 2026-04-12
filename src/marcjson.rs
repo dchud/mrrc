@@ -49,10 +49,12 @@ pub fn record_to_marcjson(record: &Record) -> Result<Value> {
     }));
 
     // Add control fields (001-009)
-    for (tag, value) in &record.control_fields {
-        let mut field = serde_json::Map::new();
-        field.insert(tag.clone(), Value::String(value.clone()));
-        fields.push(Value::Object(field));
+    for (tag, values) in &record.control_fields {
+        for value in values {
+            let mut field = serde_json::Map::new();
+            field.insert(tag.clone(), Value::String(value.clone()));
+            fields.push(Value::Object(field));
+        }
     }
 
     // Add data fields (010+)

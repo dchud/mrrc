@@ -118,10 +118,12 @@ pub fn records_to_csv(records: &[Record]) -> Result<String> {
 
     for record in records {
         // Write control fields
-        for (tag, value) in &record.control_fields {
-            // Escape value if needed
-            let escaped_value = escape_csv_value(value);
-            writeln!(output, "{tag},,,{escaped_value}").ok();
+        for (tag, values) in &record.control_fields {
+            for value in values {
+                // Escape value if needed
+                let escaped_value = escape_csv_value(value);
+                writeln!(output, "{tag},,,{escaped_value}").ok();
+            }
         }
 
         // Write data fields with subfields
@@ -188,10 +190,12 @@ where
 
     for record in records {
         // Write control fields
-        for (tag, value) in &record.control_fields {
+        for (tag, values) in &record.control_fields {
             if filter(tag) {
-                let escaped_value = escape_csv_value(value);
-                writeln!(output, "{tag},,,{escaped_value}").ok();
+                for value in values {
+                    let escaped_value = escape_csv_value(value);
+                    writeln!(output, "{tag},,,{escaped_value}").ok();
+                }
             }
         }
 

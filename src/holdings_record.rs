@@ -19,7 +19,8 @@ pub struct HoldingsRecord {
     /// Record leader (24 bytes)
     pub leader: Leader,
     /// Control fields (000-009) - preserves insertion order
-    pub control_fields: IndexMap<String, String>,
+    /// Multiple values per tag are supported (e.g., repeated 006/007 fields)
+    pub control_fields: IndexMap<String, Vec<String>>,
     /// Variable fields (010+) - unified storage, preserves insertion order
     pub fields: IndexMap<String, Vec<Field>>,
 }
@@ -103,13 +104,16 @@ impl HoldingsRecord {
 
     /// Add a control field
     pub fn add_control_field(&mut self, tag: String, value: String) {
-        self.control_fields.insert(tag, value);
+        self.control_fields.entry(tag).or_default().push(value);
     }
 
-    /// Get a control field value
+    /// Get the first control field value for a tag
     #[must_use]
     pub fn get_control_field(&self, tag: &str) -> Option<&str> {
-        self.control_fields.get(tag).map(String::as_str)
+        self.control_fields
+            .get(tag)
+            .and_then(|v| v.first())
+            .map(String::as_str)
     }
 
     /// Add a location field (852)
@@ -371,19 +375,25 @@ impl MarcRecord for HoldingsRecord {
     }
 
     fn add_control_field(&mut self, tag: impl Into<String>, value: impl Into<String>) {
-        self.control_fields.insert(tag.into(), value.into());
+        self.control_fields
+            .entry(tag.into())
+            .or_default()
+            .push(value.into());
     }
 
     fn get_control_field(&self, tag: &str) -> Option<&str> {
-        self.control_fields.get(tag).map(String::as_str)
+        self.control_fields
+            .get(tag)
+            .and_then(|v| v.first())
+            .map(String::as_str)
     }
 
     fn control_fields_iter(&self) -> Box<dyn Iterator<Item = (&str, &str)> + '_> {
-        Box::new(
-            self.control_fields
+        Box::new(self.control_fields.iter().flat_map(|(tag, values)| {
+            values
                 .iter()
-                .map(|(tag, value)| (tag.as_str(), value.as_str())),
-        )
+                .map(move |value| (tag.as_str(), value.as_str()))
+        }))
     }
 
     fn get_fields(&self, tag: &str) -> Option<&[Field]> {

@@ -58,10 +58,12 @@ pub fn record_to_json(record: &Record) -> Result<Value> {
     }));
 
     // Add control fields
-    for (tag, value) in &record.control_fields {
-        fields.push(json!({
-            tag: value
-        }));
+    for (tag, values) in &record.control_fields {
+        for value in values {
+            fields.push(json!({
+                tag: value
+            }));
+        }
     }
 
     // Add data fields

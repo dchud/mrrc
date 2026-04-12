@@ -220,6 +220,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                 self.record
                     .control_fields
                     .get("001")
+                    .and_then(|v| v.first())
                     .map_or("unknown", String::as_str)
             } else {
                 "unknown"
@@ -1637,6 +1638,7 @@ impl<'a> MarcToBibframeConverter<'a> {
                 self.record
                     .control_fields
                     .get("001")
+                    .and_then(|v| v.first())
                     .map_or("unknown", String::as_str)
             } else {
                 "unknown"
@@ -1674,7 +1676,12 @@ impl<'a> MarcToBibframeConverter<'a> {
         }
 
         // Add creation date from 008/00-05 if available
-        if let Some(field_008) = self.record.control_fields.get("008") {
+        if let Some(field_008) = self
+            .record
+            .control_fields
+            .get("008")
+            .and_then(|v| v.first())
+        {
             if field_008.len() >= 6 {
                 let date_entered = &field_008[0..6];
                 self.graph.add(

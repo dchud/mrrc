@@ -87,8 +87,10 @@ impl<W: Write> HoldingsMarcWriter<W> {
         };
 
         // Write control fields
-        for (tag, value) in &record.control_fields {
-            add_field(tag, None, Some(value), None, &mut directory, &mut data)?;
+        for (tag, values) in &record.control_fields {
+            for value in values {
+                add_field(tag, None, Some(value), None, &mut directory, &mut data)?;
+            }
         }
 
         // Write data fields (all organized in fields map)

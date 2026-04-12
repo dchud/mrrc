@@ -143,7 +143,7 @@ impl<R: Read> HoldingsMarcReader<R> {
 
         // Parse directory (entries are 12 bytes each: 3 bytes tag + 4 bytes length + 5 bytes start position)
         let mut fields: indexmap::IndexMap<String, Vec<Field>> = indexmap::IndexMap::new();
-        let mut control_fields: indexmap::IndexMap<String, String> = indexmap::IndexMap::new();
+        let mut control_fields: indexmap::IndexMap<String, Vec<String>> = indexmap::IndexMap::new();
 
         let mut i = 0;
         while i + 12 <= directory_bytes.len() {
@@ -180,7 +180,7 @@ impl<R: Read> HoldingsMarcReader<R> {
                         MarcError::InvalidRecord("Invalid control field encoding".to_string())
                     })?
                     .to_string();
-                control_fields.insert(tag, value);
+                control_fields.entry(tag).or_default().push(value);
             } else {
                 // Data field
                 if field_data.len() < 3 {
@@ -238,8 +238,10 @@ impl<R: Read> HoldingsMarcReader<R> {
         let mut record = HoldingsRecord::new(leader);
 
         // Add control fields
-        for (tag, value) in control_fields {
-            record.add_control_field(tag, value);
+        for (tag, values) in control_fields {
+            for value in values {
+                record.add_control_field(tag.clone(), value);
+            }
         }
 
         // Organize data fields by their functional role
