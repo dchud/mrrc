@@ -108,8 +108,9 @@ fn test_generic_builder_repeated_control_field() {
 
     // get_control_field returns the first value
     assert_eq!(record.get_control_field("007"), Some("cr|nn ||||||aa"));
-    // get_control_field_values returns all values
-    let values = record.get_control_field_values("007").unwrap();
+
+    // Access all values directly via the public control_fields map
+    let values = record.control_fields.get("007").unwrap();
     assert_eq!(values.len(), 2);
     assert_eq!(values[0], "cr|nn ||||||aa");
     assert_eq!(values[1], "fb|a bnnnn");

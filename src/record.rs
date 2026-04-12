@@ -162,23 +162,14 @@ impl Record {
 
     /// Get the first control field value for a tag
     ///
-    /// For tags that may have repeated values (e.g., 006, 007), use
-    /// [`Record::get_control_field_values`] to retrieve all values.
+    /// For tags that may have repeated values (e.g., 006, 007), access
+    /// `control_fields` directly to retrieve all values.
     #[must_use]
     pub fn get_control_field(&self, tag: &str) -> Option<&str> {
         self.control_fields
             .get(tag)
             .and_then(|v| v.first())
             .map(String::as_str)
-    }
-
-    /// Get all control field values for a tag
-    ///
-    /// Returns all values for tags that may be repeated (e.g., 006, 007).
-    /// Returns `None` if the tag doesn't exist.
-    #[must_use]
-    pub fn get_control_field_values(&self, tag: &str) -> Option<&[String]> {
-        self.control_fields.get(tag).map(Vec::as_slice)
     }
 
     /// Add a data field
