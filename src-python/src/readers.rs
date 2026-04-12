@@ -9,7 +9,7 @@ use crate::batched_reader::BatchedMarcReader;
 use crate::batched_unified_reader::BatchedUnifiedReader;
 use crate::parse_error::ParseError;
 use crate::wrappers::PyRecord;
-use mrrc::MarcReader;
+use mrrc::{MarcReader, RecoveryMode};
 use pyo3::prelude::*;
 use smallvec::SmallVec;
 
@@ -59,6 +59,8 @@ enum ReaderType {
 pub struct PyMARCReader {
     /// Reader backend (Python-based or unified multi-backend)
     reader: Option<ReaderType>,
+    /// Recovery mode for handling malformed records
+    recovery_mode: RecoveryMode,
 }
 
 #[pymethods]
@@ -73,12 +75,27 @@ impl PyMARCReader {
     ///
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, bytes/bytearray, or file-like object
+    /// * `recovery_mode` - Error handling mode: 'strict' (default), 'lenient', 'permissive'
     #[new]
-    pub fn new(source: &Bound<'_, PyAny>) -> PyResult<Self> {
+    #[pyo3(signature = (source, recovery_mode = "strict"))]
+    pub fn new(source: &Bound<'_, PyAny>, recovery_mode: &str) -> PyResult<Self> {
+        let rec_mode = match recovery_mode {
+            "lenient" => RecoveryMode::Lenient,
+            "permissive" => RecoveryMode::Permissive,
+            "strict" => RecoveryMode::Strict,
+            _ => {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Invalid recovery_mode '{}': must be 'strict', 'lenient', or 'permissive'",
+                    recovery_mode
+                )));
+            },
+        };
+
         // Try unified reader first (handles file paths and bytes)
         match BatchedUnifiedReader::new(source) {
             Ok(unified_reader) => Ok(PyMARCReader {
                 reader: Some(ReaderType::Unified(unified_reader)),
+                recovery_mode: rec_mode,
             }),
             Err(_) => {
                 // Fall back to legacy Python file wrapper
@@ -87,6 +104,7 @@ impl PyMARCReader {
                 let batched_reader = BatchedMarcReader::new(file_obj);
                 Ok(PyMARCReader {
                     reader: Some(ReaderType::Python(batched_reader)),
+                    recovery_mode: rec_mode,
                 })
             },
         }
@@ -122,11 +140,12 @@ impl PyMARCReader {
 
                     // Step 2: Parse bytes (GIL released)
                     // CRITICAL FIX: Use Python::detach() which properly releases the GIL.
+                    let rec_mode = self.recovery_mode;
                     let record = py
                         .detach(|| {
                             // Create a cursor from owned bytes
                             let cursor = std::io::Cursor::new(bytes_owned.to_vec());
-                            let mut parser = MarcReader::new(cursor);
+                            let mut parser = MarcReader::new(cursor).with_recovery_mode(rec_mode);
 
                             // Parse the single record
                             parser.read_record().map_err(|e| {
@@ -229,13 +248,14 @@ impl PyMARCReader {
         // We defer conversion to PyErr until AFTER detach() returns (GIL re-acquired).
         // This is required because PyErr construction needs the GIL.
         // NOTE: Use detach() which properly releases GIL
+        let rec_mode = slf.recovery_mode;
         let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> =
             py.detach(|| {
                 // This closure runs WITHOUT the GIL held
                 // All data here is owned (no Python references)
                 // Return Rust errors only; defer PyErr conversion to Phase 3
                 let cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
-                let mut parser = MarcReader::new(cursor);
+                let mut parser = MarcReader::new(cursor).with_recovery_mode(rec_mode);
 
                 // Parse the single record from bytes
                 // Return ParseError (Rust type), not PyErr

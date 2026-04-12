@@ -92,6 +92,8 @@ with open('output.mrc', 'wb') as f:
 | Operation | pymarc | mrrc | Same? |
 |-----------|--------|------|-------|
 | Create reader | `MARCReader(file_obj)` | `MARCReader('path.mrc')` (recommended) or `MARCReader(file_obj)` | Enhanced |
+| Permissive mode | `MARCReader(f, permissive=True)` | `MARCReader(f, permissive=True)` | **Same** |
+| Unicode flag | `MARCReader(f, to_unicode=True)` | `MARCReader(f, to_unicode=True)` | **Same** |
 | Read record | `reader.next()` or `next(reader)` | `next(reader)` | **Same** |
 | Write record | `writer.write(record)` | `writer.write(record)` | **Same** |
 | Iterate | `for record in reader:` | `for record in reader:` | **Same** |
@@ -337,6 +339,56 @@ from mrrc import MrrcException, MarcError
 - [ ] Use additional convenience properties like `record.issn`, `record.sudoc`, etc. for specialized use cases
 - [ ] Update writers to use context managers: `with mrrc.MARCWriter(f) as w:` (better resource management)
 - [ ] Use `record.as_marc()`, `record.as_json()`, `record.as_dict()` for serialization
+
+## Error Handling
+
+### Permissive Mode (pymarc-compatible)
+
+pymarc's `permissive=True` flag yields `None` for records that fail to parse,
+letting callers skip bad records and keep processing. mrrc supports the same
+flag with identical behavior:
+
+```python
+# Works the same in both pymarc and mrrc
+for record in mrrc.MARCReader('records.mrc', permissive=True):
+    if record is None:
+        continue  # skip malformed record
+    print(record.title)
+```
+
+### to_unicode Flag
+
+pymarc's `to_unicode=True` (the default) converts MARC-8 encoded records to
+UTF-8. mrrc always converts MARC-8 to UTF-8 automatically — the conversion
+happens in the Rust parsing layer and cannot be disabled. The `to_unicode`
+kwarg is accepted for compatibility so existing scripts work unchanged.
+Passing `to_unicode=False` emits a warning but has no effect.
+
+### Recovery Mode (mrrc-specific)
+
+mrrc also offers a `recovery_mode` kwarg that goes beyond pymarc's
+permissive mode. Instead of skipping bad records entirely, recovery mode
+attempts to salvage valid fields from damaged records:
+
+```python
+# Attempt to recover partial data from malformed records
+reader = mrrc.MARCReader('records.mrc', recovery_mode='lenient')
+for record in reader:
+    print(f"Got {len(record.get_fields())} fields")
+
+# Even more lenient — accept partial data
+reader = mrrc.MARCReader('records.mrc', recovery_mode='permissive')
+```
+
+Recovery modes:
+- `"strict"` (default) — raise on any malformation
+- `"lenient"` — attempt to recover, salvage valid fields
+- `"permissive"` — very lenient, accept partial data
+
+Note: `permissive=True` and `recovery_mode` other than `"strict"` cannot
+be combined — they represent different error-handling strategies. Use
+`permissive=True` for pymarc-compatible "skip bad records" behavior, or
+`recovery_mode` for mrrc's "salvage what you can" approach.
 
 ## Known Differences from pymarc
 

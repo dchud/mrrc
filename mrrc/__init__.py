@@ -1464,19 +1464,55 @@ class Record:
 
 
 class MARCReader:
-    """MARC Reader wrapper."""
-    
-    def __init__(self, file_obj):
+    """MARC Reader wrapper.
+
+    Args:
+        file_obj: File path (str), pathlib.Path, bytes/bytearray, or file-like object.
+        to_unicode: Accepted for pymarc compatibility. mrrc always converts
+            MARC-8 to UTF-8; passing ``False`` emits a warning.
+        permissive: When ``True``, yields ``None`` for records that fail to
+            parse instead of raising, matching pymarc's ``permissive`` behavior.
+        recovery_mode: mrrc-native error handling: ``"strict"`` (default, raise
+            on errors), ``"lenient"`` (attempt to salvage valid fields), or
+            ``"permissive"`` (very lenient, accept partial data). Cannot be
+            combined with ``permissive=True``.
+    """
+
+    def __init__(self, file_obj, to_unicode: bool = True, permissive: bool = False,
+                 recovery_mode: str = "strict"):
         """Create a new MARC reader."""
-        self._inner = _MARCReader(file_obj)
-    
+        if not to_unicode:
+            import warnings
+            warnings.warn(
+                "mrrc always converts MARC-8 to UTF-8; to_unicode=False has no effect",
+                stacklevel=2,
+            )
+        if permissive and recovery_mode != "strict":
+            raise ValueError(
+                "Cannot combine permissive=True with recovery_mode other than "
+                "'strict' — they represent different error-handling strategies"
+            )
+        self._permissive = permissive
+        self._inner = _MARCReader(file_obj, recovery_mode=recovery_mode)
+
     def __iter__(self):
         """Iterate over records."""
         return self
-    
-    def __next__(self) -> Record:
-        """Get next record."""
-        record = next(self._inner)
+
+    def __next__(self) -> Optional[Record]:
+        """Get next record.
+
+        When ``permissive=True``, returns ``None`` for records that fail
+        to parse instead of raising, matching pymarc behavior.
+        """
+        try:
+            record = next(self._inner)
+        except StopIteration:
+            raise
+        except Exception:
+            if self._permissive:
+                return None
+            raise
         wrapper = Record(None)
         wrapper._inner = record
         # Create a Leader wrapper from the Rust record's leader
@@ -1486,7 +1522,7 @@ class MARCReader:
         wrapper._leader = leader
         wrapper._leader_modified = False
         return wrapper
-    
+
     @property
     def backend_type(self) -> str:
         """The backend type: ``"rust_file"``, ``"cursor"``, or ``"python_file"``."""

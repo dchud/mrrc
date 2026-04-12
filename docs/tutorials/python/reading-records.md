@@ -128,6 +128,33 @@ except FileNotFoundError:
     print("File not found")
 ```
 
+### Permissive Mode
+
+When processing files that may contain malformed records, use
+`permissive=True` to skip bad records instead of raising errors.
+This matches pymarc's `permissive` flag behavior:
+
+```python
+for record in MARCReader("records.mrc", permissive=True):
+    if record is None:
+        continue  # skip malformed record
+    print(record.title)
+```
+
+### Recovery Mode
+
+For more control over error handling, use `recovery_mode` to attempt
+salvaging valid fields from damaged records:
+
+```python
+# Attempt to recover partial data
+for record in MARCReader("records.mrc", recovery_mode="lenient"):
+    print(f"Got {len(record.get_fields())} fields")
+```
+
+See the [migration guide](../guides/migration-from-pymarc.md#error-handling)
+for details on the differences between `permissive` and `recovery_mode`.
+
 ## Complete Example
 
 This example analyzes a MARC file to summarize the collection by language and material type:
