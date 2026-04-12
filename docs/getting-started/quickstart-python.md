@@ -20,6 +20,8 @@ for record in MARCReader("records.mrc"):
 
 This approach uses pure Rust I/O and releases Python's GIL, enabling multi-threaded speedups.
 
+For files with malformed records, use `permissive=True` to skip errors (yields `None`), or `recovery_mode="lenient"` to salvage partial data. See the [error handling guide](../guides/migration-from-pymarc.md#error-handling) for details.
+
 ## Access Fields
 
 ```python
