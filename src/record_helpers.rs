@@ -19,6 +19,22 @@
 use crate::bibliographic_helpers::PublicationInfo;
 use crate::marc_record::MarcRecord;
 
+/// Extract a single character at a given position from a control field.
+///
+/// Returns `None` if the field doesn't exist or is too short.
+/// This avoids the repeated `get_control_field(tag).and_then(|f| if f.len() > pos ...)`
+/// pattern used throughout authority and holdings record parsing.
+pub fn control_field_char_at<T: MarcRecord + ?Sized>(
+    record: &T,
+    tag: &str,
+    position: usize,
+) -> Option<char> {
+    record
+        .get_control_field(tag)
+        .filter(|f| f.len() > position)
+        .and_then(|f| f.chars().nth(position))
+}
+
 /// MARC 6XX subject tags matching pymarc's `subjects()` coverage.
 ///
 /// Includes standard subject fields (600-662) and local subject fields (690-699)

@@ -560,6 +560,17 @@ impl PyField {
             .collect())
     }
 
+    /// Delete the first subfield with a given code, returning its value
+    pub fn delete_subfield(&mut self, code: &str) -> PyResult<Option<String>> {
+        if code.is_empty() {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "Subfield code cannot be empty",
+            ));
+        }
+        let code_char = code.chars().next().unwrap();
+        Ok(self.inner.delete_subfield(code_char))
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "<Field tag={} ind1={} ind2={} subfields={}>",
