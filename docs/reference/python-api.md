@@ -209,6 +209,10 @@ leader.character_coding = "a"      # UTF-8
 Reads MARC records from files with GIL-released I/O for parallelism.
 
 ```python
+MARCReader(file_obj, to_unicode=True, permissive=False, recovery_mode="strict")
+```
+
+```python
 from mrrc import MARCReader
 
 # From file path (recommended for performance)
@@ -233,6 +237,41 @@ for record in MARCReader(data):
 | `str` or `Path` | File path (pure Rust I/O, best performance) |
 | `bytes` or `bytearray` | In-memory data |
 | File object | Python file-like object |
+
+**Keyword Arguments:**
+
+| Kwarg | Type | Default | Description |
+|-------|------|---------|-------------|
+| `to_unicode` | `bool` | `True` | Accepted for pymarc compatibility. mrrc always converts MARC-8 to UTF-8; passing `False` emits a warning but has no effect. |
+| `permissive` | `bool` | `False` | When `True`, yields `None` for records that fail to parse instead of raising, matching pymarc's permissive behavior. |
+| `recovery_mode` | `str` | `"strict"` | Controls how malformed records are handled (see below). Cannot be combined with `permissive=True`. |
+
+**Recovery Modes:**
+
+Instead of skipping bad records entirely (like `permissive=True`), `recovery_mode` attempts to salvage valid fields from damaged records:
+
+| Mode | Behavior |
+|------|----------|
+| `"strict"` | Raise on any malformation (default). |
+| `"lenient"` | Attempt to recover, salvage valid fields from damaged records. |
+| `"permissive"` | Very lenient — accept partial data even from severely malformed records. |
+
+```python
+# Skip bad records (pymarc-compatible)
+for record in MARCReader("bad.mrc", permissive=True):
+    if record is None:
+        continue
+    print(record.title)
+
+# Salvage partial data from malformed records
+for record in MARCReader("bad.mrc", recovery_mode="lenient"):
+    print(f"Got {len(record.get_fields())} fields")
+```
+
+Note: `permissive=True` and `recovery_mode` other than `"strict"` cannot be
+combined — they represent different error-handling strategies. Use `permissive=True`
+for pymarc-compatible "skip bad records" behavior, or `recovery_mode` for mrrc's
+"salvage what you can" approach.
 
 **Thread Safety:**
 

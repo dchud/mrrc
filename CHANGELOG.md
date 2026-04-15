@@ -7,13 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`MARCReader` error-handling flags** ([#78](https://github.com/dchud/mrrc/issues/78), [#80](https://github.com/dchud/mrrc/pull/80)): pymarc-compatible kwargs for `MARCReader`:
+  - `to_unicode`: accepted for compatibility, warns if `False` (mrrc always converts to Unicode).
+  - `permissive`: yields `None` for bad records instead of raising, matching pymarc behavior.
+  - `recovery_mode`: exposes mrrc's `RecoveryMode` for salvaging partial data from malformed records.
+  - Thanks to [@acdha](https://github.com/acdha) for filing [#78](https://github.com/dchud/mrrc/issues/78).
+
 ### Fixed
 
-- **Repeated control fields silently dropped** ([#77](https://github.com/dchud/mrrc/issues/77), [#79](https://github.com/dchud/mrrc/pull/79)): Control fields (e.g., multiple 007s) were stored in `IndexMap<String, String>`, causing later values to overwrite earlier ones. Changed to `IndexMap<String, Vec<String>>` across all three record types (`Record`, `AuthorityRecord`, `HoldingsRecord`). Updated all 7 serialization formats (ISO 2709, JSON, MARCJSON, MARCXML, CSV, Dublin Core/MODS, BIBFRAME) to emit all values. The pymarc-compatible `get_fields()` API now correctly returns all repeated control fields, matching pymarc behavior.
+- **Repeated control fields silently dropped** ([#77](https://github.com/dchud/mrrc/issues/77), [#79](https://github.com/dchud/mrrc/pull/79)): Control fields (e.g., multiple 007s) were stored in `IndexMap<String, String>`, causing later values to overwrite earlier ones. Changed to `IndexMap<String, Vec<String>>` across all three record types (`Record`, `AuthorityRecord`, `HoldingsRecord`). Updated all 7 serialization formats (ISO 2709, JSON, MARCJSON, MARCXML, CSV, Dublin Core/MODS, BIBFRAME) to emit all values. The pymarc-compatible `get_fields()` API now correctly returns all repeated control fields, matching pymarc behavior. Thanks to [@acdha](https://github.com/acdha) for reporting.
+- **`delete_subfield()` did not actually delete** ([#81](https://github.com/dchud/mrrc/issues/81), [#82](https://github.com/dchud/mrrc/pull/82)): Was returning the value without removing the subfield. Added Rust `Field::delete_subfield()` method, exposed via PyO3, and updated the Python wrapper to delegate. Now matches pymarc behavior.
+- **`recovery_mode` validation for authority/holdings readers** ([#82](https://github.com/dchud/mrrc/pull/82)): Authority and holdings readers now reject invalid `recovery_mode` values with `ValueError` instead of silently defaulting to strict.
 
 ### Changed
 
 - **Simplified control field API**: Removed `get_control_field_values()` accessor from `Record` — redundant with direct access to the public `control_fields` map. `get_control_field()` remains as a convenience for non-repeatable tags (001, 003, 005, 008).
+- **Reduced code duplication across Python bindings and Rust core** ([#82](https://github.com/dchud/mrrc/pull/82)):
+  - Extracted `_wrap_field()` and `_wrap_record()` helpers in the Python wrapper, replacing 16+ inconsistent wrapping patterns.
+  - Extracted shared `reader_helpers.rs` for PyO3 reader backends, reducing ~225 lines of copy-paste between authority and holdings readers.
+  - Extracted `control_field_char_at()` utility for 008 field parsing, replacing 5 duplicated patterns across authority and holdings record types.
+
+### Dependencies
+
+- Bump ruff from 0.15.8 to 0.15.10
+- Bump mypy from 1.19.1 to 1.20.1
+- Bump pytest from 9.0.2 to 9.0.3
+- Bump softprops/action-gh-release from 2 to 3
+- Bump actions/upload-pages-artifact from 4 to 5
 
 ## [0.7.5] - 2026-04-05
 
