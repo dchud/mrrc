@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-04-14
+
 ### Added
 
 - **`MARCReader` error-handling flags** ([#78](https://github.com/dchud/mrrc/issues/78), [#80](https://github.com/dchud/mrrc/pull/80)): pymarc-compatible kwargs for `MARCReader`:
