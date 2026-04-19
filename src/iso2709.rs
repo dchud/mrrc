@@ -1,24 +1,23 @@
 //! Shared ISO 2709 parsing primitives used by all three MARC readers
 //! (bibliographic, authority, holdings).
 //!
-//! This module exists to consolidate the byte-level parsing logic that was
-//! previously duplicated across [`crate::reader`], [`crate::authority_reader`],
-//! and [`crate::holdings_reader`]. Each reader still owns its own record-type
+//! Consolidates the byte-level parsing logic that would otherwise be
+//! duplicated across [`crate::reader`], [`crate::authority_reader`], and
+//! [`crate::holdings_reader`]. Each reader still owns its own record-type
 //! dispatch (which `Record`/`AuthorityRecord`/`HoldingsRecord` to instantiate
 //! and how fields are routed by tag); only the format-level primitives live
 //! here.
 //!
 //! # Scope
 //!
-//! Currently extracted: the I/O loop for reading a leader, the truncation-aware
-//! record-data read, single-entry directory parsing, ASCII numeric helpers, and
-//! the control-field-tag predicate.
+//! Provides the I/O loop for reading a leader, the truncation-aware
+//! record-data read, single-entry directory parsing, ASCII numeric helpers,
+//! and the control-field-tag predicate.
 //!
-//! Not yet extracted: subfield-level parsing. The three readers have subtly
-//! different subfield-parsing semantics (lossy vs strict UTF-8 decoding, error
-//! vs skip on unrecognized bytes) that cannot be unified without a semantic
-//! change. Convergence is deferred to the error-enrichment work where
-//! `ParseContext` will formalize the per-format behavior.
+//! Subfield-level parsing lives in each reader: the bib, authority, and
+//! holdings readers use subtly different semantics (lossy vs strict UTF-8
+//! decoding, error vs skip on unrecognized bytes) that have not been
+//! unified.
 
 use crate::error::{MarcError, Result};
 use crate::recovery::RecoveryMode;
