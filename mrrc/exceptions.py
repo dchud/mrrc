@@ -23,6 +23,7 @@ defense-in-depth measure — unpickling untrusted data remains the relevant
 attack surface regardless.
 """
 
+import os
 from typing import Optional
 
 
@@ -40,6 +41,23 @@ _POSITIONAL_FIELDS = (
 )
 
 
+# Default base URL for the docs site. Overridable via the
+# MRRC_DOCS_BASE_URL environment variable — useful for enterprise users
+# who mirror the docs internally and want help_url() to point at their
+# mirror. The variable holds the docs site root; help_url() appends
+# `/reference/error-codes/#Exxx`.
+DEFAULT_DOCS_BASE_URL = "https://dchud.github.io/mrrc"
+
+
+def _docs_base_url() -> str:
+    """Resolve the docs base URL from the env var (if set, non-empty) or
+    fall back to ``DEFAULT_DOCS_BASE_URL``. Trailing slashes are stripped
+    so the appended path is always well-formed.
+    """
+    override = os.environ.get("MRRC_DOCS_BASE_URL", "")
+    return (override or DEFAULT_DOCS_BASE_URL).rstrip("/")
+
+
 class _MrrcExceptionBase:
     """Mixin providing positional context attributes, formatting, and pickle
     support for every mrrc exception class.
@@ -48,6 +66,13 @@ class _MrrcExceptionBase:
     override ``_body_text`` independently of the inheritance chain to
     Exception itself.
     """
+
+    # Stable error-code identifiers. Every leaf exception class overrides
+    # ``code`` and ``slug`` with the canonical values matching the Rust
+    # MarcError variant. The base values "" / "" act as sentinels and
+    # never reach end users — MrrcException itself isn't raised directly.
+    code: str = ""
+    slug: str = ""
 
     # Class-level attribute annotations so mypy/pyright see the typed
     # positional context fields populated by __init__ via setattr.
@@ -213,6 +238,17 @@ class _MrrcExceptionBase:
         )
         return f"{type(self).__name__}({kwargs})"
 
+    @classmethod
+    def help_url(cls) -> str:
+        """Return the canonical docs URL for this exception class's error
+        code, pointing at the ``#Exxx`` anchor on the error-codes reference
+        page.
+
+        The base URL defaults to the GitHub Pages-hosted docs site. Set
+        the ``MRRC_DOCS_BASE_URL`` environment variable to override.
+        """
+        return f"{_docs_base_url()}/reference/error-codes/#{cls.code}"
+
 
 class MrrcException(_MrrcExceptionBase, Exception):
     """Base exception for all mrrc errors."""
@@ -220,6 +256,9 @@ class MrrcException(_MrrcExceptionBase, Exception):
 
 class RecordLengthInvalid(MrrcException):
     """The leader's record-length field is invalid (non-numeric, too small, etc.)."""
+
+    code = "E001"
+    slug = "record_length_invalid"
 
     def _body_text(self) -> str:
         if self.found is not None and self.expected is not None:
@@ -230,6 +269,9 @@ class RecordLengthInvalid(MrrcException):
 class RecordLeaderInvalid(MrrcException):
     """The 24-byte record leader is malformed."""
 
+    code = "E002"
+    slug = "leader_invalid"
+
     def _body_text(self) -> str:
         if self.found is not None and self.expected is not None:
             return f"invalid leader: found {self.found!r} — expected {self.expected}"
@@ -239,6 +281,9 @@ class RecordLeaderInvalid(MrrcException):
 class BaseAddressInvalid(MrrcException):
     """The leader's base-address-of-data field is invalid."""
 
+    code = "E003"
+    slug = "base_address_invalid"
+
     def _body_text(self) -> str:
         if self.found is not None and self.expected is not None:
             return f"invalid base address {self.found!r} — expected {self.expected}"
@@ -247,6 +292,9 @@ class BaseAddressInvalid(MrrcException):
 
 class BaseAddressNotFound(MrrcException):
     """The leader claims a base address of data that does not exist in the stream."""
+
+    code = "E004"
+    slug = "base_address_not_found"
 
     def _body_text(self) -> str:
         return "base address not found"
@@ -260,6 +308,9 @@ class RecordDirectoryInvalid(MrrcException):
     working unchanged.
     """
 
+    code = "E101"
+    slug = "directory_invalid"
+
     def _body_text(self) -> str:
         if self.found is not None and self.expected is not None:
             return f"invalid directory entry {self.found!r} — expected {self.expected}"
@@ -272,12 +323,18 @@ class EndOfRecordNotFound(MrrcException):
     Catches mrrc-specific subclass ``TruncatedRecord`` as well.
     """
 
+    code = "E006"
+    slug = "end_of_record_not_found"
+
     def _body_text(self) -> str:
         return "end-of-record marker not found"
 
 
 class FieldNotFound(MrrcException):
     """A requested field was not present in the record (accessor error)."""
+
+    code = "E105"
+    slug = "field_not_found"
 
     def _body_text(self) -> str:
         return f"field {self.field_tag} not found" if self.field_tag else "field not found"
@@ -290,12 +347,18 @@ class FatalReaderError(MrrcException):
     Rust core but kept for pymarc compatibility and for future use.
     """
 
+    code = "E099"
+    slug = "fatal_reader_error"
+
 
 # --- mrrc-specific subclasses (extend the pymarc-named parents) -----------
 
 
 class InvalidIndicator(RecordDirectoryInvalid):
     """An indicator byte was invalid for its position."""
+
+    code = "E201"
+    slug = "invalid_indicator"
 
     def _body_text(self) -> str:
         if self.found is not None and self.expected is not None:
@@ -306,6 +369,9 @@ class InvalidIndicator(RecordDirectoryInvalid):
 class BadSubfieldCode(RecordDirectoryInvalid):
     """A subfield code byte was not a printable ASCII character."""
 
+    code = "E202"
+    slug = "bad_subfield_code"
+
     def _body_text(self) -> str:
         if self.subfield_code is not None:
             return f"invalid subfield code 0x{self.subfield_code:02X}"
@@ -315,6 +381,8 @@ class BadSubfieldCode(RecordDirectoryInvalid):
 class InvalidField(RecordDirectoryInvalid):
     """A data field is structurally invalid in some way not covered by the more specific subclasses."""
 
+    code = "E106"
+    slug = "invalid_field"
     _pickle_extra_fields = ("message",)
     message: Optional[str]
 
@@ -331,6 +399,8 @@ class InvalidField(RecordDirectoryInvalid):
 class TruncatedRecord(EndOfRecordNotFound):
     """The record was truncated mid-stream."""
 
+    code = "E005"
+    slug = "truncated_record"
     _pickle_extra_fields = ("expected_length", "actual_length")
     expected_length: Optional[int]
     actual_length: Optional[int]
@@ -362,6 +432,8 @@ class TruncatedRecord(EndOfRecordNotFound):
 class EncodingError(MrrcException):
     """A character encoding conversion failed."""
 
+    code = "E301"
+    slug = "utf8_invalid"
     _pickle_extra_fields = ("message",)
     message: Optional[str]
 
@@ -378,6 +450,8 @@ class EncodingError(MrrcException):
 class XmlError(MrrcException):
     """An error occurred during MARCXML parsing."""
 
+    code = "E401"
+    slug = "marcxml_invalid"
     _pickle_extra_fields = ("message",)
     message: Optional[str]
 
@@ -394,6 +468,8 @@ class XmlError(MrrcException):
 class JsonError(MrrcException):
     """An error occurred during MARCJSON parsing."""
 
+    code = "E402"
+    slug = "marcjson_invalid"
     _pickle_extra_fields = ("message",)
     message: Optional[str]
 
@@ -410,6 +486,8 @@ class JsonError(MrrcException):
 class WriterError(MrrcException):
     """An error occurred while writing a MARC record."""
 
+    code = "E404"
+    slug = "record_too_large_for_iso2709"
     _pickle_extra_fields = ("message",)
     message: Optional[str]
 
@@ -425,6 +503,9 @@ class WriterError(MrrcException):
 
 class BadSubfieldCodeWarning(UserWarning):
     """Warning for invalid subfield codes (pymarc compatibility)."""
+
+    code = "W001"
+    slug = "bad_subfield_code_warning"
 
 
 __all__ = [

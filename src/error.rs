@@ -335,6 +335,74 @@ impl MarcError {
         out
     }
 
+    /// Stable error code for this variant (`E001`–`E4xx`). Forms the
+    /// canonical programmatic identifier — callers can match on this rather
+    /// than on the variant name to keep handlers stable across enum
+    /// restructures. See [`MarcError::slug`] for the human-friendly
+    /// counterpart and [`MarcError::help_url`] for the docs URL.
+    ///
+    /// Codes never get re-purposed: a retired check leaves its docs entry
+    /// in place pointing to a replacement. See `CONTRIBUTING.md` for the
+    /// full stability policy.
+    #[must_use]
+    pub fn code(&self) -> &'static str {
+        match self {
+            MarcError::RecordLengthInvalid { .. } => "E001",
+            MarcError::InvalidLeader { .. } => "E002",
+            MarcError::BaseAddressInvalid { .. } => "E003",
+            MarcError::BaseAddressNotFound { .. } => "E004",
+            MarcError::TruncatedRecord { .. } => "E005",
+            MarcError::EndOfRecordNotFound { .. } => "E006",
+            MarcError::IoError { .. } => "E007",
+            MarcError::DirectoryInvalid { .. } => "E101",
+            MarcError::FieldNotFound { .. } => "E105",
+            MarcError::InvalidField { .. } => "E106",
+            MarcError::InvalidIndicator { .. } => "E201",
+            MarcError::BadSubfieldCode { .. } => "E202",
+            MarcError::EncodingError { .. } => "E301",
+            MarcError::XmlError { .. } => "E401",
+            MarcError::JsonError { .. } => "E402",
+            MarcError::WriterError { .. } => "E404",
+        }
+    }
+
+    /// Human-friendly slug for this variant (e.g., `"invalid_indicator"`).
+    /// Stable counterpart to [`MarcError::code`]; both are guaranteed not
+    /// to change for an existing variant.
+    #[must_use]
+    pub fn slug(&self) -> &'static str {
+        match self {
+            MarcError::RecordLengthInvalid { .. } => "record_length_invalid",
+            MarcError::InvalidLeader { .. } => "leader_invalid",
+            MarcError::BaseAddressInvalid { .. } => "base_address_invalid",
+            MarcError::BaseAddressNotFound { .. } => "base_address_not_found",
+            MarcError::TruncatedRecord { .. } => "truncated_record",
+            MarcError::EndOfRecordNotFound { .. } => "end_of_record_not_found",
+            MarcError::IoError { .. } => "io_error",
+            MarcError::DirectoryInvalid { .. } => "directory_invalid",
+            MarcError::FieldNotFound { .. } => "field_not_found",
+            MarcError::InvalidField { .. } => "invalid_field",
+            MarcError::InvalidIndicator { .. } => "invalid_indicator",
+            MarcError::BadSubfieldCode { .. } => "bad_subfield_code",
+            MarcError::EncodingError { .. } => "utf8_invalid",
+            MarcError::XmlError { .. } => "marcxml_invalid",
+            MarcError::JsonError { .. } => "marcjson_invalid",
+            MarcError::WriterError { .. } => "record_too_large_for_iso2709",
+        }
+    }
+
+    /// Canonical docs URL for this error code, pointing at the `#Exxx`
+    /// anchor on the error-codes reference page.
+    ///
+    /// The base URL defaults to the GitHub Pages-hosted docs site. Set the
+    /// `MRRC_DOCS_BASE_URL` environment variable to override (e.g., to
+    /// redirect to an internal mirror). The variable holds the docs site
+    /// root; this method appends `/reference/error-codes/#Exxx`.
+    #[must_use]
+    pub fn help_url(&self) -> String {
+        format!("{}/reference/error-codes/#{}", docs_base_url(), self.code())
+    }
+
     /// Short `PascalCase` name for the variant, used in `detailed()` headers
     /// and as the leading token of the underlying-cause-less default `Display`.
     fn kind_name(&self) -> &'static str {
@@ -786,6 +854,20 @@ fn format_found_bytes_python_repr(bytes: &[u8]) -> String {
     out
 }
 
+/// Default base URL for the docs site. Used by [`MarcError::help_url`] when
+/// the `MRRC_DOCS_BASE_URL` environment variable is not set.
+pub const DEFAULT_DOCS_BASE_URL: &str = "https://dchud.github.io/mrrc";
+
+fn docs_base_url() -> String {
+    std::env::var("MRRC_DOCS_BASE_URL")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map_or_else(
+            || DEFAULT_DOCS_BASE_URL.to_string(),
+            |s| s.trim_end_matches('/').to_string(),
+        )
+}
+
 /// Convenience type alias for [`std::result::Result`] with [`MarcError`].
 pub type Result<T> = std::result::Result<T, MarcError>;
 
@@ -967,6 +1049,220 @@ mod tests {
             actual_length: Some(640),
         };
         insta::assert_snapshot!(err.detailed());
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn code_slug_help_url_for_every_variant() {
+        // One representative instance per variant. If a variant is added
+        // and the test panics on missing arms, add the variant + its
+        // expected (code, slug) pair to the table — and don't forget to
+        // mirror it in the Python _CODE_TABLE in tests/python/test_errors.py.
+        let cases: Vec<(MarcError, &'static str, &'static str)> = vec![
+            (
+                MarcError::RecordLengthInvalid {
+                    record_index: None,
+                    byte_offset: None,
+                    source_name: None,
+                    found: None,
+                    expected: None,
+                },
+                "E001",
+                "record_length_invalid",
+            ),
+            (
+                MarcError::InvalidLeader {
+                    record_index: None,
+                    byte_offset: None,
+                    record_byte_offset: None,
+                    source_name: None,
+                    found: None,
+                    expected: None,
+                    cause: None,
+                },
+                "E002",
+                "leader_invalid",
+            ),
+            (
+                MarcError::BaseAddressInvalid {
+                    record_index: None,
+                    byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                    found: None,
+                    expected: None,
+                },
+                "E003",
+                "base_address_invalid",
+            ),
+            (
+                MarcError::BaseAddressNotFound {
+                    record_index: None,
+                    byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                },
+                "E004",
+                "base_address_not_found",
+            ),
+            (
+                MarcError::TruncatedRecord {
+                    record_index: None,
+                    byte_offset: None,
+                    record_byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                    expected_length: None,
+                    actual_length: None,
+                },
+                "E005",
+                "truncated_record",
+            ),
+            (
+                MarcError::EndOfRecordNotFound {
+                    record_index: None,
+                    byte_offset: None,
+                    record_byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                },
+                "E006",
+                "end_of_record_not_found",
+            ),
+            (
+                MarcError::IoError {
+                    cause: std::io::Error::other("test"),
+                    record_index: None,
+                    byte_offset: None,
+                    source_name: None,
+                },
+                "E007",
+                "io_error",
+            ),
+            (
+                MarcError::DirectoryInvalid {
+                    record_index: None,
+                    byte_offset: None,
+                    record_byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                    field_tag: None,
+                    found: None,
+                    expected: None,
+                },
+                "E101",
+                "directory_invalid",
+            ),
+            (
+                MarcError::FieldNotFound {
+                    record_index: None,
+                    record_control_number: None,
+                    field_tag: "245".into(),
+                },
+                "E105",
+                "field_not_found",
+            ),
+            (
+                MarcError::InvalidField {
+                    record_index: None,
+                    byte_offset: None,
+                    record_byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                    field_tag: None,
+                    message: "test".into(),
+                },
+                "E106",
+                "invalid_field",
+            ),
+            (
+                MarcError::InvalidIndicator {
+                    record_index: None,
+                    byte_offset: None,
+                    record_byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                    field_tag: None,
+                    indicator_position: None,
+                    found: None,
+                    expected: None,
+                },
+                "E201",
+                "invalid_indicator",
+            ),
+            (
+                MarcError::BadSubfieldCode {
+                    record_index: None,
+                    byte_offset: None,
+                    record_byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                    field_tag: None,
+                    subfield_code: 0,
+                },
+                "E202",
+                "bad_subfield_code",
+            ),
+            (
+                MarcError::EncodingError {
+                    record_index: None,
+                    byte_offset: None,
+                    source_name: None,
+                    record_control_number: None,
+                    field_tag: None,
+                    message: "test".into(),
+                },
+                "E301",
+                "utf8_invalid",
+            ),
+            (
+                MarcError::XmlError {
+                    cause: Box::new(std::io::Error::other("test")),
+                    record_index: None,
+                    byte_offset: None,
+                    source_name: None,
+                },
+                "E401",
+                "marcxml_invalid",
+            ),
+            (
+                MarcError::JsonError {
+                    cause: serde_json::from_str::<serde_json::Value>("not json").unwrap_err(),
+                    record_index: None,
+                    byte_offset: None,
+                    source_name: None,
+                },
+                "E402",
+                "marcjson_invalid",
+            ),
+            (
+                MarcError::WriterError {
+                    record_index: None,
+                    record_control_number: None,
+                    message: "test".into(),
+                },
+                "E404",
+                "record_too_large_for_iso2709",
+            ),
+        ];
+        let mut codes = std::collections::HashSet::new();
+        let mut slugs = std::collections::HashSet::new();
+        for (err, expected_code, expected_slug) in cases {
+            assert_eq!(err.code(), expected_code, "wrong code for {err:?}");
+            assert_eq!(err.slug(), expected_slug, "wrong slug for {err:?}");
+            assert_eq!(
+                err.help_url(),
+                format!("{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{expected_code}"),
+            );
+            assert!(
+                codes.insert(expected_code),
+                "duplicate code {expected_code}"
+            );
+            assert!(
+                slugs.insert(expected_slug),
+                "duplicate slug {expected_slug}"
+            );
+        }
     }
 
     #[test]

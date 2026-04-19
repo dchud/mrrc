@@ -305,6 +305,37 @@ For significant features:
 - **Design Documents**: See `docs/design/` for architectural decisions
 - **Project History**: See `docs/history/` for implementation notes and audits
 
+## Error Code Stability
+
+mrrc errors carry stable identifiers (`Exxx`/`Wxxx`) and slugs documented at
+`docs/reference/error-codes.md`. Two rules apply to every change in this
+area, non-negotiable:
+
+1. **Never re-purpose a retired code.** If a check goes away, leave its
+   docs entry in place pointing to the replacement (`"retired in v0.x;
+   see [EYYY](#EYYY) for the replacement"`). Do not reassign the number
+   or slug to a different condition.
+
+2. **Never renumber.** If the grouping feels wrong later, it stays wrong.
+   URLs that users paste into chat, code review, or bug reports have to
+   keep resolving.
+
+When **adding** a new code:
+
+- Pick the next available number in the appropriate range (`E0xx` stream/
+  leader, `E1xx` directory/field header, `E2xx` subfield/indicator,
+  `E3xx` encoding, `E4xx` serialization/writer, `Wxxx` warnings).
+- Add a `## Exxx — \`slug\` { #Exxx }` section to `docs/reference/error-codes.md`
+  with the full entry shape (Context, Applies to, Populates, Common
+  causes, How to recover, Python class).
+- Add the variant's `code()` and `slug()` arms in `src/error.rs`.
+- Add the matching `code` / `slug` class constants on the Python
+  exception class in `mrrc/exceptions.py`.
+- Add the new `(class, code, slug)` tuple to `_CODE_TABLE` in
+  `tests/python/test_errors.py` so the unique-codes / unique-slugs
+  assertions catch any duplicates.
+- Add a CHANGELOG entry under `[Unreleased]` listing the new code.
+
 ## Release Process
 
 Releases follow semantic versioning (MAJOR.MINOR.PATCH):

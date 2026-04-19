@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (bd-44wb — error codes)
+
+- **Stable error codes on every `MarcError` variant.** New `code()` and
+  `slug()` methods return the canonical `Exxx` identifier (e.g., `"E201"`)
+  and human-friendly slug (e.g., `"invalid_indicator"`). Match on the code
+  rather than the variant name to keep handlers stable across enum
+  restructures.
+- **Matching `code` / `slug` class attributes + `help_url()` method on
+  every Python exception class.** `mrrc.InvalidIndicator.code == "E201"`,
+  `err.help_url()` resolves to the corresponding `#E201` anchor on
+  `docs/reference/error-codes.md`.
+- **`MRRC_DOCS_BASE_URL` environment variable** overrides the default
+  GitHub Pages docs URL — useful for enterprise deployments that mirror
+  the docs internally. Honored by both the Rust core and the Python
+  bindings.
+- **`docs/reference/error-codes.md`** documents all initial codes with
+  Context / Applies to / Populates metadata, common causes, recovery
+  hints, and the corresponding Python class.
+- **Stability policy** documented in `CONTRIBUTING.md`: codes never get
+  re-purposed or renumbered; URLs stay resolving forever.
+
 ### Breaking
 
 - **`MarcError` variants restructured from string-message tuple variants to structured struct variants.** Each variant now carries positional metadata: `record_index`, `byte_offset`, `record_byte_offset`, `record_control_number`, `field_tag`, `indicator_position`, `subfield_code`, `found` (bytes capped at 32), `expected`, and `source_name`. Wrapping variants (`IoError`, `XmlError`, `JsonError`) carry their underlying cause via `#[source]` so `std::error::Error::source()` walks the chain. Direct callers that constructed or pattern-matched `MarcError` variants need to update for the new struct shape. The `Display` output format has changed for every variant — anyone snapshot-testing or grepping log output sees different strings. The `MarcError::InvalidRecord` variant is removed; use the new specific variants (`DirectoryInvalid`, `RecordLengthInvalid`, etc.) or `InvalidField` as the fall-through.
