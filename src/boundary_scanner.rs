@@ -87,7 +87,7 @@ impl RecordBoundaryScanner {
     /// ```
     pub fn scan(&mut self, buffer: &[u8]) -> Result<Vec<(usize, usize)>> {
         if buffer.is_empty() {
-            return Err(MarcError::InvalidRecord("buffer is empty".to_string()));
+            return Err(MarcError::invalid_field_msg("buffer is empty".to_string()));
         }
 
         self.boundaries.clear();
@@ -101,7 +101,7 @@ impl RecordBoundaryScanner {
         }
 
         if self.boundaries.is_empty() {
-            return Err(MarcError::InvalidRecord(
+            return Err(MarcError::invalid_field_msg(
                 "no complete MARC records found (no 0x1D record terminators)".to_string(),
             ));
         }

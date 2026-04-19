@@ -71,7 +71,7 @@ pub fn parse_batch_parallel(
     // Validate all boundaries are within buffer
     for (offset, length) in record_boundaries {
         if offset + length > buffer.len() {
-            return Err(MarcError::InvalidRecord(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Record boundary ({}, {}) exceeds buffer size {}",
                 offset,
                 length,
@@ -95,7 +95,7 @@ pub fn parse_batch_parallel(
 
             reader.read_record().and_then(|opt| {
                 opt.ok_or_else(|| {
-                    MarcError::InvalidRecord(format!(
+                    MarcError::invalid_field_msg(format!(
                         "Record {idx} at offset {offset} parsed as empty"
                     ))
                 })

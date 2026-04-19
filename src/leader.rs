@@ -198,7 +198,7 @@ impl Leader {
     /// Returns an error if the bytes are invalid or too short.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         if bytes.len() < 24 {
-            return Err(MarcError::InvalidLeader(format!(
+            return Err(MarcError::leader_msg(format!(
                 "Leader must be at least 24 bytes, got {}",
                 bytes.len()
             )));
@@ -212,22 +212,22 @@ impl Leader {
         let character_coding = bytes[9] as char;
 
         let indicator_count = u8::try_from((bytes[10] as char).to_digit(10).ok_or_else(|| {
-            MarcError::InvalidLeader(format!(
+            MarcError::leader_msg(format!(
                 "Invalid indicator count at position 10: {}",
                 bytes[10] as char
             ))
         })?)
-        .map_err(|_| MarcError::InvalidLeader("Indicator count exceeds valid range".to_string()))?;
+        .map_err(|_| MarcError::leader_msg("Indicator count exceeds valid range".to_string()))?;
 
         let subfield_code_count =
             u8::try_from((bytes[11] as char).to_digit(10).ok_or_else(|| {
-                MarcError::InvalidLeader(format!(
+                MarcError::leader_msg(format!(
                     "Invalid subfield code count at position 11: {}",
                     bytes[11] as char
                 ))
             })?)
             .map_err(|_| {
-                MarcError::InvalidLeader("Subfield code count exceeds valid range".to_string())
+                MarcError::leader_msg("Subfield code count exceeds valid range".to_string())
             })?;
 
         let data_base_address = parse_digits(&bytes[12..17])?;
@@ -264,13 +264,13 @@ impl Leader {
     /// Returns an error if `record_length` or `data_base_address` is less than 24.
     pub fn validate_for_reading(&self) -> Result<()> {
         if self.record_length < 24 {
-            return Err(MarcError::InvalidLeader(format!(
+            return Err(MarcError::leader_msg(format!(
                 "Record length must be at least 24, got {}",
                 self.record_length
             )));
         }
         if self.data_base_address < 24 {
-            return Err(MarcError::InvalidLeader(format!(
+            return Err(MarcError::leader_msg(format!(
                 "Base address of data must be at least 24, got {}",
                 self.data_base_address
             )));
@@ -305,7 +305,7 @@ impl Leader {
         // Reserved (4 bytes)
         let reserved_bytes = self.reserved.as_bytes();
         if reserved_bytes.len() != 4 {
-            return Err(MarcError::InvalidLeader(format!(
+            return Err(MarcError::leader_msg(format!(
                 "Reserved field must be 4 characters, got {}",
                 reserved_bytes.len()
             )));
@@ -319,7 +319,7 @@ impl Leader {
 /// Parse 5-digit ASCII number from bytes
 fn parse_digits(bytes: &[u8]) -> Result<u32> {
     if bytes.len() != 5 {
-        return Err(MarcError::InvalidLeader(format!(
+        return Err(MarcError::leader_msg(format!(
             "Expected 5-digit field, got {} bytes",
             bytes.len()
         )));
@@ -327,7 +327,7 @@ fn parse_digits(bytes: &[u8]) -> Result<u32> {
 
     let s = String::from_utf8_lossy(bytes);
     s.parse::<u32>()
-        .map_err(|_| MarcError::InvalidLeader(format!("Invalid numeric field: '{s}'")))
+        .map_err(|_| MarcError::leader_msg(format!("Invalid numeric field: '{s}'")))
 }
 
 #[cfg(test)]

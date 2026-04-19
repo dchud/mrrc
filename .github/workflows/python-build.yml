@@ -67,8 +67,10 @@ jobs:
       - name: Install wheel and test dependencies
         shell: bash
         run: |
-          uv pip install --system dist/*.whl
-          uv pip install --system pytest pytest-benchmark
+          # Install the wheel together with the [test] extra from
+          # pyproject.toml so test deps stay in sync with the package.
+          WHEEL=$(ls dist/*.whl | head -1)
+          uv pip install --system "${WHEEL}[test]"
 
       - name: Run pytest (core tests, excludes benchmarks)
         run: |

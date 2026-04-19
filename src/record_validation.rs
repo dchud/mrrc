@@ -24,7 +24,7 @@ impl RecordStructureValidator {
         match leader.record_status {
             'a' | 'c' | 'd' | 'n' | 'p' => {},
             c => {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid record status in leader: '{c}'"
                 )));
             },
@@ -35,7 +35,7 @@ impl RecordStructureValidator {
             'a' | 'c' | 'd' | 'e' | 'f' | 'g' | 'i' | 'j' | 'k' | 'm' | 'o' | 'p' | 'r' | 't'
             | 'v' | 'z' => {},
             c => {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid type of record in leader: '{c}'"
                 )));
             },
@@ -45,7 +45,7 @@ impl RecordStructureValidator {
         match leader.bibliographic_level {
             'a' | 'b' | 'c' | 'd' | 'i' | 'm' | 's' => {},
             c => {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid bibliographic level in leader: '{c}'"
                 )));
             },
@@ -55,7 +55,7 @@ impl RecordStructureValidator {
         match leader.control_record_type {
             ' ' | 'a' => {},
             c => {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid control record type in leader: '{c}'"
                 )));
             },
@@ -65,7 +65,7 @@ impl RecordStructureValidator {
         match leader.character_coding {
             ' ' | 'a' => {},
             c => {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid character coding in leader: '{c}'"
                 )));
             },
@@ -73,7 +73,7 @@ impl RecordStructureValidator {
 
         // Indicator count should be 2 (position 10)
         if leader.indicator_count != 2 {
-            return Err(MarcError::InvalidField(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Invalid indicator count in leader: {} (expected 2)",
                 leader.indicator_count
             )));
@@ -81,7 +81,7 @@ impl RecordStructureValidator {
 
         // Subfield code count should be 2 (position 11)
         if leader.subfield_code_count != 2 {
-            return Err(MarcError::InvalidField(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Invalid subfield code count in leader: {} (expected 2)",
                 leader.subfield_code_count
             )));
@@ -89,7 +89,7 @@ impl RecordStructureValidator {
 
         // Base address of data should be valid (0-99999)
         if leader.data_base_address > 99999 {
-            return Err(MarcError::InvalidField(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Invalid data base address in leader: {}",
                 leader.data_base_address
             )));
@@ -99,7 +99,7 @@ impl RecordStructureValidator {
         match leader.encoding_level {
             ' ' | '1' | '2' | '3' | '4' | '5' | '7' | '8' | 'u' | 'z' => {},
             c => {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid encoding level in leader: '{c}'"
                 )));
             },
@@ -109,7 +109,7 @@ impl RecordStructureValidator {
         match leader.cataloging_form {
             ' ' | 'a' | 'c' | 'i' | 'n' | 'u' => {},
             c => {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid cataloging form in leader: '{c}'"
                 )));
             },
@@ -119,7 +119,7 @@ impl RecordStructureValidator {
         match leader.multipart_level {
             ' ' | 'a' | 'b' | 'c' => {},
             c => {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid multipart level in leader: '{c}'"
                 )));
             },
@@ -139,14 +139,14 @@ impl RecordStructureValidator {
 
         // Validate that there is at least one control field (001)
         if record.get_control_field("001").is_none() {
-            return Err(MarcError::InvalidRecord(
+            return Err(MarcError::invalid_field_msg(
                 "Missing required control field 001 (Control number)".to_string(),
             ));
         }
 
         // Validate that control field 008 exists
         if record.get_control_field("008").is_none() {
-            return Err(MarcError::InvalidRecord(
+            return Err(MarcError::invalid_field_msg(
                 "Missing required control field 008 (Fixed-length data elements)".to_string(),
             ));
         }
@@ -154,7 +154,7 @@ impl RecordStructureValidator {
         // Validate field tags are valid 3-digit strings
         for (tag, fields) in &record.fields {
             if tag.len() != 3 || !tag.chars().all(char::is_numeric) {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid field tag: '{tag}' (must be 3 digits)"
                 )));
             }
@@ -162,12 +162,12 @@ impl RecordStructureValidator {
             // Validate field indicators are single characters
             for field in fields {
                 if field.indicator1.is_control() {
-                    return Err(MarcError::InvalidField(format!(
+                    return Err(MarcError::invalid_field_msg(format!(
                         "Invalid indicator1 in field {tag}: control character"
                     )));
                 }
                 if field.indicator2.is_control() {
-                    return Err(MarcError::InvalidField(format!(
+                    return Err(MarcError::invalid_field_msg(format!(
                         "Invalid indicator2 in field {tag}: control character"
                     )));
                 }
@@ -175,7 +175,7 @@ impl RecordStructureValidator {
                 // Validate subfields
                 for subfield in &field.subfields {
                     if !subfield.code.is_ascii_graphic() {
-                        return Err(MarcError::InvalidField(format!(
+                        return Err(MarcError::invalid_field_msg(format!(
                             "Invalid subfield code in field {}: {}",
                             tag, subfield.code
                         )));
@@ -204,7 +204,7 @@ impl RecordStructureValidator {
         // Validate that base address would fit in 5-digit field
         let base_address = 24 + directory_length;
         if base_address > 99_999 {
-            return Err(MarcError::InvalidRecord(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Directory size would exceed maximum base address: {base_address}"
             )));
         }
@@ -235,7 +235,7 @@ impl RecordStructureValidator {
         total_length += 1;
 
         if total_length > 99_999 {
-            return Err(MarcError::InvalidRecord(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Total record length would exceed maximum: {total_length}"
             )));
         }

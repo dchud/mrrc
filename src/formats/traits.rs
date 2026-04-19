@@ -299,7 +299,7 @@ mod tests {
     impl FormatWriter for MockWriter {
         fn write_record(&mut self, record: &Record) -> Result<()> {
             if self.finished {
-                return Err(crate::MarcError::InvalidRecord(
+                return Err(crate::MarcError::invalid_field_msg(
                     "Writer already finished".to_string(),
                 ));
             }

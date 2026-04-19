@@ -52,6 +52,30 @@ from ._mrrc import (
 )
 from typing import Optional, List, Union, Any, Tuple
 
+# Exception hierarchy — re-exported from mrrc.exceptions so the public API
+# (`mrrc.InvalidIndicator`, `mrrc.RecordLeaderInvalid`, etc.) is unchanged.
+# See mrrc/exceptions.py for the full hierarchy and per-class behavior.
+from .exceptions import (  # noqa: F401, E402
+    BadSubfieldCode,
+    BadSubfieldCodeWarning,
+    BaseAddressInvalid,
+    BaseAddressNotFound,
+    EncodingError,
+    EndOfRecordNotFound,
+    FatalReaderError,
+    FieldNotFound,
+    InvalidField,
+    InvalidIndicator,
+    JsonError,
+    MrrcException,
+    RecordDirectoryInvalid,
+    RecordLeaderInvalid,
+    RecordLengthInvalid,
+    TruncatedRecord,
+    WriterError,
+    XmlError,
+)
+
 __version__ = _mrrc.__version__
 __author__ = "MRRC Contributors"
 
@@ -74,48 +98,6 @@ def _wrap_field(rust_field) -> 'Field':
 
 # Control field tags for enumeration (when we need to iterate all possible control fields)
 _CONTROL_TAGS = ('001', '002', '003', '004', '005', '006', '007', '008', '009')
-
-
-# Exception hierarchy (pymarc compatibility)
-class MrrcException(Exception):
-    """Base exception for mrrc errors."""
-    pass
-
-class RecordLengthInvalid(MrrcException):
-    """Record length in leader is invalid."""
-    pass
-
-class RecordLeaderInvalid(MrrcException):
-    """Record leader is malformed."""
-    pass
-
-class BaseAddressInvalid(MrrcException):
-    """Base address of data in leader is invalid."""
-    pass
-
-class BaseAddressNotFound(MrrcException):
-    """Base address of data not found in leader."""
-    pass
-
-class RecordDirectoryInvalid(MrrcException):
-    """Record directory entries are malformed."""
-    pass
-
-class EndOfRecordNotFound(MrrcException):
-    """End-of-record marker not found."""
-    pass
-
-class FieldNotFound(MrrcException):
-    """Expected field not found in record."""
-    pass
-
-class FatalReaderError(MrrcException):
-    """Unrecoverable error during record reading."""
-    pass
-
-class BadSubfieldCodeWarning(UserWarning):
-    """Warning for invalid subfield codes."""
-    pass
 
 
 # MARC format constants (pymarc compatibility)

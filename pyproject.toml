@@ -27,9 +27,19 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = [
+# Runtime test dependencies — used by the wheel-test CI workflows via
+# `mrrc[test]` so the dep list has a single source of truth and any future
+# test dep added here is automatically picked up by CI.
+test = [
     "pytest>=7.0",
     "pytest-benchmark>=4.0",
+    "syrupy>=4.0",
+]
+# Developer tooling (linters, type checkers) on top of the test deps.
+# Self-references `mrrc[test]` so the test deps stay listed in exactly one
+# place above; pip and uv both resolve self-referential extras correctly.
+dev = [
+    "mrrc[test]",
     "mypy>=1.0",
     "pyright>=1.1",
     "ruff>=0.1",

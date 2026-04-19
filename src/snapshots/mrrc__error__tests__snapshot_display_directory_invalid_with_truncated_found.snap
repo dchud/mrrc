@@ -1,0 +1,5 @@
+---
+source: src/error.rs
+expression: err.to_string()
+---
+[record 3 · 001 'oc00000003' · field 245] invalid directory entry b'abcdefghijklmnopqrstuvwxyzabcdef' — expected 12-byte numeric directory entry  (byte 0x100 / 256)

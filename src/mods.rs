@@ -479,8 +479,9 @@ fn read_text(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<String> {
         match reader.read_event_into(buf) {
             Ok(Event::Text(e)) => {
                 text.push_str(
-                    &e.decode()
-                        .map_err(|err| MarcError::ParseError(format!("XML decode: {err}")))?,
+                    &e.decode().map_err(|err| {
+                        MarcError::invalid_field_msg(format!("XML decode: {err}"))
+                    })?,
                 );
             },
             Ok(Event::CData(e)) => {
@@ -497,7 +498,7 @@ fn read_text(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<String> {
                         b"apos" => text.push('\''),
                         b"quot" => text.push('"'),
                         other => {
-                            return Err(MarcError::ParseError(format!(
+                            return Err(MarcError::invalid_field_msg(format!(
                                 "Unknown XML entity: &{};",
                                 String::from_utf8_lossy(other)
                             )));
@@ -506,7 +507,7 @@ fn read_text(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<String> {
                 }
             },
             Ok(Event::End(_) | Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -527,7 +528,7 @@ fn skip_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<()> {
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML skip: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML skip: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -580,7 +581,7 @@ fn next_start(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<Option<St
                 return Ok(Some(info));
             },
             Ok(Event::End(_) | Event::Eof) => return Ok(None),
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -612,9 +613,11 @@ pub fn mods_xml_to_record(xml: &str) -> Result<Record> {
                 }
             },
             Ok(Event::Eof) => {
-                return Err(MarcError::ParseError("No <mods> element found".to_string()));
+                return Err(MarcError::invalid_field_msg(
+                    "No <mods> element found".to_string(),
+                ));
             },
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -643,7 +646,7 @@ pub fn mods_xml_to_records(xml: &str) -> Result<Vec<Record>> {
                 // else modsCollection — continue into children
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -714,7 +717,7 @@ fn parse_mods_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<R
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -788,7 +791,7 @@ fn parse_title_info(
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -856,7 +859,7 @@ fn parse_name(
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -986,7 +989,7 @@ fn parse_origin_info(
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -1059,7 +1062,7 @@ fn parse_physical_description(
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -1150,7 +1153,7 @@ fn parse_subject(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Rec
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -1238,7 +1241,7 @@ fn parse_language(
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -1348,7 +1351,7 @@ fn parse_location(
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -1402,7 +1405,7 @@ fn parse_related_item(
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();
@@ -1475,7 +1478,7 @@ fn parse_record_info(
                 }
             },
             Ok(Event::Eof) => break,
-            Err(e) => return Err(MarcError::ParseError(format!("XML read: {e}"))),
+            Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
         buf.clear();

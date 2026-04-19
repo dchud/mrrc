@@ -149,7 +149,7 @@ impl PyMARCReader {
 
                             // Parse the single record
                             parser.read_record().map_err(|e| {
-                                ParseError::InvalidRecord(format!(
+                                ParseError::invalid_record(format!(
                                     "Failed to parse MARC record: {}",
                                     e
                                 ))
@@ -260,7 +260,7 @@ impl PyMARCReader {
                 // Parse the single record from bytes
                 // Return ParseError (Rust type), not PyErr
                 parser.read_record().map_err(|e| {
-                    ParseError::InvalidRecord(format!(
+                    ParseError::invalid_record(format!(
                         "Failed to parse MARC record from {} bytes: {}",
                         record_bytes_owned.len(),
                         e

@@ -91,6 +91,7 @@ nav:
     - Format Support: reference/formats.md
     - MARC Primer: reference/marc-primer.md
     - Character Encoding: reference/encoding.md
+    - Error Handling: reference/error-handling.md
   - Examples:
     - examples/index.md
   - Contributing:

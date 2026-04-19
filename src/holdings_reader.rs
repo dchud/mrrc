@@ -26,12 +26,10 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::error::{MarcError, Result};
+use crate::error::Result;
 use crate::holdings_record::HoldingsRecord;
-use crate::iso2709;
-use crate::iso2709::{FIELD_TERMINATOR, SUBFIELD_DELIMITER};
+use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
-use crate::record::Field;
 use crate::recovery::RecoveryMode;
 use std::io::Read;
 
@@ -51,6 +49,7 @@ use std::io::Read;
 pub struct HoldingsMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
+    ctx: ParseContext,
 }
 
 impl<R: Read> HoldingsMarcReader<R> {
@@ -64,6 +63,7 @@ impl<R: Read> HoldingsMarcReader<R> {
         HoldingsMarcReader {
             reader,
             recovery_mode: RecoveryMode::Strict,
+            ctx: ParseContext::new(),
         }
     }
 
@@ -80,6 +80,32 @@ impl<R: Read> HoldingsMarcReader<R> {
         self
     }
 
+    /// Attach a source identifier (filename or stream id) to errors raised by
+    /// this reader. Populates `source_name` on every emitted error where
+    /// applicable. Use [`HoldingsMarcReader::from_path`] when constructing
+    /// from a filesystem path to set this automatically.
+    #[must_use]
+    pub fn with_source(mut self, name: impl Into<String>) -> Self {
+        self.ctx.source_name = Some(name.into());
+        self
+    }
+}
+
+impl HoldingsMarcReader<std::fs::File> {
+    /// Open `path` for reading and create a [`HoldingsMarcReader`] whose
+    /// errors include the path as their `source_name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the underlying [`std::io::Error`] if the file cannot be opened.
+    pub fn from_path(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+        let path = path.as_ref();
+        let file = std::fs::File::open(path)?;
+        Ok(Self::new(file).with_source(path.display().to_string()))
+    }
+}
+
+impl<R: Read> HoldingsMarcReader<R> {
     /// Read the next Holdings record from the stream.
     ///
     /// Returns `Ok(None)` when the end of file is reached.
@@ -89,52 +115,62 @@ impl<R: Read> HoldingsMarcReader<R> {
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<HoldingsRecord>> {
-        // Read the leader (24 bytes)
+        // Read the leader (24 bytes). EOF here is a clean stream end.
         let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
             return Ok(None);
         };
+
+        self.ctx.begin_record();
 
         let leader = Leader::from_bytes(&leader_bytes)?;
         leader.validate_for_reading()?;
 
         // Verify this is a holdings record (Type x/y/v/u)
         if !matches!(leader.record_type, 'x' | 'y' | 'v' | 'u') {
-            return Err(MarcError::InvalidRecord(format!(
+            return Err(self.ctx.err_invalid_field(format!(
                 "Expected holdings record type (x/y/v/u), got '{}'",
                 leader.record_type
             )));
         }
 
-        // Calculate directory and data sizes
         let record_length = leader.record_length as usize;
         let base_address = leader.data_base_address as usize;
         let directory_size = base_address - 24;
+
+        self.ctx.advance(LEADER_LEN);
 
         // Read record data. In non-Strict modes a short read returns
         // `(buffer, true)`; salvage from a partial buffer is not implemented,
         // so the recovery dispatch below is unreachable in practice (the read
         // primitive returns a buffer of full length even on a short read).
-        let (record_data, _was_truncated) =
-            iso2709::read_record_data(&mut self.reader, record_length, self.recovery_mode)?;
+        let (record_data, _was_truncated) = iso2709::read_record_data(
+            &mut self.reader,
+            record_length,
+            self.recovery_mode,
+            &self.ctx,
+        )?;
 
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
-            return Err(MarcError::TruncatedRecord(
-                "Holdings record is truncated".to_string(),
+            return Err(self.ctx.err_truncated_record(
+                Some(record_length.saturating_sub(LEADER_LEN)),
+                Some(record_data.len()),
             ));
         }
 
-        // Extract directory and data sections
         let directory_bytes = &record_data[..directory_size];
         let data_section = &record_data[directory_size..];
 
-        // Parse directory (entries are 12 bytes each: 3 bytes tag + 4 bytes length + 5 bytes start position)
-        let mut fields: indexmap::IndexMap<String, Vec<Field>> = indexmap::IndexMap::new();
-        let mut control_fields: indexmap::IndexMap<String, Vec<String>> = indexmap::IndexMap::new();
+        let mut record = HoldingsRecord::new(leader);
 
         let mut i = 0;
         while i + 12 <= directory_bytes.len() {
+            // Stop on directory terminator (consistent with bib + authority).
+            if directory_bytes[i] == FIELD_TERMINATOR {
+                break;
+            }
+
             let tag = std::str::from_utf8(&directory_bytes[i..i + 3])
-                .map_err(|_| MarcError::InvalidRecord("Invalid tag encoding".to_string()))?
+                .map_err(|_| self.ctx.err_invalid_field("Invalid tag encoding"))?
                 .to_string();
 
             let length = iso2709::parse_4digits(&directory_bytes[i + 3..i + 7])?;
@@ -142,105 +178,72 @@ impl<R: Read> HoldingsMarcReader<R> {
 
             let end = start + length;
             if end > data_section.len() {
-                return Err(MarcError::InvalidRecord(
-                    "Field extends beyond data section".to_string(),
-                ));
+                self.ctx.current_field_tag = Some(tag.clone());
+                return Err(self
+                    .ctx
+                    .err_invalid_field(format!("Field {tag} extends beyond data section")));
             }
 
             let field_data = &data_section[start..end];
 
-            // Parse field content
-            if tag.chars().all(|c| c.is_ascii_digit()) && tag.parse::<u16>().unwrap_or(0) < 10 {
-                // Control field (000-009)
-                let value = std::str::from_utf8(&field_data[..field_data.len() - 1])
-                    .map_err(|_| {
-                        MarcError::InvalidRecord("Invalid control field encoding".to_string())
+            if iso2709::is_control_field_tag(&tag) {
+                // Control field: strip the trailing field terminator. Holdings
+                // historically used strict UTF-8 here, so propagate that
+                // behavior via the EncodingError variant.
+                let raw = field_data
+                    .get(..field_data.len().saturating_sub(1))
+                    .unwrap_or(&[]);
+                let value = std::str::from_utf8(raw)
+                    .map_err(|e| {
+                        self.ctx
+                            .err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}"))
                     })?
                     .to_string();
-                control_fields.entry(tag).or_default().push(value);
-            } else {
-                // Data field
-                if field_data.len() < 3 {
-                    return Err(MarcError::InvalidRecord(
-                        "Data field too short for indicators".to_string(),
-                    ));
+                if tag == "001" {
+                    self.ctx.record_control_number = Some(value.clone());
                 }
+                record.add_control_field(tag, value);
+                i += 12;
+                continue;
+            }
 
-                let indicator1 = field_data[0] as char;
-                let indicator2 = field_data[1] as char;
-                let mut subfields = smallvec::SmallVec::new();
-                let mut j = 2;
+            // Data field
+            if field_data.len() < 3 {
+                self.ctx.current_field_tag = Some(tag.clone());
+                return Err(self
+                    .ctx
+                    .err_invalid_field("Data field too short for indicators"));
+            }
 
-                while j < field_data.len() - 1 {
-                    if field_data[j] == SUBFIELD_DELIMITER {
-                        j += 1;
-                        if j >= field_data.len() - 1 {
-                            break;
-                        }
-                        let code = field_data[j] as char;
-                        j += 1;
-                        let mut value_bytes = Vec::new();
-                        while j < field_data.len()
-                            && field_data[j] != SUBFIELD_DELIMITER
-                            && field_data[j] != FIELD_TERMINATOR
-                        {
-                            value_bytes.push(field_data[j]);
-                            j += 1;
-                        }
-                        let value = std::str::from_utf8(&value_bytes)
-                            .map_err(|_| {
-                                MarcError::InvalidRecord("Invalid subfield encoding".to_string())
-                            })?
-                            .to_string();
-                        subfields.push(crate::record::Subfield { code, value });
-                    } else {
-                        j += 1;
-                    }
-                }
+            self.ctx.current_field_tag = Some(tag.clone());
+            let parsed = iso2709::parse_data_field(
+                field_data,
+                &tag,
+                DataFieldParseConfig::HOLDINGS,
+                &self.ctx,
+            );
+            self.ctx.current_field_tag = None;
+            let field = parsed?;
 
-                let field = Field {
-                    tag: tag.clone(),
-                    indicator1,
-                    indicator2,
-                    subfields,
-                };
-
-                fields.entry(tag).or_default().push(field);
+            match tag.as_str() {
+                "852" => record.add_location(field),
+                "853" => record.add_captions_basic(field),
+                "854" => record.add_captions_supplements(field),
+                "855" => record.add_captions_indexes(field),
+                "863" => record.add_enumeration_basic(field),
+                "864" => record.add_enumeration_supplements(field),
+                "865" => record.add_enumeration_indexes(field),
+                "866" => record.add_textual_holdings_basic(field),
+                "867" => record.add_textual_holdings_supplements(field),
+                "868" => record.add_textual_holdings_indexes(field),
+                "876" | "877" | "878" => record.add_item_information(field),
+                _ => record.add_field(field),
             }
 
             i += 12;
         }
 
-        // Create HoldingsRecord and organize fields by type
-        let mut record = HoldingsRecord::new(leader);
-
-        // Add control fields
-        for (tag, values) in control_fields {
-            for value in values {
-                record.add_control_field(tag.clone(), value);
-            }
-        }
-
-        // Organize data fields by their functional role
-        for (tag, field_list) in fields {
-            for field in field_list {
-                match tag.as_str() {
-                    "852" => record.add_location(field),
-                    "853" => record.add_captions_basic(field),
-                    "854" => record.add_captions_supplements(field),
-                    "855" => record.add_captions_indexes(field),
-                    "863" => record.add_enumeration_basic(field),
-                    "864" => record.add_enumeration_supplements(field),
-                    "865" => record.add_enumeration_indexes(field),
-                    "866" => record.add_textual_holdings_basic(field),
-                    "867" => record.add_textual_holdings_supplements(field),
-                    "868" => record.add_textual_holdings_indexes(field),
-                    "876" | "877" | "878" => record.add_item_information(field),
-                    _ => record.add_field(field),
-                }
-            }
-        }
-
+        self.ctx.advance(record_length.saturating_sub(LEADER_LEN));
         Ok(Some(record))
     }
 }

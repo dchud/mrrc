@@ -1,0 +1,10 @@
+---
+source: src/error.rs
+expression: invalid_indicator_full().detailed()
+---
+InvalidIndicator at record 847, field 245
+  source:          harvest.mrc
+  001:             ocm01234567
+  indicator 1:     found b':', expected digit or space
+  byte offset:     0x1C31 (7217) in stream
+  record-relative: byte 42

@@ -28,6 +28,7 @@
 //! ```
 
 use crate::error::{MarcError, Result};
+use crate::iso2709::ParseContext;
 use crate::leader::Leader;
 use crate::record::{Field, Record};
 use quick_xml::de::from_str as xml_from_str;
@@ -197,8 +198,9 @@ pub fn record_to_marcxml(record: &Record) -> Result<String> {
         datafield: datafields,
     };
 
-    let body = xml_to_string(&xml_record)
-        .map_err(|e| MarcError::ParseError(format!("Failed to serialize to MARCXML: {e}")))?;
+    let body = xml_to_string(&xml_record).map_err(|e| {
+        MarcError::invalid_field_msg(format!("Failed to serialize to MARCXML: {e}"))
+    })?;
 
     // Insert xmlns attribute into the root <record> element
     let body = body.replacen("<record>", &format!("<record xmlns=\"{MARCXML_NS}\">"), 1);
@@ -240,9 +242,9 @@ pub fn record_to_marcxml(record: &Record) -> Result<String> {
 ///
 /// Returns an error if the XML is invalid or missing required elements.
 pub fn marcxml_to_record(xml: &str) -> Result<Record> {
+    let ctx = ParseContext::new();
     let cleaned = strip_marcxml_ns(xml);
-    let xml_record: MarcxmlRecord = xml_from_str(&cleaned)
-        .map_err(|e| MarcError::ParseError(format!("Failed to parse MARCXML: {e}")))?;
+    let xml_record: MarcxmlRecord = xml_from_str(&cleaned).map_err(|e| ctx.err_xml(e))?;
 
     marcxml_record_to_record(xml_record)
 }
@@ -264,9 +266,9 @@ pub fn marcxml_to_record(xml: &str) -> Result<Record> {
 ///
 /// Returns an error if the XML is invalid or cannot be parsed.
 pub fn marcxml_to_records(xml: &str) -> Result<Vec<Record>> {
+    let ctx = ParseContext::new();
     let cleaned = strip_marcxml_ns(xml);
-    let collection: MarcxmlCollection = xml_from_str(&cleaned)
-        .map_err(|e| MarcError::ParseError(format!("Failed to parse MARCXML collection: {e}")))?;
+    let collection: MarcxmlCollection = xml_from_str(&cleaned).map_err(|e| ctx.err_xml(e))?;
 
     collection
         .records
@@ -291,11 +293,10 @@ fn marcxml_record_to_record(xml_record: MarcxmlRecord) -> Result<Record> {
         let mut field = Field::new(df.tag, ind1, ind2);
 
         for sf in df.subfield {
-            let code = sf
-                .code
-                .chars()
-                .next()
-                .ok_or_else(|| MarcError::InvalidField("Missing subfield code".to_string()))?;
+            let code =
+                sf.code.chars().next().ok_or_else(|| {
+                    MarcError::invalid_field_msg("Missing subfield code".to_string())
+                })?;
             field.add_subfield(code, sf.value);
         }
 

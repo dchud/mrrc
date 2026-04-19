@@ -154,11 +154,11 @@ pub fn read_record_bytes_from_python_file(py_obj: &Bound<'_, PyAny>) -> PyResult
         .map_err(|_| pyo3::exceptions::PyValueError::new_err("Record data must be bytes"))?;
 
     if record_data.len() != record_length - 24 {
-        return Err(pyo3::exceptions::PyValueError::new_err(format!(
-            "Truncated record: expected {} bytes, got {}",
+        return Err(crate::parse_error::ParseError::truncated_record(
             record_length - 24,
-            record_data.len()
-        )));
+            record_data.len(),
+        )
+        .to_py_err());
     }
 
     // Assemble complete record

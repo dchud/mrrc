@@ -32,7 +32,7 @@ impl PyFileWrapper {
         while pos < buf.len() {
             let n = self.read_into(py, &mut buf[pos..])?;
             if n == 0 {
-                return Err(ParseError::IoError(format!(
+                return Err(ParseError::io_error(format!(
                     "Unexpected EOF: expected {} bytes, got {}",
                     buf.len(),
                     pos
@@ -47,22 +47,22 @@ impl PyFileWrapper {
     fn read_into(&self, py: Python<'_>, buf: &mut [u8]) -> Result<usize, ParseError> {
         let file_ref = self.file_obj.bind(py);
         let read_method = file_ref.getattr("read").map_err(|_| {
-            ParseError::IoError("Python file object missing read() method".to_string())
+            ParseError::io_error("Python file object missing read() method".to_string())
         })?;
 
         let n = buf.len();
         let result = read_method
             .call1((n,))
-            .map_err(|e| ParseError::IoError(format!("Python read() failed: {}", e)))?;
+            .map_err(|e| ParseError::io_error(format!("Python read() failed: {}", e)))?;
 
-        let bytes = result
-            .extract::<Vec<u8>>()
-            .map_err(|e| ParseError::IoError(format!("read() returned non-bytes object: {}", e)))?;
+        let bytes = result.extract::<Vec<u8>>().map_err(|e| {
+            ParseError::io_error(format!("read() returned non-bytes object: {}", e))
+        })?;
 
         let len = bytes.len();
         if len > 0 {
             if len > buf.len() {
-                return Err(ParseError::IoError(
+                return Err(ParseError::io_error(
                     "read() returned more bytes than requested".to_string(),
                 ));
             }
@@ -122,7 +122,7 @@ impl BufferedMarcReader {
                 return Ok(None);
             },
             Ok(n) if n < 5 => {
-                return Err(ParseError::RecordBoundaryError(format!(
+                return Err(ParseError::record_boundary_error(format!(
                     "Incomplete record length header: got {} bytes, expected 5",
                     n
                 )));
@@ -135,7 +135,7 @@ impl BufferedMarcReader {
         let record_length = Self::parse_record_length(&length_bytes)?;
 
         if record_length < 24 {
-            return Err(ParseError::InvalidRecord(format!(
+            return Err(ParseError::invalid_record(format!(
                 "Record length {} is too small (minimum 24)",
                 record_length
             )));
@@ -155,7 +155,7 @@ impl BufferedMarcReader {
 
         // Verify record terminator (last byte should be 0x1D)
         if self.buffer.is_empty() || self.buffer[self.buffer.len() - 1] != 0x1D {
-            return Err(ParseError::RecordBoundaryError(
+            return Err(ParseError::record_boundary_error(
                 "Record missing terminator (0x1D)".to_string(),
             ));
         }
@@ -174,7 +174,7 @@ impl BufferedMarcReader {
     /// - The parsed length is 0
     pub fn parse_record_length(bytes: &[u8]) -> Result<usize, ParseError> {
         if bytes.len() != 5 {
-            return Err(ParseError::RecordBoundaryError(format!(
+            return Err(ParseError::record_boundary_error(format!(
                 "Record length field must be 5 bytes, got {}",
                 bytes.len()
             )));
@@ -183,7 +183,7 @@ impl BufferedMarcReader {
         let mut length = 0usize;
         for (i, &byte) in bytes.iter().enumerate() {
             if !(byte as char).is_ascii_digit() {
-                return Err(ParseError::InvalidRecord(format!(
+                return Err(ParseError::invalid_record(format!(
                     "Non-ASCII digit at position {} in record length: {:?} ({})",
                     i, byte as char, byte
                 )));
@@ -192,7 +192,7 @@ impl BufferedMarcReader {
         }
 
         if length == 0 {
-            return Err(ParseError::InvalidRecord(
+            return Err(ParseError::invalid_record(
                 "Record length cannot be 0".to_string(),
             ));
         }
@@ -253,14 +253,20 @@ mod tests {
     fn test_parse_record_length_non_digit() {
         let bytes = b"0123X";
         let err = BufferedMarcReader::parse_record_length(bytes).unwrap_err();
-        assert!(matches!(err, ParseError::InvalidRecord(_)));
+        assert!(matches!(
+            err.kind,
+            crate::parse_error::ParseErrorKind::InvalidRecord(_)
+        ));
     }
 
     #[test]
     fn test_parse_record_length_wrong_size() {
         let bytes = b"012";
         let err = BufferedMarcReader::parse_record_length(bytes).unwrap_err();
-        assert!(matches!(err, ParseError::RecordBoundaryError(_)));
+        assert!(matches!(
+            err.kind,
+            crate::parse_error::ParseErrorKind::RecordBoundaryError(_)
+        ));
     }
 
     #[test]

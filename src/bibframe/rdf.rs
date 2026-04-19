@@ -186,7 +186,7 @@ impl RdfGraph {
     pub fn serialize(&self, format: RdfFormat) -> Result<String> {
         let mut output = Vec::new();
         self.serialize_to_writer(&mut output, format)?;
-        String::from_utf8(output).map_err(|e| MarcError::ParseError(e.to_string()))
+        String::from_utf8(output).map_err(|e| MarcError::invalid_field_msg(e.to_string()))
     }
 
     /// Serializes the graph to a writer in the specified format.
@@ -201,7 +201,7 @@ impl RdfGraph {
         for triple in &self.triples {
             let ox_triple = to_oxrdf_triple(triple)?;
             serializer.serialize_triple(&ox_triple).map_err(|e| {
-                MarcError::IoError(std::io::Error::new(
+                MarcError::from(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     e.to_string(),
                 ))
@@ -209,7 +209,7 @@ impl RdfGraph {
         }
 
         serializer.finish().map_err(|e| {
-            MarcError::IoError(std::io::Error::new(
+            MarcError::from(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 e.to_string(),
             ))
@@ -230,7 +230,7 @@ impl RdfGraph {
         let mut graph = Self::new();
 
         for result in parser {
-            let quad = result.map_err(|e| MarcError::ParseError(e.to_string()))?;
+            let quad = result.map_err(|e| MarcError::invalid_field_msg(e.to_string()))?;
             let triple = from_oxrdf_quad(&quad)?;
             graph.add_triple(triple);
         }
@@ -264,29 +264,31 @@ fn to_oxrdf_format(format: RdfFormat) -> OxRdfFormat {
 fn to_oxrdf_triple(triple: &RdfTriple) -> Result<Triple> {
     let subject = match &triple.subject {
         RdfNode::Uri(uri) => NamedOrBlankNode::NamedNode(
-            NamedNode::new(uri).map_err(|e| MarcError::ParseError(format!("Invalid URI: {e}")))?,
+            NamedNode::new(uri)
+                .map_err(|e| MarcError::invalid_field_msg(format!("Invalid URI: {e}")))?,
         ),
         RdfNode::BlankNode(id) => NamedOrBlankNode::BlankNode(
             BlankNode::new(id)
-                .map_err(|e| MarcError::ParseError(format!("Invalid blank node ID: {e}")))?,
+                .map_err(|e| MarcError::invalid_field_msg(format!("Invalid blank node ID: {e}")))?,
         ),
         RdfNode::Literal { .. } => {
-            return Err(MarcError::ParseError(
-                "Literals cannot be triple subjects".into(),
+            return Err(MarcError::invalid_field_msg(
+                "Literals cannot be triple subjects",
             ));
         },
     };
 
     let predicate = NamedNode::new(&triple.predicate)
-        .map_err(|e| MarcError::ParseError(format!("Invalid predicate URI: {e}")))?;
+        .map_err(|e| MarcError::invalid_field_msg(format!("Invalid predicate URI: {e}")))?;
 
     let object = match &triple.object {
         RdfNode::Uri(uri) => Term::NamedNode(
-            NamedNode::new(uri).map_err(|e| MarcError::ParseError(format!("Invalid URI: {e}")))?,
+            NamedNode::new(uri)
+                .map_err(|e| MarcError::invalid_field_msg(format!("Invalid URI: {e}")))?,
         ),
         RdfNode::BlankNode(id) => Term::BlankNode(
             BlankNode::new(id)
-                .map_err(|e| MarcError::ParseError(format!("Invalid blank node ID: {e}")))?,
+                .map_err(|e| MarcError::invalid_field_msg(format!("Invalid blank node ID: {e}")))?,
         ),
         RdfNode::Literal {
             value,
@@ -294,11 +296,13 @@ fn to_oxrdf_triple(triple: &RdfTriple) -> Result<Triple> {
             datatype,
         } => {
             let lit = if let Some(lang) = language {
-                Literal::new_language_tagged_literal(value, lang)
-                    .map_err(|e| MarcError::ParseError(format!("Invalid language tag: {e}")))?
+                Literal::new_language_tagged_literal(value, lang).map_err(|e| {
+                    MarcError::invalid_field_msg(format!("Invalid language tag: {e}"))
+                })?
             } else if let Some(dt) = datatype {
-                let dt_node = NamedNode::new(dt)
-                    .map_err(|e| MarcError::ParseError(format!("Invalid datatype URI: {e}")))?;
+                let dt_node = NamedNode::new(dt).map_err(|e| {
+                    MarcError::invalid_field_msg(format!("Invalid datatype URI: {e}"))
+                })?;
                 Literal::new_typed_literal(value, dt_node)
             } else {
                 Literal::new_simple_literal(value)
@@ -317,7 +321,7 @@ fn from_oxrdf_quad(quad: &Quad) -> Result<RdfTriple> {
         NamedOrBlankNode::BlankNode(b) => RdfNode::BlankNode(b.as_str().to_string()),
         #[allow(unreachable_patterns)]
         _ => {
-            return Err(MarcError::ParseError("Unsupported subject type".into()));
+            return Err(MarcError::invalid_field_msg("Unsupported subject type"));
         },
     };
 
@@ -342,7 +346,7 @@ fn from_oxrdf_quad(quad: &Quad) -> Result<RdfTriple> {
         },
         #[allow(unreachable_patterns)]
         _ => {
-            return Err(MarcError::ParseError("Unsupported object type".into()));
+            return Err(MarcError::invalid_field_msg("Unsupported object type"));
         },
     };
 

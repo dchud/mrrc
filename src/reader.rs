@@ -33,15 +33,13 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::error::{MarcError, Result};
+use crate::error::Result;
 use crate::formats::FormatReader;
-use crate::iso2709;
+use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
-use crate::record::{Field, Record};
+use crate::record::Record;
 use crate::recovery::RecoveryMode;
 use std::io::Read;
-
-use crate::iso2709::{FIELD_TERMINATOR, SUBFIELD_DELIMITER};
 
 /// Reader for ISO 2709 binary MARC format.
 ///
@@ -69,6 +67,7 @@ pub struct MarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
     records_read: usize,
+    ctx: ParseContext,
 }
 
 impl<R: Read> MarcReader<R> {
@@ -93,6 +92,7 @@ impl<R: Read> MarcReader<R> {
             reader,
             recovery_mode: RecoveryMode::Strict,
             records_read: 0,
+            ctx: ParseContext::new(),
         }
     }
 
@@ -121,6 +121,32 @@ impl<R: Read> MarcReader<R> {
         self
     }
 
+    /// Attach a source identifier (filename or stream id) to errors raised by
+    /// this reader. Populates `source_name` on every emitted error where
+    /// applicable. Use [`MarcReader::from_path`] when constructing from a
+    /// filesystem path to set this automatically.
+    #[must_use]
+    pub fn with_source(mut self, name: impl Into<String>) -> Self {
+        self.ctx.source_name = Some(name.into());
+        self
+    }
+}
+
+impl MarcReader<std::fs::File> {
+    /// Open `path` for reading and create a [`MarcReader`] whose errors
+    /// include the path as their `source_name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the underlying [`std::io::Error`] if the file cannot be opened.
+    pub fn from_path(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+        let path = path.as_ref();
+        let file = std::fs::File::open(path)?;
+        Ok(Self::new(file).with_source(path.display().to_string()))
+    }
+}
+
+impl<R: Read> MarcReader<R> {
     /// Read a single MARC record.
     ///
     /// Returns `Ok(Some(record))` if a record was successfully read, `Ok(None)` if EOF
@@ -151,10 +177,13 @@ impl<R: Read> MarcReader<R> {
     /// - An I/O error occurs
     #[allow(clippy::too_many_lines, clippy::redundant_else)]
     pub fn read_record(&mut self) -> Result<Option<Record>> {
-        // Read the leader (24 bytes)
+        // Read the leader (24 bytes). EOF here is a clean stream end.
         let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
             return Ok(None);
         };
+
+        // We have a record — initialize the per-record positional context.
+        self.ctx.begin_record();
 
         let leader = Leader::from_bytes(&leader_bytes)?;
         leader.validate_for_reading()?;
@@ -166,12 +195,19 @@ impl<R: Read> MarcReader<R> {
         // Directory starts after leader, ends at base_address
         let directory_size = base_address - 24;
 
+        // The leader has been consumed.
+        self.ctx.advance(LEADER_LEN);
+
         // Read the full record data. In non-Strict modes a short read returns
         // `(buffer, true)`; salvage from a partial buffer is not implemented,
         // so the recovery dispatch below is unreachable in practice (the read
         // primitive returns a buffer of full length even on a short read).
-        let (record_data, _was_truncated) =
-            iso2709::read_record_data(&mut self.reader, record_length, self.recovery_mode)?;
+        let (record_data, _was_truncated) = iso2709::read_record_data(
+            &mut self.reader,
+            record_length,
+            self.recovery_mode,
+            &self.ctx,
+        )?;
 
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return crate::recovery::try_recover_record(
@@ -179,6 +215,7 @@ impl<R: Read> MarcReader<R> {
                 &record_data,
                 base_address,
                 self.recovery_mode,
+                &self.ctx,
             )
             .map(Some);
         }
@@ -210,8 +247,9 @@ impl<R: Read> MarcReader<R> {
 
             if pos + 12 > directory.len() {
                 if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(MarcError::InvalidRecord(
-                        "Incomplete directory entry".to_string(),
+                    return Err(self.ctx.err_directory_invalid(
+                        Some(&directory[pos..]),
+                        "complete 12-byte directory entry",
                     ));
                 } else {
                     break;
@@ -247,8 +285,10 @@ impl<R: Read> MarcReader<R> {
             let end_position = start_position + field_length;
             if end_position > data.len() {
                 if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(MarcError::InvalidRecord(format!(
-                        "Field {tag} exceeds data area"
+                    self.ctx.current_field_tag = Some(tag.clone());
+                    return Err(self.ctx.err_invalid_field(format!(
+                        "Field {tag} exceeds data area (end {end_position} > {})",
+                        data.len()
                     )));
                 } else {
                     // Try to read what we have
@@ -256,17 +296,26 @@ impl<R: Read> MarcReader<R> {
                     if available_end > start_position {
                         let field_data = &data[start_position..available_end];
                         if tag != "LDR" {
-                            if tag.starts_with('0')
-                                && tag.chars().all(char::is_numeric)
-                                && tag.as_str() < "010"
-                            {
+                            if iso2709::is_control_field_tag(&tag) {
                                 let value = String::from_utf8_lossy(
                                     &field_data[..field_data.len().saturating_sub(1)],
                                 )
                                 .to_string();
+                                if tag == "001" {
+                                    self.ctx.record_control_number = Some(value.clone());
+                                }
                                 record.add_control_field(tag, value);
-                            } else if let Ok(field) = parse_data_field(field_data, &tag) {
-                                record.add_field(field);
+                            } else {
+                                self.ctx.current_field_tag = Some(tag.clone());
+                                if let Ok(field) = iso2709::parse_data_field(
+                                    field_data,
+                                    &tag,
+                                    DataFieldParseConfig::BIBLIOGRAPHIC,
+                                    &self.ctx,
+                                ) {
+                                    record.add_field(field);
+                                }
+                                self.ctx.current_field_tag = None;
                             }
                         }
                     }
@@ -278,21 +327,31 @@ impl<R: Read> MarcReader<R> {
 
             // Parse field (skip LDR as it's already parsed)
             if tag != "LDR" {
-                if tag.starts_with('0') && tag.chars().all(char::is_numeric) && tag.as_str() < "010"
-                {
-                    // Control field (001-009)
-                    let value = String::from_utf8_lossy(
-                        &field_data[..field_data.len().saturating_sub(1)], // Remove field terminator
-                    )
-                    .to_string();
+                if iso2709::is_control_field_tag(&tag) {
+                    // Control field (001-009): strip the trailing field terminator
+                    let value =
+                        String::from_utf8_lossy(&field_data[..field_data.len().saturating_sub(1)])
+                            .to_string();
+                    // Opportunistic 001 capture for downstream error context.
+                    if tag == "001" {
+                        self.ctx.record_control_number = Some(value.clone());
+                    }
                     record.add_control_field(tag, value);
                 } else {
                     // Data field (010+)
-                    match parse_data_field(field_data, &tag) {
+                    self.ctx.current_field_tag = Some(tag.clone());
+                    let parsed = iso2709::parse_data_field(
+                        field_data,
+                        &tag,
+                        DataFieldParseConfig::BIBLIOGRAPHIC,
+                        &self.ctx,
+                    );
+                    self.ctx.current_field_tag = None;
+                    match parsed {
                         Ok(field) => record.add_field(field),
                         Err(e) => {
                             if self.recovery_mode == RecoveryMode::Strict {
-                                return Err(MarcError::InvalidField(format!("Tag {tag}: {e}")));
+                                return Err(e);
                             }
                             // In lenient/permissive mode, skip this field and continue
                         },
@@ -301,6 +360,8 @@ impl<R: Read> MarcReader<R> {
             }
         }
 
+        // Advance past the rest of the record (everything after the leader).
+        self.ctx.advance(record_length.saturating_sub(LEADER_LEN));
         self.records_read += 1;
         Ok(Some(record))
     }
@@ -318,65 +379,12 @@ impl<R: Read + std::fmt::Debug> FormatReader for MarcReader<R> {
     }
 }
 
-/// Parse a data field from raw bytes
-fn parse_data_field(data: &[u8], tag: &str) -> Result<Field> {
-    if data.len() < 2 {
-        return Err(MarcError::InvalidField(
-            "Data field too short (needs indicators)".to_string(),
-        ));
-    }
-
-    let indicator1 = data[0] as char;
-    let indicator2 = data[1] as char;
-    let mut field = Field::new(tag.to_string(), indicator1, indicator2);
-
-    // Parse subfields
-    let subfield_data = &data[2..];
-    let mut current_position = 0;
-
-    while current_position < subfield_data.len() {
-        if subfield_data[current_position] == FIELD_TERMINATOR {
-            // End of field
-            break;
-        }
-
-        if subfield_data[current_position] == SUBFIELD_DELIMITER {
-            current_position += 1;
-            if current_position >= subfield_data.len() {
-                break;
-            }
-
-            let code = subfield_data[current_position] as char;
-            current_position += 1;
-
-            // Find next subfield or field terminator
-            let mut end = current_position;
-            while end < subfield_data.len()
-                && subfield_data[end] != SUBFIELD_DELIMITER
-                && subfield_data[end] != FIELD_TERMINATOR
-            {
-                end += 1;
-            }
-
-            let value = String::from_utf8_lossy(&subfield_data[current_position..end]).to_string();
-            field.add_subfield(code, value);
-            current_position = end;
-        } else {
-            return Err(MarcError::InvalidField(
-                "Expected subfield delimiter".to_string(),
-            ));
-        }
-    }
-
-    Ok(field)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
 
-    use crate::iso2709::RECORD_TERMINATOR;
+    use crate::iso2709::{RECORD_TERMINATOR, SUBFIELD_DELIMITER};
 
     #[test]
     fn test_read_simple_record() {

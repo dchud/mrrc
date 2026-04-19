@@ -10,8 +10,9 @@
 
 use crate::error::marc_error_to_py_err;
 use crate::wrappers::PyRecord;
+use mrrc::iso2709::ParseContext;
 use mrrc::{csv, dublin_core, json, marcjson, marcxml, mods, Record};
-use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 
 /// Extract a Rust `Record` from either a raw `PyRecord` or a wrapped Python `Record`
@@ -73,8 +74,9 @@ pub fn record_to_json(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String>
 /// ```
 #[pyfunction]
 pub fn json_to_record(json_str: &str) -> PyResult<PyRecord> {
-    let json_value: Value = serde_json::from_str(json_str)
-        .map_err(|e| PyValueError::new_err(format!("Invalid JSON: {}", e)))?;
+    let ctx = ParseContext::new();
+    let json_value: Value =
+        serde_json::from_str(json_str).map_err(|e| marc_error_to_py_err(ctx.err_json(e)))?;
     json::json_to_record(&json_value)
         .map(|inner| PyRecord { inner })
         .map_err(marc_error_to_py_err)
@@ -184,8 +186,9 @@ pub fn record_to_marcjson(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<Str
 /// ```
 #[pyfunction]
 pub fn marcjson_to_record(marcjson_str: &str) -> PyResult<PyRecord> {
-    let json_value: Value = serde_json::from_str(marcjson_str)
-        .map_err(|e| PyValueError::new_err(format!("Invalid MARCJSON: {}", e)))?;
+    let ctx = ParseContext::new();
+    let json_value: Value =
+        serde_json::from_str(marcjson_str).map_err(|e| marc_error_to_py_err(ctx.err_json(e)))?;
     marcjson::marcjson_to_record(&json_value)
         .map(|inner| PyRecord { inner })
         .map_err(marc_error_to_py_err)

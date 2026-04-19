@@ -69,7 +69,7 @@ impl<W: Write> HoldingsMarcWriter<W> {
                     }
                 },
                 _ => {
-                    return Err(MarcError::InvalidRecord(
+                    return Err(MarcError::invalid_field_msg(
                         "Invalid field structure".to_string(),
                     ))
                 },
@@ -113,7 +113,7 @@ impl<W: Write> HoldingsMarcWriter<W> {
         // Calculate base address of data section
         let base_address = 24 + directory.len();
         if base_address > 99999 {
-            return Err(MarcError::InvalidRecord(
+            return Err(MarcError::invalid_field_msg(
                 "Record too large (base address exceeds 5 digits)".to_string(),
             ));
         }
@@ -121,7 +121,7 @@ impl<W: Write> HoldingsMarcWriter<W> {
         // Calculate total record length
         let record_length = base_address + data.len() + 1; // +1 for record terminator
         if record_length > 99999 {
-            return Err(MarcError::InvalidRecord(
+            return Err(MarcError::invalid_field_msg(
                 "Record too large (total length exceeds 5 digits)".to_string(),
             ));
         }

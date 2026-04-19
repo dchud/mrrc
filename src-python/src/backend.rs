@@ -175,7 +175,7 @@ impl ReaderBackend {
                 return Ok(None); // EOF
             },
             Err(e) => {
-                return Err(ParseError::IoError(format!(
+                return Err(ParseError::io_error(format!(
                     "Failed to read record leader: {}",
                     e
                 )))
@@ -185,14 +185,14 @@ impl ReaderBackend {
         // Parse record length from leader (bytes 0-4, ASCII digits)
         let record_length_str = String::from_utf8_lossy(&leader[0..5]);
         let record_length: usize = record_length_str.trim().parse().map_err(|_| {
-            ParseError::InvalidRecord(format!(
+            ParseError::invalid_record(format!(
                 "Invalid record length in leader: '{}'",
                 record_length_str
             ))
         })?;
 
         if record_length < 24 {
-            return Err(ParseError::InvalidRecord(format!(
+            return Err(ParseError::invalid_record(format!(
                 "Record length too small: {} (minimum 24)",
                 record_length
             )));
@@ -203,14 +203,13 @@ impl ReaderBackend {
         match reader.read_exact(&mut record_data) {
             Ok(()) => {},
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                return Err(ParseError::InvalidRecord(format!(
-                    "Truncated record: expected {} bytes, got {}",
+                return Err(ParseError::truncated_record(
                     record_length - 24,
-                    record_data.len()
-                )))
+                    record_data.len(),
+                ));
             },
             Err(e) => {
-                return Err(ParseError::IoError(format!(
+                return Err(ParseError::io_error(format!(
                     "Failed to read record data: {}",
                     e
                 )))
@@ -232,22 +231,22 @@ impl ReaderBackend {
         // Read leader (24 bytes)
         let read_method = py_obj
             .getattr("read")
-            .map_err(|e| ParseError::IoError(format!("Object missing .read() method: {}", e)))?;
+            .map_err(|e| ParseError::io_error(format!("Object missing .read() method: {}", e)))?;
 
         let leader_result = read_method.call1((24usize,)).map_err(|e| {
-            ParseError::IoError(format!("Failed to read leader from Python file: {}", e))
+            ParseError::io_error(format!("Failed to read leader from Python file: {}", e))
         })?;
 
         let leader: Vec<u8> = leader_result
             .extract()
-            .map_err(|_| ParseError::InvalidRecord("Leader must be bytes".to_string()))?;
+            .map_err(|_| ParseError::invalid_record("Leader must be bytes".to_string()))?;
 
         if leader.len() != 24 {
             // EOF or partial read
             if leader.is_empty() {
                 return Ok(None); // EOF
             }
-            return Err(ParseError::InvalidRecord(format!(
+            return Err(ParseError::invalid_record(format!(
                 "Incomplete leader: expected 24 bytes, got {}",
                 leader.len()
             )));
@@ -256,14 +255,14 @@ impl ReaderBackend {
         // Parse record length from leader
         let record_length_str = String::from_utf8_lossy(&leader[0..5]);
         let record_length: usize = record_length_str.trim().parse().map_err(|_| {
-            ParseError::InvalidRecord(format!(
+            ParseError::invalid_record(format!(
                 "Invalid record length in leader: '{}'",
                 record_length_str
             ))
         })?;
 
         if record_length < 24 {
-            return Err(ParseError::InvalidRecord(format!(
+            return Err(ParseError::invalid_record(format!(
                 "Record length too small: {} (minimum 24)",
                 record_length
             )));
@@ -271,7 +270,7 @@ impl ReaderBackend {
 
         // Read remainder of record
         let record_data_bytes = read_method.call1((record_length - 24,)).map_err(|e| {
-            ParseError::IoError(format!(
+            ParseError::io_error(format!(
                 "Failed to read record data from Python file: {}",
                 e
             ))
@@ -279,14 +278,13 @@ impl ReaderBackend {
 
         let record_data: Vec<u8> = record_data_bytes
             .extract()
-            .map_err(|_| ParseError::InvalidRecord("Record data must be bytes".to_string()))?;
+            .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
 
         if record_data.len() != record_length - 24 {
-            return Err(ParseError::InvalidRecord(format!(
-                "Truncated record: expected {} bytes, got {}",
+            return Err(ParseError::truncated_record(
                 record_length - 24,
-                record_data.len()
-            )));
+                record_data.len(),
+            ));
         }
 
         // Assemble complete record

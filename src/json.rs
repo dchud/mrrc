@@ -120,21 +120,21 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
 
     let array = json
         .as_array()
-        .ok_or_else(|| MarcError::InvalidRecord("Expected JSON array".to_string()))?;
+        .ok_or_else(|| MarcError::invalid_field_msg("Expected JSON array".to_string()))?;
 
     if array.is_empty() {
-        return Err(MarcError::InvalidRecord("Empty JSON array".to_string()));
+        return Err(MarcError::invalid_field_msg("Empty JSON array".to_string()));
     }
 
     // First item should be leader
     let leader_obj = array[0]
         .as_object()
-        .ok_or_else(|| MarcError::InvalidRecord("First item must be object".to_string()))?;
+        .ok_or_else(|| MarcError::invalid_field_msg("First item must be object".to_string()))?;
 
     let leader_str = leader_obj
         .get("leader")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| MarcError::InvalidRecord("Missing leader field".to_string()))?;
+        .ok_or_else(|| MarcError::invalid_field_msg("Missing leader field".to_string()))?;
 
     let leader = Leader::from_bytes(leader_str.as_bytes())?;
     let mut record = Record::new(leader);
@@ -143,7 +143,7 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
     for item in &array[1..] {
         let obj = item
             .as_object()
-            .ok_or_else(|| MarcError::InvalidRecord("Field must be object".to_string()))?;
+            .ok_or_else(|| MarcError::invalid_field_msg("Field must be object".to_string()))?;
 
         for (tag, value) in obj {
             if tag.len() != 3 {
@@ -158,20 +158,20 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
             } else {
                 // Data field
                 let field_obj = value.as_object().ok_or_else(|| {
-                    MarcError::InvalidField(format!("Field {tag} must be object"))
+                    MarcError::invalid_field_msg(format!("Field {tag} must be object"))
                 })?;
 
                 let ind1 = field_obj
                     .get("ind1")
                     .and_then(|v| v.as_str())
                     .and_then(|s| s.chars().next())
-                    .ok_or_else(|| MarcError::InvalidField("Missing ind1".to_string()))?;
+                    .ok_or_else(|| MarcError::invalid_field_msg("Missing ind1".to_string()))?;
 
                 let ind2 = field_obj
                     .get("ind2")
                     .and_then(|v| v.as_str())
                     .and_then(|s| s.chars().next())
-                    .ok_or_else(|| MarcError::InvalidField("Missing ind2".to_string()))?;
+                    .ok_or_else(|| MarcError::invalid_field_msg("Missing ind2".to_string()))?;
 
                 let mut field = Field::new(tag.clone(), ind1, ind2);
 
