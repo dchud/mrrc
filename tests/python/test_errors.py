@@ -6,8 +6,6 @@ output for representative exception classes. Property tests cover pickle
 round-trip, hierarchy assertions, and bare-constructor compatibility.
 """
 
-from __future__ import annotations
-
 import pickle
 
 import pytest
