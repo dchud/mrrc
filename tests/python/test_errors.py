@@ -65,7 +65,7 @@ class TestExceptionHierarchy:
 
 
 # ---------------------------------------------------------------------------
-# Stable error codes (bd-44wb)
+# Stable error codes
 # ---------------------------------------------------------------------------
 
 
@@ -93,8 +93,8 @@ _CODE_TABLE = [
 
 
 class TestErrorCodes:
-    """Stable error codes per bd-44wb. Codes and slugs must never change
-    for an existing variant — see CONTRIBUTING.md for the stability policy.
+    """Stable error codes. Codes and slugs must never change for an existing
+    variant — see ``CONTRIBUTING.md`` for the stability policy.
     """
 
     @pytest.mark.parametrize("cls, code, slug", _CODE_TABLE)

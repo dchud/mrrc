@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added (bd-44wb — error codes)
+### Added — stable error codes
 
 - **Stable error codes on every `MarcError` variant.** New `code()` and
   `slug()` methods return the canonical `Exxx` identifier (e.g., `"E201"`)
