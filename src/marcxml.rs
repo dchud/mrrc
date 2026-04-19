@@ -28,6 +28,7 @@
 //! ```
 
 use crate::error::{MarcError, Result};
+use crate::iso2709::ParseContext;
 use crate::leader::Leader;
 use crate::record::{Field, Record};
 use quick_xml::de::from_str as xml_from_str;
@@ -241,9 +242,9 @@ pub fn record_to_marcxml(record: &Record) -> Result<String> {
 ///
 /// Returns an error if the XML is invalid or missing required elements.
 pub fn marcxml_to_record(xml: &str) -> Result<Record> {
+    let ctx = ParseContext::new();
     let cleaned = strip_marcxml_ns(xml);
-    let xml_record: MarcxmlRecord = xml_from_str(&cleaned)
-        .map_err(|e| MarcError::invalid_field_msg(format!("Failed to parse MARCXML: {e}")))?;
+    let xml_record: MarcxmlRecord = xml_from_str(&cleaned).map_err(|e| ctx.err_xml(e))?;
 
     marcxml_record_to_record(xml_record)
 }
@@ -265,10 +266,9 @@ pub fn marcxml_to_record(xml: &str) -> Result<Record> {
 ///
 /// Returns an error if the XML is invalid or cannot be parsed.
 pub fn marcxml_to_records(xml: &str) -> Result<Vec<Record>> {
+    let ctx = ParseContext::new();
     let cleaned = strip_marcxml_ns(xml);
-    let collection: MarcxmlCollection = xml_from_str(&cleaned).map_err(|e| {
-        MarcError::invalid_field_msg(format!("Failed to parse MARCXML collection: {e}"))
-    })?;
+    let collection: MarcxmlCollection = xml_from_str(&cleaned).map_err(|e| ctx.err_xml(e))?;
 
     collection
         .records

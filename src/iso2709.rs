@@ -332,6 +332,34 @@ impl ParseContext {
             source_name: self.source_name.clone(),
         }
     }
+
+    /// Construct an [`MarcError::XmlError`] wrapping a `quick_xml` error type.
+    /// Any error implementing `std::error::Error + Send + Sync + 'static` is
+    /// accepted (handles both `quick_xml::Error` and `quick_xml::DeError`).
+    #[must_use]
+    pub fn err_xml(&self, cause: impl std::error::Error + Send + Sync + 'static) -> MarcError {
+        MarcError::XmlError {
+            cause: Box::new(cause),
+            record_index: self.record_index_opt(),
+            byte_offset: None,
+            source_name: self.source_name.clone(),
+        }
+    }
+
+    /// Construct an [`MarcError::JsonError`] wrapping a `serde_json` error.
+    /// Position information (`line`/`column`) is preserved on the wrapped
+    /// cause; `byte_offset` is left `None` because translating a
+    /// (line, column) pair to a byte offset requires the original input,
+    /// which is not in scope here.
+    #[must_use]
+    pub fn err_json(&self, cause: serde_json::Error) -> MarcError {
+        MarcError::JsonError {
+            cause,
+            record_index: self.record_index_opt(),
+            byte_offset: None,
+            source_name: self.source_name.clone(),
+        }
+    }
 }
 
 /// Read the 24-byte MARC leader from `reader`.

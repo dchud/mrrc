@@ -261,12 +261,16 @@ pub enum MarcError {
 
     /// An error occurred during MARCXML parsing.
     XmlError {
-        /// Underlying XML parser error.
+        /// Underlying XML parser error. Boxed so any of `quick_xml`'s error
+        /// types (`Error`, `DeError`, etc.) can be wrapped.
         #[source]
-        cause: quick_xml::Error,
+        cause: Box<dyn std::error::Error + Send + Sync + 'static>,
         /// 1-based record index in the document, when known.
         record_index: Option<usize>,
-        /// Byte offset within the source document, when known.
+        /// Byte offset within the source document, when known. For XML this
+        /// is typically derived from the parser's line/column position rather
+        /// than a raw byte offset; it may be `None` when the parser does not
+        /// expose any position information.
         byte_offset: Option<usize>,
         /// Source filename or stream identifier, when known.
         source_name: Option<String>,
@@ -279,7 +283,10 @@ pub enum MarcError {
         cause: serde_json::Error,
         /// 1-based record index in the document, when known.
         record_index: Option<usize>,
-        /// Byte offset within the source document, when known.
+        /// Byte offset within the source document, when known. Computed from
+        /// `serde_json::Error::line()` and `column()` when both are
+        /// available; left `None` when the parser does not expose position
+        /// information.
         byte_offset: Option<usize>,
         /// Source filename or stream identifier, when known.
         source_name: Option<String>,
