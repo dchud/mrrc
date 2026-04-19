@@ -135,10 +135,18 @@ impl<W: Write> MarcWriter<W> {
     /// - An I/O error occurs during writing
     pub fn write_record(&mut self, record: &Record) -> Result<()> {
         if self.finished {
-            return Err(MarcError::invalid_field_msg(
-                "Cannot write to a finished writer".to_string(),
-            ));
+            return Err(MarcError::WriterError {
+                record_index: None,
+                record_control_number: None,
+                message: "Cannot write to a finished writer".to_string(),
+            });
         }
+
+        // Snapshot per-record error context up front so write-path failures
+        // carry the record's identity (1-based index in the output stream
+        // plus its 001 control number, when available).
+        let record_index = Some(self.records_written.saturating_add(1));
+        let record_control_number = crate::RecordHelpers::control_number(record).map(String::from);
 
         // Build the data area first
         let mut data_area = Vec::new();
@@ -201,12 +209,18 @@ impl<W: Write> MarcWriter<W> {
 
         // Update leader with correct values
         let mut leader = record.leader.clone();
-        leader.record_length = u32::try_from(record_length).map_err(|_| {
-            MarcError::invalid_field_msg("Record length exceeds 4GB limit".to_string())
-        })?;
-        leader.data_base_address = u32::try_from(base_address).map_err(|_| {
-            MarcError::invalid_field_msg("Base address exceeds 4GB limit".to_string())
-        })?;
+        leader.record_length =
+            u32::try_from(record_length).map_err(|_| MarcError::WriterError {
+                record_index,
+                record_control_number: record_control_number.clone(),
+                message: format!("Record length exceeds 4GB limit ({record_length} bytes)"),
+            })?;
+        leader.data_base_address =
+            u32::try_from(base_address).map_err(|_| MarcError::WriterError {
+                record_index,
+                record_control_number: record_control_number.clone(),
+                message: format!("Base address exceeds 4GB limit ({base_address} bytes)"),
+            })?;
 
         // Write leader
         let leader_bytes = leader.as_bytes()?;
