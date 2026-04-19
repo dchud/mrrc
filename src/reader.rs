@@ -35,13 +35,13 @@
 
 use crate::error::{MarcError, Result};
 use crate::formats::FormatReader;
+use crate::iso2709;
 use crate::leader::Leader;
 use crate::record::{Field, Record};
 use crate::recovery::RecoveryMode;
 use std::io::Read;
 
-const FIELD_TERMINATOR: u8 = 0x1E;
-const SUBFIELD_DELIMITER: u8 = 0x1F;
+use crate::iso2709::{FIELD_TERMINATOR, SUBFIELD_DELIMITER};
 
 /// Reader for ISO 2709 binary MARC format.
 ///
@@ -152,15 +152,9 @@ impl<R: Read> MarcReader<R> {
     #[allow(clippy::too_many_lines, clippy::redundant_else)]
     pub fn read_record(&mut self) -> Result<Option<Record>> {
         // Read the leader (24 bytes)
-        let mut leader_bytes = vec![0u8; 24];
-        match self.reader.read_exact(&mut leader_bytes) {
-            Ok(()) => {},
-            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                // End of file
-                return Ok(None);
-            },
-            Err(e) => return Err(MarcError::IoError(e)),
-        }
+        let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
+            return Ok(None);
+        };
 
         let leader = Leader::from_bytes(&leader_bytes)?;
         leader.validate_for_reading()?;
@@ -172,23 +166,15 @@ impl<R: Read> MarcReader<R> {
         // Directory starts after leader, ends at base_address
         let directory_size = base_address - 24;
 
-        // Try to read the full record data, but handle truncation gracefully
-        let mut record_data = vec![0u8; record_length - 24];
-        match self.reader.read_exact(&mut record_data) {
-            Ok(()) => {},
-            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                // Record is truncated
-                if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(MarcError::TruncatedRecord(
-                        "Unexpected end of file while reading record data".to_string(),
-                    ));
-                }
-                // For lenient/permissive modes, attempt recovery with partial data
-            },
-            Err(e) => return Err(MarcError::IoError(e)),
-        }
+        // Try to read the full record data; in non-Strict modes, a short read
+        // returns `(buffer, true)` and the recovery branch below dispatches.
+        let (record_data, _was_truncated) =
+            iso2709::read_record_data(&mut self.reader, record_length, self.recovery_mode)?;
 
-        // If the record is truncated and we're in recovery mode, use recovery logic
+        // If the record is truncated and we're in recovery mode, use recovery logic.
+        // Note: this comparison is preserved verbatim from the pre-refactor reader;
+        // because the buffer is allocated at full length it is effectively dead
+        // today, and intentionally left so by PR1 to avoid any semantic change.
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return crate::recovery::try_recover_record(
                 leader,
@@ -236,7 +222,7 @@ impl<R: Read> MarcReader<R> {
 
             let entry_chunk = &directory[pos..pos + 12];
             let tag = String::from_utf8_lossy(&entry_chunk[0..3]).to_string();
-            let field_length = match parse_4digits(&entry_chunk[3..7]) {
+            let field_length = match iso2709::parse_4digits(&entry_chunk[3..7]) {
                 Ok(len) => len,
                 Err(e) => {
                     if self.recovery_mode == RecoveryMode::Strict {
@@ -247,7 +233,7 @@ impl<R: Read> MarcReader<R> {
                     }
                 },
             };
-            let start_position = match parse_digits(&entry_chunk[7..12]) {
+            let start_position = match iso2709::parse_5digits(&entry_chunk[7..12]) {
                 Ok(pos) => pos,
                 Err(e) => {
                     if self.recovery_mode == RecoveryMode::Strict {
@@ -387,60 +373,12 @@ fn parse_data_field(data: &[u8], tag: &str) -> Result<Field> {
     Ok(field)
 }
 
-/// Parse a 4-digit ASCII number from bytes
-fn parse_4digits(bytes: &[u8]) -> Result<usize> {
-    if bytes.len() != 4 {
-        return Err(MarcError::InvalidRecord(format!(
-            "Expected 4-digit field, got {} bytes",
-            bytes.len()
-        )));
-    }
-
-    // Parse ASCII digits directly without string allocation
-    let mut result = 0usize;
-    for &byte in bytes {
-        if byte.is_ascii_digit() {
-            result = result * 10 + (byte - b'0') as usize;
-        } else {
-            return Err(MarcError::InvalidRecord(format!(
-                "Invalid numeric field: expected digits, got byte {}",
-                byte as char
-            )));
-        }
-    }
-    Ok(result)
-}
-
-/// Parse a 5-digit ASCII number from bytes
-fn parse_digits(bytes: &[u8]) -> Result<usize> {
-    if bytes.len() != 5 {
-        return Err(MarcError::InvalidRecord(format!(
-            "Expected 5-digit field, got {} bytes",
-            bytes.len()
-        )));
-    }
-
-    // Parse ASCII digits directly without string allocation
-    let mut result = 0usize;
-    for &byte in bytes {
-        if byte.is_ascii_digit() {
-            result = result * 10 + (byte - b'0') as usize;
-        } else {
-            return Err(MarcError::InvalidRecord(format!(
-                "Invalid numeric field: expected digits, got byte {}",
-                byte as char
-            )));
-        }
-    }
-    Ok(result)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
 
-    const RECORD_TERMINATOR: u8 = 0x1D;
+    use crate::iso2709::RECORD_TERMINATOR;
 
     #[test]
     fn test_read_simple_record() {

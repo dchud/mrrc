@@ -28,13 +28,12 @@
 
 use crate::error::{MarcError, Result};
 use crate::holdings_record::HoldingsRecord;
+use crate::iso2709;
+use crate::iso2709::{FIELD_TERMINATOR, SUBFIELD_DELIMITER};
 use crate::leader::Leader;
 use crate::record::Field;
 use crate::recovery::RecoveryMode;
 use std::io::Read;
-
-const FIELD_TERMINATOR: u8 = 0x1E;
-const SUBFIELD_DELIMITER: u8 = 0x1F;
 
 /// Reader for ISO 2709 binary MARC Holdings records.
 ///
@@ -91,14 +90,9 @@ impl<R: Read> HoldingsMarcReader<R> {
     #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<HoldingsRecord>> {
         // Read the leader (24 bytes)
-        let mut leader_bytes = vec![0u8; 24];
-        match self.reader.read_exact(&mut leader_bytes) {
-            Ok(()) => {},
-            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                return Ok(None);
-            },
-            Err(e) => return Err(MarcError::IoError(e)),
-        }
+        let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
+            return Ok(None);
+        };
 
         let leader = Leader::from_bytes(&leader_bytes)?;
         leader.validate_for_reading()?;
@@ -116,21 +110,15 @@ impl<R: Read> HoldingsMarcReader<R> {
         let base_address = leader.data_base_address as usize;
         let directory_size = base_address - 24;
 
-        // Read record data
-        let mut record_data = vec![0u8; record_length - 24];
-        match self.reader.read_exact(&mut record_data) {
-            Ok(()) => {},
-            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(MarcError::TruncatedRecord(
-                        "Unexpected end of file while reading record data".to_string(),
-                    ));
-                }
-            },
-            Err(e) => return Err(MarcError::IoError(e)),
-        }
+        // Read record data; in non-Strict modes a short read returns
+        // `(buffer, true)` and the recovery branch below handles it.
+        let (record_data, _was_truncated) =
+            iso2709::read_record_data(&mut self.reader, record_length, self.recovery_mode)?;
 
-        // Handle truncation in recovery mode
+        // Handle truncation in recovery mode. The comparison is preserved
+        // verbatim from the pre-refactor reader: because the buffer is
+        // allocated at full length it is effectively dead today, and
+        // intentionally left so by PR1 to avoid any semantic change.
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return Err(MarcError::TruncatedRecord(
                 "Holdings record is truncated".to_string(),
@@ -151,17 +139,8 @@ impl<R: Read> HoldingsMarcReader<R> {
                 .map_err(|_| MarcError::InvalidRecord("Invalid tag encoding".to_string()))?
                 .to_string();
 
-            let length_str = std::str::from_utf8(&directory_bytes[i + 3..i + 7])
-                .map_err(|_| MarcError::InvalidRecord("Invalid field length".to_string()))?;
-            let length: usize = length_str
-                .parse()
-                .map_err(|_| MarcError::InvalidRecord("Invalid field length value".to_string()))?;
-
-            let start_str = std::str::from_utf8(&directory_bytes[i + 7..i + 12])
-                .map_err(|_| MarcError::InvalidRecord("Invalid start position".to_string()))?;
-            let start: usize = start_str.parse().map_err(|_| {
-                MarcError::InvalidRecord("Invalid start position value".to_string())
-            })?;
+            let length = iso2709::parse_4digits(&directory_bytes[i + 3..i + 7])?;
+            let start = iso2709::parse_5digits(&directory_bytes[i + 7..i + 12])?;
 
             let end = start + length;
             if end > data_section.len() {
