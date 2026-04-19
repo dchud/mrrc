@@ -312,15 +312,18 @@ impl MarcError {
             out.push_str(" at ");
             out.push_str(&context);
         }
-        for (label, value) in self.detail_lines() {
+        let lines = self.detail_lines();
+        let label_width = lines.iter().map(|(l, _)| l.len()).max().unwrap_or(0);
+        for (label, value) in &lines {
             out.push_str("\n  ");
             out.push_str(label);
-            // Padding so labels align visually.
-            let pad = 10usize.saturating_sub(label.len() + 1);
-            for _ in 0..pad {
+            // Pad each label up to the widest label in this output so columns
+            // align even when label lengths vary widely (e.g.,
+            // "001:" vs "record-relative:").
+            for _ in label.len()..=label_width {
                 out.push(' ');
             }
-            out.push_str(&value);
+            out.push_str(value);
         }
         out
     }
@@ -441,7 +444,11 @@ impl MarcError {
         {
             header_parts.push(format!("ind{pos}"));
         }
-        if !header_parts.is_empty() {
+        if header_parts.is_empty() {
+            // No positional context available — lead with the variant name so
+            // the message at least identifies what kind of error it is.
+            write!(f, "{}: ", self.kind_name())?;
+        } else {
             write!(f, "[{}] ", header_parts.join(" · "))?;
         }
         write!(f, "{}", self.body_text())?;
@@ -695,7 +702,7 @@ impl MarcError {
     /// metadata available. Subsequent enrichment work attaches positional
     /// fields where they can be derived from a `ParseContext`.
     #[must_use]
-    pub fn invalid_field_msg(msg: impl Into<String>) -> Self {
+    pub(crate) fn invalid_field_msg(msg: impl Into<String>) -> Self {
         MarcError::InvalidField {
             record_index: None,
             byte_offset: None,
@@ -709,7 +716,7 @@ impl MarcError {
 
     /// Construct an [`MarcError::EncodingError`] with only a message.
     #[must_use]
-    pub fn encoding_msg(msg: impl Into<String>) -> Self {
+    pub(crate) fn encoding_msg(msg: impl Into<String>) -> Self {
         MarcError::EncodingError {
             record_index: None,
             byte_offset: None,
@@ -724,7 +731,7 @@ impl MarcError {
     /// description (the message itself is discarded; the message form is for
     /// migration ergonomics from the previous string-message variant).
     #[must_use]
-    pub fn truncated_msg(_msg: impl Into<String>) -> Self {
+    pub(crate) fn truncated_msg(_msg: impl Into<String>) -> Self {
         MarcError::TruncatedRecord {
             record_index: None,
             byte_offset: None,
@@ -738,7 +745,7 @@ impl MarcError {
 
     /// Construct an [`MarcError::InvalidLeader`] from a textual cause.
     #[must_use]
-    pub fn leader_msg(cause: impl Into<String>) -> Self {
+    pub(crate) fn leader_msg(cause: impl Into<String>) -> Self {
         MarcError::InvalidLeader {
             record_index: None,
             byte_offset: None,
@@ -747,16 +754,6 @@ impl MarcError {
             found: None,
             expected: None,
             cause: Some(cause.into()),
-        }
-    }
-
-    /// Construct an [`MarcError::WriterError`] with only a message.
-    #[must_use]
-    pub fn writer_msg(msg: impl Into<String>) -> Self {
-        MarcError::WriterError {
-            record_index: None,
-            record_control_number: None,
-            message: msg.into(),
         }
     }
 }
