@@ -116,6 +116,19 @@ class _MrrcExceptionBase:
     Exception itself.
     """
 
+    # Class-level attribute annotations so mypy/pyright see the typed
+    # positional context fields populated by __init__ via setattr.
+    record_index: Optional[int]
+    record_control_number: Optional[str]
+    field_tag: Optional[str]
+    indicator_position: Optional[int]
+    subfield_code: Optional[int]
+    found: Optional[bytes]
+    expected: Optional[str]
+    byte_offset: Optional[int]
+    record_byte_offset: Optional[int]
+    source: Optional[str]
+
     def __init__(self, *args, **kwargs) -> None:
         for field in _POSITIONAL_FIELDS:
             setattr(self, field, kwargs.pop(field, None))
@@ -370,6 +383,7 @@ class InvalidField(RecordDirectoryInvalid):
     """A data field is structurally invalid in some way not covered by the more specific subclasses."""
 
     _pickle_extra_fields = ("message",)
+    message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
@@ -385,6 +399,8 @@ class TruncatedRecord(EndOfRecordNotFound):
     """The record was truncated mid-stream."""
 
     _pickle_extra_fields = ("expected_length", "actual_length")
+    expected_length: Optional[int]
+    actual_length: Optional[int]
 
     def __init__(self, *args, expected_length=None, actual_length=None, **kwargs) -> None:
         self.expected_length = expected_length
@@ -414,6 +430,7 @@ class EncodingError(MrrcException):
     """A character encoding conversion failed."""
 
     _pickle_extra_fields = ("message",)
+    message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
@@ -429,6 +446,7 @@ class XmlError(MrrcException):
     """An error occurred during MARCXML parsing."""
 
     _pickle_extra_fields = ("message",)
+    message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
@@ -444,6 +462,7 @@ class JsonError(MrrcException):
     """An error occurred during MARCJSON parsing."""
 
     _pickle_extra_fields = ("message",)
+    message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
@@ -459,6 +478,7 @@ class WriterError(MrrcException):
     """An error occurred while writing a MARC record."""
 
     _pickle_extra_fields = ("message",)
+    message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
