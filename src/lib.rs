@@ -121,6 +121,7 @@ pub mod formats;
 pub mod holdings_reader;
 pub mod holdings_record;
 pub mod holdings_writer;
+pub mod iso2709;
 pub mod json;
 pub mod leader;
 pub mod macros;
