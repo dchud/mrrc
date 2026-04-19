@@ -739,22 +739,6 @@ impl MarcError {
         }
     }
 
-    /// Construct an [`MarcError::TruncatedRecord`] with only a message-style
-    /// description (the message itself is discarded; the message form is for
-    /// migration ergonomics from the previous string-message variant).
-    #[must_use]
-    pub(crate) fn truncated_msg(_msg: impl Into<String>) -> Self {
-        MarcError::TruncatedRecord {
-            record_index: None,
-            byte_offset: None,
-            record_byte_offset: None,
-            source_name: None,
-            record_control_number: None,
-            expected_length: None,
-            actual_length: None,
-        }
-    }
-
     /// Construct an [`MarcError::InvalidLeader`] from a textual cause.
     #[must_use]
     pub(crate) fn leader_msg(cause: impl Into<String>) -> Self {

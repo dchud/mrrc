@@ -215,6 +215,7 @@ impl<R: Read> MarcReader<R> {
                 &record_data,
                 base_address,
                 self.recovery_mode,
+                &self.ctx,
             )
             .map(Some);
         }
