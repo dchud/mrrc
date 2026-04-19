@@ -29,11 +29,11 @@
 //! ```
 
 use crate::authority_record::AuthorityRecord;
-use crate::error::{MarcError, Result};
-use crate::iso2709;
-use crate::iso2709::{FIELD_TERMINATOR, SUBFIELD_DELIMITER};
+#[cfg(test)]
+use crate::error::MarcError;
+use crate::error::Result;
+use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
-use crate::record::Field;
 use crate::recovery::RecoveryMode;
 use std::io::Read;
 
@@ -53,6 +53,7 @@ use std::io::Read;
 pub struct AuthorityMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
+    ctx: ParseContext,
 }
 
 impl<R: Read> AuthorityMarcReader<R> {
@@ -66,6 +67,7 @@ impl<R: Read> AuthorityMarcReader<R> {
         AuthorityMarcReader {
             reader,
             recovery_mode: RecoveryMode::Strict,
+            ctx: ParseContext::new(),
         }
     }
 
@@ -82,6 +84,32 @@ impl<R: Read> AuthorityMarcReader<R> {
         self
     }
 
+    /// Attach a source identifier (filename or stream id) to errors raised by
+    /// this reader. Populates `source_name` on every emitted error where
+    /// applicable. Use [`AuthorityMarcReader::from_path`] when constructing
+    /// from a filesystem path to set this automatically.
+    #[must_use]
+    pub fn with_source(mut self, name: impl Into<String>) -> Self {
+        self.ctx.source_name = Some(name.into());
+        self
+    }
+}
+
+impl AuthorityMarcReader<std::fs::File> {
+    /// Open `path` for reading and create an [`AuthorityMarcReader`] whose
+    /// errors include the path as their `source_name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the underlying [`std::io::Error`] if the file cannot be opened.
+    pub fn from_path(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+        let path = path.as_ref();
+        let file = std::fs::File::open(path)?;
+        Ok(Self::new(file).with_source(path.display().to_string()))
+    }
+}
+
+impl<R: Read> AuthorityMarcReader<R> {
     /// Read the next Authority record from the stream.
     ///
     /// Returns `Ok(None)` when the end of file is reached.
@@ -91,26 +119,29 @@ impl<R: Read> AuthorityMarcReader<R> {
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<AuthorityRecord>> {
-        // Read the leader (24 bytes)
+        // Read the leader (24 bytes). EOF here is a clean stream end.
         let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
             return Ok(None);
         };
+
+        self.ctx.begin_record();
 
         let leader = Leader::from_bytes(&leader_bytes)?;
         leader.validate_for_reading()?;
 
         // Verify this is an authority record (Type Z)
         if leader.record_type != 'z' {
-            return Err(MarcError::invalid_field_msg(format!(
+            return Err(self.ctx.err_invalid_field(format!(
                 "Expected authority record type 'z', got '{}'",
                 leader.record_type
             )));
         }
 
-        // Calculate directory and data sizes
         let record_length = leader.record_length as usize;
         let base_address = leader.data_base_address as usize;
         let directory_size = base_address - 24;
+
+        self.ctx.advance(LEADER_LEN);
 
         // Read record data. In non-Strict modes a short read returns
         // `(buffer, true)`; salvage from a partial buffer is not implemented,
@@ -120,10 +151,9 @@ impl<R: Read> AuthorityMarcReader<R> {
             iso2709::read_record_data(&mut self.reader, record_length, self.recovery_mode)?;
 
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
-            // For now, treat truncated authority records as a strict error
-            // In the future, we could implement recovery logic
-            return Err(MarcError::truncated_msg(
-                "Authority record is truncated".to_string(),
+            return Err(self.ctx.err_truncated_record(
+                Some(record_length.saturating_sub(LEADER_LEN)),
+                Some(record_data.len()),
             ));
         }
 
@@ -135,12 +165,6 @@ impl<R: Read> AuthorityMarcReader<R> {
             &[]
         };
         let data_start = std::cmp::min(base_address - 24, record_data.len());
-        let data = if data_start < record_data.len() {
-            &record_data[data_start..]
-        } else {
-            &[]
-        };
-        let _ = data; // Will be used when parsing fields
 
         let mut record = AuthorityRecord::new(leader);
 
@@ -153,8 +177,9 @@ impl<R: Read> AuthorityMarcReader<R> {
 
             if pos + 12 > directory.len() {
                 if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(MarcError::invalid_field_msg(
-                        "Incomplete directory entry".to_string(),
+                    return Err(self.ctx.err_directory_invalid(
+                        Some(&directory[pos..]),
+                        "complete 12-byte directory entry",
                     ));
                 }
                 break;
@@ -162,7 +187,7 @@ impl<R: Read> AuthorityMarcReader<R> {
 
             // Parse directory entry (12 bytes: tag + length + start position)
             let tag = std::str::from_utf8(&directory[pos..pos + 3])
-                .map_err(|_| MarcError::invalid_field_msg("Invalid field tag".to_string()))?
+                .map_err(|_| self.ctx.err_invalid_field("Invalid field tag"))?
                 .to_string();
 
             let length = iso2709::parse_4digits(&directory[pos + 3..pos + 7])?;
@@ -181,62 +206,40 @@ impl<R: Read> AuthorityMarcReader<R> {
             let field_bytes = &record_data[field_data_start..field_data_end];
 
             // Check if this is a control field (00X-009)
-            if tag.len() == 3 && tag.as_str() < "010" {
+            if iso2709::is_control_field_tag(&tag) {
                 // Control field - no indicators or subfields
                 let value = String::from_utf8_lossy(field_bytes)
                     .trim_end_matches(['\x1E', '\x1F'])
                     .to_string();
+                if tag == "001" {
+                    self.ctx.record_control_number = Some(value.clone());
+                }
                 record.add_control_field(tag, value);
             } else {
-                // Data field - has indicators and subfields
+                // Data field - has indicators and subfields. Authority preserves
+                // its historical permissive/lossy behavior via the AUTHORITY
+                // config; bytes in field_bytes shorter than 2 are ignored to
+                // match the prior `if field_bytes.len() < 2 { continue }` guard.
                 if field_bytes.len() < 2 {
                     continue;
                 }
-
-                let indicator1 = field_bytes[0] as char;
-                let indicator2 = field_bytes[1] as char;
-
-                let mut field = Field {
-                    tag: tag.clone(),
-                    indicator1,
-                    indicator2,
-                    subfields: smallvec::SmallVec::new(),
-                };
-
-                // Parse subfields
-                let mut subfield_pos = 2;
-                while subfield_pos < field_bytes.len() {
-                    if field_bytes[subfield_pos] == SUBFIELD_DELIMITER {
-                        if subfield_pos + 1 < field_bytes.len() {
-                            let code = field_bytes[subfield_pos + 1] as char;
-                            subfield_pos += 2;
-
-                            // Find the end of this subfield
-                            let mut subfield_end = subfield_pos;
-                            while subfield_end < field_bytes.len()
-                                && field_bytes[subfield_end] != SUBFIELD_DELIMITER
-                                && field_bytes[subfield_end] != FIELD_TERMINATOR
-                            {
-                                subfield_end += 1;
-                            }
-
-                            let value =
-                                String::from_utf8_lossy(&field_bytes[subfield_pos..subfield_end])
-                                    .to_string();
-                            field
-                                .subfields
-                                .push(crate::record::Subfield { code, value });
-
-                            subfield_pos = subfield_end;
-                        } else {
-                            break;
+                self.ctx.current_field_tag = Some(tag.clone());
+                let parsed = iso2709::parse_data_field(
+                    field_bytes,
+                    &tag,
+                    DataFieldParseConfig::AUTHORITY,
+                    &self.ctx,
+                );
+                self.ctx.current_field_tag = None;
+                let field = match parsed {
+                    Ok(f) => f,
+                    Err(e) => {
+                        if self.recovery_mode == RecoveryMode::Strict {
+                            return Err(e);
                         }
-                    } else if field_bytes[subfield_pos] == FIELD_TERMINATOR {
-                        break;
-                    } else {
-                        subfield_pos += 1;
-                    }
-                }
+                        continue;
+                    },
+                };
 
                 // Organize field by its function based on tag
                 match tag.as_str() {
@@ -271,6 +274,7 @@ impl<R: Read> AuthorityMarcReader<R> {
             }
         }
 
+        self.ctx.advance(record_length.saturating_sub(LEADER_LEN));
         Ok(Some(record))
     }
 }
