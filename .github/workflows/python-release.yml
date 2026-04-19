@@ -122,8 +122,11 @@ jobs:
       - name: Install wheel and test dependencies
         shell: bash
         run: |
-          uv pip install --system dist/mrrc-*.whl
-          uv pip install --system pytest pytest-benchmark mypy pyright
+          # Install the wheel together with the [test] extra from
+          # pyproject.toml so test deps stay in sync with the package.
+          WHEEL=$(ls dist/mrrc-*.whl | head -1)
+          uv pip install --system "${WHEEL}[test]"
+          uv pip install --system mypy pyright
 
       - name: Run pytest (core tests, excludes benchmarks)
         run: |

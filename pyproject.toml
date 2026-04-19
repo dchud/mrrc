@@ -27,13 +27,22 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+# Runtime test dependencies — kept as a separate extra so the wheel-test CI
+# workflows can install them via `mrrc[test]` and stay in sync with this list
+# automatically (no parallel hardcoded list to keep updated).
+test = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+    "syrupy>=4.0",
+]
+# Developer tooling (linters, type checkers) on top of the test deps.
 dev = [
     "pytest>=7.0",
     "pytest-benchmark>=4.0",
+    "syrupy>=4.0",
     "mypy>=1.0",
     "pyright>=1.1",
     "ruff>=0.1",
-    "syrupy>=4.0",
 ]
 benchmark = [
     "pytest>=7.0",

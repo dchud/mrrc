@@ -135,6 +135,11 @@ dev = [
     { name = "ruff" },
     { name = "syrupy" },
 ]
+test = [
+    { name = "pytest" },
+    { name = "pytest-benchmark" },
+    { name = "syrupy" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -142,12 +147,15 @@ requires-dist = [
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1" },
     { name = "pytest", marker = "extra == 'benchmark'", specifier = ">=7.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0" },
     { name = "pytest-benchmark", marker = "extra == 'benchmark'", specifier = ">=4.0" },
     { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0" },
+    { name = "pytest-benchmark", marker = "extra == 'test'", specifier = ">=4.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1" },
     { name = "syrupy", marker = "extra == 'dev'", specifier = ">=4.0" },
+    { name = "syrupy", marker = "extra == 'test'", specifier = ">=4.0" },
 ]
-provides-extras = ["dev", "benchmark"]
+provides-extras = ["test", "dev", "benchmark"]
 
 [[package]]
 name = "mypy"
