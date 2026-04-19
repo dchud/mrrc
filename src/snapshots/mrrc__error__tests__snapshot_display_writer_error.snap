@@ -1,0 +1,5 @@
+---
+source: src/error.rs
+expression: err.to_string()
+---
+[record 99 · 001 'oc00000099'] writer error: Record length exceeds 4GB limit (5000000000 bytes)

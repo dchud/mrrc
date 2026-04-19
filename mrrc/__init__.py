@@ -194,36 +194,70 @@ class _MrrcExceptionBase:
         return type(self).__name__
 
     def detailed(self) -> str:
-        """Return a multi-line diagnostic with all populated positional fields visible."""
-        lines = [type(self).__name__]
-        if self.record_index is not None or self.field_tag is not None:
-            ctx_parts = []
-            if self.record_index is not None:
-                ctx_parts.append(f"record {self.record_index}")
-            if self.field_tag is not None:
-                ctx_parts.append(f"field {self.field_tag}")
-            lines[0] = f"{type(self).__name__} at {', '.join(ctx_parts)}"
+        """Return a multi-line diagnostic with all populated positional fields visible.
+
+        Output mirrors the Rust `MarcError::detailed()` format: header line
+        followed by zero or more `  label: value` lines, with labels padded
+        to the width of the widest label so columns align consistently.
+        """
+        # Header
+        ctx_parts: list[str] = []
+        if self.record_index is not None:
+            ctx_parts.append(f"record {self.record_index}")
+        if self.field_tag is not None:
+            ctx_parts.append(f"field {self.field_tag}")
+        if ctx_parts:
+            header = f"{type(self).__name__} at {', '.join(ctx_parts)}"
+        else:
+            header = type(self).__name__
+
+        # Detail rows: list of (label, value) pairs in display order.
+        rows: list[tuple[str, str]] = []
         if self.source:
-            lines.append(f"  source:           {self.source}")
+            rows.append(("source:", self.source))
         if self.record_control_number:
-            lines.append(f"  001:              {self.record_control_number}")
+            rows.append(("001:", self.record_control_number))
         if self.indicator_position is not None and self.expected is not None:
             found_repr = repr(self.found) if self.found is not None else "?"
-            lines.append(
-                f"  indicator {self.indicator_position}:      "
-                f"found {found_repr}, expected {self.expected}"
+            rows.append(
+                (
+                    f"indicator {self.indicator_position}:",
+                    f"found {found_repr}, expected {self.expected}",
+                )
             )
         if self.subfield_code is not None:
-            lines.append(
-                f"  subfield:         invalid code byte 0x{self.subfield_code:02X}"
+            rows.append(
+                ("subfield:", f"invalid code byte 0x{self.subfield_code:02X}")
             )
+        # Subclasses with extra context attributes (TruncatedRecord) hook in
+        # via _extra_detail_rows so detailed() doesn't need a per-class
+        # override of the whole method.
+        rows.extend(self._extra_detail_rows())
         if self.byte_offset is not None:
-            lines.append(
-                f"  byte offset:      0x{self.byte_offset:X} ({self.byte_offset}) in stream"
+            rows.append(
+                (
+                    "byte offset:",
+                    f"0x{self.byte_offset:X} ({self.byte_offset}) in stream",
+                )
             )
         if self.record_byte_offset is not None:
-            lines.append(f"  record-relative:  byte {self.record_byte_offset}")
-        return "\n".join(lines)
+            rows.append(("record-relative:", f"byte {self.record_byte_offset}"))
+
+        if not rows:
+            return header
+
+        label_width = max(len(label) for label, _ in rows)
+        body = "\n".join(
+            f"  {label}{' ' * (label_width - len(label) + 1)}{value}"
+            for label, value in rows
+        )
+        return f"{header}\n{body}"
+
+    def _extra_detail_rows(self) -> list[tuple[str, str]]:
+        """Hook for subclasses to add detail rows for their extra
+        attributes. Default returns no extra rows.
+        """
+        return []
 
     def __repr__(self) -> str:
         kwargs = ", ".join(
@@ -364,6 +398,16 @@ class TruncatedRecord(EndOfRecordNotFound):
                 f"found {self.actual_length}"
             )
         return "truncated record"
+
+    def _extra_detail_rows(self) -> list[tuple[str, str]]:
+        if self.expected_length is not None and self.actual_length is not None:
+            return [
+                (
+                    "length:",
+                    f"expected {self.expected_length} bytes, found {self.actual_length}",
+                )
+            ]
+        return []
 
 
 class EncodingError(MrrcException):

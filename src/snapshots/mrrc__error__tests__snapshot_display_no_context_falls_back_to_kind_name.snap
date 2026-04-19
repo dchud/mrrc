@@ -1,0 +1,5 @@
+---
+source: src/error.rs
+expression: err.to_string()
+---
+BaseAddressNotFound: base address not found

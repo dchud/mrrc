@@ -906,4 +906,87 @@ mod tests {
         let err = wraps().unwrap_err();
         assert!(matches!(err, MarcError::IoError { .. }));
     }
+
+    // -- Snapshot tests for the externally-visible error format ----------
+    //
+    // These pin the on-the-wire wording of Display (one-liner) and
+    // detailed() (multi-line) outputs across representative variants.
+    // Run `cargo insta review` to inspect/accept changes when these
+    // snapshots drift.
+
+    fn invalid_indicator_full() -> MarcError {
+        MarcError::InvalidIndicator {
+            record_index: Some(847),
+            byte_offset: Some(7217),
+            record_byte_offset: Some(42),
+            source_name: Some("harvest.mrc".into()),
+            record_control_number: Some("ocm01234567".into()),
+            field_tag: Some("245".into()),
+            indicator_position: Some(1),
+            found: Some(b":".to_vec()),
+            expected: Some("digit or space".into()),
+        }
+    }
+
+    #[test]
+    fn snapshot_display_invalid_indicator_full_context() {
+        insta::assert_snapshot!(invalid_indicator_full().to_string());
+    }
+
+    #[test]
+    fn snapshot_detailed_invalid_indicator_full_context() {
+        insta::assert_snapshot!(invalid_indicator_full().detailed());
+    }
+
+    #[test]
+    fn snapshot_display_no_context_falls_back_to_kind_name() {
+        let err = MarcError::BaseAddressNotFound {
+            record_index: None,
+            byte_offset: None,
+            source_name: None,
+            record_control_number: None,
+        };
+        insta::assert_snapshot!(err.to_string());
+    }
+
+    #[test]
+    fn snapshot_display_directory_invalid_with_truncated_found() {
+        let big_input: Vec<u8> = (b'a'..=b'z').cycle().take(60).collect();
+        let (truncated, _was_truncated) = truncate_bytes(&big_input);
+        let err = MarcError::DirectoryInvalid {
+            record_index: Some(3),
+            byte_offset: Some(0x100),
+            record_byte_offset: Some(24),
+            source_name: Some("collection.mrc".into()),
+            record_control_number: Some("oc00000003".into()),
+            field_tag: Some("245".into()),
+            found: Some(truncated),
+            expected: Some("12-byte numeric directory entry".into()),
+        };
+        insta::assert_snapshot!(err.to_string());
+    }
+
+    #[test]
+    fn snapshot_detailed_truncated_record() {
+        let err = MarcError::TruncatedRecord {
+            record_index: Some(12),
+            byte_offset: Some(0x4000),
+            record_byte_offset: Some(0x80),
+            source_name: Some("partial.mrc".into()),
+            record_control_number: Some("oc00000012".into()),
+            expected_length: Some(1024),
+            actual_length: Some(640),
+        };
+        insta::assert_snapshot!(err.detailed());
+    }
+
+    #[test]
+    fn snapshot_display_writer_error() {
+        let err = MarcError::WriterError {
+            record_index: Some(99),
+            record_control_number: Some("oc00000099".into()),
+            message: "Record length exceeds 4GB limit (5000000000 bytes)".into(),
+        };
+        insta::assert_snapshot!(err.to_string());
+    }
 }

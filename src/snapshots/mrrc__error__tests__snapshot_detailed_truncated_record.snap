@@ -1,0 +1,10 @@
+---
+source: src/error.rs
+expression: err.detailed()
+---
+TruncatedRecord at record 12
+  source:          partial.mrc
+  001:             oc00000012
+  length:          expected 1024 bytes, found 640
+  byte offset:     0x4000 (16384) in stream
+  record-relative: byte 128

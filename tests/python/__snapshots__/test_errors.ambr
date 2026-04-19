@@ -1,0 +1,36 @@
+# serializer version: 1
+# name: TestSnapshotFormats.test_detailed_invalid_indicator_full_context
+  '''
+  InvalidIndicator at record 847, field 245
+    source:          harvest.mrc
+    001:             ocm01234567
+    indicator 1:     found b':', expected digit or space
+    byte offset:     0x1C31 (7217) in stream
+    record-relative: byte 42
+  '''
+# ---
+# name: TestSnapshotFormats.test_detailed_truncated_record
+  '''
+  TruncatedRecord at record 12
+    source:          partial.mrc
+    001:             oc00000012
+    length:          expected 1024 bytes, found 640
+    byte offset:     0x4000 (16384) in stream
+    record-relative: byte 128
+  '''
+# ---
+# name: TestSnapshotFormats.test_repr_invalid_indicator_full_context
+  "InvalidIndicator(record_index=847, record_control_number='ocm01234567', field_tag='245', indicator_position=1, found=b':', expected='digit or space', byte_offset=7217, record_byte_offset=42, source='harvest.mrc')"
+# ---
+# name: TestSnapshotFormats.test_str_invalid_indicator_full_context
+  "[record 847 · 001 'ocm01234567' · field 245 · ind1] invalid b':' — expected digit or space  (byte 0x1C31 / 7217)"
+# ---
+# name: TestSnapshotFormats.test_str_no_context_falls_back_to_class_name
+  'BaseAddressNotFound: base address not found'
+# ---
+# name: TestSnapshotFormats.test_str_truncated_record
+  "[record 12 · 001 'oc00000012'] truncated record: expected 1024 bytes, found 640  (byte 0x4000 / 16384)"
+# ---
+# name: TestSnapshotFormats.test_str_writer_error
+  "[record 99 · 001 'oc00000099'] writer error: Record length exceeds 4GB limit (5000000000 bytes)"
+# ---
