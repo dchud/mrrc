@@ -65,6 +65,82 @@ class TestExceptionHierarchy:
 
 
 # ---------------------------------------------------------------------------
+# Stable error codes
+# ---------------------------------------------------------------------------
+
+
+# Mapping of Python exception class to its (code, slug). Cross-checks the
+# class-level constants against the Rust MarcError side via the FFI tests
+# below. Update both lists together when adding a new variant.
+_CODE_TABLE = [
+    (mrrc.RecordLengthInvalid, "E001", "record_length_invalid"),
+    (mrrc.RecordLeaderInvalid, "E002", "leader_invalid"),
+    (mrrc.BaseAddressInvalid, "E003", "base_address_invalid"),
+    (mrrc.BaseAddressNotFound, "E004", "base_address_not_found"),
+    (mrrc.TruncatedRecord, "E005", "truncated_record"),
+    (mrrc.EndOfRecordNotFound, "E006", "end_of_record_not_found"),
+    (mrrc.RecordDirectoryInvalid, "E101", "directory_invalid"),
+    (mrrc.FieldNotFound, "E105", "field_not_found"),
+    (mrrc.InvalidField, "E106", "invalid_field"),
+    (mrrc.InvalidIndicator, "E201", "invalid_indicator"),
+    (mrrc.BadSubfieldCode, "E202", "bad_subfield_code"),
+    (mrrc.EncodingError, "E301", "utf8_invalid"),
+    (mrrc.XmlError, "E401", "marcxml_invalid"),
+    (mrrc.JsonError, "E402", "marcjson_invalid"),
+    (mrrc.WriterError, "E404", "record_too_large_for_iso2709"),
+    (mrrc.BadSubfieldCodeWarning, "W001", "bad_subfield_code_warning"),
+]
+
+
+class TestErrorCodes:
+    """Stable error codes. Codes and slugs must never change for an existing
+    variant — see ``CONTRIBUTING.md`` for the stability policy.
+    """
+
+    @pytest.mark.parametrize("cls, code, slug", _CODE_TABLE)
+    def test_class_carries_canonical_code_and_slug(self, cls, code, slug):
+        assert cls.code == code, f"{cls.__name__}.code != {code!r}"
+        assert cls.slug == slug, f"{cls.__name__}.slug != {slug!r}"
+
+    @pytest.mark.parametrize("cls, code, _slug", _CODE_TABLE)
+    def test_help_url_anchors_on_docs_page(self, cls, code, _slug):
+        if cls is mrrc.BadSubfieldCodeWarning:
+            pytest.skip("BadSubfieldCodeWarning is a warning, not an exception")
+        instance = cls()
+        from mrrc.exceptions import DEFAULT_DOCS_BASE_URL
+        assert (
+            instance.help_url()
+            == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{code}"
+        )
+
+    def test_help_url_respects_env_var_override(self, monkeypatch):
+        """Setting MRRC_DOCS_BASE_URL must redirect help_url() output —
+        useful for enterprise mirrors and offline docs serving."""
+        monkeypatch.setenv("MRRC_DOCS_BASE_URL", "https://docs.internal/mrrc")
+        err = mrrc.InvalidIndicator()
+        assert err.help_url() == "https://docs.internal/mrrc/reference/error-codes/#E201"
+
+    def test_help_url_strips_trailing_slash_from_env_var(self, monkeypatch):
+        monkeypatch.setenv("MRRC_DOCS_BASE_URL", "https://docs.internal/mrrc/")
+        err = mrrc.InvalidIndicator()
+        assert err.help_url() == "https://docs.internal/mrrc/reference/error-codes/#E201"
+
+    def test_help_url_empty_env_var_falls_back_to_default(self, monkeypatch):
+        monkeypatch.setenv("MRRC_DOCS_BASE_URL", "")
+        from mrrc.exceptions import DEFAULT_DOCS_BASE_URL
+        err = mrrc.InvalidIndicator()
+        assert err.help_url() == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#E201"
+
+    def test_codes_are_unique(self):
+        codes = [code for _cls, code, _slug in _CODE_TABLE]
+        assert len(codes) == len(set(codes)), "duplicate error codes detected"
+
+    def test_slugs_are_unique(self):
+        slugs = [slug for _cls, _code, slug in _CODE_TABLE]
+        assert len(slugs) == len(set(slugs)), "duplicate error slugs detected"
+
+
+# ---------------------------------------------------------------------------
 # Bare-constructor + kwarg-only compatibility
 # ---------------------------------------------------------------------------
 
@@ -336,6 +412,27 @@ class TestFfiTypedExceptions:
         if isinstance(err, mrrc.InvalidField):
             assert err.message is not None
             assert "authority" in err.message.lower()
+
+    def test_typed_exception_carries_code_slug_help_url(self):
+        """An FFI-surfaced typed exception must carry the same `code`,
+        `slug`, and `help_url()` values as a Python-constructed instance.
+        """
+        import io
+        from mrrc.exceptions import DEFAULT_DOCS_BASE_URL
+
+        leader = b"00010nam a2200025 i 4500"
+        reader = mrrc.MARCReader(io.BytesIO(leader))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        err = excinfo.value
+        # Whatever variant fired, code/slug should be populated and the
+        # help URL should anchor onto the docs page.
+        assert err.code.startswith("E"), err.code
+        assert err.slug
+        assert (
+            err.help_url()
+            == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{err.code}"
+        )
 
     def test_no_silent_drops_in_pyo3_conversion(self):
         """Catch-all: confirm that whatever Rust raises always surfaces as

@@ -50,6 +50,7 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - admonition
+  - attr_list
   - tables
   - toc:
       permalink: true
@@ -92,6 +93,7 @@ nav:
     - MARC Primer: reference/marc-primer.md
     - Character Encoding: reference/encoding.md
     - Error Handling: reference/error-handling.md
+    - Error Codes: reference/error-codes.md
   - Examples:
     - examples/index.md
   - Contributing:
