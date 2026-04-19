@@ -392,10 +392,15 @@ impl MarcError {
                     let found_repr = found
                         .as_deref()
                         .map_or_else(|| "?".to_string(), format_found_bytes_python_repr);
-                    lines.push((
-                        "indicator",
-                        format!("{pos}: found {found_repr}, expected {exp}"),
-                    ));
+                    // Label carries the indicator number + colon; value is
+                    // just the found/expected so column alignment in
+                    // detailed() matches the Python side byte-for-byte.
+                    let label = if *pos == 0 {
+                        "indicator 0:"
+                    } else {
+                        "indicator 1:"
+                    };
+                    lines.push((label, format!("found {found_repr}, expected {exp}")));
                 }
             },
             MarcError::BadSubfieldCode { subfield_code, .. } => {

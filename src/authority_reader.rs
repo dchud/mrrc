@@ -147,8 +147,12 @@ impl<R: Read> AuthorityMarcReader<R> {
         // `(buffer, true)`; salvage from a partial buffer is not implemented,
         // so the recovery dispatch below is unreachable in practice (the read
         // primitive returns a buffer of full length even on a short read).
-        let (record_data, _was_truncated) =
-            iso2709::read_record_data(&mut self.reader, record_length, self.recovery_mode)?;
+        let (record_data, _was_truncated) = iso2709::read_record_data(
+            &mut self.reader,
+            record_length,
+            self.recovery_mode,
+            &self.ctx,
+        )?;
 
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return Err(self.ctx.err_truncated_record(

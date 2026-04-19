@@ -381,12 +381,14 @@ pub fn read_leader_bytes<R: Read>(reader: &mut R) -> Result<Option<[u8; LEADER_L
     }
 }
 
-/// Read the remaining `record_length - 24` bytes of a MARC record after the leader
-/// has already been consumed.
+/// Read the remaining `record_length - 24` bytes of a MARC record after the
+/// leader has already been consumed.
 ///
-/// Returns `(data, was_truncated)` where `was_truncated` is `true` when the read
-/// hit EOF before filling the buffer. In [`RecoveryMode::Strict`] a short read
-/// returns [`MarcError::TruncatedRecord`] instead of `(data, true)`.
+/// Returns `(data, was_truncated)` where `was_truncated` is `true` when the
+/// read hit EOF before filling the buffer. In [`RecoveryMode::Strict`] a short
+/// read returns a [`MarcError::TruncatedRecord`] enriched with the current
+/// positional context (record index, byte offset, source filename, 001 if
+/// already extracted) plus the expected/actual byte counts.
 ///
 /// # Errors
 ///
@@ -397,22 +399,24 @@ pub fn read_record_data<R: Read>(
     reader: &mut R,
     record_length: usize,
     recovery_mode: RecoveryMode,
+    ctx: &ParseContext,
 ) -> Result<(Vec<u8>, bool)> {
     let expected_len = record_length.saturating_sub(LEADER_LEN);
     let mut data = vec![0u8; expected_len];
-    match reader.read_exact(&mut data) {
-        Ok(()) => Ok((data, false)),
-        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-            if recovery_mode == RecoveryMode::Strict {
-                Err(MarcError::truncated_msg(
-                    "Unexpected end of file while reading record data".to_string(),
-                ))
-            } else {
-                Ok((data, true))
-            }
-        },
-        Err(e) => Err(e.into()),
+    let mut bytes_read = 0;
+    while bytes_read < expected_len {
+        match reader.read(&mut data[bytes_read..]) {
+            Ok(0) => break,
+            Ok(n) => bytes_read += n,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {},
+            Err(e) => return Err(e.into()),
+        }
     }
+    let was_truncated = bytes_read < expected_len;
+    if was_truncated && recovery_mode == RecoveryMode::Strict {
+        return Err(ctx.err_truncated_record(Some(expected_len), Some(bytes_read)));
+    }
+    Ok((data, was_truncated))
 }
 
 /// A parsed 12-byte directory entry: tag, field length in bytes, and start
@@ -696,7 +700,9 @@ mod tests {
     #[test]
     fn read_record_data_full_read() {
         let mut reader = Cursor::new(vec![b'x'; 76]);
-        let (data, truncated) = read_record_data(&mut reader, 100, RecoveryMode::Strict).unwrap();
+        let ctx = ParseContext::new();
+        let (data, truncated) =
+            read_record_data(&mut reader, 100, RecoveryMode::Strict, &ctx).unwrap();
         assert_eq!(data.len(), 76);
         assert!(!truncated);
     }
@@ -704,16 +710,33 @@ mod tests {
     #[test]
     fn read_record_data_strict_mode_errors_on_truncation() {
         let mut reader = Cursor::new(vec![b'x'; 50]);
-        assert!(matches!(
-            read_record_data(&mut reader, 100, RecoveryMode::Strict),
-            Err(MarcError::TruncatedRecord { .. })
-        ));
+        let mut ctx = ParseContext::new().with_source_name("test.mrc");
+        ctx.begin_record();
+        let err = read_record_data(&mut reader, 100, RecoveryMode::Strict, &ctx)
+            .expect_err("strict mode should error on truncation");
+        match err {
+            MarcError::TruncatedRecord {
+                record_index,
+                source_name,
+                expected_length,
+                actual_length,
+                ..
+            } => {
+                assert_eq!(record_index, Some(1));
+                assert_eq!(source_name.as_deref(), Some("test.mrc"));
+                assert_eq!(expected_length, Some(76));
+                assert_eq!(actual_length, Some(50));
+            },
+            other => panic!("expected TruncatedRecord, got {other:?}"),
+        }
     }
 
     #[test]
     fn read_record_data_lenient_mode_returns_truncated_flag() {
         let mut reader = Cursor::new(vec![b'x'; 50]);
-        let (data, truncated) = read_record_data(&mut reader, 100, RecoveryMode::Lenient).unwrap();
+        let ctx = ParseContext::new();
+        let (data, truncated) =
+            read_record_data(&mut reader, 100, RecoveryMode::Lenient, &ctx).unwrap();
         assert_eq!(data.len(), 76);
         assert!(truncated);
     }
