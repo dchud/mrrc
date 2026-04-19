@@ -166,10 +166,10 @@ impl EncodingValidator {
                 primary,
                 secondary,
                 field_count,
-            } => Err(MarcError::EncodingError(format!(
+            } => Err(MarcError::encoding_msg(format!(
                 "Mixed encodings detected: primary={primary:?}, secondary={secondary:?}, affected fields={field_count}"
             ))),
-            EncodingAnalysis::Undetermined => Err(MarcError::EncodingError(
+            EncodingAnalysis::Undetermined => Err(MarcError::encoding_msg(
                 "Unable to determine encoding".to_string(),
             )),
         }

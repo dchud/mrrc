@@ -38,7 +38,7 @@ impl MarcEncoding {
         match c {
             ' ' => Ok(MarcEncoding::Marc8),
             'a' => Ok(MarcEncoding::Utf8),
-            _ => Err(MarcError::EncodingError(format!(
+            _ => Err(MarcError::encoding_msg(format!(
                 "Unknown character encoding: {c}"
             ))),
         }
@@ -62,7 +62,7 @@ impl MarcEncoding {
 pub fn decode_bytes(bytes: &[u8], encoding: MarcEncoding) -> Result<String> {
     match encoding {
         MarcEncoding::Utf8 => String::from_utf8(bytes.to_vec())
-            .map_err(|e| MarcError::EncodingError(format!("Invalid UTF-8: {e}"))),
+            .map_err(|e| MarcError::encoding_msg(format!("Invalid UTF-8: {e}"))),
         MarcEncoding::Marc8 => decode_marc8(bytes),
     }
 }
@@ -396,7 +396,7 @@ fn encode_marc8(s: &str) -> Result<Vec<u8>> {
             // For single-byte character sets, byte_value fits in u8
             // For EACC (multi-byte), this is handled separately above
             bytes.push(u8::try_from(byte_value).map_err(|_| {
-                MarcError::EncodingError(
+                MarcError::encoding_msg(
                     format!("Character byte value {byte_value} exceeds u8 range for charset {target_charset:?}")
                 )
             })?);

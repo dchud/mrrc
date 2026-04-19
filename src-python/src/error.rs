@@ -1,20 +1,24 @@
-// Error handling and mapping from Rust to Python exceptions
+// Error handling and mapping from Rust to Python exceptions.
+//
+// This is a temporary fall-through mapping that produces bare PyValueError /
+// PyIOError exceptions with formatted strings. Python-side typed exception
+// construction with positional kwargs lands in a subsequent change once the
+// Python exception class hierarchy is updated to accept the new attributes.
 
 use mrrc::MarcError;
 use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::PyErr;
 
-/// Map Rust MarcError to Python exceptions
+/// Map a Rust [`MarcError`] to a Python exception.
 pub fn marc_error_to_py_err(err: MarcError) -> PyErr {
     match err {
-        MarcError::InvalidRecord(msg) => PyValueError::new_err(format!("Invalid record: {}", msg)),
-        MarcError::InvalidLeader(msg) => PyValueError::new_err(format!("Invalid leader: {}", msg)),
-        MarcError::InvalidField(msg) => PyValueError::new_err(format!("Invalid field: {}", msg)),
-        MarcError::EncodingError(msg) => PyValueError::new_err(format!("Encoding error: {}", msg)),
-        MarcError::ParseError(msg) => PyValueError::new_err(format!("Parse error: {}", msg)),
-        MarcError::TruncatedRecord(msg) => {
-            PyValueError::new_err(format!("Truncated record: {}", msg))
+        MarcError::IoError { cause, .. } => PyIOError::new_err(cause.to_string()),
+        MarcError::XmlError { cause, .. } => {
+            PyValueError::new_err(format!("XML parse error: {}", cause))
         },
-        MarcError::IoError(io_err) => PyIOError::new_err(io_err.to_string()),
+        MarcError::JsonError { cause, .. } => {
+            PyValueError::new_err(format!("JSON parse error: {}", cause))
+        },
+        other => PyValueError::new_err(other.to_string()),
     }
 }

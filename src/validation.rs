@@ -338,13 +338,13 @@ impl IndicatorValidator {
     pub fn validate_indicators(&self, tag: &str, indicator1: char, indicator2: char) -> Result<()> {
         if let Some(rules) = self.rules.get(tag) {
             if !rules.indicator1.is_valid(indicator1) {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid indicator1 '{}' for field {}: expected {:?}",
                     indicator1, tag, rules.indicator1
                 )));
             }
             if !rules.indicator2.is_valid(indicator2) {
-                return Err(MarcError::InvalidField(format!(
+                return Err(MarcError::invalid_field_msg(format!(
                     "Invalid indicator2 '{}' for field {}: expected {:?}",
                     indicator2, tag, rules.indicator2
                 )));

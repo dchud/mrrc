@@ -101,7 +101,7 @@ impl<R: Read> AuthorityMarcReader<R> {
 
         // Verify this is an authority record (Type Z)
         if leader.record_type != 'z' {
-            return Err(MarcError::InvalidRecord(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Expected authority record type 'z', got '{}'",
                 leader.record_type
             )));
@@ -122,7 +122,7 @@ impl<R: Read> AuthorityMarcReader<R> {
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             // For now, treat truncated authority records as a strict error
             // In the future, we could implement recovery logic
-            return Err(MarcError::TruncatedRecord(
+            return Err(MarcError::truncated_msg(
                 "Authority record is truncated".to_string(),
             ));
         }
@@ -153,7 +153,7 @@ impl<R: Read> AuthorityMarcReader<R> {
 
             if pos + 12 > directory.len() {
                 if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(MarcError::InvalidRecord(
+                    return Err(MarcError::invalid_field_msg(
                         "Incomplete directory entry".to_string(),
                     ));
                 }
@@ -162,7 +162,7 @@ impl<R: Read> AuthorityMarcReader<R> {
 
             // Parse directory entry (12 bytes: tag + length + start position)
             let tag = std::str::from_utf8(&directory[pos..pos + 3])
-                .map_err(|_| MarcError::InvalidRecord("Invalid field tag".to_string()))?
+                .map_err(|_| MarcError::invalid_field_msg("Invalid field tag".to_string()))?
                 .to_string();
 
             let length = iso2709::parse_4digits(&directory[pos + 3..pos + 7])?;
@@ -339,8 +339,8 @@ mod tests {
         let mut reader = AuthorityMarcReader::new(cursor);
 
         match reader.read_record() {
-            Err(MarcError::InvalidRecord(msg))
-                if msg.contains("Expected authority record type") =>
+            Err(MarcError::InvalidField { ref message, .. })
+                if message.contains("Expected authority record type") =>
             {
                 // Expected error
             },

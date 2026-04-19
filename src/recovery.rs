@@ -96,7 +96,7 @@ pub fn try_recover_record(
     let directory_size = base_address.saturating_sub(24);
 
     if directory_size == 0 {
-        return Err(MarcError::TruncatedRecord(
+        return Err(MarcError::truncated_msg(
             "No directory found in record".to_string(),
         ));
     }
@@ -152,7 +152,7 @@ pub fn try_recover_record(
 
         if start_position < data_start || end_position > partial_data.len() {
             if mode == RecoveryMode::Strict {
-                return Err(MarcError::TruncatedRecord(format!(
+                return Err(MarcError::truncated_msg(format!(
                     "Field {tag} data not available"
                 )));
             }
@@ -206,11 +206,11 @@ fn try_parse_field(
     use crate::record::Field;
 
     if data.is_empty() {
-        return Err(MarcError::InvalidField("Empty field data".to_string()));
+        return Err(MarcError::invalid_field_msg("Empty field data".to_string()));
     }
 
     if data.len() < 2 {
-        return Err(MarcError::InvalidField(
+        return Err(MarcError::invalid_field_msg(
             "Data field too short (needs indicators)".to_string(),
         ));
     }
@@ -248,7 +248,7 @@ fn try_parse_field(
             field.add_subfield(code, value);
             current_position = end;
         } else {
-            return Err(MarcError::InvalidField(
+            return Err(MarcError::invalid_field_msg(
                 "Expected subfield delimiter".to_string(),
             ));
         }
@@ -260,7 +260,7 @@ fn try_parse_field(
 /// Parse a 4-digit ASCII number from bytes
 fn parse_4digits(bytes: &[u8]) -> Result<usize> {
     if bytes.len() != 4 {
-        return Err(MarcError::InvalidRecord(format!(
+        return Err(MarcError::invalid_field_msg(format!(
             "Expected 4-digit field, got {} bytes",
             bytes.len()
         )));
@@ -268,13 +268,13 @@ fn parse_4digits(bytes: &[u8]) -> Result<usize> {
 
     let s = String::from_utf8_lossy(bytes);
     s.parse::<usize>()
-        .map_err(|_| MarcError::InvalidRecord(format!("Invalid numeric field: '{s}'")))
+        .map_err(|_| MarcError::invalid_field_msg(format!("Invalid numeric field: '{s}'")))
 }
 
 /// Parse a 5-digit ASCII number from bytes
 fn parse_digits(bytes: &[u8]) -> Result<usize> {
     if bytes.len() != 5 {
-        return Err(MarcError::InvalidRecord(format!(
+        return Err(MarcError::invalid_field_msg(format!(
             "Expected 5-digit field, got {} bytes",
             bytes.len()
         )));
@@ -282,7 +282,7 @@ fn parse_digits(bytes: &[u8]) -> Result<usize> {
 
     let s = String::from_utf8_lossy(bytes);
     s.parse::<usize>()
-        .map_err(|_| MarcError::InvalidRecord(format!("Invalid numeric field: '{s}'")))
+        .map_err(|_| MarcError::invalid_field_msg(format!("Invalid numeric field: '{s}'")))
 }
 
 #[cfg(test)]
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn test_recovery_mode_lenient() {
         let mut ctx = RecoveryContext::new(RecoveryMode::Lenient);
-        let error = MarcError::InvalidField("test".to_string());
+        let error = MarcError::invalid_field_msg("test".to_string());
         let result: Result<Option<()>> = ctx.recover(error, "test context");
         assert!(result.is_ok());
         assert!(ctx.has_errors);
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn test_recovery_mode_strict() {
         let mut ctx = RecoveryContext::new(RecoveryMode::Strict);
-        let error = MarcError::InvalidField("test".to_string());
+        let error = MarcError::invalid_field_msg("test".to_string());
         let result: Result<Option<()>> = ctx.recover(error, "test context");
         assert!(result.is_err());
     }

@@ -53,7 +53,7 @@ pub fn read_leader_bytes<R: Read>(reader: &mut R) -> Result<Option<[u8; LEADER_L
     match reader.read_exact(&mut buf) {
         Ok(()) => Ok(Some(buf)),
         Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Ok(None),
-        Err(e) => Err(MarcError::IoError(e)),
+        Err(e) => Err(e.into()),
     }
 }
 
@@ -80,14 +80,14 @@ pub fn read_record_data<R: Read>(
         Ok(()) => Ok((data, false)),
         Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
             if recovery_mode == RecoveryMode::Strict {
-                Err(MarcError::TruncatedRecord(
+                Err(MarcError::truncated_msg(
                     "Unexpected end of file while reading record data".to_string(),
                 ))
             } else {
                 Ok((data, true))
             }
         },
-        Err(e) => Err(MarcError::IoError(e)),
+        Err(e) => Err(e.into()),
     }
 }
 
@@ -107,17 +107,17 @@ pub struct DirectoryEntry {
 ///
 /// # Errors
 ///
-/// Returns [`MarcError::InvalidRecord`] if the slice is shorter than 12 bytes,
+/// Returns an error if the slice is shorter than 12 bytes,
 /// the tag is not valid UTF-8, or either numeric field contains a non-digit byte.
 pub fn parse_directory_entry(entry: &[u8]) -> Result<DirectoryEntry> {
     if entry.len() < DIRECTORY_ENTRY_LEN {
-        return Err(MarcError::InvalidRecord(format!(
+        return Err(MarcError::invalid_field_msg(format!(
             "Directory entry too short: expected {DIRECTORY_ENTRY_LEN} bytes, got {}",
             entry.len()
         )));
     }
     let tag = std::str::from_utf8(&entry[0..3])
-        .map_err(|_| MarcError::InvalidRecord("Invalid tag encoding".to_string()))?
+        .map_err(|_| MarcError::invalid_field_msg("Invalid tag encoding".to_string()))?
         .to_string();
     let length = parse_4digits(&entry[3..7])?;
     let start = parse_5digits(&entry[7..12])?;
@@ -128,11 +128,11 @@ pub fn parse_directory_entry(entry: &[u8]) -> Result<DirectoryEntry> {
 ///
 /// # Errors
 ///
-/// Returns [`MarcError::InvalidRecord`] if `bytes` is not exactly 4 bytes long
+/// Returns an error if `bytes` is not exactly 4 bytes long
 /// or contains any non-digit byte.
 pub fn parse_4digits(bytes: &[u8]) -> Result<usize> {
     if bytes.len() != 4 {
-        return Err(MarcError::InvalidRecord(format!(
+        return Err(MarcError::invalid_field_msg(format!(
             "Expected 4-digit field, got {} bytes",
             bytes.len()
         )));
@@ -144,11 +144,11 @@ pub fn parse_4digits(bytes: &[u8]) -> Result<usize> {
 ///
 /// # Errors
 ///
-/// Returns [`MarcError::InvalidRecord`] if `bytes` is not exactly 5 bytes long
+/// Returns an error if `bytes` is not exactly 5 bytes long
 /// or contains any non-digit byte.
 pub fn parse_5digits(bytes: &[u8]) -> Result<usize> {
     if bytes.len() != 5 {
-        return Err(MarcError::InvalidRecord(format!(
+        return Err(MarcError::invalid_field_msg(format!(
             "Expected 5-digit field, got {} bytes",
             bytes.len()
         )));
@@ -165,7 +165,7 @@ fn parse_ascii_digits(bytes: &[u8]) -> Result<usize> {
         if byte.is_ascii_digit() {
             result = result * 10 + (byte - b'0') as usize;
         } else {
-            return Err(MarcError::InvalidRecord(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Invalid numeric field: expected digits, got byte {}",
                 byte as char
             )));
@@ -221,7 +221,7 @@ mod tests {
         let mut reader = Cursor::new(vec![b'x'; 50]);
         assert!(matches!(
             read_record_data(&mut reader, 100, RecoveryMode::Strict),
-            Err(MarcError::TruncatedRecord(_))
+            Err(MarcError::TruncatedRecord { .. })
         ));
     }
 

@@ -1,5 +1,12 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
+// MarcError carries structured positional metadata (record index, byte
+// offsets, control number, source filename, etc.) which makes its struct
+// variants larger than clippy's default threshold for the error half of a
+// Result. The visibility of that metadata is the whole point of the type;
+// shrinking it via Box<MarcError> would add an allocation to every error
+// without addressing a real performance concern (errors are off the hot path).
+#![allow(clippy::result_large_err)]
 
 //! # MRRC: MARC Rust Crate
 //!

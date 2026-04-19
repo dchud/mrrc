@@ -99,7 +99,7 @@ impl<R: Read> HoldingsMarcReader<R> {
 
         // Verify this is a holdings record (Type x/y/v/u)
         if !matches!(leader.record_type, 'x' | 'y' | 'v' | 'u') {
-            return Err(MarcError::InvalidRecord(format!(
+            return Err(MarcError::invalid_field_msg(format!(
                 "Expected holdings record type (x/y/v/u), got '{}'",
                 leader.record_type
             )));
@@ -118,7 +118,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             iso2709::read_record_data(&mut self.reader, record_length, self.recovery_mode)?;
 
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
-            return Err(MarcError::TruncatedRecord(
+            return Err(MarcError::truncated_msg(
                 "Holdings record is truncated".to_string(),
             ));
         }
@@ -134,7 +134,7 @@ impl<R: Read> HoldingsMarcReader<R> {
         let mut i = 0;
         while i + 12 <= directory_bytes.len() {
             let tag = std::str::from_utf8(&directory_bytes[i..i + 3])
-                .map_err(|_| MarcError::InvalidRecord("Invalid tag encoding".to_string()))?
+                .map_err(|_| MarcError::invalid_field_msg("Invalid tag encoding".to_string()))?
                 .to_string();
 
             let length = iso2709::parse_4digits(&directory_bytes[i + 3..i + 7])?;
@@ -142,7 +142,7 @@ impl<R: Read> HoldingsMarcReader<R> {
 
             let end = start + length;
             if end > data_section.len() {
-                return Err(MarcError::InvalidRecord(
+                return Err(MarcError::invalid_field_msg(
                     "Field extends beyond data section".to_string(),
                 ));
             }
@@ -154,14 +154,14 @@ impl<R: Read> HoldingsMarcReader<R> {
                 // Control field (000-009)
                 let value = std::str::from_utf8(&field_data[..field_data.len() - 1])
                     .map_err(|_| {
-                        MarcError::InvalidRecord("Invalid control field encoding".to_string())
+                        MarcError::invalid_field_msg("Invalid control field encoding".to_string())
                     })?
                     .to_string();
                 control_fields.entry(tag).or_default().push(value);
             } else {
                 // Data field
                 if field_data.len() < 3 {
-                    return Err(MarcError::InvalidRecord(
+                    return Err(MarcError::invalid_field_msg(
                         "Data field too short for indicators".to_string(),
                     ));
                 }
@@ -189,7 +189,9 @@ impl<R: Read> HoldingsMarcReader<R> {
                         }
                         let value = std::str::from_utf8(&value_bytes)
                             .map_err(|_| {
-                                MarcError::InvalidRecord("Invalid subfield encoding".to_string())
+                                MarcError::invalid_field_msg(
+                                    "Invalid subfield encoding".to_string(),
+                                )
                             })?
                             .to_string();
                         subfields.push(crate::record::Subfield { code, value });

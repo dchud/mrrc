@@ -210,7 +210,7 @@ impl<R: Read> MarcReader<R> {
 
             if pos + 12 > directory.len() {
                 if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(MarcError::InvalidRecord(
+                    return Err(MarcError::invalid_field_msg(
                         "Incomplete directory entry".to_string(),
                     ));
                 } else {
@@ -247,7 +247,7 @@ impl<R: Read> MarcReader<R> {
             let end_position = start_position + field_length;
             if end_position > data.len() {
                 if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(MarcError::InvalidRecord(format!(
+                    return Err(MarcError::invalid_field_msg(format!(
                         "Field {tag} exceeds data area"
                     )));
                 } else {
@@ -292,7 +292,9 @@ impl<R: Read> MarcReader<R> {
                         Ok(field) => record.add_field(field),
                         Err(e) => {
                             if self.recovery_mode == RecoveryMode::Strict {
-                                return Err(MarcError::InvalidField(format!("Tag {tag}: {e}")));
+                                return Err(MarcError::invalid_field_msg(format!(
+                                    "Tag {tag}: {e}"
+                                )));
                             }
                             // In lenient/permissive mode, skip this field and continue
                         },
@@ -321,7 +323,7 @@ impl<R: Read + std::fmt::Debug> FormatReader for MarcReader<R> {
 /// Parse a data field from raw bytes
 fn parse_data_field(data: &[u8], tag: &str) -> Result<Field> {
     if data.len() < 2 {
-        return Err(MarcError::InvalidField(
+        return Err(MarcError::invalid_field_msg(
             "Data field too short (needs indicators)".to_string(),
         ));
     }
@@ -362,7 +364,7 @@ fn parse_data_field(data: &[u8], tag: &str) -> Result<Field> {
             field.add_subfield(code, value);
             current_position = end;
         } else {
-            return Err(MarcError::InvalidField(
+            return Err(MarcError::invalid_field_msg(
                 "Expected subfield delimiter".to_string(),
             ));
         }
