@@ -555,15 +555,13 @@ impl<'a> MarcToBibframeConverter<'a> {
                         );
                     }
                 },
-                'e' => {
+                'e' if !field.subfields.iter().any(|s| s.code == '4') => {
                     // Relator term - use as literal if no $4
-                    if !field.subfields.iter().any(|s| s.code == '4') {
-                        self.graph.add(
-                            contribution.clone(),
-                            format!("{BF}{}", properties::ROLE),
-                            RdfNode::literal(&subfield.value),
-                        );
-                    }
+                    self.graph.add(
+                        contribution.clone(),
+                        format!("{BF}{}", properties::ROLE),
+                        RdfNode::literal(&subfield.value),
+                    );
                 },
                 _ => {},
             }
@@ -1908,23 +1906,17 @@ impl<'a> MarcToBibframeConverter<'a> {
             };
 
             match subfield.code {
-                'a' => {
-                    if self.config.include_bflc {
-                        self.graph
-                            .add(activity_node.clone(), format!("{BFLC}simplePlace"), node);
-                    }
+                'a' if self.config.include_bflc => {
+                    self.graph
+                        .add(activity_node.clone(), format!("{BFLC}simplePlace"), node);
                 },
-                'b' => {
-                    if self.config.include_bflc {
-                        self.graph
-                            .add(activity_node.clone(), format!("{BFLC}simpleAgent"), node);
-                    }
+                'b' if self.config.include_bflc => {
+                    self.graph
+                        .add(activity_node.clone(), format!("{BFLC}simpleAgent"), node);
                 },
-                'c' => {
-                    if self.config.include_bflc {
-                        self.graph
-                            .add(activity_node.clone(), format!("{BFLC}simpleDate"), node);
-                    }
+                'c' if self.config.include_bflc => {
+                    self.graph
+                        .add(activity_node.clone(), format!("{BFLC}simpleDate"), node);
                 },
                 _ => {},
             }
