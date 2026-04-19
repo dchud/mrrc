@@ -4,10 +4,37 @@ This guide covers setting up a local development environment for MRRC.
 
 ## Prerequisites
 
-- **Rust** 1.71+ (see `Cargo.toml` for minimum version)
+- **Rust** via [rustup](https://rustup.rs/) — `rust-toolchain.toml` in the
+  repo root pins the contributor toolchain version, and rustup
+  auto-installs it on first `cargo` invocation. See [Rust
+  Toolchain](#rust-toolchain) below for why you should not use Homebrew's
+  `rust` package. (The library's published MSRV, for downstream
+  consumers of the crate itself, is in `Cargo.toml` → `rust-version` and
+  is separate from the contributor toolchain.)
 - **Python** 3.10+
 - **maturin** 1.0+ (for building Python bindings)
 - **uv** (recommended) or pip for Python package management
+
+## Rust Toolchain
+
+The repo pins a specific Rust version in `rust-toolchain.toml`. If you
+use rustup, this is transparent — rustup reads the file and installs the
+pinned toolchain on first use. No manual version selection needed.
+
+**Do not install Rust via Homebrew** (`brew install rust`). Homebrew's
+rust package is a standalone compiler install and does not respect
+`rust-toolchain.toml`. You will silently drift from CI and see lint or
+test failures locally that don't reproduce in CI (or vice versa). If you
+currently have brew rust installed, uninstall it and use rustup instead:
+
+```bash
+brew uninstall rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+```
+
+After that, any `cargo` command run in the repo root will trigger rustup
+to install the pinned toolchain automatically.
 
 ## Quick Setup
 
@@ -140,10 +167,20 @@ mrrc/
 
 ### maturin develop fails
 
-Ensure you have the correct Rust toolchain:
+Verify your toolchain matches `rust-toolchain.toml`:
+
 ```bash
-rustup show
-rustup update stable
+rustup show active-toolchain   # should match the pinned version
+rustc --version                 # should match the pinned version
+```
+
+If rustup hasn't installed the pinned toolchain yet, running any
+`cargo` command in the repo root will trigger it automatically. If that
+fails, install the pinned version manually (substitute the version from
+`rust-toolchain.toml`):
+
+```bash
+rustup toolchain install 1.95.0
 ```
 
 ### Python import fails after rebuild

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI Clippy failure on `main`** ([#96](https://github.com/dchud/mrrc/issues/96), [#97](https://github.com/dchud/mrrc/pull/97)): Rust stable advanced to 1.95.0 on GitHub Actions and expanded `clippy::collapsible_match` to catch 4 pre-existing cases in `src/bibframe/converter.rs`. With `-D warnings` in the lint workflow, these became hard errors. Fixed by collapsing each flagged match arm from `'x' => { if cond { ... } }` to `'x' if cond => { ... }`; behaviour preserved (each `match` ends in `_ => {}` so fall-through is identical).
+
+### Changed
+
+- **Pinned Rust toolchain to 1.95.0** ([#96](https://github.com/dchud/mrrc/issues/96), [#97](https://github.com/dchud/mrrc/pull/97)): Added `rust-toolchain.toml` at the repo root so local development and CI resolve to identical Rust + clippy versions. Contributors using rustup get the pinned toolchain auto-installed on first `cargo` invocation. The library's published MSRV (`Cargo.toml` → `rust-version = "1.71"`) is separate and unchanged. Updated `docs/contributing/development-setup.md` to document this, warn against installing Rust via Homebrew (incompatible with `rust-toolchain.toml`), and refresh the troubleshooting section.
+
 ## [0.7.6] - 2026-04-14
 
 ### Added
