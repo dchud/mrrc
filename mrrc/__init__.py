@@ -134,15 +134,35 @@ class _MrrcExceptionBase:
     # tuple, dropping instance __dict__. Override __reduce__ so kwargs
     # survive a pickle round-trip.
 
+    # Per-subclass extra attributes that should be preserved across pickle
+    # round-trips in addition to _POSITIONAL_FIELDS. Subclasses with extra
+    # __init__ kwargs (e.g., InvalidField.message) override this.
+    _pickle_extra_fields: tuple = ()
+
     def __reduce__(self):
         return (self.__class__, (), self._pickle_state())
 
     def __setstate__(self, state) -> None:
+        # Whitelist state keys against the per-class allowed set. Without
+        # this, a maliciously-crafted pickle could setattr arbitrary names
+        # (including __dict__ or method names) and shadow class methods on
+        # the instance — pickle deserialization itself is the RCE primitive,
+        # but blind setattr amplifies the blast radius unnecessarily.
+        allowed = set(_POSITIONAL_FIELDS) | set(self._pickle_extra_fields)
+        unexpected = set(state) - allowed
+        if unexpected:
+            raise TypeError(
+                f"Refusing to set unexpected attributes during pickle restore: "
+                f"{', '.join(sorted(unexpected))}"
+            )
         for k, v in state.items():
             setattr(self, k, v)
 
     def _pickle_state(self) -> dict:
-        return {f: getattr(self, f) for f in _POSITIONAL_FIELDS}
+        state = {f: getattr(self, f) for f in _POSITIONAL_FIELDS}
+        for f in self._pickle_extra_fields:
+            state[f] = getattr(self, f, None)
+        return state
 
     # --- rendering ------------------------------------------------------
     # _format is the actionable one-liner shown by str(err); detailed() is
@@ -315,6 +335,8 @@ class BadSubfieldCode(RecordDirectoryInvalid):
 class InvalidField(RecordDirectoryInvalid):
     """A data field is structurally invalid in some way not covered by the more specific subclasses."""
 
+    _pickle_extra_fields = ("message",)
+
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
         super().__init__(*args, **kwargs)
@@ -327,6 +349,8 @@ class InvalidField(RecordDirectoryInvalid):
 
 class TruncatedRecord(EndOfRecordNotFound):
     """The record was truncated mid-stream."""
+
+    _pickle_extra_fields = ("expected_length", "actual_length")
 
     def __init__(self, *args, expected_length=None, actual_length=None, **kwargs) -> None:
         self.expected_length = expected_length
@@ -345,6 +369,8 @@ class TruncatedRecord(EndOfRecordNotFound):
 class EncodingError(MrrcException):
     """A character encoding conversion failed."""
 
+    _pickle_extra_fields = ("message",)
+
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
         super().__init__(*args, **kwargs)
@@ -357,6 +383,8 @@ class EncodingError(MrrcException):
 
 class XmlError(MrrcException):
     """An error occurred during MARCXML parsing."""
+
+    _pickle_extra_fields = ("message",)
 
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
@@ -371,6 +399,8 @@ class XmlError(MrrcException):
 class JsonError(MrrcException):
     """An error occurred during MARCJSON parsing."""
 
+    _pickle_extra_fields = ("message",)
+
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message
         super().__init__(*args, **kwargs)
@@ -383,6 +413,8 @@ class JsonError(MrrcException):
 
 class WriterError(MrrcException):
     """An error occurred while writing a MARC record."""
+
+    _pickle_extra_fields = ("message",)
 
     def __init__(self, *args, message=None, **kwargs) -> None:
         self.message = message

@@ -17,15 +17,23 @@ use pyo3::PyErr;
 pub fn marc_error_to_py_err(err: MarcError) -> PyErr {
     Python::attach(|py| match build_typed(py, &err) {
         Ok(typed) => PyErr::from_value(typed),
-        Err(_) => fallback(err),
+        Err(construction_err) => fallback_with_cause(py, err, Some(construction_err)),
     })
 }
 
-fn fallback(err: MarcError) -> PyErr {
-    match err {
-        MarcError::IoError { cause, .. } => PyIOError::new_err(cause.to_string()),
+fn fallback_with_cause(py: Python<'_>, err: MarcError, cause: Option<PyErr>) -> PyErr {
+    let py_err = match err {
+        MarcError::IoError { cause: io, .. } => PyIOError::new_err(io.to_string()),
         other => PyValueError::new_err(other.to_string()),
+    };
+    // Chain the construction failure as __cause__ so a broken install (mrrc
+    // missing, class shape changed, kwargs rejected) is debuggable instead
+    // of silently swallowed. Skipped when the variant is IoError, where we
+    // intentionally route through the fallback path.
+    if let Some(cause) = cause {
+        py_err.set_cause(py, Some(cause));
     }
+    py_err
 }
 
 /// Construct the typed Python exception instance corresponding to `err`.
