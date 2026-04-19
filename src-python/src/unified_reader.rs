@@ -174,11 +174,7 @@ impl UnifiedReader {
             .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
 
         if record_data.len() != remaining {
-            return Err(ParseError::invalid_record(format!(
-                "Truncated record: expected {} bytes, got {}",
-                remaining,
-                record_data.len()
-            )));
+            return Err(ParseError::truncated_record(remaining, record_data.len()));
         }
 
         // Assemble complete record

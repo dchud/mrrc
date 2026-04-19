@@ -203,11 +203,10 @@ impl ReaderBackend {
         match reader.read_exact(&mut record_data) {
             Ok(()) => {},
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                return Err(ParseError::invalid_record(format!(
-                    "Truncated record: expected {} bytes, got {}",
+                return Err(ParseError::truncated_record(
                     record_length - 24,
-                    record_data.len()
-                )))
+                    record_data.len(),
+                ));
             },
             Err(e) => {
                 return Err(ParseError::io_error(format!(
@@ -282,11 +281,10 @@ impl ReaderBackend {
             .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
 
         if record_data.len() != record_length - 24 {
-            return Err(ParseError::invalid_record(format!(
-                "Truncated record: expected {} bytes, got {}",
+            return Err(ParseError::truncated_record(
                 record_length - 24,
-                record_data.len()
-            )));
+                record_data.len(),
+            ));
         }
 
         // Assemble complete record

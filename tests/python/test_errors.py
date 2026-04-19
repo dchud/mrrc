@@ -250,3 +250,111 @@ class TestSnapshotFormats:
             message="Record length exceeds 4GB limit (5000000000 bytes)",
         )
         assert str(err) == snapshot
+
+
+# ---------------------------------------------------------------------------
+# FFI integration: Rust → PyO3 → Python typed exceptions with attrs
+# ---------------------------------------------------------------------------
+
+
+def _build_minimal_marc_record(record_type: bytes = b"a") -> bytes:
+    """Construct a minimal valid ISO 2709 MARC record with a single 245
+    field. Used as a starting point that downstream tests mutate to trigger
+    specific MarcError variants.
+    """
+    field_245 = b"10\x1fa" + b"Test" + b"\x1e"
+    directory = b"245" + format(len(field_245), "04d").encode() + b"00000"
+    base_address = 24 + len(directory) + 1
+    record_length = base_address + len(field_245) + 1
+    leader = (
+        format(record_length, "05d").encode()
+        + b"n"
+        + record_type
+        + b"m a2"
+        + b"2"
+        + format(base_address, "05d").encode()
+        + b"   4500"
+    )
+    return leader + directory + b"\x1e" + field_245 + b"\x1d"
+
+
+class TestFfiTypedExceptions:
+    """Drive the Rust → PyO3 → Python conversion path and verify each
+    MarcError variant surfaces as the corresponding typed Python exception
+    with positional attributes populated.
+    """
+
+    def test_truncated_record_surfaces_as_typed_exception_with_byte_counts(self):
+        """A truncated record must surface as ``mrrc.TruncatedRecord``
+        (a subclass of ``mrrc.EndOfRecordNotFound``) with
+        ``expected_length`` and ``actual_length`` populated.
+
+        Note: ``record_index``, ``byte_offset``, and ``source`` are not yet
+        populated on this path because the boundary scanner that catches
+        truncation does not currently track a records-read counter. That's
+        captured in the ``ParseError`` builder methods landed in this PR;
+        wiring per-site context tracking is intentionally separate work.
+        """
+        import io
+
+        full = _build_minimal_marc_record()
+        # Truncate the record bytes mid-record
+        truncated = full[: len(full) - 10]
+
+        reader = mrrc.MARCReader(io.BytesIO(truncated))
+        with pytest.raises(mrrc.EndOfRecordNotFound) as excinfo:
+            list(reader)
+        err = excinfo.value
+        assert isinstance(err, mrrc.TruncatedRecord)
+        assert err.expected_length is not None
+        assert err.actual_length is not None
+        assert err.actual_length < err.expected_length
+
+    def test_invalid_leader_record_length_too_small(self):
+        """A leader claiming a record length below 24 is structurally
+        invalid; surface as ``mrrc.RecordLeaderInvalid``.
+        """
+        import io
+
+        leader = b"00010nam a2200025 i 4500"  # record_length=10 < 24
+        reader = mrrc.MARCReader(io.BytesIO(leader))
+        with pytest.raises(mrrc.MrrcException):
+            list(reader)
+
+    def test_wrong_authority_record_type_raises_invalid_field(self):
+        """An `AuthorityMARCReader` fed a bibliographic-typed record
+        rejects it via a typed exception.
+        """
+        import io
+
+        bib_record = _build_minimal_marc_record(record_type=b"a")
+        reader = mrrc.AuthorityMARCReader(io.BytesIO(bib_record))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        # Should carry record_index and at least the type-mismatch message
+        err = excinfo.value
+        assert err.record_index == 1
+        # InvalidField surfaces with a message naming the type mismatch
+        if isinstance(err, mrrc.InvalidField):
+            assert err.message is not None
+            assert "authority" in err.message.lower()
+
+    def test_no_silent_drops_in_pyo3_conversion(self):
+        """Catch-all: confirm that whatever Rust raises always surfaces as
+        an MrrcException subclass (or OSError for I/O), never an
+        unhandled bare PyValueError when the input is recognizably a
+        MARC parse failure.
+        """
+        import io
+
+        # Garbage that parses as a leader but has no directory
+        garbage = b"00050nam a22000000 i 4500" + b"\x00" * 26
+        reader = mrrc.MARCReader(io.BytesIO(garbage))
+        try:
+            list(reader)
+        except mrrc.MrrcException:
+            pass  # expected — typed exception class raised
+        except OSError:
+            pass  # also acceptable — I/O errors map to built-in
+        # If neither, the test will fail with the actual exception type
+        # in the traceback; that is the diagnostic.

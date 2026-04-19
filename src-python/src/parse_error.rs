@@ -28,6 +28,12 @@ pub enum ParseErrorKind {
     InvalidRecord(String),
     /// ISO 2709 record boundary detection failed.
     RecordBoundaryError(String),
+    /// The record was truncated mid-stream. Carries the expected and
+    /// actual byte counts when known.
+    TruncatedRecord {
+        expected_length: Option<usize>,
+        actual_length: Option<usize>,
+    },
     /// I/O error reading from file or Python file object.
     IoError(String),
 }
@@ -50,6 +56,13 @@ impl fmt::Display for ParseError {
         match &self.kind {
             ParseErrorKind::InvalidRecord(msg) => write!(f, "Invalid record: {msg}"),
             ParseErrorKind::RecordBoundaryError(msg) => write!(f, "Record boundary error: {msg}"),
+            ParseErrorKind::TruncatedRecord {
+                expected_length,
+                actual_length,
+            } => match (expected_length, actual_length) {
+                (Some(e), Some(a)) => write!(f, "Truncated record: expected {e} bytes, got {a}"),
+                _ => write!(f, "Truncated record"),
+            },
             ParseErrorKind::IoError(msg) => write!(f, "IO error: {msg}"),
         }
     }
@@ -86,6 +99,21 @@ impl ParseError {
     pub fn record_boundary_error(msg: impl Into<String>) -> Self {
         Self {
             kind: ParseErrorKind::RecordBoundaryError(msg.into()),
+            context: ParseErrorContext::default(),
+        }
+    }
+
+    /// Construct a `TruncatedRecord` error with the expected/actual byte
+    /// counts. The boundary-scanner / buffered-reader paths use this when
+    /// they detect a record shorter than its declared length so the typed
+    /// Python exception (`mrrc.TruncatedRecord`) surfaces with byte-count
+    /// metadata rather than a generic `InvalidField`.
+    pub fn truncated_record(expected_length: usize, actual_length: usize) -> Self {
+        Self {
+            kind: ParseErrorKind::TruncatedRecord {
+                expected_length: Some(expected_length),
+                actual_length: Some(actual_length),
+            },
             context: ParseErrorContext::default(),
         }
     }
@@ -145,6 +173,18 @@ impl ParseError {
                 record_control_number: None,
                 field_tag: None,
                 message: format!("record boundary error: {msg}"),
+            },
+            ParseErrorKind::TruncatedRecord {
+                expected_length,
+                actual_length,
+            } => MarcError::TruncatedRecord {
+                record_index: self.context.record_index,
+                byte_offset: self.context.byte_offset,
+                record_byte_offset: None,
+                source_name: self.context.source_name.clone(),
+                record_control_number: None,
+                expected_length: *expected_length,
+                actual_length: *actual_length,
             },
             ParseErrorKind::IoError(msg) => MarcError::IoError {
                 cause: std::io::Error::other(msg.clone()),

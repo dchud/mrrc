@@ -93,10 +93,7 @@ impl PyHoldingsMARCReader {
                 Ok(None) => Ok(None),
                 Err(e) => {
                     self.backend = Some(HoldingsReaderBackend::RustFile(reader));
-                    Err(pyo3::exceptions::PyValueError::new_err(format!(
-                        "Failed to read record: {}",
-                        e
-                    )))
+                    Err(crate::error::marc_error_to_py_err(e))
                 },
             },
             HoldingsReaderBackend::CursorBackend(mut reader) => match reader.read_record() {
@@ -107,10 +104,7 @@ impl PyHoldingsMARCReader {
                 Ok(None) => Ok(None),
                 Err(e) => {
                     self.backend = Some(HoldingsReaderBackend::CursorBackend(reader));
-                    Err(pyo3::exceptions::PyValueError::new_err(format!(
-                        "Failed to read record: {}",
-                        e
-                    )))
+                    Err(crate::error::marc_error_to_py_err(e))
                 },
             },
             HoldingsReaderBackend::PythonFile(py_obj) => {
@@ -128,10 +122,7 @@ impl PyHoldingsMARCReader {
                                 Ok(Some(PyHoldingsRecord { inner: record }))
                             },
                             Ok(None) => Ok(None),
-                            Err(e) => Err(pyo3::exceptions::PyValueError::new_err(format!(
-                                "Failed to parse record: {}",
-                                e
-                            ))),
+                            Err(e) => Err(crate::error::marc_error_to_py_err(e)),
                         }
                     },
                 }
