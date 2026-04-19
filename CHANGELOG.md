@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+
+- **`MarcError` variants restructured from string-message tuple variants to structured struct variants.** Each variant now carries positional metadata: `record_index`, `byte_offset`, `record_byte_offset`, `record_control_number`, `field_tag`, `indicator_position`, `subfield_code`, `found` (bytes capped at 32), `expected`, and `source_name`. Wrapping variants (`IoError`, `XmlError`, `JsonError`) carry their underlying cause via `#[source]` so `std::error::Error::source()` walks the chain. Direct callers that constructed or pattern-matched `MarcError` variants need to update for the new struct shape. The `Display` output format has changed for every variant — anyone snapshot-testing or grepping log output sees different strings. The `MarcError::InvalidRecord` variant is removed; use the new specific variants (`DirectoryInvalid`, `RecordLengthInvalid`, etc.) or `InvalidField` as the fall-through.
+
+### Added
+
+- **Structured positional context on every parse error.** Each `MarcError` carries the record index in the stream, absolute and record-relative byte offsets, the 001 control number when available, the field tag and (where applicable) indicator position or subfield code being parsed, the bad bytes (capped at 32), and the source filename.
+- **`ParseContext` parsing context type and per-context error helpers** in `src/iso2709.rs`. The context tracks per-stream and per-record positional state; the `ctx.err_*` family of methods constructs the appropriate `MarcError` variant with all positional fields auto-populated.
+- **Shared subfield-parsing primitives** `iso2709::parse_data_field` and `iso2709::parse_subfields` with three named profiles (`DataFieldParseConfig::BIBLIOGRAPHIC`, `AUTHORITY`, `HOLDINGS`) capturing each existing reader's historical behavior for two orthogonal axes (lossy/strict UTF-8, error/skip on unrecognized bytes).
+- **`with_source` builder method and `from_path` constructor** on `MarcReader`, `AuthorityMarcReader`, and `HoldingsMarcReader`. `from_path` opens the file and sets the source name from the path so emitted errors include the filename.
+- **Opportunistic 001 extraction** during reading so errors raised after the 001 control field is decoded include `record_control_number`.
+- **`MarcError::detailed()` multi-line diagnostic** rendering with all populated positional fields visible in aligned columns. The default `Display` format produces a one-liner with byte offset visually subordinate.
+- **mrrc-specific Python exception subclasses** (`InvalidIndicator`, `BadSubfieldCode`, `InvalidField`, `TruncatedRecord`, `EncodingError`, `XmlError`, `JsonError`, `WriterError`) extending the closest pymarc-named parent so existing pymarc-style `except` clauses keep catching the same conditions while mrrc-aware code can opt into finer granularity.
+- **Positional attributes on every Python exception class** as keyword arguments, with bare-constructor compatibility preserved (`raise RecordLeaderInvalid()` still works) and pickle round-trip support via `__reduce__`/`__setstate__`. `__setstate__` whitelists incoming attribute names for defense-in-depth.
+- **Python `_format()` and `detailed()` methods on every exception class**, producing output byte-for-byte identical to the corresponding Rust `Display` and `MarcError::detailed()` outputs.
+- **PyO3 typed-exception construction** in `src-python/src/error.rs::marc_error_to_py_err` so each `MarcError` variant maps to its corresponding Python typed exception class with kwargs, replacing the previous bare `PyValueError`/`PyIOError` mapping. Falls through to bare `PyValueError` with `__cause__` chained when typed construction fails.
+- **`docs/reference/error-handling.md`** documenting the exception hierarchy, pymarc compatibility surface, per-variant fields, position semantics by format, source plumbing, recovery-mode interaction, and pickle behavior.
+- **Snapshot tests for the externally-visible error format** via `insta` (Rust) and `syrupy` (Python). Run `cargo insta review` and `pytest --snapshot-update` to refresh baselines when the format intentionally changes.
+
+### Changed
+
+- **`MarcError` source-error chain now walks correctly** for I/O, XML, and JSON variants (was previously empty). Callers walking error chains see new entries; code that was checking for `Error::source() == None` may need to update.
+- **`From<io::Error> for MarcError`** continues to work for `?` propagation but now produces the new `IoError { cause, .. }` struct shape rather than the previous tuple form.
+- **`src-python/src/parse_error.rs`**: `ParseError::to_py_err` now routes each variant through the main `marc_error_to_py_err` so the boundary-scanner / buffered-reader paths raise the same typed Python exception classes as the synchronous reader path. The `ParseError` enum API itself is unchanged so existing call sites need no edits.
+- **Shared ISO 2709 parsing primitives** (`src/iso2709.rs`) now own the leader read, truncation-aware record-data read, single-entry directory parsing, ASCII numeric helpers, and the control-field-tag predicate; the three readers delegate. The bibliographic, authority, and holdings readers' near-duplicate inline subfield-parsing loops are replaced with a single `iso2709::parse_data_field` call configured per-reader.
+
 ### Fixed
 
 - **CI Clippy failure on `main`** ([#96](https://github.com/dchud/mrrc/issues/96), [#97](https://github.com/dchud/mrrc/pull/97)): Rust stable advanced to 1.95.0 on GitHub Actions and expanded `clippy::collapsible_match` to catch 4 pre-existing cases in `src/bibframe/converter.rs`. With `-D warnings` in the lint workflow, these became hard errors. Fixed by collapsing each flagged match arm from `'x' => { if cond { ... } }` to `'x' if cond => { ... }`; behaviour preserved (each `match` ends in `_ => {}` so fall-through is identical).
