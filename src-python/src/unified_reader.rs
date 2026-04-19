@@ -120,17 +120,17 @@ impl UnifiedReader {
         // Read first 5 bytes (record length header)
         let read_method = file_obj
             .getattr("read")
-            .map_err(|e| ParseError::IoError(format!("Object missing .read() method: {}", e)))?;
+            .map_err(|e| ParseError::io_error(format!("Object missing .read() method: {}", e)))?;
 
         let length_result = read_method.call1((5usize,)).map_err(|e| {
-            ParseError::IoError(format!(
+            ParseError::io_error(format!(
                 "Failed to read length header from Python file: {}",
                 e
             ))
         })?;
 
         let length_bytes: Vec<u8> = length_result.extract().map_err(|_| {
-            ParseError::InvalidRecord("Record length header must be bytes".to_string())
+            ParseError::invalid_record("Record length header must be bytes".to_string())
         })?;
 
         if length_bytes.is_empty() {
@@ -138,7 +138,7 @@ impl UnifiedReader {
         }
 
         if length_bytes.len() < 5 {
-            return Err(ParseError::RecordBoundaryError(format!(
+            return Err(ParseError::record_boundary_error(format!(
                 "Incomplete record length header: got {} bytes, expected 5",
                 length_bytes.len()
             )));
@@ -147,14 +147,14 @@ impl UnifiedReader {
         // Parse record length
         let record_length_str = String::from_utf8_lossy(&length_bytes[0..5]);
         let record_length: usize = record_length_str.trim().parse().map_err(|_| {
-            ParseError::InvalidRecord(format!(
+            ParseError::invalid_record(format!(
                 "Invalid record length in header: '{}'",
                 record_length_str
             ))
         })?;
 
         if record_length < 24 {
-            return Err(ParseError::InvalidRecord(format!(
+            return Err(ParseError::invalid_record(format!(
                 "Record length {} is too small (minimum 24)",
                 record_length
             )));
@@ -163,7 +163,7 @@ impl UnifiedReader {
         // Read remaining bytes (record_length - 5 for already-read header)
         let remaining = record_length - 5;
         let record_data_result = read_method.call1((remaining,)).map_err(|e| {
-            ParseError::IoError(format!(
+            ParseError::io_error(format!(
                 "Failed to read record data from Python file: {}",
                 e
             ))
@@ -171,10 +171,10 @@ impl UnifiedReader {
 
         let record_data: Vec<u8> = record_data_result
             .extract()
-            .map_err(|_| ParseError::InvalidRecord("Record data must be bytes".to_string()))?;
+            .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
 
         if record_data.len() != remaining {
-            return Err(ParseError::InvalidRecord(format!(
+            return Err(ParseError::invalid_record(format!(
                 "Truncated record: expected {} bytes, got {}",
                 remaining,
                 record_data.len()
