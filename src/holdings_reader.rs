@@ -110,15 +110,13 @@ impl<R: Read> HoldingsMarcReader<R> {
         let base_address = leader.data_base_address as usize;
         let directory_size = base_address - 24;
 
-        // Read record data; in non-Strict modes a short read returns
-        // `(buffer, true)` and the recovery branch below handles it.
+        // Read record data. In non-Strict modes a short read returns
+        // `(buffer, true)`; salvage from a partial buffer is not implemented,
+        // so the recovery dispatch below is unreachable in practice (the read
+        // primitive returns a buffer of full length even on a short read).
         let (record_data, _was_truncated) =
             iso2709::read_record_data(&mut self.reader, record_length, self.recovery_mode)?;
 
-        // Handle truncation in recovery mode. The comparison is preserved
-        // verbatim from the pre-refactor reader: because the buffer is
-        // allocated at full length it is effectively dead today, and
-        // intentionally left so by PR1 to avoid any semantic change.
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return Err(MarcError::TruncatedRecord(
                 "Holdings record is truncated".to_string(),
