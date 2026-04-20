@@ -37,6 +37,10 @@ jobs:
           key: ${{ runner.os }}-cargo-asan-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run ASAN on library tests
+        env:
+          # Override rust-toolchain.toml pin so -Zbuild-std uses the nightly
+          # toolchain installed above rather than the stable channel.
+          RUSTUP_TOOLCHAIN: nightly
         run: |
           export RUSTFLAGS="-Z sanitizer=address"
           export LSAN_OPTIONS="suppressions=${{ github.workspace }}/.cargo/asan_suppressions.txt"
