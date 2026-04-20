@@ -636,6 +636,31 @@ class TestFfiTypedExceptions:
             == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{err.code}"
         )
 
+    def test_leader_error_carries_bytes_near_via_with_bytes_near(self):
+        """Leader errors bypass `ParseContext` (constructed directly in
+        `leader.rs`), but the reader enriches them via
+        ``MarcError::with_bytes_near`` so `detailed()` still renders a
+        hex dump of the offending leader bytes.
+        """
+        import io
+
+        # record_length=50 clears the buffered_reader's >= 24 guard, but
+        # base_address=00010 fails Leader::validate_for_reading.
+        bad_leader = b"00050nam a2200010 i 4500" + b"\x00" * 26
+        reader = mrrc.MARCReader(io.BytesIO(bad_leader))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        err = excinfo.value
+        assert isinstance(err, mrrc.RecordLeaderInvalid)
+        assert err.bytes_near is not None
+        assert len(err.bytes_near) > 0
+        assert err.byte_offset == 0
+        assert err.bytes_near_offset == 0
+        d = err.detailed()
+        assert "bytes near offset" in d
+        assert "^^ offending byte" in d
+        assert "00050nam" in d
+
     def test_ffi_error_carries_bytes_near_window_for_hex_dump(self):
         """End-to-end: a malformed record raised via the `MARCReader` FFI
         path carries a populated `bytes_near` window and a precise

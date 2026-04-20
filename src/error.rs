@@ -646,6 +646,98 @@ impl MarcError {
         }
     }
 
+    /// Attach a byte-window to this error after the fact, enriching it for
+    /// hex-dump rendering.
+    ///
+    /// Useful at call sites that construct a `MarcError` without access to
+    /// a `ParseContext` (e.g., `Leader::from_bytes`) and want to surface
+    /// hex-dump-ready bytes before propagating. The window is centered on
+    /// the error's `byte_offset` when set, or on `buffer_start_offset`
+    /// otherwise; it is clamped at buffer boundaries.
+    ///
+    /// `buffer` is the bytes that were being parsed; `buffer_start_offset`
+    /// is the absolute stream offset of `buffer[0]`.
+    ///
+    /// If the variant has a `byte_offset` field that is currently `None`,
+    /// it is also populated with `buffer_start_offset` so downstream
+    /// renderers have an anchor for the hex-dump caret (points at the
+    /// start of the buffer).
+    ///
+    /// Variants that don't carry `bytes_near` (e.g. `IoError`, `XmlError`,
+    /// `JsonError`, `FieldNotFound`, `WriterError`) are returned unchanged.
+    /// Variants that already have `bytes_near` set are overwritten.
+    #[must_use]
+    pub fn with_bytes_near(mut self, buffer: &[u8], buffer_start_offset: usize) -> Self {
+        let anchor = self.byte_offset().unwrap_or(buffer_start_offset);
+        let Some(window) = BytesNear::capture(buffer, buffer_start_offset, anchor) else {
+            return self;
+        };
+        match &mut self {
+            MarcError::InvalidLeader {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::RecordLengthInvalid {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::BaseAddressInvalid {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::BaseAddressNotFound {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::DirectoryInvalid {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::TruncatedRecord {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::EndOfRecordNotFound {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::InvalidIndicator {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::BadSubfieldCode {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::InvalidField {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::EncodingError {
+                bytes_near,
+                byte_offset,
+                ..
+            } => {
+                if byte_offset.is_none() {
+                    *byte_offset = Some(buffer_start_offset);
+                }
+                *bytes_near = Some(window);
+            },
+            _ => {},
+        }
+        self
+    }
+
     /// Canonical docs URL for this error code, pointing at the `#Exxx`
     /// anchor on the error-codes reference page.
     ///

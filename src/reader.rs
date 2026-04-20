@@ -185,8 +185,15 @@ impl<R: Read> MarcReader<R> {
         // We have a record — initialize the per-record positional context.
         self.ctx.begin_record();
 
-        let leader = Leader::from_bytes(&leader_bytes)?;
-        leader.validate_for_reading()?;
+        // Leader errors bypass ParseContext (Leader::from_bytes builds
+        // MarcError directly), so enrich any raised error with a byte
+        // window around the leader bytes for hex-dump rendering.
+        let leader_offset = self.ctx.stream_byte_offset;
+        let leader = Leader::from_bytes(&leader_bytes)
+            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
+        leader
+            .validate_for_reading()
+            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
 
         // Calculate the size of the directory and data areas
         let record_length = leader.record_length as usize;

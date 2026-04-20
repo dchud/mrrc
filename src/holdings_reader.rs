@@ -122,8 +122,14 @@ impl<R: Read> HoldingsMarcReader<R> {
 
         self.ctx.begin_record();
 
-        let leader = Leader::from_bytes(&leader_bytes)?;
-        leader.validate_for_reading()?;
+        // Leader errors bypass ParseContext; enrich with a byte window so
+        // `detailed()` can render a hex dump.
+        let leader_offset = self.ctx.stream_byte_offset;
+        let leader = Leader::from_bytes(&leader_bytes)
+            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
+        leader
+            .validate_for_reading()
+            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
 
         // Verify this is a holdings record (Type x/y/v/u)
         if !matches!(leader.record_type, 'x' | 'y' | 'v' | 'u') {
