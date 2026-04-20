@@ -154,6 +154,11 @@ impl<R: Read> AuthorityMarcReader<R> {
             &self.ctx,
         )?;
 
+        // Hand the record buffer to the context for bytes_near capture on
+        // any error raised during directory/field parsing.
+        let record_data_offset = self.ctx.stream_byte_offset;
+        self.ctx.set_parse_buffer(&record_data, record_data_offset);
+
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return Err(self.ctx.err_truncated_record(
                 Some(record_length.saturating_sub(LEADER_LEN)),
@@ -175,6 +180,10 @@ impl<R: Read> AuthorityMarcReader<R> {
         // Parse directory and extract fields
         let mut pos = 0;
         while pos < directory.len() {
+            // Move stream_byte_offset to the current directory byte so
+            // errors below carry a precise byte_offset (and the bytes_near
+            // hex-dump caret lands at the actual offending byte).
+            self.ctx.stream_byte_offset = record_data_offset + pos;
             if directory[pos] == FIELD_TERMINATOR {
                 break;
             }
@@ -228,6 +237,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                     continue;
                 }
                 self.ctx.current_field_tag = Some(tag.clone());
+                self.ctx.stream_byte_offset = record_data_offset + field_data_start;
                 let parsed = iso2709::parse_data_field(
                     field_bytes,
                     &tag,
@@ -278,7 +288,10 @@ impl<R: Read> AuthorityMarcReader<R> {
             }
         }
 
-        self.ctx.advance(record_length.saturating_sub(LEADER_LEN));
+        // Restore stream_byte_offset to the end of the current record.
+        // The directory/field loop above moved it mid-record for precise
+        // error alignment; this restores the bytes-consumed invariant.
+        self.ctx.stream_byte_offset = record_data_offset + record_length.saturating_sub(LEADER_LEN);
         Ok(Some(record))
     }
 }

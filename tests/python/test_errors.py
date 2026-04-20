@@ -636,6 +636,49 @@ class TestFfiTypedExceptions:
             == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{err.code}"
         )
 
+    def test_ffi_error_carries_bytes_near_window_for_hex_dump(self):
+        """End-to-end: a malformed record raised via the `MARCReader` FFI
+        path carries a populated `bytes_near` window and a precise
+        `byte_offset` that points inside the window — so ``detailed()``
+        renders a caret at the actual offending byte rather than column 0
+        of the first row.
+        """
+        import io
+
+        # Directory entry claims field length=9999 — past the data area.
+        # Raises `err_invalid_field` with ctx populated, which carries
+        # bytes_near captured from the record buffer.
+        field_245 = b"10\x1faT\x1e"
+        directory = b"245999900000"
+        base_address = 24 + len(directory) + 1
+        record_length = base_address + len(field_245) + 1
+        leader = (
+            f"{record_length:05d}".encode()
+            + b"nam a22"
+            + f"{base_address:05d}".encode()
+            + b" i 4500"
+        )
+        record = leader + directory + b"\x1e" + field_245 + b"\x1d"
+        reader = mrrc.MARCReader(io.BytesIO(record))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        err = excinfo.value
+        # bytes_near populated from reader buffer
+        assert err.bytes_near is not None, err
+        assert len(err.bytes_near) > 0
+        # byte_offset falls inside the captured window
+        assert err.byte_offset is not None
+        assert err.bytes_near_offset is not None
+        assert (
+            err.bytes_near_offset
+            <= err.byte_offset
+            <= err.bytes_near_offset + len(err.bytes_near)
+        )
+        # detailed() renders the hex dump + caret
+        d = err.detailed()
+        assert "bytes near offset" in d
+        assert "^^ offending byte" in d
+
     def test_to_dict_on_surfaced_exception_carries_positional_fields(self):
         """FFI integration: a Rust parse error surfaced as a Python typed
         exception round-trips through ``to_dict()`` with all positional

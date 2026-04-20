@@ -23,8 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   appends a 16 + 16 byte hex + ASCII dump with a caret pointing at the
   offending byte. Byte-for-byte identical output across languages.
 - **`bytes_near` / `bytes_near_offset` attributes** on parse-path
-  exceptions carry the byte window; populated opportunistically by the
-  `MARCReader` path for record-body errors.
+  exceptions carry the byte window; populated by the `MARCReader`,
+  `AuthorityMarcReader`, and `HoldingsMarcReader` paths for directory
+  and data-field errors. `ctx.stream_byte_offset` advances through
+  directory/field iteration so the hex-dump caret lands at the actual
+  offending byte, not column 0 of the first row.
+- **Typed `MarcError` now survives the Python FFI boundary.** The
+  `PyMARCReader` parse path previously collapsed any `MarcError` into
+  a generic `ParseError::invalid_record("Failed to parse …")`, which
+  erased the variant, positional fields, and (when added) `bytes_near`.
+  The parse result is now routed through `marc_error_to_py_err`
+  directly, so Python callers receive the typed `MrrcException`
+  subclass with every attribute populated.
 - **`BytesNear` public struct** in `mrrc` exposes the window type and a
   `BytesNear::capture(buffer, base_offset, absolute_offset)` helper.
 - **Schema stability contract** documented in
