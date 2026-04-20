@@ -43,6 +43,11 @@ perf.data.old
 test-output/
 *.log
 
+# Proptest regression seeds: committed files are permanent regression guards.
+# Only ignore transient *.pending files proptest writes before a seed is accepted.
+tests/proptest-regressions/*.pending
+tests/*.proptest-regressions.pending
+
 # Large benchmark fixtures (regenerate with scripts/generate_benchmark_fixtures.py)
 tests/data/fixtures/100k_records.mrc
 
