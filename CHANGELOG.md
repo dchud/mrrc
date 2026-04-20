@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — expanded property-test suite
+
+- **`tests/properties.rs` now runs 8 property tests** covering binary,
+  MARCXML, and MARCJSON round-trips plus four structural invariants on the
+  emitted ISO 2709 bytes: leader-length matches byte count, directory
+  entries tile the data area without gaps or overlaps, indicator bytes are
+  digits or spaces, and subfield codes are lowercase-alphanumeric. Tied to
+  `ProptestConfig { cases: 64 }` so the full suite completes in ~3s
+  locally.
+- **Broadened record strategy** covers zero-control-field and
+  zero-data-field records, and MARCXML/MARCJSON strategies deliberately
+  include format-specific metacharacters (`< > & " '` for XML;
+  `\t \n \r \\ "` for JSON) to exercise escaping edge cases.
+- **Removed stray commented `#proptest = "1.0"`** from the main
+  `[dependencies]` section of `Cargo.toml`; the real entry has always been
+  in `[dev-dependencies]`.
+
 ### Added — structured error serialization and hex-dump diagnostics
 
 - **`to_dict()` / `to_json()` on every `MrrcException`** emit a JSON-ready

@@ -46,9 +46,6 @@ thiserror = "2.0"
 # Pattern matching
 regex = "1.10"
 
-# Testing and examples
-#proptest = "1.0"
-
 # Examples and utilities
 csv = "1.3"
 flate2 = "1.0"

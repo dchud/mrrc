@@ -1,9 +1,27 @@
-//! Property-based tests for MARC record round-trip fidelity.
+//! Property-based tests for MARC records.
 //!
-//! Uses proptest to generate arbitrary structurally valid MARC records
-//! and verify that serialization → parsing produces identical results.
+//! The binary round-trip property is the oldest: any structurally valid
+//! record we can build should serialize to ISO 2709 and parse back to an
+//! equal record. Around it sits a family of structural invariants that
+//! inspect the emitted bytes directly (leader length, directory tiling,
+//! indicator byte set, subfield code shape), plus round-trip properties
+//! for MARCXML and MARCJSON that deliberately exercise format-specific
+//! escaping (`< > & " '` for XML; `\t \n \r \\ "` for JSON).
+//!
+//! # Runtime and configuration
+//!
+//! `ProptestConfig::cases = 64` keeps the suite under ~10s locally (actual
+//! on an Apple-silicon laptop: ~1s). Override with `PROPTEST_CASES=N cargo
+//! test` when you want deeper coverage for a single run.
+//!
+//! # Regression seeds
+//!
+//! When a property fails, proptest writes the failing seed to
+//! `tests/proptest-regressions/properties.txt`. Commit that file — the
+//! saved seeds are permanent regression guards that re-run on every test
+//! invocation. Only `*.pending` files are gitignored (see `.gitignore`).
 
-use mrrc::{Field, Leader, MarcReader, MarcWriter, Record, Subfield};
+use mrrc::{marcjson, marcxml, Field, Leader, MarcReader, MarcWriter, Record, Subfield};
 use proptest::prelude::*;
 use smallvec::SmallVec;
 use std::io::Cursor;
@@ -129,25 +147,75 @@ fn arb_subfield_code() -> impl Strategy<Value = char> {
     ]
 }
 
-/// Generate subfield value content (ASCII, no MARC delimiters).
-fn arb_subfield_value() -> impl Strategy<Value = String> {
-    "[a-zA-Z0-9 .,:;()'/&-]{1,80}".prop_filter("no MARC delimiters", |s| {
+/// Generate subfield value content for the binary round-trip (ASCII, no
+/// MARC delimiters).
+fn arb_subfield_value() -> BoxedStrategy<String> {
+    "[a-zA-Z0-9 .,:;()'/&-]{1,80}"
+        .prop_filter("no MARC delimiters", |s: &String| {
+            !s.bytes().any(|b| b == 0x1D || b == 0x1E || b == 0x1F)
+        })
+        .boxed()
+}
+
+/// Generate subfield values that exercise XML escaping edge cases.
+///
+/// Deliberately includes `<`, `>`, `&`, `"`, and `'`. The first and last
+/// characters are non-space so XML text-content trimming cannot mask a
+/// whitespace-preservation bug behind a false pass.
+fn arb_subfield_value_xml() -> BoxedStrategy<String> {
+    let non_space = "[a-zA-Z0-9.,:;()<>&\"'/-]";
+    let body = "[a-zA-Z0-9 .,:;()<>&\"'/-]{0,78}";
+    (non_space, body, non_space)
+        .prop_map(|(a, b, c): (String, String, String)| format!("{a}{b}{c}"))
+        .prop_filter("no MARC delimiters", |s: &String| {
+            !s.bytes().any(|b| b == 0x1D || b == 0x1E || b == 0x1F)
+        })
+        .boxed()
+}
+
+/// Generate subfield values that exercise JSON escaping edge cases.
+///
+/// Includes control characters (`\t`, `\n`, `\r`), plus `\\` and `"` — the
+/// characters `serde_json` must escape to keep the emitted JSON valid.
+fn arb_subfield_value_json() -> BoxedStrategy<String> {
+    prop::collection::vec(
+        prop_oneof![
+            Just('\t'),
+            Just('\n'),
+            Just('\r'),
+            Just('\\'),
+            Just('"'),
+            (b'a'..=b'z').prop_map(|b| b as char),
+            (b'A'..=b'Z').prop_map(|b| b as char),
+            (b'0'..=b'9').prop_map(|b| b as char),
+            Just(' '),
+            Just('.'),
+            Just(','),
+        ],
+        1..=80,
+    )
+    .prop_map(|chars: Vec<char>| chars.into_iter().collect::<String>())
+    .prop_filter("no MARC delimiters", |s: &String| {
         !s.bytes().any(|b| b == 0x1D || b == 0x1E || b == 0x1F)
     })
+    .boxed()
 }
 
-/// Generate a single subfield.
-fn arb_subfield() -> impl Strategy<Value = Subfield> {
-    (arb_subfield_code(), arb_subfield_value()).prop_map(|(code, value)| Subfield { code, value })
+/// Generate a single subfield with the given value strategy.
+fn arb_subfield_with(value: BoxedStrategy<String>) -> BoxedStrategy<Subfield> {
+    (arb_subfield_code(), value)
+        .prop_map(|(code, value)| Subfield { code, value })
+        .boxed()
 }
 
-/// Generate a data field with indicators and 1-5 subfields.
-fn arb_data_field() -> impl Strategy<Value = Field> {
+/// Generate a data field with indicators and 1-5 subfields using the given
+/// value strategy.
+fn arb_data_field_with(value: BoxedStrategy<String>) -> BoxedStrategy<Field> {
     (
         arb_data_tag(),
         arb_indicator(),
         arb_indicator(),
-        prop::collection::vec(arb_subfield(), 1..=5),
+        prop::collection::vec(arb_subfield_with(value), 1..=5),
     )
         .prop_map(|(tag, ind1, ind2, subfields)| Field {
             tag,
@@ -155,14 +223,35 @@ fn arb_data_field() -> impl Strategy<Value = Field> {
             indicator2: ind2,
             subfields: SmallVec::from_vec(subfields),
         })
+        .boxed()
 }
 
-/// Generate a complete, structurally valid MARC record.
-fn arb_record() -> impl Strategy<Value = Record> {
+/// Control-field value strategy for MARCXML round-trips. Excludes
+/// whitespace-only values because `quick-xml` + `serde(rename = "$value")`
+/// strips whitespace-only text content during deserialization. Tracked by
+/// bd-zm6m; once fixed, this can collapse back to `arb_control_value`.
+fn arb_control_value_xml() -> BoxedStrategy<String> {
+    arb_control_value()
+        .prop_filter("whitespace-only control values blocked by bd-zm6m", |s| {
+            s.bytes().any(|b| b != b' ')
+        })
+        .boxed()
+}
+
+/// Generate a structurally valid MARC record using the given subfield-value
+/// and control-value strategies.
+///
+/// Ranges cover edge cases called out in bd-ouji: `0..=3` control fields
+/// (including zero → no 001, no record-control-number dependency) and
+/// `0..=10` data fields (including zero → control-only records).
+fn arb_record_with(
+    subfield_value: BoxedStrategy<String>,
+    control_value: BoxedStrategy<String>,
+) -> BoxedStrategy<Record> {
     (
         arb_leader(),
-        prop::collection::vec((arb_control_tag(), arb_control_value()), 0..=3),
-        prop::collection::vec(arb_data_field(), 1..=10),
+        prop::collection::vec((arb_control_tag(), control_value), 0..=3),
+        prop::collection::vec(arb_data_field_with(subfield_value), 0..=10),
     )
         .prop_map(|(leader, control_fields, data_fields)| {
             let mut record = Record::new(leader);
@@ -177,6 +266,90 @@ fn arb_record() -> impl Strategy<Value = Record> {
             }
             record
         })
+        .boxed()
+}
+
+/// Default record strategy: ASCII subfield values, safe for binary
+/// round-trips and structural-invariant inspection.
+fn arb_record() -> BoxedStrategy<Record> {
+    arb_record_with(arb_subfield_value(), arb_control_value().boxed())
+}
+
+/// Record strategy for MARCXML round-trips.
+fn arb_record_xml() -> BoxedStrategy<Record> {
+    arb_record_with(arb_subfield_value_xml(), arb_control_value_xml())
+}
+
+/// Record strategy for MARCJSON round-trips.
+fn arb_record_json() -> BoxedStrategy<Record> {
+    arb_record_with(arb_subfield_value_json(), arb_control_value().boxed())
+}
+
+// ============================================================================
+// Byte-level helpers for structural invariants
+// ============================================================================
+
+const LEADER_LEN: usize = 24;
+const DIRECTORY_ENTRY_LEN: usize = 12;
+const FIELD_TERMINATOR: u8 = 0x1E;
+const RECORD_TERMINATOR: u8 = 0x1D;
+const SUBFIELD_DELIMITER: u8 = 0x1F;
+
+/// Parse the 5-byte ASCII record length from the leader.
+fn parse_record_length(bytes: &[u8]) -> usize {
+    std::str::from_utf8(&bytes[0..5])
+        .expect("leader length is ASCII")
+        .parse()
+        .expect("leader length is numeric")
+}
+
+/// Parse the 5-byte ASCII data-base-address from the leader.
+fn parse_data_base_address(bytes: &[u8]) -> usize {
+    std::str::from_utf8(&bytes[12..17])
+        .expect("leader base address is ASCII")
+        .parse()
+        .expect("leader base address is numeric")
+}
+
+/// A single directory entry: `(tag, length, start)`.
+#[derive(Debug)]
+struct DirEntry {
+    tag: String,
+    length: usize,
+    start: usize,
+}
+
+/// Parse all directory entries from the serialized record.
+fn parse_directory(bytes: &[u8]) -> Vec<DirEntry> {
+    let base = parse_data_base_address(bytes);
+    // Directory runs from LEADER_LEN up to base-1 (the byte at base-1 is a
+    // FIELD_TERMINATOR separating directory from data area).
+    let dir = &bytes[LEADER_LEN..base - 1];
+    dir.chunks_exact(DIRECTORY_ENTRY_LEN)
+        .map(|chunk| DirEntry {
+            tag: std::str::from_utf8(&chunk[0..3])
+                .expect("tag is ASCII")
+                .to_string(),
+            length: std::str::from_utf8(&chunk[3..7])
+                .expect("length is ASCII")
+                .parse()
+                .expect("length is numeric"),
+            start: std::str::from_utf8(&chunk[7..12])
+                .expect("start is ASCII")
+                .parse()
+                .expect("start is numeric"),
+        })
+        .collect()
+}
+
+/// Serialize a record to ISO 2709 bytes (test convenience).
+fn emit_binary(record: &Record) -> Vec<u8> {
+    let mut buffer = Vec::new();
+    {
+        let mut writer = MarcWriter::new(&mut buffer);
+        writer.write_record(record).expect("write should succeed");
+    }
+    buffer
 }
 
 // ============================================================================
@@ -184,18 +357,17 @@ fn arb_record() -> impl Strategy<Value = Record> {
 // ============================================================================
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        cases: 64,
+        ..ProptestConfig::default()
+    })]
+
     /// Binary round-trip: any record we can build, we can serialize to
     /// ISO 2709 and parse back to a structurally identical record.
     #[test]
     fn binary_roundtrip(record in arb_record()) {
-        // Serialize to binary MARC
-        let mut buffer = Vec::new();
-        {
-            let mut writer = MarcWriter::new(&mut buffer);
-            writer.write_record(&record).expect("write should succeed");
-        }
+        let buffer = emit_binary(&record);
 
-        // Parse back
         let cursor = Cursor::new(&buffer);
         let mut reader = MarcReader::new(cursor);
         let parsed = reader
@@ -258,4 +430,170 @@ proptest! {
         prop_assert!(result.is_ok(), "MarcWriter failed: {:?}", result.err());
         prop_assert!(!buf.is_empty(), "Serialized record is empty");
     }
+
+    /// The record-length field in the leader must match the number of bytes
+    /// the writer actually emitted.
+    #[test]
+    fn leader_length_matches_emitted_bytes(record in arb_record()) {
+        let buffer = emit_binary(&record);
+        let declared = parse_record_length(&buffer);
+        prop_assert_eq!(declared, buffer.len(),
+            "leader.record_length ({}) != emitted byte count ({})",
+            declared, buffer.len());
+    }
+
+    /// Every directory entry must tile the data area exactly: entries
+    /// start immediately after one another, their lengths (each of which
+    /// includes the field terminator) sum to the data-area size minus the
+    /// record terminator, and no entry points outside the data area.
+    #[test]
+    fn directory_entries_tile_data_area(record in arb_record()) {
+        let buffer = emit_binary(&record);
+        let base = parse_data_base_address(&buffer);
+        let record_length = parse_record_length(&buffer);
+        let entries = parse_directory(&buffer);
+
+        let data_area_size = record_length - base;
+        prop_assert_eq!(buffer[record_length - 1], RECORD_TERMINATOR,
+            "last byte should be RECORD_TERMINATOR");
+
+        let mut expected_start = 0usize;
+        let mut total_length = 0usize;
+        for entry in &entries {
+            prop_assert_eq!(entry.start, expected_start,
+                "entry {} start {} != expected {}",
+                entry.tag, entry.start, expected_start);
+            prop_assert!(entry.length >= 1,
+                "entry {} length is zero", entry.tag);
+            let field_end_in_data = entry.start + entry.length;
+            prop_assert!(field_end_in_data < data_area_size,
+                "entry {} extends past data area (end={}, data_area_size={})",
+                entry.tag, field_end_in_data, data_area_size);
+            // Each field's declared length includes its trailing FIELD_TERMINATOR.
+            let term_pos = base + entry.start + entry.length - 1;
+            prop_assert_eq!(buffer[term_pos], FIELD_TERMINATOR,
+                "entry {} should end with FIELD_TERMINATOR at {}",
+                entry.tag, term_pos);
+            expected_start += entry.length;
+            total_length += entry.length;
+        }
+
+        // Lengths plus the trailing record-terminator byte should tile the
+        // entire data area.
+        prop_assert_eq!(total_length + 1, data_area_size,
+            "sum of field lengths ({}) + RECORD_TERMINATOR != data area size ({})",
+            total_length, data_area_size);
+    }
+
+    /// Every indicator byte emitted in a data field must be a digit or a
+    /// space. The leader declares `indicator_count = 2`, so indicators
+    /// occupy the first two bytes of each data-field block.
+    #[test]
+    fn indicator_bytes_in_valid_set(record in arb_record()) {
+        let buffer = emit_binary(&record);
+        let base = parse_data_base_address(&buffer);
+        for entry in parse_directory(&buffer) {
+            if entry.tag.as_str() < "010" {
+                continue; // control fields have no indicators
+            }
+            let ind1 = buffer[base + entry.start];
+            let ind2 = buffer[base + entry.start + 1];
+            for (label, byte) in [("ind1", ind1), ("ind2", ind2)] {
+                prop_assert!(
+                    byte == b' ' || byte.is_ascii_digit(),
+                    "{} for tag {} is 0x{:02x} (not digit or space)",
+                    label, entry.tag, byte
+                );
+            }
+        }
+    }
+
+    /// Every byte immediately following a SUBFIELD_DELIMITER (0x1F) is a
+    /// subfield code, which must be a lowercase ASCII letter or digit.
+    #[test]
+    fn subfield_codes_are_lower_alnum(record in arb_record()) {
+        let buffer = emit_binary(&record);
+        for (i, byte) in buffer.iter().enumerate() {
+            if *byte == SUBFIELD_DELIMITER {
+                let code = buffer[i + 1];
+                prop_assert!(
+                    code.is_ascii_lowercase() || code.is_ascii_digit(),
+                    "subfield code at offset {} is 0x{:02x} (expected [a-z0-9])",
+                    i + 1, code
+                );
+            }
+        }
+    }
+
+    /// MARCXML round-trip: a record with subfield values containing XML
+    /// metacharacters (`< > & " '`) must survive serialize → parse.
+    ///
+    /// Note: whitespace-only control/subfield values are excluded from this
+    /// property pending bd-zm6m (quick-xml strips whitespace-only text).
+    #[test]
+    fn marcxml_roundtrip(record in arb_record_xml()) {
+        let xml = marcxml::record_to_marcxml(&record).expect("MARCXML serialize");
+        let parsed = marcxml::marcxml_to_record(&xml).expect("MARCXML parse");
+        assert_records_equal(&record, &parsed)?;
+    }
+
+    /// MARCJSON round-trip: a record with subfield values containing
+    /// JSON-problematic characters (control chars, `\\`, `"`) must survive
+    /// serialize → parse.
+    #[test]
+    fn marcjson_roundtrip(record in arb_record_json()) {
+        let json = marcjson::record_to_marcjson(&record).expect("MARCJSON serialize");
+        let parsed = marcjson::marcjson_to_record(&json).expect("MARCJSON parse");
+        assert_records_equal(&record, &parsed)?;
+    }
+}
+
+/// Compare two records for structural equality, ignoring leader fields the
+/// writer computes (`record_length`, `data_base_address`).
+fn assert_records_equal(orig: &Record, parsed: &Record) -> Result<(), TestCaseError> {
+    prop_assert_eq!(orig.leader.record_status, parsed.leader.record_status);
+    prop_assert_eq!(orig.leader.record_type, parsed.leader.record_type);
+    prop_assert_eq!(
+        orig.leader.bibliographic_level,
+        parsed.leader.bibliographic_level
+    );
+    prop_assert_eq!(orig.leader.character_coding, parsed.leader.character_coding);
+    prop_assert_eq!(&orig.leader.reserved, &parsed.leader.reserved);
+
+    prop_assert_eq!(orig.control_fields.len(), parsed.control_fields.len());
+    for (tag, values) in &orig.control_fields {
+        let parsed_values = parsed.control_fields.get(tag);
+        prop_assert_eq!(
+            Some(values),
+            parsed_values,
+            "control field {} mismatch",
+            tag
+        );
+    }
+
+    let orig_fields: Vec<&Field> = orig.fields().collect();
+    let parsed_fields: Vec<&Field> = parsed.fields().collect();
+    prop_assert_eq!(
+        orig_fields.len(),
+        parsed_fields.len(),
+        "field count mismatch"
+    );
+
+    for (orig_f, parsed_f) in orig_fields.iter().zip(parsed_fields.iter()) {
+        prop_assert_eq!(&orig_f.tag, &parsed_f.tag);
+        prop_assert_eq!(orig_f.indicator1, parsed_f.indicator1);
+        prop_assert_eq!(orig_f.indicator2, parsed_f.indicator2);
+        prop_assert_eq!(
+            orig_f.subfields.len(),
+            parsed_f.subfields.len(),
+            "subfield count in {} mismatch",
+            orig_f.tag
+        );
+        for (orig_sf, parsed_sf) in orig_f.subfields.iter().zip(parsed_f.subfields.iter()) {
+            prop_assert_eq!(orig_sf.code, parsed_sf.code);
+            prop_assert_eq!(&orig_sf.value, &parsed_sf.value);
+        }
+    }
+
+    Ok(())
 }
