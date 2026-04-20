@@ -125,20 +125,30 @@ impl BufferedMarcReader {
                 return Err(ParseError::record_boundary_error(format!(
                     "Incomplete record length header: got {} bytes, expected 5",
                     n
-                )));
+                ))
+                .with_bytes_near(&length_bytes[..n], 0));
             },
             Ok(_) => {},
             Err(e) => return Err(e),
         }
 
-        // Parse the record length
-        let record_length = Self::parse_record_length(&length_bytes)?;
+        // Parse the record length. Pre-capture the 5 length bytes so any
+        // ParseError raised below carries a bytes_near window for hex-dump
+        // rendering (parse_record_length doesn't have its own buffer).
+        let record_length = Self::parse_record_length(&length_bytes).map_err(|e| {
+            if e.context.bytes_near.is_none() {
+                e.with_bytes_near(&length_bytes, 0)
+            } else {
+                e
+            }
+        })?;
 
         if record_length < 24 {
             return Err(ParseError::invalid_record(format!(
                 "Record length {} is too small (minimum 24)",
                 record_length
-            )));
+            ))
+            .with_bytes_near(&length_bytes, 0));
         }
 
         // Clear and prepare buffer
@@ -153,11 +163,17 @@ impl BufferedMarcReader {
         self.file_wrapper.read_exact(py, &mut temp_buf)?;
         self.buffer.extend_from_slice(&temp_buf);
 
-        // Verify record terminator (last byte should be 0x1D)
+        // Verify record terminator (last byte should be 0x1D). Capture a
+        // window over the tail of the record so the user can see what
+        // landed where the terminator should have been.
         if self.buffer.is_empty() || self.buffer[self.buffer.len() - 1] != 0x1D {
+            let tail_start = self.buffer.len().saturating_sub(32);
+            let tail = &self.buffer[tail_start..];
             return Err(ParseError::record_boundary_error(
                 "Record missing terminator (0x1D)".to_string(),
-            ));
+            )
+            .with_byte_offset(self.buffer.len())
+            .with_bytes_near(tail, tail_start));
         }
 
         // Convert to owned Vec<u8>

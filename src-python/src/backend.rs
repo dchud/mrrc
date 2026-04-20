@@ -189,13 +189,15 @@ impl ReaderBackend {
                 "Invalid record length in leader: '{}'",
                 record_length_str
             ))
+            .with_bytes_near(&leader, 0)
         })?;
 
         if record_length < 24 {
             return Err(ParseError::invalid_record(format!(
                 "Record length too small: {} (minimum 24)",
                 record_length
-            )));
+            ))
+            .with_bytes_near(&leader, 0));
         }
 
         // Read remainder of record (record_length - 24 bytes)
@@ -249,7 +251,8 @@ impl ReaderBackend {
             return Err(ParseError::invalid_record(format!(
                 "Incomplete leader: expected 24 bytes, got {}",
                 leader.len()
-            )));
+            ))
+            .with_bytes_near(&leader, 0));
         }
 
         // Parse record length from leader
@@ -259,13 +262,15 @@ impl ReaderBackend {
                 "Invalid record length in leader: '{}'",
                 record_length_str
             ))
+            .with_bytes_near(&leader, 0)
         })?;
 
         if record_length < 24 {
             return Err(ParseError::invalid_record(format!(
                 "Record length too small: {} (minimum 24)",
                 record_length
-            )));
+            ))
+            .with_bytes_near(&leader, 0));
         }
 
         // Read remainder of record

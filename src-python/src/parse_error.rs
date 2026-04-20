@@ -9,7 +9,7 @@
 // see the same Python class hierarchy as the synchronous reader path,
 // including positional attributes when populated.
 
-use mrrc::MarcError;
+use mrrc::{BytesNear, MarcError};
 use pyo3::PyErr;
 use std::fmt;
 
@@ -49,6 +49,8 @@ pub struct ParseErrorContext {
     pub byte_offset: Option<usize>,
     /// Source filename or stream identifier.
     pub source_name: Option<String>,
+    /// Byte window around the error for hex-dump rendering.
+    pub bytes_near: Option<BytesNear>,
 }
 
 impl fmt::Display for ParseError {
@@ -148,6 +150,23 @@ impl ParseError {
         self
     }
 
+    /// Capture a byte window around the given absolute offset for hex-dump
+    /// rendering. `buffer_start_offset` is the absolute stream offset of
+    /// `buffer[0]`. The anchor is the error's current `byte_offset` when
+    /// set, or `buffer_start_offset` otherwise. No-op if the anchor falls
+    /// outside `buffer`.
+    #[must_use]
+    pub fn with_bytes_near(mut self, buffer: &[u8], buffer_start_offset: usize) -> Self {
+        let anchor = self.context.byte_offset.unwrap_or(buffer_start_offset);
+        if let Some(window) = BytesNear::capture(buffer, buffer_start_offset, anchor) {
+            self.context.bytes_near = Some(window);
+            if self.context.byte_offset.is_none() {
+                self.context.byte_offset = Some(buffer_start_offset);
+            }
+        }
+        self
+    }
+
     /// Convert to a Python exception. Must be called with the GIL held.
     ///
     /// Each kind maps to the equivalent `MarcError`, with any populated
@@ -164,7 +183,7 @@ impl ParseError {
                 record_control_number: None,
                 field_tag: None,
                 message: msg.clone(),
-                bytes_near: None,
+                bytes_near: self.context.bytes_near.clone(),
             },
             ParseErrorKind::RecordBoundaryError(msg) => MarcError::InvalidField {
                 record_index: self.context.record_index,
@@ -174,7 +193,7 @@ impl ParseError {
                 record_control_number: None,
                 field_tag: None,
                 message: format!("record boundary error: {msg}"),
-                bytes_near: None,
+                bytes_near: self.context.bytes_near.clone(),
             },
             ParseErrorKind::TruncatedRecord {
                 expected_length,
@@ -187,7 +206,7 @@ impl ParseError {
                 record_control_number: None,
                 expected_length: *expected_length,
                 actual_length: *actual_length,
-                bytes_near: None,
+                bytes_near: self.context.bytes_near.clone(),
             },
             ParseErrorKind::IoError(msg) => MarcError::IoError {
                 cause: std::io::Error::other(msg.clone()),

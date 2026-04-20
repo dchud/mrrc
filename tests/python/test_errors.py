@@ -636,6 +636,30 @@ class TestFfiTypedExceptions:
             == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{err.code}"
         )
 
+    def test_pre_parse_error_from_buffered_reader_carries_bytes_near(self):
+        """The buffered-reader boundary-scan path (pre-parse validation
+        for short record-length headers, record_length < 24, missing
+        terminator) previously collapsed its `ParseError` into an
+        `InvalidField` with no positional context. The ParseError path
+        now carries `bytes_near` / `byte_offset` through to the typed
+        Python exception.
+        """
+        import io
+
+        # record_length=10 < 24 → caught by buffered_reader before the
+        # parser runs. bytes_near should contain the 5-byte length header
+        # + surrounding leader bytes.
+        bad = b"00010nam a2200025 i 4500"
+        reader = mrrc.MARCReader(io.BytesIO(bad))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        err = excinfo.value
+        assert err.byte_offset == 0
+        assert err.bytes_near is not None
+        assert len(err.bytes_near) > 0
+        assert b"00010" in err.bytes_near
+        assert "bytes near offset" in err.detailed()
+
     def test_leader_error_carries_bytes_near_via_with_bytes_near(self):
         """Leader errors bypass `ParseContext` (constructed directly in
         `leader.rs`), but the reader enriches them via
