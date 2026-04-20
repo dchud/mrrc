@@ -470,24 +470,17 @@ impl MarcError {
         }
     }
 
-    /// Versioned JSON-serializable schema for this error suitable for
-    /// emitting to structured logging platforms (ELK, Datadog, Splunk,
+    /// Serialize this error as a JSON-ready `serde_json::Value` suitable
+    /// for emitting to structured logging platforms (ELK, Datadog, Splunk,
     /// JSON-line pipelines).
     ///
-    /// Schema contract (`schema_version: 1`):
-    /// - `schema_version`, `class`, `code`, `slug`, `severity`, `help_url`
-    ///   keys always present
-    /// - All positional fields appear by name with `null` when absent
-    /// - `bytes`-typed fields (`found`) get hex-encoded under a `_hex` key
-    /// - `_cause` is always a string or `null`, never nested
-    ///
-    /// Bytes fields are bounded to [`FOUND_BYTES_CAP`] bytes by the
-    /// constructors that populate them, so the dict is bounded in size and
-    /// safe for ingestion-limited log platforms.
-    ///
-    /// Any change to the dict shape must bump the constant
-    /// [`SCHEMA_VERSION`] and the crate's minor version (pre-1.0) or
-    /// major (post-1.0).
+    /// Shape notes:
+    /// - Bytes fields (`found`, `bytes_near`) are hex-encoded under a
+    ///   `_hex`-suffixed key; the bare key stays `null`.
+    /// - `_cause` is a flat string (from [`std::error::Error::source`])
+    ///   or `null` — never nested.
+    /// - [`SCHEMA_VERSION`] is included so consumers can branch on it if
+    ///   the shape changes later. Pre-1.0, the shape may still evolve.
     #[must_use]
     pub fn to_json_value(&self) -> serde_json::Value {
         use serde_json::{json, Map, Value};
@@ -1208,9 +1201,9 @@ fn format_found_bytes_python_repr(bytes: &[u8]) -> String {
 /// the `MRRC_DOCS_BASE_URL` environment variable is not set.
 pub const DEFAULT_DOCS_BASE_URL: &str = "https://dchud.github.io/mrrc";
 
-/// Versioned schema identifier for [`MarcError::to_json_value`] output.
-/// Any change to the emitted dict shape must bump this constant and the
-/// crate's minor version (pre-1.0) or major (post-1.0).
+/// Schema identifier included in [`MarcError::to_json_value`] output so
+/// consumers can branch on it if the shape changes later. Pre-1.0, the
+/// shape may still evolve.
 pub const SCHEMA_VERSION: u32 = 1;
 
 fn opt_json<T: Into<serde_json::Value>>(v: Option<T>) -> serde_json::Value {

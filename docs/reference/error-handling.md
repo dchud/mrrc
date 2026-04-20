@@ -314,28 +314,19 @@ Sample output:
 }
 ```
 
-### Schema contract (v1)
+### Notes on the shape
 
-The `schema_version: 1` key is the stability anchor. Downstream consumers
-can rely on:
-
-- **Fixed-position keys always present**: `schema_version`, `class`, `code`,
-  `slug`, `severity`, `help_url`, every positional field, and `_cause`
-  appear in every dict. Values may be `null` but keys are never missing.
-- **Bytes fields hex-encoded with a `_hex` suffix**: `found` (always `null`
-  in the dict), `found_hex` (present only when bytes were captured), and
-  similarly `bytes_near` / `bytes_near_hex`. This keeps the dict
-  JSON-serializable without a custom encoder.
-- **Bounded payload size**: `found` is capped at 32 bytes at capture time
-  and `bytes_near` at 32 bytes (16 before + 16 after the error offset), so
-  the full dict stays well under typical log-platform ingestion limits.
-- **`_cause` is flat**: always a string or `null`, never a nested dict.
-  Consumers who need the full exception chain pass
-  `include_traceback=True` or walk `__cause__` themselves.
-
-Any change to the dict shape (adding, removing, or re-purposing a key)
-must bump `schema_version` and the crate's minor version (pre-1.0) or
-major version (post-1.0).
+- Bytes fields carry their data under a `_hex` suffix key (`found_hex`,
+  `bytes_near_hex`); the bare key (`found`, `bytes_near`) stays `null` so
+  the dict is JSON-serializable without a custom encoder. The `_hex`
+  keys appear only when bytes were captured.
+- `_cause` is always a string or `null`, never nested. For the full
+  exception chain pass `include_traceback=True` or walk `__cause__`.
+- The emitted bytes are bounded at capture time (`found` ≤ 32 bytes,
+  `bytes_near` ≤ 32 bytes from the 16+16 hex-dump window), so payloads
+  don't grow unboundedly.
+- `schema_version: 1` is included so callers can branch on it later if
+  the shape ever changes. Pre-1.0, the shape may still evolve.
 
 ### `include_traceback`
 

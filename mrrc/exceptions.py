@@ -314,16 +314,13 @@ class _MrrcExceptionBase:
         return f"{_docs_base_url()}/reference/error-codes/#{cls.code}"
 
     # --- structured serialization --------------------------------------
-    # to_dict / to_json emit a versioned schema suitable for structured
-    # logging platforms (ELK, Datadog, Splunk, JSON-line pipelines).
-    # Schema contract (v1):
-    #   - schema_version, class, code, slug, severity, help_url always present
-    #   - All _diagnostic_fields keys always present (None when absent)
-    #   - Bytes values get hex-encoded with a `_hex` suffix on the key
-    #   - _cause is always a string or null, never nested
-    #
-    # Any change to the dict shape MUST bump SCHEMA_VERSION and bump the
-    # crate's minor version (pre-1.0) or major (post-1.0).
+    # to_dict / to_json emit a JSON-ready dict suitable for structured
+    # logging pipelines (ELK, Datadog, Splunk). Bytes fields are
+    # hex-encoded under a `_hex`-suffixed key; the bare key stays None so
+    # the dict is JSON-serializable without a custom encoder. `_cause` is
+    # a flat string or None (never nested). SCHEMA_VERSION is included so
+    # consumers can branch on it if the shape changes later — pre-1.0 the
+    # shape may still evolve.
 
     SCHEMA_VERSION: int = 1
 
@@ -333,12 +330,11 @@ class _MrrcExceptionBase:
     _diagnostic_extra_fields: tuple = ()
 
     def to_dict(self, *, include_traceback: bool = False) -> dict:
-        """Render this exception as a versioned, JSON-serializable dict.
+        """Render this exception as a JSON-ready dict.
 
-        The dict has a stable schema (``schema_version: 1``) suitable for
-        emitting to structured logging platforms. Bytes-typed fields are
-        hex-encoded with a ``_hex`` suffix on the key (e.g., ``found_hex``)
-        so the result is JSON-serializable without further conversion.
+        Bytes fields are hex-encoded under a ``_hex``-suffixed key (e.g.,
+        ``found_hex``) so the result is JSON-serializable without a
+        custom encoder.
 
         ``include_traceback=True`` adds a ``traceback`` key with the
         formatted traceback lines (only present when ``self.__traceback__``

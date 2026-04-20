@@ -9,15 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — structured error serialization and hex-dump diagnostics
 
-- **`to_dict()` / `to_json()` on every `MrrcException`** emit a versioned
-  (`schema_version: 1`) JSON-serializable dict suitable for structured
-  logging pipelines (ELK, Datadog, Splunk). Bytes fields get hex-encoded
-  with a `_hex` suffix on the key; every schema key is always present (null
-  when absent); `_cause` surfaces the exception chain as a flat string.
-  `to_dict(include_traceback=True)` adds a formatted traceback.
+- **`to_dict()` / `to_json()` on every `MrrcException`** emit a JSON-ready
+  dict suitable for structured logging pipelines (ELK, Datadog, Splunk).
+  Bytes fields get hex-encoded under a `_hex`-suffixed key; `_cause`
+  surfaces the exception chain as a flat string. `to_dict(include_traceback=True)`
+  adds a formatted traceback. A `schema_version: 1` key is included so
+  consumers can branch on it if the shape changes later (pre-1.0, the
+  shape may still evolve).
 - **Matching `MarcError::to_json_value()` / `to_json()`** on the Rust side
-  via `serde_json`. Identical schema shape; `pub const SCHEMA_VERSION: u32`
-  anchors the stability contract.
+  via `serde_json`. Same shape; `pub const SCHEMA_VERSION: u32` for the
+  version key.
 - **Hex-dump in `detailed()` output** (both Rust and Python). When the
   parser captures a byte window around the error offset, `detailed()`
   appends a 16 + 16 byte hex + ASCII dump with a caret pointing at the
@@ -37,11 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subclass with every attribute populated.
 - **`BytesNear` public struct** in `mrrc` exposes the window type and a
   `BytesNear::capture(buffer, base_offset, absolute_offset)` helper.
-- **Schema stability contract** documented in
-  `docs/reference/error-handling.md`: bounded payload size (via the
-  existing 32-byte cap on `found` plus the 32-byte hex-dump window),
-  always-present keys, flat `_cause`, and the `schema_version` bump rule
-  for any future shape change.
+- **Structured-serialization notes** in `docs/reference/error-handling.md`:
+  sample output, the `_hex`-suffix convention, the flat `_cause`, and the
+  bounded payload size (via the 32-byte `found` cap + 32-byte hex-dump
+  window).
 
 ### Added — stable error codes
 
