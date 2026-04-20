@@ -19,7 +19,7 @@
 //! decoding, error vs skip on unrecognized bytes) that have not been
 //! unified.
 
-use crate::error::{MarcError, Result};
+use crate::error::{BytesNear, MarcError, Result};
 use crate::record::{Field, Subfield};
 use crate::recovery::RecoveryMode;
 use smallvec::SmallVec;
@@ -81,6 +81,13 @@ pub struct ParseContext {
     pub current_subfield_code: Option<u8>,
     /// Indicator position currently being parsed (0 or 1), when known.
     pub current_indicator_position: Option<u8>,
+    /// Most recently captured parse buffer, used to populate `bytes_near`
+    /// on errors. Owned so the context has no lifetime parameters; callers
+    /// update it via [`ParseContext::set_parse_buffer`] as they take
+    /// ownership of new record/field bytes.
+    current_buffer: Option<Vec<u8>>,
+    /// Absolute stream offset of `current_buffer[0]`.
+    current_buffer_base_offset: Option<usize>,
 }
 
 impl ParseContext {
@@ -107,6 +114,8 @@ impl ParseContext {
         self.current_field_tag = None;
         self.current_subfield_code = None;
         self.current_indicator_position = None;
+        self.current_buffer = None;
+        self.current_buffer_base_offset = None;
     }
 
     /// Advance the stream byte offset by `n`.
@@ -129,6 +138,32 @@ impl ParseContext {
         }
     }
 
+    /// Hand the parser's current byte buffer to the context so subsequent
+    /// `err_*` helpers can capture a hex-dump-ready window around the error
+    /// offset. `buffer_start_offset` is the absolute stream offset of
+    /// `buffer[0]`. Cheap clone (typically a record's bytes, <1 KB).
+    pub fn set_parse_buffer(&mut self, buffer: &[u8], buffer_start_offset: usize) {
+        self.current_buffer = Some(buffer.to_vec());
+        self.current_buffer_base_offset = Some(buffer_start_offset);
+    }
+
+    /// Clear any previously-set parse buffer; call after a record is
+    /// successfully parsed so a later error on a fresh buffer doesn't
+    /// capture stale bytes.
+    pub fn clear_parse_buffer(&mut self) {
+        self.current_buffer = None;
+        self.current_buffer_base_offset = None;
+    }
+
+    /// Capture a byte-window around the current stream offset for attaching
+    /// to an error. Returns `None` when no buffer has been provided or the
+    /// current offset is outside the buffer.
+    fn capture_bytes_near(&self) -> Option<BytesNear> {
+        let buffer = self.current_buffer.as_deref()?;
+        let base = self.current_buffer_base_offset?;
+        BytesNear::capture(buffer, base, self.stream_byte_offset)
+    }
+
     /// Construct an [`MarcError::InvalidLeader`] inheriting the current
     /// stream/record positional state.
     #[must_use]
@@ -147,6 +182,7 @@ impl ParseContext {
             found: found_bytes,
             expected: Some(expected.into()),
             cause,
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -165,6 +201,7 @@ impl ParseContext {
             source_name: self.source_name.clone(),
             found: found_bytes,
             expected: Some(expected.into()),
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -184,6 +221,7 @@ impl ParseContext {
             record_control_number: self.record_control_number.clone(),
             found: found_bytes,
             expected: Some(expected.into()),
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -196,6 +234,7 @@ impl ParseContext {
             byte_offset: Some(self.stream_byte_offset),
             source_name: self.source_name.clone(),
             record_control_number: self.record_control_number.clone(),
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -217,6 +256,7 @@ impl ParseContext {
             field_tag: self.current_field_tag.clone(),
             found: found_bytes,
             expected: Some(expected.into()),
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -236,6 +276,7 @@ impl ParseContext {
             record_control_number: self.record_control_number.clone(),
             expected_length,
             actual_length,
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -249,6 +290,7 @@ impl ParseContext {
             record_byte_offset: Some(self.record_byte_offset()),
             source_name: self.source_name.clone(),
             record_control_number: self.record_control_number.clone(),
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -274,6 +316,7 @@ impl ParseContext {
             indicator_position: Some(indicator_position),
             found: Some(found_bytes),
             expected: Some(expected.into()),
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -289,6 +332,7 @@ impl ParseContext {
             record_control_number: self.record_control_number.clone(),
             field_tag: self.current_field_tag.clone(),
             subfield_code,
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -304,6 +348,7 @@ impl ParseContext {
             record_control_number: self.record_control_number.clone(),
             field_tag: self.current_field_tag.clone(),
             message: message.into(),
+            bytes_near: self.capture_bytes_near(),
         }
     }
 
@@ -318,6 +363,7 @@ impl ParseContext {
             record_control_number: self.record_control_number.clone(),
             field_tag: self.current_field_tag.clone(),
             message: message.into(),
+            bytes_near: self.capture_bytes_near(),
         }
     }
 

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — structured error serialization and hex-dump diagnostics
+
+- **`to_dict()` / `to_json()` on every `MrrcException`** emit a versioned
+  (`schema_version: 1`) JSON-serializable dict suitable for structured
+  logging pipelines (ELK, Datadog, Splunk). Bytes fields get hex-encoded
+  with a `_hex` suffix on the key; every schema key is always present (null
+  when absent); `_cause` surfaces the exception chain as a flat string.
+  `to_dict(include_traceback=True)` adds a formatted traceback.
+- **Matching `MarcError::to_json_value()` / `to_json()`** on the Rust side
+  via `serde_json`. Identical schema shape; `pub const SCHEMA_VERSION: u32`
+  anchors the stability contract.
+- **Hex-dump in `detailed()` output** (both Rust and Python). When the
+  parser captures a byte window around the error offset, `detailed()`
+  appends a 16 + 16 byte hex + ASCII dump with a caret pointing at the
+  offending byte. Byte-for-byte identical output across languages.
+- **`bytes_near` / `bytes_near_offset` attributes** on parse-path
+  exceptions carry the byte window; populated opportunistically by the
+  `MARCReader` path for record-body errors.
+- **`BytesNear` public struct** in `mrrc` exposes the window type and a
+  `BytesNear::capture(buffer, base_offset, absolute_offset)` helper.
+- **Schema stability contract** documented in
+  `docs/reference/error-handling.md`: bounded payload size (via the
+  existing 32-byte cap on `found` plus the 32-byte hex-dump window),
+  always-present keys, flat `_cause`, and the `schema_version` bump rule
+  for any future shape change.
+
 ### Added — stable error codes
 
 - **Stable error codes on every `MarcError` variant.** New `code()` and

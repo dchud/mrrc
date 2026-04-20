@@ -209,6 +209,13 @@ impl<R: Read> MarcReader<R> {
             &self.ctx,
         )?;
 
+        // Hand the loaded record buffer to the context so `err_*` helpers
+        // raised during directory/field parsing can capture a byte-window
+        // for hex-dump rendering. The record data starts at the stream
+        // offset just past the leader.
+        let record_data_offset = self.ctx.stream_byte_offset;
+        self.ctx.set_parse_buffer(&record_data, record_data_offset);
+
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return crate::recovery::try_recover_record(
                 leader,

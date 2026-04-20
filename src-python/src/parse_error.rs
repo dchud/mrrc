@@ -164,6 +164,7 @@ impl ParseError {
                 record_control_number: None,
                 field_tag: None,
                 message: msg.clone(),
+                bytes_near: None,
             },
             ParseErrorKind::RecordBoundaryError(msg) => MarcError::InvalidField {
                 record_index: self.context.record_index,
@@ -173,6 +174,7 @@ impl ParseError {
                 record_control_number: None,
                 field_tag: None,
                 message: format!("record boundary error: {msg}"),
+                bytes_near: None,
             },
             ParseErrorKind::TruncatedRecord {
                 expected_length,
@@ -185,6 +187,7 @@ impl ParseError {
                 record_control_number: None,
                 expected_length: *expected_length,
                 actual_length: *actual_length,
+                bytes_near: None,
             },
             ParseErrorKind::IoError(msg) => MarcError::IoError {
                 cause: std::io::Error::other(msg.clone()),

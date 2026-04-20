@@ -38,7 +38,15 @@ _POSITIONAL_FIELDS = (
     "byte_offset",
     "record_byte_offset",
     "source",
+    "bytes_near",
+    "bytes_near_offset",
 )
+
+
+# Hex-dump window layout: rendered as 16 bytes per row with an ASCII sidecar.
+# Mirrors the Rust `render_hex_dump` in `src/error.rs`; any change must be
+# applied in both places so cross-language output stays byte-for-byte equal.
+_HEX_DUMP_ROW_WIDTH = 16
 
 
 # Default base URL for the docs site. Overridable via the
@@ -56,6 +64,51 @@ def _docs_base_url() -> str:
     """
     override = os.environ.get("MRRC_DOCS_BASE_URL", "")
     return (override or DEFAULT_DOCS_BASE_URL).rstrip("/")
+
+
+def _render_hex_dump(
+    window: bytes,
+    window_start_offset: int,
+    byte_offset: Optional[int],
+) -> str:
+    """Render a byte window as a hex + ASCII dump with an optional caret.
+
+    Matches the Rust ``render_hex_dump`` in ``src/error.rs`` byte-for-byte.
+    See ``docs/reference/error-handling.md`` for the format contract.
+    """
+    anchor = byte_offset if byte_offset is not None else window_start_offset
+    lines: list[str] = [f"bytes near offset 0x{anchor:X}:"]
+    row_width = _HEX_DUMP_ROW_WIDTH
+    caret_line: Optional[str] = None
+    for row_idx in range(0, len(window), row_width):
+        chunk = window[row_idx:row_idx + row_width]
+        row_start = window_start_offset + row_idx
+        hex_parts: list[str] = []
+        for i, b in enumerate(chunk):
+            if i == 8:
+                hex_parts.append(" ")
+            hex_parts.append(f"{b:02x} ")
+        for i in range(len(chunk), row_width):
+            if i == 8:
+                hex_parts.append(" ")
+            hex_parts.append("   ")
+        ascii_parts = "".join(
+            chr(b) if 0x20 <= b <= 0x7E else "." for b in chunk
+        )
+        ascii_parts = ascii_parts + " " * (row_width - len(chunk))
+        row = f"    0x{row_start:04X}:  {''.join(hex_parts)}|{ascii_parts}|"
+        lines.append(row)
+        if (
+            byte_offset is not None
+            and row_start <= byte_offset < row_start + len(chunk)
+        ):
+            col = byte_offset - row_start
+            # Prefix: 4 spaces + "0x####:  " = 13 chars; 3 chars per byte for
+            # `col` bytes; one extra space after 8 bytes.
+            caret_col = 13 + col * 3 + (1 if col >= 8 else 0)
+            caret_line = " " * caret_col + "^^ offending byte"
+            lines.append(caret_line)
+    return "\n".join(lines)
 
 
 class _MrrcExceptionBase:
@@ -86,6 +139,8 @@ class _MrrcExceptionBase:
     byte_offset: Optional[int]
     record_byte_offset: Optional[int]
     source: Optional[str]
+    bytes_near: Optional[bytes]
+    bytes_near_offset: Optional[int]
 
     def __init__(self, *args, **kwargs) -> None:
         for field in _POSITIONAL_FIELDS:
@@ -215,14 +270,23 @@ class _MrrcExceptionBase:
             rows.append(("record-relative:", f"byte {self.record_byte_offset}"))
 
         if not rows:
-            return header
+            header_out = header
+        else:
+            label_width = max(len(label) for label, _ in rows)
+            body = "\n".join(
+                f"  {label}{' ' * (label_width - len(label) + 1)}{value}"
+                for label, value in rows
+            )
+            header_out = f"{header}\n{body}"
 
-        label_width = max(len(label) for label, _ in rows)
-        body = "\n".join(
-            f"  {label}{' ' * (label_width - len(label) + 1)}{value}"
-            for label, value in rows
-        )
-        return f"{header}\n{body}"
+        if self.bytes_near is not None and self.bytes_near_offset is not None:
+            dump = _render_hex_dump(
+                self.bytes_near,
+                self.bytes_near_offset,
+                self.byte_offset,
+            )
+            return f"{header_out}\n\n{dump}"
+        return header_out
 
     def _extra_detail_rows(self) -> list[tuple[str, str]]:
         """Hook for subclasses to add detail rows for their extra
@@ -248,6 +312,84 @@ class _MrrcExceptionBase:
         the ``MRRC_DOCS_BASE_URL`` environment variable to override.
         """
         return f"{_docs_base_url()}/reference/error-codes/#{cls.code}"
+
+    # --- structured serialization --------------------------------------
+    # to_dict / to_json emit a versioned schema suitable for structured
+    # logging platforms (ELK, Datadog, Splunk, JSON-line pipelines).
+    # Schema contract (v1):
+    #   - schema_version, class, code, slug, severity, help_url always present
+    #   - All _diagnostic_fields keys always present (None when absent)
+    #   - Bytes values get hex-encoded with a `_hex` suffix on the key
+    #   - _cause is always a string or null, never nested
+    #
+    # Any change to the dict shape MUST bump SCHEMA_VERSION and bump the
+    # crate's minor version (pre-1.0) or major (post-1.0).
+
+    SCHEMA_VERSION: int = 1
+
+    # Per-subclass extra fields to include in to_dict() output beyond the
+    # base _POSITIONAL_FIELDS. Subclasses with extras like `message` or
+    # `expected_length` declare them here.
+    _diagnostic_extra_fields: tuple = ()
+
+    def to_dict(self, *, include_traceback: bool = False) -> dict:
+        """Render this exception as a versioned, JSON-serializable dict.
+
+        The dict has a stable schema (``schema_version: 1``) suitable for
+        emitting to structured logging platforms. Bytes-typed fields are
+        hex-encoded with a ``_hex`` suffix on the key (e.g., ``found_hex``)
+        so the result is JSON-serializable without further conversion.
+
+        ``include_traceback=True`` adds a ``traceback`` key with the
+        formatted traceback lines (only present when ``self.__traceback__``
+        is set, i.e., the exception was actually raised).
+        """
+        result: dict = {
+            "schema_version": self.SCHEMA_VERSION,
+            "class": type(self).__name__,
+            "code": getattr(self, "code", None) or None,
+            "slug": getattr(self, "slug", None) or None,
+            "severity": getattr(self, "severity", "error"),
+            "help_url": (
+                self.help_url()
+                if getattr(self, "code", None)
+                else None
+            ),
+        }
+        for field in _POSITIONAL_FIELDS:
+            value = getattr(self, field, None)
+            if isinstance(value, bytes):
+                result[f"{field}_hex"] = value.hex()
+                result[field] = None
+            else:
+                result[field] = value
+        for field in self._diagnostic_extra_fields:
+            value = getattr(self, field, None)
+            if isinstance(value, bytes):
+                result[f"{field}_hex"] = value.hex()
+                result[field] = None
+            else:
+                result[field] = value
+        cause = self.__cause__ or self.__context__
+        result["_cause"] = str(cause) if cause is not None else None
+        if include_traceback and self.__traceback__:
+            import traceback
+
+            result["traceback"] = traceback.format_exception(
+                type(self), self, self.__traceback__
+            )
+        return result
+
+    def to_json(self, **kwargs) -> str:
+        """JSON-serialize this exception via :meth:`to_dict`. Any kwargs are
+        forwarded to ``json.dumps`` (e.g., ``indent=2`` for pretty-print).
+        """
+        import json
+
+        # Pull include_traceback out of kwargs so it's passed to to_dict
+        # rather than json.dumps (which would reject it).
+        include_traceback = kwargs.pop("include_traceback", False)
+        return json.dumps(self.to_dict(include_traceback=include_traceback), **kwargs)
 
 
 class MrrcException(_MrrcExceptionBase, Exception):
@@ -384,6 +526,7 @@ class InvalidField(RecordDirectoryInvalid):
     code = "E106"
     slug = "invalid_field"
     _pickle_extra_fields = ("message",)
+    _diagnostic_extra_fields = ("message",)
     message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
@@ -402,6 +545,7 @@ class TruncatedRecord(EndOfRecordNotFound):
     code = "E005"
     slug = "truncated_record"
     _pickle_extra_fields = ("expected_length", "actual_length")
+    _diagnostic_extra_fields = ("expected_length", "actual_length")
     expected_length: Optional[int]
     actual_length: Optional[int]
 
@@ -435,6 +579,7 @@ class EncodingError(MrrcException):
     code = "E301"
     slug = "utf8_invalid"
     _pickle_extra_fields = ("message",)
+    _diagnostic_extra_fields = ("message",)
     message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
@@ -453,6 +598,7 @@ class XmlError(MrrcException):
     code = "E401"
     slug = "marcxml_invalid"
     _pickle_extra_fields = ("message",)
+    _diagnostic_extra_fields = ("message",)
     message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
@@ -471,6 +617,7 @@ class JsonError(MrrcException):
     code = "E402"
     slug = "marcjson_invalid"
     _pickle_extra_fields = ("message",)
+    _diagnostic_extra_fields = ("message",)
     message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
@@ -489,6 +636,7 @@ class WriterError(MrrcException):
     code = "E404"
     slug = "record_too_large_for_iso2709"
     _pickle_extra_fields = ("message",)
+    _diagnostic_extra_fields = ("message",)
     message: Optional[str]
 
     def __init__(self, *args, message=None, **kwargs) -> None:
