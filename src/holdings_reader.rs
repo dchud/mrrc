@@ -122,8 +122,14 @@ impl<R: Read> HoldingsMarcReader<R> {
 
         self.ctx.begin_record();
 
-        let leader = Leader::from_bytes(&leader_bytes)?;
-        leader.validate_for_reading()?;
+        // Leader errors bypass ParseContext; enrich with a byte window so
+        // `detailed()` can render a hex dump.
+        let leader_offset = self.ctx.stream_byte_offset;
+        let leader = Leader::from_bytes(&leader_bytes)
+            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
+        leader
+            .validate_for_reading()
+            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
 
         // Verify this is a holdings record (Type x/y/v/u)
         if !matches!(leader.record_type, 'x' | 'y' | 'v' | 'u') {
@@ -150,6 +156,11 @@ impl<R: Read> HoldingsMarcReader<R> {
             &self.ctx,
         )?;
 
+        // Hand the record buffer to the context for bytes_near capture on
+        // any error raised during directory/field parsing.
+        let record_data_offset = self.ctx.stream_byte_offset;
+        self.ctx.set_parse_buffer(&record_data, record_data_offset);
+
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return Err(self.ctx.err_truncated_record(
                 Some(record_length.saturating_sub(LEADER_LEN)),
@@ -164,6 +175,10 @@ impl<R: Read> HoldingsMarcReader<R> {
 
         let mut i = 0;
         while i + 12 <= directory_bytes.len() {
+            // Move stream_byte_offset to the current directory byte so
+            // errors below carry a precise byte_offset and the bytes_near
+            // hex-dump caret lands at the actual offending byte.
+            self.ctx.stream_byte_offset = record_data_offset + i;
             // Stop on directory terminator (consistent with bib + authority).
             if directory_bytes[i] == FIELD_TERMINATOR {
                 break;
@@ -216,6 +231,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             }
 
             self.ctx.current_field_tag = Some(tag.clone());
+            self.ctx.stream_byte_offset = record_data_offset + directory_size + start;
             let parsed = iso2709::parse_data_field(
                 field_data,
                 &tag,
@@ -243,7 +259,10 @@ impl<R: Read> HoldingsMarcReader<R> {
             i += 12;
         }
 
-        self.ctx.advance(record_length.saturating_sub(LEADER_LEN));
+        // Restore stream_byte_offset to the end of the current record.
+        // The directory/field loop above moved it mid-record for precise
+        // error alignment; this restores the bytes-consumed invariant.
+        self.ctx.stream_byte_offset = record_data_offset + record_length.saturating_sub(LEADER_LEN);
         Ok(Some(record))
     }
 }

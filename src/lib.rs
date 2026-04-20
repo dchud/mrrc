@@ -157,7 +157,7 @@ pub use authority_record::{
 pub use authority_writer::AuthorityMarcWriter;
 pub use bibliographic_helpers::{IsbnValidator, PublicationInfo};
 pub use encoding_validation::{EncodingAnalysis, EncodingValidator};
-pub use error::{MarcError, Result};
+pub use error::{BytesNear, MarcError, Result};
 pub use field_linkage::LinkageInfo;
 pub use field_query::{FieldQuery, SubfieldPatternQuery, SubfieldValueQuery, TagRangeQuery};
 pub use field_query_helpers::FieldQueryHelpers;

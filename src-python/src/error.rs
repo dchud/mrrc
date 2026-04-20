@@ -7,7 +7,7 @@
 // kwargs rejected — the mapping falls back to a bare `PyValueError` with the
 // Rust `Display` output as its message, so an error never gets dropped.
 
-use mrrc::MarcError;
+use mrrc::{BytesNear, MarcError};
 use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
@@ -60,6 +60,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             source_name,
             found,
             expected,
+            bytes_near,
             ..
         } => {
             populate_common(py, &kwargs, *record_index, None, None, source_name)?;
@@ -67,6 +68,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("record_byte_offset", *record_byte_offset)?;
             set_found(py, &kwargs, found.as_deref())?;
             kwargs.set_item("expected", expected)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "RecordLeaderInvalid"
         },
         MarcError::RecordLengthInvalid {
@@ -75,11 +77,13 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             source_name,
             found,
             expected,
+            bytes_near,
         } => {
             populate_common(py, &kwargs, *record_index, None, None, source_name)?;
             kwargs.set_item("byte_offset", *byte_offset)?;
             set_found(py, &kwargs, found.as_deref())?;
             kwargs.set_item("expected", expected)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "RecordLengthInvalid"
         },
         MarcError::BaseAddressInvalid {
@@ -89,6 +93,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             record_control_number,
             found,
             expected,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -101,6 +106,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("byte_offset", *byte_offset)?;
             set_found(py, &kwargs, found.as_deref())?;
             kwargs.set_item("expected", expected)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "BaseAddressInvalid"
         },
         MarcError::BaseAddressNotFound {
@@ -108,6 +114,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             byte_offset,
             source_name,
             record_control_number,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -118,6 +125,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
                 source_name,
             )?;
             kwargs.set_item("byte_offset", *byte_offset)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "BaseAddressNotFound"
         },
         MarcError::DirectoryInvalid {
@@ -129,6 +137,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             field_tag,
             found,
             expected,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -142,6 +151,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("record_byte_offset", *record_byte_offset)?;
             set_found(py, &kwargs, found.as_deref())?;
             kwargs.set_item("expected", expected)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "RecordDirectoryInvalid"
         },
         MarcError::TruncatedRecord {
@@ -152,6 +162,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             record_control_number,
             expected_length,
             actual_length,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -165,6 +176,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("record_byte_offset", *record_byte_offset)?;
             kwargs.set_item("expected_length", *expected_length)?;
             kwargs.set_item("actual_length", *actual_length)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "TruncatedRecord"
         },
         MarcError::EndOfRecordNotFound {
@@ -173,6 +185,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             record_byte_offset,
             source_name,
             record_control_number,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -184,6 +197,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             )?;
             kwargs.set_item("byte_offset", *byte_offset)?;
             kwargs.set_item("record_byte_offset", *record_byte_offset)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "EndOfRecordNotFound"
         },
         MarcError::InvalidIndicator {
@@ -196,6 +210,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             indicator_position,
             found,
             expected,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -210,6 +225,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("indicator_position", *indicator_position)?;
             set_found(py, &kwargs, found.as_deref())?;
             kwargs.set_item("expected", expected)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "InvalidIndicator"
         },
         MarcError::BadSubfieldCode {
@@ -220,6 +236,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             record_control_number,
             field_tag,
             subfield_code,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -232,6 +249,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("byte_offset", *byte_offset)?;
             kwargs.set_item("record_byte_offset", *record_byte_offset)?;
             kwargs.set_item("subfield_code", *subfield_code)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "BadSubfieldCode"
         },
         MarcError::InvalidField {
@@ -242,6 +260,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             record_control_number,
             field_tag,
             message,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -254,6 +273,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("byte_offset", *byte_offset)?;
             kwargs.set_item("record_byte_offset", *record_byte_offset)?;
             kwargs.set_item("message", message)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "InvalidField"
         },
         MarcError::EncodingError {
@@ -263,6 +283,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             record_control_number,
             field_tag,
             message,
+            bytes_near,
         } => {
             populate_common(
                 py,
@@ -274,6 +295,7 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             )?;
             kwargs.set_item("byte_offset", *byte_offset)?;
             kwargs.set_item("message", message)?;
+            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "EncodingError"
         },
         MarcError::FieldNotFound {
@@ -362,4 +384,22 @@ fn set_found<'py>(
         Some(bytes) => kwargs.set_item("found", PyBytes::new(py, bytes)),
         None => kwargs.set_item("found", py.None()),
     }
+}
+
+fn set_bytes_near<'py>(
+    py: Python<'py>,
+    kwargs: &Bound<'py, PyDict>,
+    bytes_near: Option<&BytesNear>,
+) -> PyResult<()> {
+    match bytes_near {
+        Some(window) => {
+            kwargs.set_item("bytes_near", PyBytes::new(py, &window.bytes))?;
+            kwargs.set_item("bytes_near_offset", window.start_offset)?;
+        },
+        None => {
+            kwargs.set_item("bytes_near", py.None())?;
+            kwargs.set_item("bytes_near_offset", py.None())?;
+        },
+    }
+    Ok(())
 }

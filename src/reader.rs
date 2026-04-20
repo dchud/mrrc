@@ -185,8 +185,15 @@ impl<R: Read> MarcReader<R> {
         // We have a record — initialize the per-record positional context.
         self.ctx.begin_record();
 
-        let leader = Leader::from_bytes(&leader_bytes)?;
-        leader.validate_for_reading()?;
+        // Leader errors bypass ParseContext (Leader::from_bytes builds
+        // MarcError directly), so enrich any raised error with a byte
+        // window around the leader bytes for hex-dump rendering.
+        let leader_offset = self.ctx.stream_byte_offset;
+        let leader = Leader::from_bytes(&leader_bytes)
+            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
+        leader
+            .validate_for_reading()
+            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
 
         // Calculate the size of the directory and data areas
         let record_length = leader.record_length as usize;
@@ -208,6 +215,13 @@ impl<R: Read> MarcReader<R> {
             self.recovery_mode,
             &self.ctx,
         )?;
+
+        // Hand the loaded record buffer to the context so `err_*` helpers
+        // raised during directory/field parsing can capture a byte-window
+        // for hex-dump rendering. The record data starts at the stream
+        // offset just past the leader.
+        let record_data_offset = self.ctx.stream_byte_offset;
+        self.ctx.set_parse_buffer(&record_data, record_data_offset);
 
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
             return crate::recovery::try_recover_record(
@@ -240,6 +254,11 @@ impl<R: Read> MarcReader<R> {
         // Directory is terminated with FIELD_TERMINATOR
         let mut pos = 0;
         while pos < directory.len() {
+            // Keep ctx.stream_byte_offset pointed at the current directory
+            // byte so errors raised below carry a precise byte_offset and
+            // the bytes_near hex-dump caret lands at the actual offending
+            // byte rather than column 0 of the first row.
+            self.ctx.stream_byte_offset = record_data_offset + pos;
             if directory[pos] == FIELD_TERMINATOR {
                 // End of directory
                 break;
@@ -307,6 +326,8 @@ impl<R: Read> MarcReader<R> {
                                 record.add_control_field(tag, value);
                             } else {
                                 self.ctx.current_field_tag = Some(tag.clone());
+                                self.ctx.stream_byte_offset =
+                                    record_data_offset + data_start + start_position;
                                 if let Ok(field) = iso2709::parse_data_field(
                                     field_data,
                                     &tag,
@@ -338,8 +359,12 @@ impl<R: Read> MarcReader<R> {
                     }
                     record.add_control_field(tag, value);
                 } else {
-                    // Data field (010+)
+                    // Data field (010+). Point stream_byte_offset at the
+                    // field's absolute start so any error raised inside
+                    // carries a precise byte_offset for hex-dump caret
+                    // alignment.
                     self.ctx.current_field_tag = Some(tag.clone());
+                    self.ctx.stream_byte_offset = record_data_offset + data_start + start_position;
                     let parsed = iso2709::parse_data_field(
                         field_data,
                         &tag,
@@ -360,8 +385,11 @@ impl<R: Read> MarcReader<R> {
             }
         }
 
-        // Advance past the rest of the record (everything after the leader).
-        self.ctx.advance(record_length.saturating_sub(LEADER_LEN));
+        // Reset stream_byte_offset to the end of the current record. The
+        // directory/field loop above moved it to mid-record for precise
+        // error-offset alignment; this line restores the invariant that
+        // stream_byte_offset equals bytes consumed from the stream.
+        self.ctx.stream_byte_offset = record_data_offset + record_length.saturating_sub(LEADER_LEN);
         self.records_read += 1;
         Ok(Some(record))
     }

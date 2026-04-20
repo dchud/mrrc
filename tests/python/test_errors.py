@@ -327,6 +327,208 @@ class TestSnapshotFormats:
 
 
 # ---------------------------------------------------------------------------
+# Structured serialization (to_dict / to_json)
+# ---------------------------------------------------------------------------
+
+
+class TestStructuredSerialization:
+    """``to_dict()`` / ``to_json()`` produce a versioned schema suitable for
+    structured logging platforms. See ``docs/reference/error-handling.md``
+    for the full schema contract.
+    """
+
+    def test_to_dict_full_schema_invalid_indicator(self):
+        err = mrrc.InvalidIndicator(
+            record_index=847,
+            record_control_number="ocm01234567",
+            field_tag="245",
+            indicator_position=1,
+            found=b":",
+            expected="digit or space",
+            byte_offset=7217,
+            record_byte_offset=42,
+            source="harvest.mrc",
+        )
+        d = err.to_dict()
+
+        # Schema fixed-position keys
+        assert d["schema_version"] == 1
+        assert d["class"] == "InvalidIndicator"
+        assert d["code"] == "E201"
+        assert d["slug"] == "invalid_indicator"
+        assert d["severity"] == "error"
+        assert d["help_url"].endswith("#E201")
+
+        # Positional fields
+        assert d["record_index"] == 847
+        assert d["record_control_number"] == "ocm01234567"
+        assert d["field_tag"] == "245"
+        assert d["indicator_position"] == 1
+        assert d["expected"] == "digit or space"
+        assert d["byte_offset"] == 7217
+        assert d["record_byte_offset"] == 42
+        assert d["source"] == "harvest.mrc"
+
+        # Bytes get hex-encoded under _hex suffix; original key is null
+        assert d["found"] is None
+        assert d["found_hex"] == "3a"
+
+        # No cause
+        assert d["_cause"] is None
+
+    def test_to_dict_truncated_record_includes_length_extras(self):
+        err = mrrc.TruncatedRecord(expected_length=1024, actual_length=640)
+        d = err.to_dict()
+        assert d["expected_length"] == 1024
+        assert d["actual_length"] == 640
+        assert d["class"] == "TruncatedRecord"
+        assert d["code"] == "E005"
+
+    def test_to_dict_invalid_field_includes_message(self):
+        err = mrrc.InvalidField(message="exceeds data area", field_tag="245")
+        d = err.to_dict()
+        assert d["message"] == "exceeds data area"
+        assert d["field_tag"] == "245"
+
+    def test_to_dict_cause_chain_populates_underscore_cause(self):
+        try:
+            try:
+                raise FileNotFoundError("test path")
+            except FileNotFoundError as e:
+                raise mrrc.WriterError(message="failed") from e
+        except mrrc.WriterError as e:
+            d = e.to_dict()
+        assert d["_cause"] == "test path"
+
+    def test_to_dict_no_cause_chain_yields_null(self):
+        err = mrrc.InvalidIndicator()
+        assert err.to_dict()["_cause"] is None
+
+    def test_to_dict_include_traceback(self):
+        try:
+            raise mrrc.InvalidIndicator()
+        except mrrc.InvalidIndicator as e:
+            d = e.to_dict(include_traceback=True)
+        assert "traceback" in d
+        assert isinstance(d["traceback"], list)
+        assert any("InvalidIndicator" in line for line in d["traceback"])
+
+    def test_to_dict_default_omits_traceback(self):
+        try:
+            raise mrrc.InvalidIndicator()
+        except mrrc.InvalidIndicator as e:
+            d = e.to_dict()
+        assert "traceback" not in d
+
+    def test_to_json_returns_valid_json_string(self):
+        import json
+
+        err = mrrc.InvalidIndicator(
+            record_index=1,
+            field_tag="245",
+            found=b":",
+        )
+        s = err.to_json()
+        parsed = json.loads(s)
+        assert parsed["class"] == "InvalidIndicator"
+        assert parsed["found_hex"] == "3a"
+
+    def test_to_json_forwards_kwargs_to_json_dumps(self):
+        err = mrrc.InvalidIndicator()
+        pretty = err.to_json(indent=2)
+        # Pretty-printed JSON has newlines
+        assert "\n" in pretty
+
+    def test_to_json_include_traceback_routes_to_to_dict(self):
+        import json
+
+        try:
+            raise mrrc.InvalidIndicator()
+        except mrrc.InvalidIndicator as e:
+            s = e.to_json(include_traceback=True)
+        parsed = json.loads(s)
+        assert "traceback" in parsed
+
+    def test_to_dict_payload_size_bounded(self):
+        """The schema's bounded-size guarantee depends on `found` being
+        capped (32 bytes max via the Rust truncate_bytes helper). Verify
+        the Python side honors this when bytes are provided directly.
+        """
+        # Even if a caller passes a larger bytes value, the resulting
+        # found_hex stays small as long as upstream truncation works.
+        err = mrrc.InvalidIndicator(found=b"a" * 32)
+        d = err.to_dict()
+        assert len(d["found_hex"]) == 64  # 32 bytes * 2 hex chars
+
+    def test_to_dict_bytes_near_surfaces_hex_and_offset(self):
+        err = mrrc.InvalidIndicator(
+            bytes_near=b" :0",
+            bytes_near_offset=99,
+        )
+        d = err.to_dict()
+        assert d["bytes_near"] is None
+        assert d["bytes_near_hex"] == "203a30"
+        assert d["bytes_near_offset"] == 99
+
+    def test_to_dict_bytes_near_null_when_absent(self):
+        err = mrrc.InvalidIndicator()
+        d = err.to_dict()
+        assert d["bytes_near"] is None
+        assert "bytes_near_hex" not in d
+        assert d["bytes_near_offset"] is None
+
+
+class TestHexDumpRendering:
+    """Python ``MrrcException.detailed()`` renders a hex dump matching the
+    Rust ``MarcError::detailed()`` format byte-for-byte when a byte window
+    is attached via ``bytes_near`` / ``bytes_near_offset``.
+    """
+
+    def test_detailed_includes_hex_dump_when_bytes_near_set(self):
+        # 32-byte window: 16 before + 16 after the offending byte at 0x1C31
+        window = b"2023nyu         " + b":0\x000 0 eng d\x1e245"
+        err = mrrc.InvalidIndicator(
+            record_index=847,
+            field_tag="245",
+            indicator_position=0,
+            byte_offset=0x1C31,
+            bytes_near=window,
+            bytes_near_offset=0x1C21,
+        )
+        d = err.detailed()
+        assert "bytes near offset 0x1C31:" in d, d
+        assert "0x1C21:" in d, d
+        assert "0x1C31:" in d, d
+        assert "^^ offending byte" in d, d
+        assert "|2023nyu" in d, d
+
+    def test_detailed_no_dump_when_bytes_near_absent(self):
+        err = mrrc.InvalidIndicator(record_index=1)
+        assert "bytes near offset" not in err.detailed()
+
+    def test_detailed_no_caret_when_offset_outside_window(self):
+        err = mrrc.InvalidIndicator(
+            byte_offset=9999,
+            bytes_near=b"abcdef",
+            bytes_near_offset=0,
+        )
+        d = err.detailed()
+        assert "bytes near offset 0x270F:" in d
+        assert "^^ offending byte" not in d
+
+    def test_pickle_preserves_bytes_near(self):
+        import pickle
+
+        err = mrrc.InvalidIndicator(
+            bytes_near=b" :0",
+            bytes_near_offset=99,
+        )
+        restored = pickle.loads(pickle.dumps(err))
+        assert restored.bytes_near == b" :0"
+        assert restored.bytes_near_offset == 99
+
+
+# ---------------------------------------------------------------------------
 # FFI integration: Rust → PyO3 → Python typed exceptions with attrs
 # ---------------------------------------------------------------------------
 
@@ -433,6 +635,137 @@ class TestFfiTypedExceptions:
             err.help_url()
             == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{err.code}"
         )
+
+    def test_pre_parse_error_from_buffered_reader_carries_bytes_near(self):
+        """The buffered-reader boundary-scan path (pre-parse validation
+        for short record-length headers, record_length < 24, missing
+        terminator) previously collapsed its `ParseError` into an
+        `InvalidField` with no positional context. The ParseError path
+        now carries `bytes_near` / `byte_offset` through to the typed
+        Python exception.
+        """
+        import io
+
+        # record_length=10 < 24 → caught by buffered_reader before the
+        # parser runs. bytes_near should contain the 5-byte length header
+        # + surrounding leader bytes.
+        bad = b"00010nam a2200025 i 4500"
+        reader = mrrc.MARCReader(io.BytesIO(bad))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        err = excinfo.value
+        assert err.byte_offset == 0
+        assert err.bytes_near is not None
+        assert len(err.bytes_near) > 0
+        assert b"00010" in err.bytes_near
+        assert "bytes near offset" in err.detailed()
+
+    def test_leader_error_carries_bytes_near_via_with_bytes_near(self):
+        """Leader errors bypass `ParseContext` (constructed directly in
+        `leader.rs`), but the reader enriches them via
+        ``MarcError::with_bytes_near`` so `detailed()` still renders a
+        hex dump of the offending leader bytes.
+        """
+        import io
+
+        # record_length=50 clears the buffered_reader's >= 24 guard, but
+        # base_address=00010 fails Leader::validate_for_reading.
+        bad_leader = b"00050nam a2200010 i 4500" + b"\x00" * 26
+        reader = mrrc.MARCReader(io.BytesIO(bad_leader))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        err = excinfo.value
+        assert isinstance(err, mrrc.RecordLeaderInvalid)
+        assert err.bytes_near is not None
+        assert len(err.bytes_near) > 0
+        assert err.byte_offset == 0
+        assert err.bytes_near_offset == 0
+        d = err.detailed()
+        assert "bytes near offset" in d
+        assert "^^ offending byte" in d
+        assert "00050nam" in d
+
+    def test_ffi_error_carries_bytes_near_window_for_hex_dump(self):
+        """End-to-end: a malformed record raised via the `MARCReader` FFI
+        path carries a populated `bytes_near` window and a precise
+        `byte_offset` that points inside the window — so ``detailed()``
+        renders a caret at the actual offending byte rather than column 0
+        of the first row.
+        """
+        import io
+
+        # Directory entry claims field length=9999 — past the data area.
+        # Raises `err_invalid_field` with ctx populated, which carries
+        # bytes_near captured from the record buffer.
+        field_245 = b"10\x1faT\x1e"
+        directory = b"245999900000"
+        base_address = 24 + len(directory) + 1
+        record_length = base_address + len(field_245) + 1
+        leader = (
+            f"{record_length:05d}".encode()
+            + b"nam a22"
+            + f"{base_address:05d}".encode()
+            + b" i 4500"
+        )
+        record = leader + directory + b"\x1e" + field_245 + b"\x1d"
+        reader = mrrc.MARCReader(io.BytesIO(record))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        err = excinfo.value
+        # bytes_near populated from reader buffer
+        assert err.bytes_near is not None, err
+        assert len(err.bytes_near) > 0
+        # byte_offset falls inside the captured window
+        assert err.byte_offset is not None
+        assert err.bytes_near_offset is not None
+        assert (
+            err.bytes_near_offset
+            <= err.byte_offset
+            <= err.bytes_near_offset + len(err.bytes_near)
+        )
+        # detailed() renders the hex dump + caret
+        d = err.detailed()
+        assert "bytes near offset" in d
+        assert "^^ offending byte" in d
+
+    def test_to_dict_on_surfaced_exception_carries_positional_fields(self):
+        """FFI integration: a Rust parse error surfaced as a Python typed
+        exception round-trips through ``to_dict()`` with all positional
+        fields populated. Regression guard for the structured-serialization
+        path end-to-end.
+        """
+        import io
+
+        full = _build_minimal_marc_record()
+        truncated = full[: len(full) - 10]
+        reader = mrrc.MARCReader(io.BytesIO(truncated))
+        with pytest.raises(mrrc.MrrcException) as excinfo:
+            list(reader)
+        d = excinfo.value.to_dict()
+        # Schema spine always populated
+        assert d["schema_version"] == 1
+        assert d["class"]
+        assert d["code"].startswith("E")
+        assert d["slug"]
+        assert d["help_url"].endswith(f"#{d['code']}")
+        # Positional fields surface (keys always present; values may be null)
+        for key in (
+            "record_index",
+            "record_control_number",
+            "field_tag",
+            "byte_offset",
+            "record_byte_offset",
+            "source",
+            "bytes_near",
+            "bytes_near_offset",
+        ):
+            assert key in d, f"missing key {key}"
+        # TruncatedRecord carries expected/actual length extras
+        if d["class"] == "TruncatedRecord":
+            assert d["expected_length"] is not None
+            assert d["actual_length"] is not None
+        # _cause present; may be None or string
+        assert "_cause" in d
 
     def test_no_silent_drops_in_pyo3_conversion(self):
         """Catch-all: confirm that whatever Rust raises always surfaces as

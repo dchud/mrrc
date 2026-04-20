@@ -18,6 +18,12 @@ use thiserror::Error;
 /// where many errors may be accumulated.
 pub const FOUND_BYTES_CAP: usize = 32;
 
+/// Number of bytes retained before the error offset in [`BytesNear`].
+pub const BYTES_NEAR_BEFORE: usize = 16;
+
+/// Number of bytes retained after the error offset in [`BytesNear`].
+pub const BYTES_NEAR_AFTER: usize = 16;
+
 /// Truncate a byte slice to at most [`FOUND_BYTES_CAP`] bytes.
 ///
 /// Returns `(bytes, was_truncated)`. The caller is responsible for surfacing
@@ -29,6 +35,47 @@ pub fn truncate_bytes(input: &[u8]) -> (Vec<u8>, bool) {
         (input[..FOUND_BYTES_CAP].to_vec(), true)
     } else {
         (input.to_vec(), false)
+    }
+}
+
+/// Byte window captured near the point of an error, used to render a hex
+/// dump in [`MarcError::detailed`] output.
+///
+/// The window is up to [`BYTES_NEAR_BEFORE`] + [`BYTES_NEAR_AFTER`] bytes
+/// long and clamped at buffer boundaries; [`Self::start_offset`] is the
+/// absolute stream offset of [`Self::bytes`]`[0]` so consumers can align
+/// the caret at the offending byte by computing
+/// `err.byte_offset - bytes_near.start_offset`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BytesNear {
+    /// The captured bytes.
+    pub bytes: Vec<u8>,
+    /// Absolute stream offset of the first byte in [`Self::bytes`].
+    pub start_offset: usize,
+}
+
+impl BytesNear {
+    /// Capture a window centered on `absolute_offset` from `buffer`, given
+    /// the absolute stream offset of `buffer[0]` in `buffer_start`.
+    ///
+    /// Returns `None` when `absolute_offset` does not fall within
+    /// `[buffer_start, buffer_start + buffer.len()]`. Clamps at buffer
+    /// boundaries when the window would extend past either end.
+    #[must_use]
+    pub fn capture(buffer: &[u8], buffer_start: usize, absolute_offset: usize) -> Option<Self> {
+        if absolute_offset < buffer_start {
+            return None;
+        }
+        let rel = absolute_offset - buffer_start;
+        if rel > buffer.len() {
+            return None;
+        }
+        let window_start = rel.saturating_sub(BYTES_NEAR_BEFORE);
+        let window_end = rel.saturating_add(BYTES_NEAR_AFTER).min(buffer.len());
+        Some(BytesNear {
+            bytes: buffer[window_start..window_end].to_vec(),
+            start_offset: buffer_start + window_start,
+        })
     }
 }
 
@@ -62,6 +109,8 @@ pub enum MarcError {
         expected: Option<String>,
         /// Underlying cause as a string (e.g., from a leader validation routine).
         cause: Option<String>,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// The leader's record-length field is invalid (non-numeric, too small, etc.).
@@ -76,6 +125,8 @@ pub enum MarcError {
         found: Option<Vec<u8>>,
         /// Human-readable description of what was expected.
         expected: Option<String>,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// The leader's base-address-of-data field is invalid.
@@ -92,6 +143,8 @@ pub enum MarcError {
         found: Option<Vec<u8>>,
         /// Human-readable description of what was expected.
         expected: Option<String>,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// The leader claims a base address of data that does not exist in the stream.
@@ -104,6 +157,8 @@ pub enum MarcError {
         source_name: Option<String>,
         /// 001 control number, when already extracted.
         record_control_number: Option<String>,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// A directory entry is structurally invalid (bad tag, length, or start position).
@@ -124,6 +179,8 @@ pub enum MarcError {
         found: Option<Vec<u8>>,
         /// Human-readable description of what was expected.
         expected: Option<String>,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// The record was truncated mid-stream.
@@ -142,6 +199,8 @@ pub enum MarcError {
         expected_length: Option<usize>,
         /// Actual bytes available before truncation.
         actual_length: Option<usize>,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// The end-of-record marker was not found where expected.
@@ -156,6 +215,8 @@ pub enum MarcError {
         source_name: Option<String>,
         /// 001 control number, when already extracted.
         record_control_number: Option<String>,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// An indicator byte was invalid for its position.
@@ -178,6 +239,8 @@ pub enum MarcError {
         found: Option<Vec<u8>>,
         /// Human-readable description of what was expected.
         expected: Option<String>,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// A subfield code byte was invalid.
@@ -196,6 +259,8 @@ pub enum MarcError {
         field_tag: Option<String>,
         /// The offending subfield code byte.
         subfield_code: u8,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// A data field is structurally invalid in some way not covered by the
@@ -215,6 +280,8 @@ pub enum MarcError {
         field_tag: Option<String>,
         /// Human-readable description of the problem.
         message: String,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// A character encoding conversion failed.
@@ -231,6 +298,8 @@ pub enum MarcError {
         field_tag: Option<String>,
         /// Human-readable description of the problem.
         message: String,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
     },
 
     /// An accessor lookup failed: a requested field was not present in the record.
@@ -307,6 +376,11 @@ impl MarcError {
     /// Render the error as a multi-line diagnostic with all populated
     /// positional metadata visible. Callers who want the actionable one-liner
     /// should use the default [`fmt::Display`] format instead.
+    ///
+    /// When the variant carries a [`BytesNear`] window, a hex dump of the
+    /// surrounding bytes is appended: each row renders 16 bytes as `hh hh
+    /// ...` plus an ASCII sidecar, with a caret pointing at the offending
+    /// byte.
     #[must_use]
     pub fn detailed(&self) -> String {
         let mut out = String::new();
@@ -331,6 +405,11 @@ impl MarcError {
                 out.push(' ');
             }
             out.push_str(value);
+        }
+        if let Some(window) = self.bytes_near() {
+            out.push('\n');
+            out.push('\n');
+            out.push_str(&render_hex_dump(window, self.byte_offset()));
         }
         out
     }
@@ -389,6 +468,267 @@ impl MarcError {
             MarcError::JsonError { .. } => "marcjson_invalid",
             MarcError::WriterError { .. } => "record_too_large_for_iso2709",
         }
+    }
+
+    /// Serialize this error as a JSON-ready `serde_json::Value` suitable
+    /// for emitting to structured logging platforms (ELK, Datadog, Splunk,
+    /// JSON-line pipelines).
+    ///
+    /// Shape notes:
+    /// - Bytes fields (`found`, `bytes_near`) are hex-encoded under a
+    ///   `_hex`-suffixed key; the bare key stays `null`.
+    /// - `_cause` is a flat string (from [`std::error::Error::source`])
+    ///   or `null` — never nested.
+    /// - [`SCHEMA_VERSION`] is included so consumers can branch on it if
+    ///   the shape changes later. Pre-1.0, the shape may still evolve.
+    #[must_use]
+    pub fn to_json_value(&self) -> serde_json::Value {
+        use serde_json::{json, Map, Value};
+        let mut m: Map<String, Value> = Map::new();
+        m.insert("schema_version".into(), json!(SCHEMA_VERSION));
+        m.insert("class".into(), json!(self.kind_name()));
+        m.insert("code".into(), json!(self.code()));
+        m.insert("slug".into(), json!(self.slug()));
+        m.insert("severity".into(), json!("error"));
+        m.insert("help_url".into(), json!(self.help_url()));
+
+        // Positional fields, mirroring the Python _POSITIONAL_FIELDS list.
+        // Fields the variant doesn't carry surface as null.
+        m.insert("record_index".into(), opt_json(self.record_index()));
+        m.insert(
+            "record_control_number".into(),
+            self.record_control_number()
+                .map_or(Value::Null, Value::from),
+        );
+        m.insert(
+            "field_tag".into(),
+            self.field_tag().map_or(Value::Null, Value::from),
+        );
+        m.insert(
+            "indicator_position".into(),
+            opt_json(self.indicator_position_field()),
+        );
+        m.insert("subfield_code".into(), opt_json(self.subfield_code_field()));
+        m.insert("found".into(), Value::Null);
+        if let Some(bytes) = self.found_field() {
+            m.insert("found_hex".into(), json!(hex_encode(bytes)));
+        }
+        m.insert(
+            "expected".into(),
+            self.expected_field().map_or(Value::Null, Value::from),
+        );
+        m.insert("byte_offset".into(), opt_json(self.byte_offset()));
+        m.insert(
+            "record_byte_offset".into(),
+            opt_json(self.record_byte_offset()),
+        );
+        m.insert(
+            "source".into(),
+            self.source_name().map_or(Value::Null, Value::from),
+        );
+        // bytes_near is a byte-window surfaced via the `_hex` suffix
+        // convention: `bytes_near` always None in the dict, `bytes_near_hex`
+        // present only when bytes were captured. `bytes_near_offset` is the
+        // absolute stream offset of the window's first byte.
+        m.insert("bytes_near".into(), Value::Null);
+        if let Some(window) = self.bytes_near() {
+            m.insert("bytes_near_hex".into(), json!(hex_encode(&window.bytes)));
+            m.insert("bytes_near_offset".into(), json!(window.start_offset));
+        } else {
+            m.insert("bytes_near_offset".into(), Value::Null);
+        }
+
+        // Variant-specific extra fields (mirrors Python's
+        // _diagnostic_extra_fields). Surface the message / length pair
+        // when applicable so downstream consumers don't lose them.
+        if let Some(msg) = self.message_text() {
+            m.insert("message".into(), json!(msg));
+        }
+        if let MarcError::TruncatedRecord {
+            expected_length,
+            actual_length,
+            ..
+        } = self
+        {
+            m.insert("expected_length".into(), opt_json(*expected_length));
+            m.insert("actual_length".into(), opt_json(*actual_length));
+        }
+
+        // Cause chain: stringified single value, never nested. Walks
+        // `std::error::Error::source` so the wrapped underlying error
+        // surfaces here for IoError / XmlError / JsonError variants.
+        let cause_str = std::error::Error::source(self).map(ToString::to_string);
+        m.insert("_cause".into(), cause_str.map_or(Value::Null, Value::from));
+
+        Value::Object(m)
+    }
+
+    /// Convenience wrapper: serialize [`MarcError::to_json_value`] to a
+    /// JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns `serde_json::Error` only if the underlying serializer fails
+    /// (which should not happen for the well-formed map produced by
+    /// `to_json_value`).
+    pub fn to_json(&self) -> std::result::Result<String, serde_json::Error> {
+        serde_json::to_string(&self.to_json_value())
+    }
+
+    /// Helper accessors for variants that carry the shared fields. These
+    /// abstract over per-variant field-set differences so `to_json_value`
+    /// can be written once.
+    fn indicator_position_field(&self) -> Option<u8> {
+        match self {
+            MarcError::InvalidIndicator {
+                indicator_position, ..
+            } => *indicator_position,
+            _ => None,
+        }
+    }
+
+    fn subfield_code_field(&self) -> Option<u8> {
+        match self {
+            MarcError::BadSubfieldCode { subfield_code, .. } => Some(*subfield_code),
+            _ => None,
+        }
+    }
+
+    fn found_field(&self) -> Option<&[u8]> {
+        match self {
+            MarcError::InvalidLeader { found, .. }
+            | MarcError::RecordLengthInvalid { found, .. }
+            | MarcError::BaseAddressInvalid { found, .. }
+            | MarcError::DirectoryInvalid { found, .. }
+            | MarcError::InvalidIndicator { found, .. } => found.as_deref(),
+            _ => None,
+        }
+    }
+
+    fn expected_field(&self) -> Option<&str> {
+        match self {
+            MarcError::InvalidLeader { expected, .. }
+            | MarcError::RecordLengthInvalid { expected, .. }
+            | MarcError::BaseAddressInvalid { expected, .. }
+            | MarcError::DirectoryInvalid { expected, .. }
+            | MarcError::InvalidIndicator { expected, .. } => expected.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// Byte window captured near the error offset, when available.
+    ///
+    /// Returned for the parse-path variants that carry it; returns `None`
+    /// for variants without the field (e.g. `IoError`, `FieldNotFound`) or
+    /// when the parser did not have access to a buffer at error time.
+    #[must_use]
+    pub fn bytes_near(&self) -> Option<&BytesNear> {
+        match self {
+            MarcError::InvalidLeader { bytes_near, .. }
+            | MarcError::RecordLengthInvalid { bytes_near, .. }
+            | MarcError::BaseAddressInvalid { bytes_near, .. }
+            | MarcError::BaseAddressNotFound { bytes_near, .. }
+            | MarcError::DirectoryInvalid { bytes_near, .. }
+            | MarcError::TruncatedRecord { bytes_near, .. }
+            | MarcError::EndOfRecordNotFound { bytes_near, .. }
+            | MarcError::InvalidIndicator { bytes_near, .. }
+            | MarcError::BadSubfieldCode { bytes_near, .. }
+            | MarcError::InvalidField { bytes_near, .. }
+            | MarcError::EncodingError { bytes_near, .. } => bytes_near.as_ref(),
+            _ => None,
+        }
+    }
+
+    /// Attach a byte-window to this error after the fact, enriching it for
+    /// hex-dump rendering.
+    ///
+    /// Useful at call sites that construct a `MarcError` without access to
+    /// a `ParseContext` (e.g., `Leader::from_bytes`) and want to surface
+    /// hex-dump-ready bytes before propagating. The window is centered on
+    /// the error's `byte_offset` when set, or on `buffer_start_offset`
+    /// otherwise; it is clamped at buffer boundaries.
+    ///
+    /// `buffer` is the bytes that were being parsed; `buffer_start_offset`
+    /// is the absolute stream offset of `buffer[0]`.
+    ///
+    /// If the variant has a `byte_offset` field that is currently `None`,
+    /// it is also populated with `buffer_start_offset` so downstream
+    /// renderers have an anchor for the hex-dump caret (points at the
+    /// start of the buffer).
+    ///
+    /// Variants that don't carry `bytes_near` (e.g. `IoError`, `XmlError`,
+    /// `JsonError`, `FieldNotFound`, `WriterError`) are returned unchanged.
+    /// Variants that already have `bytes_near` set are overwritten.
+    #[must_use]
+    pub fn with_bytes_near(mut self, buffer: &[u8], buffer_start_offset: usize) -> Self {
+        let anchor = self.byte_offset().unwrap_or(buffer_start_offset);
+        let Some(window) = BytesNear::capture(buffer, buffer_start_offset, anchor) else {
+            return self;
+        };
+        match &mut self {
+            MarcError::InvalidLeader {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::RecordLengthInvalid {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::BaseAddressInvalid {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::BaseAddressNotFound {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::DirectoryInvalid {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::TruncatedRecord {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::EndOfRecordNotFound {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::InvalidIndicator {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::BadSubfieldCode {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::InvalidField {
+                bytes_near,
+                byte_offset,
+                ..
+            }
+            | MarcError::EncodingError {
+                bytes_near,
+                byte_offset,
+                ..
+            } => {
+                if byte_offset.is_none() {
+                    *byte_offset = Some(buffer_start_offset);
+                }
+                *bytes_near = Some(window);
+            },
+            _ => {},
+        }
+        self
     }
 
     /// Canonical docs URL for this error code, pointing at the `#Exxx`
@@ -791,6 +1131,7 @@ impl MarcError {
             record_control_number: None,
             field_tag: None,
             message: msg.into(),
+            bytes_near: None,
         }
     }
 
@@ -804,6 +1145,7 @@ impl MarcError {
             record_control_number: None,
             field_tag: None,
             message: msg.into(),
+            bytes_near: None,
         }
     }
 
@@ -818,6 +1160,7 @@ impl MarcError {
             found: None,
             expected: None,
             cause: Some(cause.into()),
+            bytes_near: None,
         }
     }
 }
@@ -857,6 +1200,97 @@ fn format_found_bytes_python_repr(bytes: &[u8]) -> String {
 /// Default base URL for the docs site. Used by [`MarcError::help_url`] when
 /// the `MRRC_DOCS_BASE_URL` environment variable is not set.
 pub const DEFAULT_DOCS_BASE_URL: &str = "https://dchud.github.io/mrrc";
+
+/// Schema identifier included in [`MarcError::to_json_value`] output so
+/// consumers can branch on it if the shape changes later. Pre-1.0, the
+/// shape may still evolve.
+pub const SCHEMA_VERSION: u32 = 1;
+
+fn opt_json<T: Into<serde_json::Value>>(v: Option<T>) -> serde_json::Value {
+    v.map_or(serde_json::Value::Null, Into::into)
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        let _ = write!(out, "{b:02x}");
+    }
+    out
+}
+
+/// Render a [`BytesNear`] window as a hex + ASCII dump, with an optional
+/// caret pointing at the offending byte.
+///
+/// Format (matches the Python mirror in `mrrc/exceptions.py`):
+///
+/// ```text
+/// bytes near offset 0x1C31:
+///   0x1C21:  32 30 32 33 6e 79 75 20  20 20 20 20 20 20 20 20  |2023nyu         |
+///   0x1C31:  3a 30 00 30 20 30 20 65  6e 67 20 64 1e 32 34 35  |:0.0 0 eng d.245|
+///              ^^ offending byte
+/// ```
+///
+/// `byte_offset` is the absolute stream offset of the offending byte; when
+/// `Some` and within the window, a caret line is emitted beneath the
+/// matching row. Rows are 16 bytes each with an 8-byte gap for readability.
+#[must_use]
+pub fn render_hex_dump(window: &BytesNear, byte_offset: Option<usize>) -> String {
+    use std::fmt::Write;
+    const ROW_WIDTH: usize = 16;
+    let mut out = String::new();
+    let anchor = byte_offset.unwrap_or(window.start_offset);
+    let _ = write!(out, "bytes near offset 0x{anchor:X}:");
+    for (row_idx, chunk) in window.bytes.chunks(ROW_WIDTH).enumerate() {
+        let row_start = window.start_offset + row_idx * ROW_WIDTH;
+        out.push('\n');
+        let _ = write!(out, "    0x{row_start:04X}:  ");
+        // Hex bytes: 8 + 2 spaces + 8 (or fewer when the last row is short)
+        for (i, b) in chunk.iter().enumerate() {
+            if i == 8 {
+                out.push(' ');
+            }
+            let _ = write!(out, "{b:02x} ");
+        }
+        // Pad if this row has fewer than 16 bytes so the ASCII panel aligns
+        // with rows above.
+        for i in chunk.len()..ROW_WIDTH {
+            if i == 8 {
+                out.push(' ');
+            }
+            out.push_str("   ");
+        }
+        // ASCII sidecar
+        out.push('|');
+        for &b in chunk {
+            if (0x20..=0x7E).contains(&b) {
+                out.push(b as char);
+            } else {
+                out.push('.');
+            }
+        }
+        for _ in chunk.len()..ROW_WIDTH {
+            out.push(' ');
+        }
+        out.push('|');
+        // Caret under the offending byte, when it falls in this row.
+        if let Some(abs) = byte_offset {
+            if abs >= row_start && abs < row_start + chunk.len() {
+                let col = abs - row_start;
+                // Prefix: 4 spaces + "0x####:  " = 4 + 9 = 13 chars
+                //   + 3 chars per byte for `col` bytes
+                //   + extra space after 8 bytes
+                let caret_col = 13 + col * 3 + usize::from(col >= 8);
+                out.push('\n');
+                for _ in 0..caret_col {
+                    out.push(' ');
+                }
+                out.push_str("^^ offending byte");
+            }
+        }
+    }
+    out
+}
 
 fn docs_base_url() -> String {
     std::env::var("MRRC_DOCS_BASE_URL")
@@ -915,6 +1349,7 @@ mod tests {
             indicator_position: Some(1),
             found: Some(b":".to_vec()),
             expected: Some("digit or space".into()),
+            bytes_near: None,
         };
         let s = err.to_string();
         assert!(s.starts_with("[record 847"), "got: {s}");
@@ -936,6 +1371,7 @@ mod tests {
             indicator_position: Some(1),
             found: Some(b":".to_vec()),
             expected: Some("digit or space".into()),
+            bytes_near: None,
         };
         let d = err.detailed();
         assert!(
@@ -996,6 +1432,7 @@ mod tests {
             indicator_position: Some(1),
             found: Some(b":".to_vec()),
             expected: Some("digit or space".into()),
+            bytes_near: None,
         }
     }
 
@@ -1016,6 +1453,7 @@ mod tests {
             byte_offset: None,
             source_name: None,
             record_control_number: None,
+            bytes_near: None,
         };
         insta::assert_snapshot!(err.to_string());
     }
@@ -1033,6 +1471,7 @@ mod tests {
             field_tag: Some("245".into()),
             found: Some(truncated),
             expected: Some("12-byte numeric directory entry".into()),
+            bytes_near: None,
         };
         insta::assert_snapshot!(err.to_string());
     }
@@ -1047,6 +1486,7 @@ mod tests {
             record_control_number: Some("oc00000012".into()),
             expected_length: Some(1024),
             actual_length: Some(640),
+            bytes_near: None,
         };
         insta::assert_snapshot!(err.detailed());
     }
@@ -1066,6 +1506,7 @@ mod tests {
                     source_name: None,
                     found: None,
                     expected: None,
+                    bytes_near: None,
                 },
                 "E001",
                 "record_length_invalid",
@@ -1079,6 +1520,7 @@ mod tests {
                     found: None,
                     expected: None,
                     cause: None,
+                    bytes_near: None,
                 },
                 "E002",
                 "leader_invalid",
@@ -1091,6 +1533,7 @@ mod tests {
                     record_control_number: None,
                     found: None,
                     expected: None,
+                    bytes_near: None,
                 },
                 "E003",
                 "base_address_invalid",
@@ -1101,6 +1544,7 @@ mod tests {
                     byte_offset: None,
                     source_name: None,
                     record_control_number: None,
+                    bytes_near: None,
                 },
                 "E004",
                 "base_address_not_found",
@@ -1114,6 +1558,7 @@ mod tests {
                     record_control_number: None,
                     expected_length: None,
                     actual_length: None,
+                    bytes_near: None,
                 },
                 "E005",
                 "truncated_record",
@@ -1125,6 +1570,7 @@ mod tests {
                     record_byte_offset: None,
                     source_name: None,
                     record_control_number: None,
+                    bytes_near: None,
                 },
                 "E006",
                 "end_of_record_not_found",
@@ -1149,6 +1595,7 @@ mod tests {
                     field_tag: None,
                     found: None,
                     expected: None,
+                    bytes_near: None,
                 },
                 "E101",
                 "directory_invalid",
@@ -1171,6 +1618,7 @@ mod tests {
                     record_control_number: None,
                     field_tag: None,
                     message: "test".into(),
+                    bytes_near: None,
                 },
                 "E106",
                 "invalid_field",
@@ -1186,6 +1634,7 @@ mod tests {
                     indicator_position: None,
                     found: None,
                     expected: None,
+                    bytes_near: None,
                 },
                 "E201",
                 "invalid_indicator",
@@ -1199,6 +1648,7 @@ mod tests {
                     record_control_number: None,
                     field_tag: None,
                     subfield_code: 0,
+                    bytes_near: None,
                 },
                 "E202",
                 "bad_subfield_code",
@@ -1211,6 +1661,7 @@ mod tests {
                     record_control_number: None,
                     field_tag: None,
                     message: "test".into(),
+                    bytes_near: None,
                 },
                 "E301",
                 "utf8_invalid",
@@ -1266,6 +1717,82 @@ mod tests {
     }
 
     #[test]
+    fn to_json_value_invalid_indicator_full_schema() {
+        let err = invalid_indicator_full();
+        let v = err.to_json_value();
+        let obj = v.as_object().expect("to_json_value returns an object");
+
+        // Schema fixed-position keys
+        assert_eq!(obj["schema_version"], serde_json::json!(1));
+        assert_eq!(obj["class"], serde_json::json!("InvalidIndicator"));
+        assert_eq!(obj["code"], serde_json::json!("E201"));
+        assert_eq!(obj["slug"], serde_json::json!("invalid_indicator"));
+        assert_eq!(obj["severity"], serde_json::json!("error"));
+        assert!(obj["help_url"].as_str().unwrap().ends_with("#E201"));
+
+        // Positional fields
+        assert_eq!(obj["record_index"], serde_json::json!(847));
+        assert_eq!(
+            obj["record_control_number"],
+            serde_json::json!("ocm01234567")
+        );
+        assert_eq!(obj["field_tag"], serde_json::json!("245"));
+        assert_eq!(obj["indicator_position"], serde_json::json!(1));
+        assert_eq!(obj["expected"], serde_json::json!("digit or space"));
+        assert_eq!(obj["byte_offset"], serde_json::json!(7217));
+        assert_eq!(obj["record_byte_offset"], serde_json::json!(42));
+        assert_eq!(obj["source"], serde_json::json!("harvest.mrc"));
+
+        // Bytes get hex-encoded under _hex suffix; the original key is null
+        assert_eq!(obj["found"], serde_json::Value::Null);
+        assert_eq!(obj["found_hex"], serde_json::json!("3a"));
+
+        // No cause chain on InvalidIndicator
+        assert_eq!(obj["_cause"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn to_json_includes_cause_chain_for_io_error() {
+        let io = std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "test eof");
+        let err = MarcError::IoError {
+            cause: io,
+            record_index: Some(5),
+            byte_offset: Some(100),
+            source_name: None,
+        };
+        let v = err.to_json_value();
+        let obj = v.as_object().unwrap();
+        assert_eq!(obj["_cause"], serde_json::json!("test eof"));
+        assert_eq!(obj["code"], serde_json::json!("E007"));
+    }
+
+    #[test]
+    fn to_json_truncated_record_includes_length_extras() {
+        let err = MarcError::TruncatedRecord {
+            record_index: Some(12),
+            byte_offset: Some(0x4000),
+            record_byte_offset: Some(0x80),
+            source_name: Some("partial.mrc".into()),
+            record_control_number: Some("oc00000012".into()),
+            expected_length: Some(1024),
+            actual_length: Some(640),
+            bytes_near: None,
+        };
+        let v = err.to_json_value();
+        let obj = v.as_object().unwrap();
+        assert_eq!(obj["expected_length"], serde_json::json!(1024));
+        assert_eq!(obj["actual_length"], serde_json::json!(640));
+    }
+
+    #[test]
+    fn to_json_returns_valid_json_string() {
+        let err = invalid_indicator_full();
+        let s = err.to_json().expect("serialize");
+        // Round-trip parse to verify it's well-formed JSON
+        let _parsed: serde_json::Value = serde_json::from_str(&s).expect("parse");
+    }
+
+    #[test]
     fn snapshot_display_writer_error() {
         let err = MarcError::WriterError {
             record_index: Some(99),
@@ -1273,5 +1800,105 @@ mod tests {
             message: "Record length exceeds 4GB limit (5000000000 bytes)".into(),
         };
         insta::assert_snapshot!(err.to_string());
+    }
+
+    // -- bytes_near / hex dump --------------------------------------------
+
+    #[test]
+    fn bytes_near_capture_returns_none_outside_buffer() {
+        let buf = b"abcdef".to_vec();
+        assert!(BytesNear::capture(&buf, 100, 50).is_none());
+        assert!(BytesNear::capture(&buf, 100, 107).is_none());
+    }
+
+    #[test]
+    fn bytes_near_capture_clamps_at_buffer_boundaries() {
+        // Offset at buffer[0]: window starts at buffer[0] (not negative), ends 16 in.
+        let buf: Vec<u8> = (0..20).collect();
+        let window = BytesNear::capture(&buf, 1000, 1000).unwrap();
+        assert_eq!(window.start_offset, 1000);
+        assert_eq!(window.bytes.len(), 16);
+        // Offset near end: window clips at buffer end.
+        let window = BytesNear::capture(&buf, 1000, 1018).unwrap();
+        assert_eq!(window.bytes.len(), 16 + 2); // 16 before + 2 after (clipped)
+        assert_eq!(window.start_offset, 1002);
+    }
+
+    #[test]
+    fn to_json_bytes_near_surfaces_hex_and_offset() {
+        let err = MarcError::InvalidIndicator {
+            record_index: Some(1),
+            byte_offset: Some(100),
+            record_byte_offset: None,
+            source_name: None,
+            record_control_number: None,
+            field_tag: Some("245".into()),
+            indicator_position: Some(0),
+            found: Some(b":".to_vec()),
+            expected: Some("digit or space".into()),
+            bytes_near: Some(BytesNear {
+                bytes: vec![0x20, 0x3a, 0x30],
+                start_offset: 99,
+            }),
+        };
+        let obj = err.to_json_value();
+        let obj = obj.as_object().unwrap();
+        assert_eq!(obj["bytes_near"], serde_json::Value::Null);
+        assert_eq!(obj["bytes_near_hex"], serde_json::json!("203a30"));
+        assert_eq!(obj["bytes_near_offset"], serde_json::json!(99));
+    }
+
+    #[test]
+    fn to_json_bytes_near_is_null_when_absent() {
+        // Variant that carries bytes_near but with None populated
+        let err = MarcError::InvalidIndicator {
+            record_index: None,
+            byte_offset: None,
+            record_byte_offset: None,
+            source_name: None,
+            record_control_number: None,
+            field_tag: None,
+            indicator_position: None,
+            found: None,
+            expected: None,
+            bytes_near: None,
+        };
+        let obj = err.to_json_value();
+        let obj = obj.as_object().unwrap();
+        assert_eq!(obj["bytes_near"], serde_json::Value::Null);
+        assert!(!obj.contains_key("bytes_near_hex"));
+        assert_eq!(obj["bytes_near_offset"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn detailed_includes_hex_dump_with_caret_when_bytes_near_set() {
+        // Two full rows: 16 bytes before + 16 bytes after the error byte.
+        let mut window_bytes = Vec::with_capacity(32);
+        window_bytes.extend(b"2023nyu         ");
+        window_bytes.extend(b":0\x000 0 eng d\x1e245");
+        let err = MarcError::InvalidIndicator {
+            record_index: Some(847),
+            byte_offset: Some(0x1C31),
+            record_byte_offset: Some(42),
+            source_name: Some("harvest.mrc".into()),
+            record_control_number: Some("ocm01234567".into()),
+            field_tag: Some("245".into()),
+            indicator_position: Some(0),
+            found: Some(b":".to_vec()),
+            expected: Some("digit or space".into()),
+            bytes_near: Some(BytesNear {
+                bytes: window_bytes,
+                start_offset: 0x1C21,
+            }),
+        };
+        let d = err.detailed();
+        assert!(d.contains("bytes near offset 0x1C31:"), "got:\n{d}");
+        // First row header is row-start
+        assert!(d.contains("0x1C21:"), "got:\n{d}");
+        assert!(d.contains("0x1C31:"), "got:\n{d}");
+        // Caret
+        assert!(d.contains("^^ offending byte"), "got:\n{d}");
+        // ASCII panel shows printable chars
+        assert!(d.contains("|2023nyu"), "got:\n{d}");
     }
 }

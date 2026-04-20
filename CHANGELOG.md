@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — structured error serialization and hex-dump diagnostics
+
+- **`to_dict()` / `to_json()` on every `MrrcException`** emit a JSON-ready
+  dict suitable for structured logging pipelines (ELK, Datadog, Splunk).
+  Bytes fields get hex-encoded under a `_hex`-suffixed key; `_cause`
+  surfaces the exception chain as a flat string. `to_dict(include_traceback=True)`
+  adds a formatted traceback. A `schema_version: 1` key is included so
+  consumers can branch on it if the shape changes later (pre-1.0, the
+  shape may still evolve).
+- **Matching `MarcError::to_json_value()` / `to_json()`** on the Rust side
+  via `serde_json`. Same shape; `pub const SCHEMA_VERSION: u32` for the
+  version key.
+- **Hex-dump in `detailed()` output** (both Rust and Python). When the
+  parser captures a byte window around the error offset, `detailed()`
+  appends a 16 + 16 byte hex + ASCII dump with a caret pointing at the
+  offending byte. Byte-for-byte identical output across languages.
+- **`bytes_near` / `bytes_near_offset` attributes** on parse-path
+  exceptions carry the byte window; populated by the `MARCReader`,
+  `AuthorityMarcReader`, and `HoldingsMarcReader` paths for directory
+  and data-field errors. `ctx.stream_byte_offset` advances through
+  directory/field iteration so the hex-dump caret lands at the actual
+  offending byte, not column 0 of the first row.
+- **Typed `MarcError` now survives the Python FFI boundary.** The
+  `PyMARCReader` parse path previously collapsed any `MarcError` into
+  a generic `ParseError::invalid_record("Failed to parse …")`, which
+  erased the variant, positional fields, and (when added) `bytes_near`.
+  The parse result is now routed through `marc_error_to_py_err`
+  directly, so Python callers receive the typed `MrrcException`
+  subclass with every attribute populated.
+- **`BytesNear` public struct** in `mrrc` exposes the window type and a
+  `BytesNear::capture(buffer, base_offset, absolute_offset)` helper.
+- **Structured-serialization notes** in `docs/reference/error-handling.md`:
+  sample output, the `_hex`-suffix convention, the flat `_cause`, and the
+  bounded payload size (via the 32-byte `found` cap + 32-byte hex-dump
+  window).
+
 ### Added — stable error codes
 
 - **Stable error codes on every `MarcError` variant.** New `code()` and

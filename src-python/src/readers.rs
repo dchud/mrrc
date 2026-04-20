@@ -7,7 +7,6 @@
 
 use crate::batched_reader::BatchedMarcReader;
 use crate::batched_unified_reader::BatchedUnifiedReader;
-use crate::parse_error::ParseError;
 use crate::wrappers::PyRecord;
 use mrrc::{MarcReader, RecoveryMode};
 use pyo3::prelude::*;
@@ -138,24 +137,20 @@ impl PyMARCReader {
                     // CRITICAL: Copy to owned SmallVec for parsing closure
                     let bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&bytes);
 
-                    // Step 2: Parse bytes (GIL released)
-                    // CRITICAL FIX: Use Python::detach() which properly releases the GIL.
+                    // Step 2: Parse bytes (GIL released). Return the raw
+                    // MarcError across the GIL boundary so the typed variant
+                    // and all positional context (byte_offset, bytes_near,
+                    // etc.) survive to the Python exception. Boxed to keep
+                    // the Result small (clippy::result_large_err).
                     let rec_mode = self.recovery_mode;
-                    let record = py
+                    let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py
                         .detach(|| {
-                            // Create a cursor from owned bytes
                             let cursor = std::io::Cursor::new(bytes_owned.to_vec());
                             let mut parser = MarcReader::new(cursor).with_recovery_mode(rec_mode);
-
-                            // Parse the single record
-                            parser.read_record().map_err(|e| {
-                                ParseError::invalid_record(format!(
-                                    "Failed to parse MARC record: {}",
-                                    e
-                                ))
-                            })
-                        })
-                        .map_err(|e| e.to_py_err())?;
+                            parser.read_record().map_err(Box::new)
+                        });
+                    let record =
+                        parse_result.map_err(|e| crate::error::marc_error_to_py_err(*e))?;
 
                     // Step 3: Convert to PyRecord (GIL re-acquired)
                     match record {
@@ -244,33 +239,23 @@ impl PyMARCReader {
 
         // ===== STEP 2: Parse bytes (GIL released) =====
         // Parse the record while GIL is released to allow other threads to execute.
-        // CRITICAL: The closure returns Result<Option<mrrc::Record>, ParseError> (NOT PyResult).
-        // We defer conversion to PyErr until AFTER detach() returns (GIL re-acquired).
-        // This is required because PyErr construction needs the GIL.
-        // NOTE: Use detach() which properly releases GIL
+        // CRITICAL: The closure returns Result<Option<mrrc::Record>, MarcError>
+        // (NOT PyResult). We defer conversion to PyErr until AFTER detach()
+        // returns (GIL re-acquired) because PyErr construction needs the GIL.
+        // Returning the raw MarcError preserves the typed variant and all
+        // positional context (byte_offset, bytes_near, etc.) through to the
+        // Python exception — collapsing to a generic ParseError::invalid_record
+        // here would lose the typed shape and drop `bytes_near`.
         let rec_mode = slf.recovery_mode;
-        let parse_result: Result<Option<mrrc::Record>, crate::parse_error::ParseError> =
-            py.detach(|| {
-                // This closure runs WITHOUT the GIL held
-                // All data here is owned (no Python references)
-                // Return Rust errors only; defer PyErr conversion to Phase 3
-                let cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
-                let mut parser = MarcReader::new(cursor).with_recovery_mode(rec_mode);
-
-                // Parse the single record from bytes
-                // Return ParseError (Rust type), not PyErr
-                parser.read_record().map_err(|e| {
-                    ParseError::invalid_record(format!(
-                        "Failed to parse MARC record from {} bytes: {}",
-                        record_bytes_owned.len(),
-                        e
-                    ))
-                })
-            });
+        let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py.detach(|| {
+            let cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
+            let mut parser = MarcReader::new(cursor).with_recovery_mode(rec_mode);
+            parser.read_record().map_err(Box::new)
+        });
 
         // ===== STEP 3: Convert to PyRecord (GIL re-acquired) =====
         // GIL is automatically re-acquired when exiting detach() block.
-        // NOW we can safely construct PyErr from ParseError.
+        // NOW we can safely construct PyErr from MarcError.
         match parse_result {
             Ok(Some(record)) => Ok(PyRecord { inner: record }),
             Ok(None) => {
@@ -279,10 +264,7 @@ impl PyMARCReader {
                     "Parser returned None for complete record",
                 ))
             },
-            Err(parse_error) => {
-                // Convert ParseError to PyErr AFTER GIL is re-acquired
-                Err(parse_error.to_py_err())
-            },
+            Err(marc_error) => Err(crate::error::marc_error_to_py_err(*marc_error)),
         }
     }
 

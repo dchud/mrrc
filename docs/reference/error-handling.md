@@ -200,6 +200,8 @@ when the information is available; absent values stay `None`.
 | `byte_offset` | `int \| None` | Absolute byte offset within the input stream. |
 | `record_byte_offset` | `int \| None` | Byte offset within the current record. |
 | `source` | `str \| None` | Filename or stream identifier, populated when the reader was constructed via `from_path`. |
+| `bytes_near` | `bytes \| None` | Up to 32 bytes around the error offset, for hex-dump rendering. `None` when the parser did not have access to a buffer at error time. |
+| `bytes_near_offset` | `int \| None` | Absolute stream offset of the first byte of `bytes_near`. |
 
 Subclass-specific extras:
 
@@ -268,6 +270,100 @@ whether a malformed record raises immediately, is salvaged with partial
 data, or is skipped. The structured positional metadata is populated
 identically in all three modes — the modes only differ in whether the
 error is propagated, suppressed, or used to inform a salvage attempt.
+
+## Structured serialization (`to_dict` / `to_json`)
+
+Every `MrrcException` exposes `to_dict()` and `to_json()` for emitting the
+error into structured logging platforms (ELK, Datadog, Splunk,
+JSON-line pipelines) without writing an adapter. The Rust side offers a
+matching `MarcError::to_json_value()` / `to_json()` that produces the same
+schema.
+
+```python
+try:
+    ...
+except mrrc.MrrcException as e:
+    log.error(json.dumps({**e.to_dict(), "app": "ingest"}))
+```
+
+Sample output:
+
+```python
+>>> err.to_dict()
+{
+  "schema_version": 1,
+  "class": "InvalidIndicator",
+  "code": "E201",
+  "slug": "invalid_indicator",
+  "severity": "error",
+  "help_url": "https://dchud.github.io/mrrc/reference/error-codes/#E201",
+  "record_index": 847,
+  "record_control_number": "ocm01234567",
+  "field_tag": "245",
+  "indicator_position": 0,
+  "found": None,
+  "found_hex": "3a",
+  "expected": "digit or space",
+  "byte_offset": 7217,
+  "record_byte_offset": 42,
+  "source": "harvest.mrc",
+  "bytes_near": None,
+  "bytes_near_hex": "323032336e79752020202020202020203a3030203020656e6720641e323435",
+  "bytes_near_offset": 7201,
+  "_cause": None
+}
+```
+
+### Notes on the shape
+
+- Bytes fields carry their data under a `_hex` suffix key (`found_hex`,
+  `bytes_near_hex`); the bare key (`found`, `bytes_near`) stays `null` so
+  the dict is JSON-serializable without a custom encoder. The `_hex`
+  keys appear only when bytes were captured.
+- `_cause` is always a string or `null`, never nested. For the full
+  exception chain pass `include_traceback=True` or walk `__cause__`.
+- The emitted bytes are bounded at capture time (`found` ≤ 32 bytes,
+  `bytes_near` ≤ 32 bytes from the 16+16 hex-dump window), so payloads
+  don't grow unboundedly.
+- `schema_version: 1` is included so callers can branch on it later if
+  the shape ever changes. Pre-1.0, the shape may still evolve.
+
+### `include_traceback`
+
+`to_dict(include_traceback=True)` adds a `traceback` key with formatted
+traceback lines (only present when the exception was actually raised).
+`to_json(include_traceback=True)` forwards the flag to `to_dict`.
+
+## Hex dump in `detailed()`
+
+When the parser captures a byte window around the error offset, the
+exception's `detailed()` output appends a 32-byte hex + ASCII dump with a
+caret pointing at the offending byte:
+
+```text
+InvalidIndicator at record 847, field 245
+  source:          harvest.mrc
+  001:             ocm01234567
+  indicator 0:     found b':', expected digit or space
+  byte offset:     0x1C31 (7217) in stream
+  record-relative: byte 42
+
+bytes near offset 0x1C31:
+    0x1C21:  32 30 32 33 6e 79 75 20  20 20 20 20 20 20 20 20 |2023nyu         |
+    0x1C31:  3a 30 00 30 20 30 20 65  6e 67 20 64 1e 32 34 35 |:0.0 0 eng d.245|
+             ^^ offending byte
+```
+
+The window is up to 16 bytes before + 16 bytes after the error offset,
+clamped at buffer boundaries. Non-printable bytes render as `.` in the
+ASCII sidecar. The window layout is fixed at 16 bytes per row with an
+8-byte gap for readability; the format is byte-for-byte identical in
+Rust (`MarcError::detailed()`) and Python (`MrrcException.detailed()`).
+
+The `bytes_near` attribute on the exception is `None` when the parser
+did not have access to a buffer at the point the error was raised
+(e.g., for wrapping variants like `IoError` / `XmlError` / `JsonError`,
+or for error paths that do not yet plumb the buffer through).
 
 ## Pickle round-trip
 

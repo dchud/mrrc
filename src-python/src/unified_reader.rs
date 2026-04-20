@@ -141,7 +141,8 @@ impl UnifiedReader {
             return Err(ParseError::record_boundary_error(format!(
                 "Incomplete record length header: got {} bytes, expected 5",
                 length_bytes.len()
-            )));
+            ))
+            .with_bytes_near(&length_bytes, 0));
         }
 
         // Parse record length
@@ -151,13 +152,15 @@ impl UnifiedReader {
                 "Invalid record length in header: '{}'",
                 record_length_str
             ))
+            .with_bytes_near(&length_bytes, 0)
         })?;
 
         if record_length < 24 {
             return Err(ParseError::invalid_record(format!(
                 "Record length {} is too small (minimum 24)",
                 record_length
-            )));
+            ))
+            .with_bytes_near(&length_bytes, 0));
         }
 
         // Read remaining bytes (record_length - 5 for already-read header)
