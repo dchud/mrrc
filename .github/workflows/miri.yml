@@ -32,3 +32,6 @@ jobs:
         run: cargo +nightly miri test --lib
         env:
           MIRIFLAGS: -Zmiri-disable-isolation
+          # Prevent insta from spawning `cargo metadata` to discover the
+          # workspace root — Miri can't execute subprocesses (no pidfd_spawnp).
+          INSTA_WORKSPACE_ROOT: ${{ github.workspace }}
