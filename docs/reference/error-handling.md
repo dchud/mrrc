@@ -152,18 +152,6 @@ InvalidIndicator at record 847, field 245
   record-relative: byte 42
 ```
 
-### Out of scope for this guide
-
-This page does **not** claim compatibility for:
-
-- Reader/writer constructor signatures or behavior differences.
-- `Record`, `Field`, `Subfield` API differences.
-- Format-coverage differences (MARCXML/MARCJSON edge cases, character
-  encoding handling, etc.).
-- Performance and memory behavior.
-
-For those, see the linked reference pages above.
-
 ### Subclass behavior reference
 
 | If you `except` this class… | …you also catch these mrrc-specific subclasses |

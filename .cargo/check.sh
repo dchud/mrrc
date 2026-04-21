@@ -32,6 +32,10 @@ echo "=== Rustfmt check ==="
 cargo fmt --all -- --check
 
 echo ""
+echo "=== CHANGELOG lint ==="
+bash scripts/lint-changelog.sh
+
+echo ""
 echo "=== Clippy check (mrrc core) ==="
 cargo clippy --package mrrc --all-targets -- -D warnings
 
