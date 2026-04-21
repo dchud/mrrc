@@ -37,6 +37,7 @@ ROOT_VER=$(sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version' | sed 's/
 # 2. CHANGELOG.md structure correct
 [ "$(grep -c "## \[Unreleased\]" CHANGELOG.md)" = "1" ] || exit 1
 grep -q "## \[$VERSION\]" CHANGELOG.md || exit 1
+bash scripts/lint-changelog.sh || exit 1
 
 # 3. All pre-release checks passed
 bash .cargo/check.sh || exit 1
@@ -73,6 +74,7 @@ ROOT=$(sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version' | sed 's/.*"\
 
 # Changelog
 [ "$(grep -c "## \[Unreleased\]" CHANGELOG.md)" = "1" ] && echo "✓ Changelog structure OK" || (echo "✗ Changelog issue" && exit 1)
+bash scripts/lint-changelog.sh && echo "✓ Changelog lint OK" || (echo "✗ Changelog lint failed" && exit 1)
 
 # Git state
 [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] && echo "✓ On main branch" || (echo "✗ Wrong branch" && exit 1)
@@ -257,6 +259,37 @@ If this release includes breaking changes:
 - [ ] **REQUIRED**: Deprecation notices were given in previous release (if applicable)
 - [ ] **REQUIRED**: Major version bump scheduled (e.g., 0.x → 1.0)
 
+### 1.4 Lint Changelog
+
+Run the CHANGELOG lint script to catch structural drift in the `[Unreleased]`
+block. `.cargo/check.sh` runs this on every PR, so normally it will already
+have passed — running it here is belt-and-braces before tagging a release.
+
+```bash
+bash scripts/lint-changelog.sh
+```
+
+The script fails if:
+
+- A `###` subsection heading appears more than once. Topic-grouped
+  `### Added — <topic>` entries with distinct topics are allowed; a bare
+  `### Added` mixed with `### Added — <topic>` entries is flagged as
+  drift (this is the pre-bd-95ho shape the lint was written to prevent).
+- Subsections are out of Keep-a-Changelog order. Canonical order is
+  `Breaking, Added, Changed, Deprecated, Removed, Fixed, Security,
+  Dependencies`; `### Added — <topic>` variants all rank as `Added`.
+- Any line in `[Unreleased]` exceeds 100 columns (fenced code blocks
+  excepted). The working target is ~72–80 columns for bullet content,
+  matching the existing wrap style.
+
+It warns (without failing) on `###` heading names that are not in the
+canonical set or the `### Added — <topic>` form.
+
+**Checklist**:
+
+- [ ] `scripts/lint-changelog.sh` exits 0
+- [ ] No drift warnings left unaddressed
+
 ---
 
 ## Version Number Selection
@@ -398,6 +431,27 @@ echo "✓ All versions match"
 **File**: `CHANGELOG.md` (in repo root)
 
 The changelog requires a deterministic transformation: the current `[Unreleased]` section becomes the new release, and a fresh `[Unreleased]` is created above it.
+
+### CHANGELOG Conventions
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Contributors writing entries into `[Unreleased]` during a release cycle
+should follow these conventions so `scripts/lint-changelog.sh` (wired into
+`.cargo/check.sh`) stays quiet:
+
+- **Subsection order** (within any version block):
+  `Breaking` (optional top callout), `Added`, `Changed`, `Deprecated`,
+  `Removed`, `Fixed`, `Security`, `Dependencies`.
+- **Topic-grouped Added sections** are allowed: `### Added — <topic>`
+  (e.g., `### Added — expanded property-test suite`). Use them when a
+  single release has multiple distinct feature areas that each warrant
+  narrative framing. Don't mix a bare `### Added` flat list with
+  `### Added — <topic>` subsections in the same block.
+- **Line wrap** target is ~72–80 columns for bullet content, with
+  two-space continuation indent under the `-`. The lint fails above 100
+  columns. Fenced code blocks are exempt; inline markdown links are not,
+  so wrap bullets that contain links so the URL lands on its own
+  continuation line if needed.
 
 ### 4.1 Validate Changelog Structure
 
