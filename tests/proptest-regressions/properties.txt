@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc c55bf86fe34e98890f3851b08dc2838087458f63372964533b0190c7d491c89e # shrinks to a control field with a whitespace-only value — the MARCXML reader must preserve whitespace rather than error with "missing field `$value`"
+cc 611a22afe5d785efb770fad87beb0034c46b36a8320edf01f5413840734163a9 # shrinks to a subfield value containing a `<` character — the MARCXML reader must resolve the `&lt;` entity reference emitted by the serializer back to `<`
