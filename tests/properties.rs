@@ -159,14 +159,11 @@ fn arb_subfield_value() -> BoxedStrategy<String> {
 
 /// Generate subfield values that exercise XML escaping edge cases.
 ///
-/// Deliberately includes `<`, `>`, `&`, `"`, and `'`. The first and last
-/// characters are non-space so XML text-content trimming cannot mask a
-/// whitespace-preservation bug behind a false pass.
+/// Deliberately includes `<`, `>`, `&`, `"`, `'`, and arbitrary whitespace
+/// — the MARCXML reader preserves whitespace-only and whitespace-edge
+/// text content verbatim.
 fn arb_subfield_value_xml() -> BoxedStrategy<String> {
-    let non_space = "[a-zA-Z0-9.,:;()<>&\"'/-]";
-    let body = "[a-zA-Z0-9 .,:;()<>&\"'/-]{0,78}";
-    (non_space, body, non_space)
-        .prop_map(|(a, b, c): (String, String, String)| format!("{a}{b}{c}"))
+    "[a-zA-Z0-9 .,:;()<>&\"'/-]{1,80}"
         .prop_filter("no MARC delimiters", |s: &String| {
             !s.bytes().any(|b| b == 0x1D || b == 0x1E || b == 0x1F)
         })
@@ -226,16 +223,11 @@ fn arb_data_field_with(value: BoxedStrategy<String>) -> BoxedStrategy<Field> {
         .boxed()
 }
 
-/// Control-field value strategy for MARCXML round-trips. Excludes
-/// whitespace-only values because `quick-xml` + `serde(rename = "$value")`
-/// strips whitespace-only text content during deserialization. Tracked by
-/// bd-zm6m; once fixed, this can collapse back to `arb_control_value`.
+/// Control-field value strategy for MARCXML round-trips — pass-through to
+/// the shared strategy. The MARCXML reader preserves whitespace-only
+/// control values so no extra filtering is needed here.
 fn arb_control_value_xml() -> BoxedStrategy<String> {
-    arb_control_value()
-        .prop_filter("whitespace-only control values blocked by bd-zm6m", |s| {
-            s.bytes().any(|b| b != b' ')
-        })
-        .boxed()
+    arb_control_value().boxed()
 }
 
 /// Generate a structurally valid MARC record using the given subfield-value
@@ -526,10 +518,9 @@ proptest! {
     }
 
     /// MARCXML round-trip: a record with subfield values containing XML
-    /// metacharacters (`< > & " '`) must survive serialize → parse.
-    ///
-    /// Note: whitespace-only control/subfield values are excluded from this
-    /// property pending bd-zm6m (quick-xml strips whitespace-only text).
+    /// metacharacters (`< > & " '`) and arbitrary whitespace must survive
+    /// serialize → parse, including whitespace-only and whitespace-edge
+    /// text content.
     #[test]
     fn marcxml_roundtrip(record in arb_record_xml()) {
         let xml = marcxml::record_to_marcxml(&record).expect("MARCXML serialize");

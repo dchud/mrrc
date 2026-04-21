@@ -31,7 +31,7 @@ use crate::error::{MarcError, Result};
 use crate::iso2709::ParseContext;
 use crate::leader::Leader;
 use crate::record::{Field, Record};
-use quick_xml::de::from_str as xml_from_str;
+use quick_xml::events::Event;
 use quick_xml::se::to_string as xml_to_string;
 use serde::{Deserialize, Serialize};
 
@@ -119,6 +119,199 @@ fn strip_marcxml_ns(xml: &str) -> String {
     // </marc:record> → </record>
     let re_prefix = Regex::new(r"<(/?)(\w+):").unwrap();
     re_prefix.replace_all(&stripped, "<$1").to_string()
+}
+
+// ---------------------------------------------------------------------------
+// Event-driven MARCXML reader
+// ---------------------------------------------------------------------------
+//
+// `quick-xml`'s serde deserializer trims text content at an internal layer
+// regardless of `trim_text` config, so `<controlfield tag="008">   </…>`
+// raises "missing field `$value`". MARC values are often padded with
+// meaningful whitespace (an all-spaces 008 is common on minimal records),
+// so the reader walks the event stream directly and captures text + CDATA
+// payloads verbatim.
+//
+// The write path still uses serde; quick-xml's serializer emits whitespace
+// correctly.
+
+/// Drive the event reader, filling a `MarcxmlRecord` from the start-tag of
+/// the `<record>` element (inclusive) through its end tag (exclusive of
+/// anything after).
+fn read_marcxml_record<B: std::io::BufRead>(
+    reader: &mut quick_xml::reader::Reader<B>,
+    ctx: &ParseContext,
+) -> Result<MarcxmlRecord> {
+    let mut buf = Vec::new();
+    let mut record = MarcxmlRecord {
+        leader: String::new(),
+        controlfield: Vec::new(),
+        datafield: Vec::new(),
+    };
+    let mut current_df: Option<MarcxmlDataField> = None;
+
+    loop {
+        buf.clear();
+        match reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ctx.err_xml(e))?
+        {
+            Event::Start(ref e) => {
+                let name_bytes = e.name().into_inner();
+                let name = std::str::from_utf8(name_bytes).unwrap_or("");
+                match name {
+                    "leader" => {
+                        record.leader = read_leaf_text(reader, name_bytes, ctx)?;
+                    },
+                    "controlfield" => {
+                        let tag = attr_value(e, b"tag").unwrap_or_default();
+                        let value = read_leaf_text(reader, name_bytes, ctx)?;
+                        record.controlfield.push(MarcxmlControlField { tag, value });
+                    },
+                    "datafield" => {
+                        current_df = Some(MarcxmlDataField {
+                            tag: attr_value(e, b"tag").unwrap_or_default(),
+                            ind1: attr_value(e, b"ind1").unwrap_or_default(),
+                            ind2: attr_value(e, b"ind2").unwrap_or_default(),
+                            subfield: Vec::new(),
+                        });
+                    },
+                    "subfield" => {
+                        let code = attr_value(e, b"code").unwrap_or_default();
+                        let value = read_leaf_text(reader, name_bytes, ctx)?;
+                        if let Some(df) = current_df.as_mut() {
+                            df.subfield.push(MarcxmlSubfield { code, value });
+                        }
+                    },
+                    _ => {},
+                }
+            },
+            Event::End(ref e) => {
+                let name = std::str::from_utf8(e.name().into_inner()).unwrap_or("");
+                if name == "datafield" {
+                    if let Some(df) = current_df.take() {
+                        record.datafield.push(df);
+                    }
+                } else if name == "record" {
+                    return Ok(record);
+                }
+            },
+            Event::Empty(ref e) => {
+                // Self-closing element: <controlfield tag="001"/> etc. Treat
+                // as empty string value so callers see the field at all.
+                let name = std::str::from_utf8(e.name().into_inner()).unwrap_or("");
+                match name {
+                    "controlfield" => {
+                        record.controlfield.push(MarcxmlControlField {
+                            tag: attr_value(e, b"tag").unwrap_or_default(),
+                            value: String::new(),
+                        });
+                    },
+                    "subfield" => {
+                        if let Some(df) = current_df.as_mut() {
+                            df.subfield.push(MarcxmlSubfield {
+                                code: attr_value(e, b"code").unwrap_or_default(),
+                                value: String::new(),
+                            });
+                        }
+                    },
+                    "datafield" => {
+                        record.datafield.push(MarcxmlDataField {
+                            tag: attr_value(e, b"tag").unwrap_or_default(),
+                            ind1: attr_value(e, b"ind1").unwrap_or_default(),
+                            ind2: attr_value(e, b"ind2").unwrap_or_default(),
+                            subfield: Vec::new(),
+                        });
+                    },
+                    _ => {},
+                }
+            },
+            Event::Eof => {
+                return Err(ctx.err_xml(quick_xml::DeError::Custom(
+                    "unexpected EOF before </record>".to_string(),
+                )));
+            },
+            _ => {},
+        }
+    }
+}
+
+/// Read all Text/CData events until the end tag matching `name`. Returns
+/// the concatenated, unescaped payload verbatim (whitespace preserved).
+fn read_leaf_text<B: std::io::BufRead>(
+    reader: &mut quick_xml::reader::Reader<B>,
+    name: &[u8],
+    ctx: &ParseContext,
+) -> Result<String> {
+    let mut out = String::new();
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        match reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ctx.err_xml(e))?
+        {
+            Event::Text(t) => {
+                // quick-xml 0.39 splits `&entity;` out into GeneralRef events,
+                // so Text events carry no XML escapes — decode() is enough.
+                let decoded = t.decode().map_err(|e| {
+                    MarcError::invalid_field_msg(format!("Invalid text encoding: {e}"))
+                })?;
+                out.push_str(&decoded);
+            },
+            Event::CData(c) => {
+                let s = std::str::from_utf8(&c).map_err(|e| {
+                    MarcError::invalid_field_msg(format!("Invalid UTF-8 in CDATA: {e}"))
+                })?;
+                out.push_str(s);
+            },
+            Event::GeneralRef(r) => {
+                // `&#NN;` / `&#xHH;` numeric character references, plus the
+                // five XML built-in named entities. Any other named entity
+                // would need a DTD, which MARCXML does not use.
+                if let Some(ch) = r.resolve_char_ref().map_err(|e| ctx.err_xml(e))? {
+                    out.push(ch);
+                } else {
+                    let name = r.decode().map_err(|e| {
+                        MarcError::invalid_field_msg(format!("Invalid entity encoding: {e}"))
+                    })?;
+                    let ch = match &*name {
+                        "lt" => '<',
+                        "gt" => '>',
+                        "amp" => '&',
+                        "apos" => '\'',
+                        "quot" => '"',
+                        other => {
+                            return Err(MarcError::invalid_field_msg(format!(
+                                "Unknown entity reference: &{other};"
+                            )));
+                        },
+                    };
+                    out.push(ch);
+                }
+            },
+            Event::End(ref e) if e.name().into_inner() == name => return Ok(out),
+            Event::Eof => {
+                return Err(ctx.err_xml(quick_xml::DeError::Custom(format!(
+                    "unexpected EOF inside <{}>",
+                    std::str::from_utf8(name).unwrap_or("?")
+                ))));
+            },
+            // Ignore comments, PIs, nested starts (MARCXML leaf elements
+            // have text-only content per schema).
+            _ => {},
+        }
+    }
+}
+
+/// Extract an attribute value as an owned `String`, decoding XML escapes.
+fn attr_value(start: &quick_xml::events::BytesStart, name: &[u8]) -> Option<String> {
+    start
+        .attributes()
+        .with_checks(false)
+        .filter_map(std::result::Result::ok)
+        .find(|a| a.key.into_inner() == name)
+        .and_then(|a| a.unescape_value().ok().map(std::borrow::Cow::into_owned))
 }
 
 // ---------------------------------------------------------------------------
@@ -244,8 +437,27 @@ pub fn record_to_marcxml(record: &Record) -> Result<String> {
 pub fn marcxml_to_record(xml: &str) -> Result<Record> {
     let ctx = ParseContext::new();
     let cleaned = strip_marcxml_ns(xml);
-    let xml_record: MarcxmlRecord = xml_from_str(&cleaned).map_err(|e| ctx.err_xml(e))?;
+    let mut reader = quick_xml::reader::Reader::from_str(&cleaned);
 
+    // Walk to the first <record> Start event.
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        match reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ctx.err_xml(e))?
+        {
+            Event::Start(ref e) if e.name().into_inner() == b"record" => break,
+            Event::Eof => {
+                return Err(ctx.err_xml(quick_xml::DeError::Custom(
+                    "no <record> element found".to_string(),
+                )));
+            },
+            _ => {},
+        }
+    }
+
+    let xml_record = read_marcxml_record(&mut reader, &ctx)?;
     marcxml_record_to_record(xml_record)
 }
 
@@ -268,13 +480,24 @@ pub fn marcxml_to_record(xml: &str) -> Result<Record> {
 pub fn marcxml_to_records(xml: &str) -> Result<Vec<Record>> {
     let ctx = ParseContext::new();
     let cleaned = strip_marcxml_ns(xml);
-    let collection: MarcxmlCollection = xml_from_str(&cleaned).map_err(|e| ctx.err_xml(e))?;
+    let mut reader = quick_xml::reader::Reader::from_str(&cleaned);
 
-    collection
-        .records
-        .into_iter()
-        .map(marcxml_record_to_record)
-        .collect()
+    let mut records = Vec::new();
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        match reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ctx.err_xml(e))?
+        {
+            Event::Start(ref e) if e.name().into_inner() == b"record" => {
+                let xml_record = read_marcxml_record(&mut reader, &ctx)?;
+                records.push(marcxml_record_to_record(xml_record)?);
+            },
+            Event::Eof => return Ok(records),
+            _ => {},
+        }
+    }
 }
 
 /// Internal helper: convert a deserialized `MarcxmlRecord` into a `Record`.
@@ -489,6 +712,38 @@ mod tests {
 
         let fields = restored.get_fields("650").unwrap();
         assert_eq!(fields.len(), 3);
+    }
+
+    /// MARCXML must round-trip whitespace-only control-field values without
+    /// stripping them. `008` (fixed-length 40-char control field) in
+    /// particular is often all spaces on minimal records; losing that
+    /// content silently changes the record's semantics.
+    #[test]
+    fn test_marcxml_roundtrip_whitespace_only_control_field() {
+        let mut record = Record::new(make_test_leader());
+        // 3 spaces — a whitespace-only control value
+        record.add_control_field("008".to_string(), "   ".to_string());
+
+        let xml = record_to_marcxml(&record).unwrap();
+        let restored = marcxml_to_record(&xml).unwrap();
+
+        assert_eq!(restored.get_control_field("008"), Some("   "));
+    }
+
+    /// MARCXML must round-trip a subfield whose text content is a single
+    /// space.
+    #[test]
+    fn test_marcxml_roundtrip_whitespace_only_subfield() {
+        let mut record = Record::new(make_test_leader());
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', " ".to_string());
+        record.add_field(field);
+
+        let xml = record_to_marcxml(&record).unwrap();
+        let restored = marcxml_to_record(&xml).unwrap();
+
+        let fields = restored.get_fields("245").unwrap();
+        assert_eq!(fields[0].get_subfield('a'), Some(" "));
     }
 
     #[test]
