@@ -1,0 +1,29 @@
+[package]
+name = "mrrc-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+rust-version = "1.71"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.mrrc]
+path = ".."
+
+# Standalone workspace root. Keeps fuzz/ from being absorbed into the outer
+# workspace, so the root (stable 1.95.0) toolchain does not try to build it.
+[workspace]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "parse_record"
+path = "fuzz_targets/parse_record.rs"
+test = false
+doc = false
+bench = false
