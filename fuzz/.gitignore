@@ -1,0 +1,17 @@
+# cargo-fuzz build output and crash reproducers (local-only; crashes get
+# copied into tests/ as regressions).
+target
+artifacts
+coverage
+
+# cargo-fuzz mutator-discovered corpus additions are local-only. They use
+# hash-like filenames and can grow into the GBs over a long fuzz run, so
+# they must not be committed. Only curated seeds (explicitly allow-listed
+# below) are tracked.
+corpus/*/*
+!corpus/*/.gitkeep
+!corpus/parse_record/simple_book
+!corpus/parse_record/music_score
+!corpus/parse_record/simple_authority
+!corpus/parse_record/with_control_fields
+!corpus/parse_record/multi_records

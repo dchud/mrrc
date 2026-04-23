@@ -1,0 +1,74 @@
+name: Fuzz (nightly)
+
+# Scheduled coverage-guided fuzzing. Finds panics, infinite loops, and
+# memory issues in the parser that property tests and unit tests miss.
+#
+# Policy (per bd-dfn2 design decision 4):
+#   - Runs nightly + on demand (workflow_dispatch); not a PR gate.
+#   - A crash FAILS the job so the red mark surfaces on the Actions
+#     dashboard. fuzz/artifacts/* uploads so the reproducer survives.
+#   - Triage is manual. No auto-filing. Reproducers get copied into
+#     tests/ as regressions — see docs/contributing/fuzzing.md.
+
+on:
+  schedule:
+    # Daily at 03:00 UTC. Offset from memory-safety.yml (02:00) so the
+    # two nightly jobs do not contend for the same cache slot.
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      max_total_time:
+        description: 'Seconds to fuzz (default 300 = 5 min)'
+        required: false
+        default: '300'
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  parse_record:
+    name: parse_record (${{ github.event.inputs.max_total_time || '300' }}s)
+    runs-on: ubuntu-latest
+    # Generous cap: toolchain install + cargo-fuzz install + build + 5-min
+    # fuzz + artifact upload. Raise if workflow_dispatch runs use longer
+    # budgets.
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install nightly Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@cargo-fuzz
+
+      - name: Cache cargo + fuzz target
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            fuzz/target
+          key: ${{ runner.os }}-cargo-fuzz-${{ hashFiles('fuzz/Cargo.toml', 'Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-fuzz-
+
+      - name: Run parse_record
+        env:
+          MAX_TOTAL_TIME: ${{ github.event.inputs.max_total_time || '300' }}
+        # Run from the repo root — cargo-fuzz resolves `./fuzz/Cargo.toml`
+        # from cwd. `+nightly` overrides the root rust-toolchain.toml pin
+        # (1.95.0) with the nightly installed above, which libfuzzer-sys
+        # requires.
+        run: cargo +nightly fuzz run parse_record -- -max_total_time=$MAX_TOTAL_TIME
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-artifacts-parse_record
+          path: fuzz/artifacts/
+          if-no-files-found: warn
+          retention-days: 30

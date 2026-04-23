@@ -28,6 +28,8 @@ that aim for API compatibility with pymarc.
 | `tests/python/` | Active Python test suite |
 | `examples/` | Runnable Rust and Python examples |
 | `docs/` | mkdocs-material documentation site |
+| `fuzz/` | Standalone cargo-fuzz workspace (nightly toolchain, isolated from root) |
+| `docs/contributing/fuzzing.md` | Fuzzing install, local run, and CI-failure triage playbook |
 
 ## Architecture
 

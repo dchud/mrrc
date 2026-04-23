@@ -160,6 +160,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `[dependencies]` section of `Cargo.toml`; the real entry has always been
   in `[dev-dependencies]`.
 
+### Added — coverage-guided fuzzing infrastructure
+
+- **`fuzz/` standalone Cargo workspace with `cargo-fuzz`**
+  ([#90](https://github.com/dchud/mrrc/issues/90)): first coverage-guided
+  fuzz target, `parse_record`, exercises `MarcReader::read_record` over
+  arbitrary byte streams. The harness discards the `Result` so libfuzzer
+  only flags panics, OOMs, and timeouts — `Err(MarcError)` on malformed
+  input is correct behavior, not a bug. Seed corpus is drawn from small
+  binary fixtures under `tests/data/*.mrc` (simple book, music score,
+  authority record, control fields, multi-record stream).
+- **Standalone workspace design** (`fuzz/Cargo.toml` declares its own
+  `[workspace]`): isolates the fuzz crate from the root workspace so
+  `cargo build --workspace`, `cargo clippy --all-targets`, and
+  `.cargo/check.sh` do not try to compile it under stable 1.95.0. The
+  `fuzz/rust-toolchain.toml` pins nightly, which `libfuzzer-sys` requires
+  for its `-C passes=sancov-*` instrumentation.
+- **Nightly CI workflow** at `.github/workflows/fuzz.yml` runs
+  `parse_record` for 5 minutes daily at 03:00 UTC (offset from the 02:00
+  memory-safety ASAN job), plus on-demand via `workflow_dispatch` with a
+  configurable time budget. A crash fails the job and uploads
+  `fuzz/artifacts/` as a workflow artifact with 30-day retention. No
+  auto-filing — the red mark on the Actions dashboard is the notification
+  and triage is manual. The job is not a PR gate; fuzz findings get
+  copied into `tests/` as regressions that run on every PR.
+- **Documentation** at `docs/contributing/fuzzing.md` covers install,
+  local run, the reproduce-minimize-fix-regress triage flow, the seed
+  corpus policy (curated seeds tracked; mutator-discovered additions
+  local-only), and the relationship with the larger formal-methods
+  pyramid being built jointly with the
+  [mrrc-testbed](https://github.com/dchud/mrrc-testbed) repo.
+- **Follow-up fuzz targets tracked separately:** `parse_leader` (small
+  24-byte state space, fastest convergence), `roundtrip_binary`
+  (parse → serialize → parse-again stability), `parse_marcxml`,
+  `parse_json` / `parse_marcjson`, and `decode_marc8`.
+
 ### Changed
 
 - **`MarcError` source-error chain now walks correctly** for I/O, XML,
