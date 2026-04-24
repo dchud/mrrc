@@ -80,10 +80,10 @@ pub struct ParseContext {
     /// The primary reason for this representation — over `Option<String>` —
     /// is that the smaller `ParseContext` lets `#[inline(always)]` on
     /// `parse_data_field` fit in the L1 instruction cache comfortably;
-    /// with the larger 24-byte Option<String> variant forcing inlining
+    /// with the larger 24-byte `Option<String>` variant forcing inlining
     /// blew parallel benchmarks up by 30-44% vs the baseline. Converted
-    /// to `String` lazily at error-construction time via
-    /// [`ParseContext::field_tag_as_string`].
+    /// to `String` lazily at error-construction time via the private
+    /// `field_tag_as_string` helper.
     pub current_field_tag: Option<[u8; 3]>,
     /// Subfield code currently being parsed, when known.
     pub current_subfield_code: Option<u8>,
