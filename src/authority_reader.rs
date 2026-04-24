@@ -29,11 +29,10 @@
 //! ```
 
 use crate::authority_record::AuthorityRecord;
-#[cfg(test)]
-use crate::error::MarcError;
-use crate::error::Result;
+use crate::error::{MarcError, Result};
 use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
+use crate::reader::DEFAULT_MAX_ERRORS;
 use crate::recovery::RecoveryMode;
 use std::io::Read;
 
@@ -54,6 +53,9 @@ pub struct AuthorityMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
     ctx: ParseContext,
+    max_errors: usize,
+    error_count: usize,
+    cap_exceeded: bool,
 }
 
 impl<R: Read> AuthorityMarcReader<R> {
@@ -68,6 +70,9 @@ impl<R: Read> AuthorityMarcReader<R> {
             reader,
             recovery_mode: RecoveryMode::Strict,
             ctx: ParseContext::new(),
+            max_errors: DEFAULT_MAX_ERRORS,
+            error_count: 0,
+            cap_exceeded: false,
         }
     }
 
@@ -92,6 +97,37 @@ impl<R: Read> AuthorityMarcReader<R> {
     pub fn with_source(mut self, name: impl Into<String>) -> Self {
         self.ctx.source_name = Some(name.into());
         self
+    }
+
+    /// Cap the number of recovered errors tolerated in one stream before the
+    /// reader raises [`MarcError::FatalReaderError`] and halts.
+    ///
+    /// See [`crate::MarcReader::with_max_errors`] for semantics; passing `0`
+    /// disables the cap (unbounded accumulation). Default when not set is
+    /// [`DEFAULT_MAX_ERRORS`].
+    #[must_use]
+    pub fn with_max_errors(mut self, n: usize) -> Self {
+        self.max_errors = n;
+        self
+    }
+
+    /// Record a recovered parse failure against the stream cap.
+    fn note_recovery_error(&mut self) -> Result<()> {
+        if self.max_errors == 0 {
+            return Ok(());
+        }
+        self.error_count += 1;
+        if self.error_count > self.max_errors {
+            self.cap_exceeded = true;
+            let idx = self.ctx.record_index;
+            return Err(MarcError::FatalReaderError {
+                cap: self.max_errors,
+                errors_seen: self.error_count,
+                record_index: if idx == 0 { None } else { Some(idx) },
+                source_name: self.ctx.source_name.clone(),
+            });
+        }
+        Ok(())
     }
 }
 
@@ -119,6 +155,10 @@ impl<R: Read> AuthorityMarcReader<R> {
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<AuthorityRecord>> {
+        if self.cap_exceeded {
+            return Ok(None);
+        }
+
         // Read the leader (24 bytes). EOF here is a clean stream end.
         let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
             return Ok(None);
@@ -201,6 +241,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                         "complete 12-byte directory entry",
                     ));
                 }
+                self.note_recovery_error()?;
                 break;
             }
 
@@ -257,6 +298,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                         if self.recovery_mode == RecoveryMode::Strict {
                             return Err(e);
                         }
+                        self.note_recovery_error()?;
                         continue;
                     },
                 };
@@ -325,6 +367,84 @@ mod tests {
             Ok(Some(_)) => panic!("Should not have read a record"),
             Err(e) => panic!("Unexpected error: {e}"),
         }
+    }
+
+    /// Build a malformed authority record whose directory is 6 bytes long
+    /// (not a multiple of 12 and not terminated). In lenient/permissive mode
+    /// this triggers `note_recovery_error` exactly once per record via the
+    /// "incomplete directory entry" branch.
+    fn build_bad_authority_record() -> Vec<u8> {
+        let directory: [u8; 6] = *b"245000";
+        let base_address: usize = 24 + directory.len();
+        let record_length: usize = base_address + 1;
+
+        let mut leader = Vec::new();
+        leader.extend_from_slice(format!("{record_length:05}").as_bytes());
+        leader.push(b'n'); // status
+        leader.push(b'z'); // type: authority
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.push(b'2');
+        leader.push(b'2');
+        leader.extend_from_slice(format!("{base_address:05}").as_bytes());
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.extend_from_slice(b"4500");
+        assert_eq!(leader.len(), 24);
+
+        let mut out = Vec::new();
+        out.extend_from_slice(&leader);
+        out.extend_from_slice(&directory);
+        out.push(0x1D); // RECORD_TERMINATOR
+        out
+    }
+
+    #[test]
+    fn test_authority_max_errors_cap_trips() {
+        let mut stream = Vec::new();
+        for _ in 0..5 {
+            stream.extend_from_slice(&build_bad_authority_record());
+        }
+        let mut reader = AuthorityMarcReader::new(Cursor::new(stream))
+            .with_recovery_mode(RecoveryMode::Lenient)
+            .with_max_errors(3);
+
+        for _ in 0..3 {
+            assert!(reader.read_record().unwrap().is_some());
+        }
+        let err = reader.read_record().expect_err("cap should trip");
+        assert!(
+            matches!(
+                err,
+                MarcError::FatalReaderError {
+                    cap: 3,
+                    errors_seen: 4,
+                    record_index: Some(4),
+                    ..
+                }
+            ),
+            "unexpected error: {err:?}"
+        );
+        assert!(reader.read_record().unwrap().is_none());
+    }
+
+    #[test]
+    fn test_authority_max_errors_zero_disables() {
+        let mut stream = Vec::new();
+        for _ in 0..20 {
+            stream.extend_from_slice(&build_bad_authority_record());
+        }
+        let mut reader = AuthorityMarcReader::new(Cursor::new(stream))
+            .with_recovery_mode(RecoveryMode::Lenient)
+            .with_max_errors(0);
+
+        let mut count = 0;
+        while reader.read_record().unwrap().is_some() {
+            count += 1;
+        }
+        assert_eq!(count, 20);
     }
 
     #[test]

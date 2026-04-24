@@ -479,14 +479,38 @@ class FieldNotFound(MrrcException):
 
 
 class FatalReaderError(MrrcException):
-    """Unrecoverable error during record reading.
+    """Unrecoverable error during record reading — the reader is halted.
 
-    Reserved for catastrophic states; not raised directly by the current
-    Rust core but kept for pymarc compatibility and for future use.
+    Currently raised when the per-stream recovered-error cap is exceeded
+    in ``RecoveryMode.Lenient`` / ``Permissive`` (see
+    :py:meth:`mrrc.MARCReader`'s ``max_errors`` parameter). The class is
+    also reserved for future catastrophic reader states.
+
+    When the cap has been exceeded, ``cap`` and ``errors_seen`` carry
+    the configured limit and the count at the moment of the trip. After
+    this exception is raised the reader is exhausted; subsequent
+    iteration returns nothing.
     """
 
     code = "E099"
     slug = "fatal_reader_error"
+    _pickle_extra_fields = ("cap", "errors_seen")
+    _diagnostic_extra_fields = ("cap", "errors_seen")
+    cap: Optional[int]
+    errors_seen: Optional[int]
+
+    def __init__(self, *args, cap=None, errors_seen=None, **kwargs) -> None:
+        self.cap = cap
+        self.errors_seen = errors_seen
+        super().__init__(*args, **kwargs)
+
+    def _body_text(self) -> str:
+        if self.cap is not None and self.errors_seen is not None:
+            return (
+                f"fatal reader error: recovered-error cap exceeded "
+                f"({self.errors_seen} errors, cap {self.cap})"
+            )
+        return "fatal reader error"
 
 
 # --- mrrc-specific subclasses (extend the pymarc-named parents) -----------

@@ -351,6 +351,17 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("message", message)?;
             "WriterError"
         },
+        MarcError::FatalReaderError {
+            cap,
+            errors_seen,
+            record_index,
+            source_name,
+        } => {
+            populate_common(py, &kwargs, *record_index, None, None, source_name)?;
+            kwargs.set_item("cap", *cap)?;
+            kwargs.set_item("errors_seen", *errors_seen)?;
+            "FatalReaderError"
+        },
         // I/O errors map to Python's built-in OSError via PyIOError, which
         // matches pymarc's behavior. Force the caller into the fallback.
         MarcError::IoError { .. } => {

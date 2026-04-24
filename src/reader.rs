@@ -33,13 +33,19 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::error::Result;
+use crate::error::{MarcError, Result};
 use crate::formats::FormatReader;
 use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
 use crate::record::Record;
 use crate::recovery::RecoveryMode;
 use std::io::Read;
+
+/// Default cap on the number of recovered errors tolerated in one stream
+/// before the reader raises [`MarcError::FatalReaderError`] and halts. A
+/// [`MarcReader`] constructed via [`MarcReader::new`] starts with this cap;
+/// override it with [`MarcReader::with_max_errors`] (pass `0` to disable).
+pub const DEFAULT_MAX_ERRORS: usize = 10_000;
 
 /// Reader for ISO 2709 binary MARC format.
 ///
@@ -68,6 +74,9 @@ pub struct MarcReader<R: Read> {
     recovery_mode: RecoveryMode,
     records_read: usize,
     ctx: ParseContext,
+    max_errors: usize,
+    error_count: usize,
+    cap_exceeded: bool,
 }
 
 impl<R: Read> MarcReader<R> {
@@ -93,6 +102,9 @@ impl<R: Read> MarcReader<R> {
             recovery_mode: RecoveryMode::Strict,
             records_read: 0,
             ctx: ParseContext::new(),
+            max_errors: DEFAULT_MAX_ERRORS,
+            error_count: 0,
+            cap_exceeded: false,
         }
     }
 
@@ -129,6 +141,47 @@ impl<R: Read> MarcReader<R> {
     pub fn with_source(mut self, name: impl Into<String>) -> Self {
         self.ctx.source_name = Some(name.into());
         self
+    }
+
+    /// Cap the number of recovered errors tolerated in one stream before the
+    /// reader raises [`MarcError::FatalReaderError`] and halts.
+    ///
+    /// Only meaningful in [`RecoveryMode::Lenient`] and
+    /// [`RecoveryMode::Permissive`]: in [`RecoveryMode::Strict`] the first
+    /// error already aborts the stream, so no cap applies.
+    ///
+    /// Passing `0` disables the cap (unbounded accumulation — callers accept
+    /// the memory risk explicitly). The default when the builder is not
+    /// called is [`DEFAULT_MAX_ERRORS`].
+    ///
+    /// After the cap is hit the reader is exhausted — subsequent
+    /// [`MarcReader::read_record`] calls return `Ok(None)`.
+    #[must_use]
+    pub fn with_max_errors(mut self, n: usize) -> Self {
+        self.max_errors = n;
+        self
+    }
+
+    /// Record a recovered parse failure against the stream cap.
+    ///
+    /// Returns `Err(MarcError::FatalReaderError)` the moment the configured
+    /// cap is exceeded, and flags the reader exhausted for future calls.
+    fn note_recovery_error(&mut self) -> Result<()> {
+        if self.max_errors == 0 {
+            return Ok(());
+        }
+        self.error_count += 1;
+        if self.error_count > self.max_errors {
+            self.cap_exceeded = true;
+            let idx = self.ctx.record_index;
+            return Err(MarcError::FatalReaderError {
+                cap: self.max_errors,
+                errors_seen: self.error_count,
+                record_index: if idx == 0 { None } else { Some(idx) },
+                source_name: self.ctx.source_name.clone(),
+            });
+        }
+        Ok(())
     }
 }
 
@@ -177,6 +230,12 @@ impl<R: Read> MarcReader<R> {
     /// - An I/O error occurs
     #[allow(clippy::too_many_lines, clippy::redundant_else)]
     pub fn read_record(&mut self) -> Result<Option<Record>> {
+        // Stream halted: either cap already tripped, or caller kept reading
+        // past the FatalReaderError error. Either way, no more records.
+        if self.cap_exceeded {
+            return Ok(None);
+        }
+
         // Read the leader (24 bytes). EOF here is a clean stream end.
         let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
             return Ok(None);
@@ -224,6 +283,7 @@ impl<R: Read> MarcReader<R> {
         self.ctx.set_parse_buffer(&record_data, record_data_offset);
 
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
+            self.note_recovery_error()?;
             return crate::recovery::try_recover_record(
                 leader,
                 &record_data,
@@ -270,9 +330,9 @@ impl<R: Read> MarcReader<R> {
                         Some(&directory[pos..]),
                         "complete 12-byte directory entry",
                     ));
-                } else {
-                    break;
                 }
+                self.note_recovery_error()?;
+                break;
             }
 
             let entry_chunk = &directory[pos..pos + 12];
@@ -282,10 +342,10 @@ impl<R: Read> MarcReader<R> {
                 Err(e) => {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
-                    } else {
-                        pos += 12;
-                        continue;
                     }
+                    self.note_recovery_error()?;
+                    pos += 12;
+                    continue;
                 },
             };
             let start_position = match iso2709::parse_5digits(&entry_chunk[7..12]) {
@@ -293,10 +353,10 @@ impl<R: Read> MarcReader<R> {
                 Err(e) => {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
-                    } else {
-                        pos += 12;
-                        continue;
                     }
+                    self.note_recovery_error()?;
+                    pos += 12;
+                    continue;
                 },
             };
             pos += 12;
@@ -310,6 +370,7 @@ impl<R: Read> MarcReader<R> {
                         data.len()
                     )));
                 } else {
+                    self.note_recovery_error()?;
                     // Try to read what we have
                     let available_end = std::cmp::min(end_position, data.len());
                     if available_end > start_position {
@@ -379,6 +440,7 @@ impl<R: Read> MarcReader<R> {
                                 return Err(e);
                             }
                             // In lenient/permissive mode, skip this field and continue
+                            self.note_recovery_error()?;
                         },
                     }
                 }
@@ -669,6 +731,107 @@ mod tests {
         assert!(
             err.contains("Record length must be at least 24"),
             "got: {err}"
+        );
+    }
+
+    /// Build a record with a single malformed directory entry (non-digit
+    /// bytes in the field-length positions). In lenient/permissive mode this
+    /// triggers `note_recovery_error` once per record; in strict mode it
+    /// surfaces a parse error.
+    fn build_bad_record() -> Vec<u8> {
+        // Directory: 12-byte entry with bad field-length, then terminator.
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"245ABCD00000");
+        directory.push(FIELD_TERMINATOR);
+
+        let base_address = 24 + directory.len();
+        let record_length = base_address + 1; // +1 for RECORD_TERMINATOR
+
+        let mut leader = Vec::new();
+        leader.extend_from_slice(format!("{record_length:05}").as_bytes());
+        leader.extend_from_slice(b"nam a22");
+        leader.extend_from_slice(format!("{base_address:05}").as_bytes());
+        leader.extend_from_slice(b" i 4500");
+        assert_eq!(leader.len(), 24);
+
+        let mut out = Vec::new();
+        out.extend_from_slice(&leader);
+        out.extend_from_slice(&directory);
+        out.push(RECORD_TERMINATOR);
+        out
+    }
+
+    #[test]
+    fn test_max_errors_cap_trips_on_stream_of_malformed_records() {
+        // 5 malformed records, cap at 3 → the 4th read should trip the cap.
+        let mut stream = Vec::new();
+        for _ in 0..5 {
+            stream.extend_from_slice(&build_bad_record());
+        }
+        let mut reader = MarcReader::new(Cursor::new(stream))
+            .with_recovery_mode(RecoveryMode::Lenient)
+            .with_max_errors(3);
+
+        // Reads 1..=3: each records one recovery error; error_count reaches 3
+        // which does not exceed the cap. Records come back with no fields.
+        for _ in 0..3 {
+            let rec = reader.read_record().unwrap();
+            assert!(rec.is_some());
+        }
+
+        // Read 4: would increment error_count to 4, which exceeds cap.
+        let err = reader.read_record().expect_err("cap should trip");
+        match err {
+            crate::error::MarcError::FatalReaderError {
+                cap,
+                errors_seen,
+                record_index,
+                ..
+            } => {
+                assert_eq!(cap, 3);
+                assert_eq!(errors_seen, 4);
+                // 4th record in the stream (1-indexed).
+                assert_eq!(record_index, Some(4));
+            },
+            other => panic!("expected FatalReaderError, got {other:?}"),
+        }
+
+        // Subsequent reads: reader is exhausted.
+        assert!(reader.read_record().unwrap().is_none());
+        assert!(reader.read_record().unwrap().is_none());
+    }
+
+    #[test]
+    fn test_max_errors_zero_disables_cap() {
+        // 50 malformed records with cap=0 must all be read without tripping.
+        let mut stream = Vec::new();
+        for _ in 0..50 {
+            stream.extend_from_slice(&build_bad_record());
+        }
+        let mut reader = MarcReader::new(Cursor::new(stream))
+            .with_recovery_mode(RecoveryMode::Lenient)
+            .with_max_errors(0);
+
+        let mut count = 0;
+        while reader.read_record().unwrap().is_some() {
+            count += 1;
+        }
+        assert_eq!(count, 50);
+    }
+
+    #[test]
+    fn test_max_errors_inert_in_strict_mode() {
+        // In strict mode, the first malformed record returns an error
+        // immediately — the cap never has a chance to trip, even with cap=1.
+        let stream = build_bad_record();
+        let mut reader = MarcReader::new(Cursor::new(stream))
+            .with_recovery_mode(RecoveryMode::Strict)
+            .with_max_errors(1);
+        let err = reader.read_record().expect_err("strict mode should error");
+        // Any variant other than FatalReaderError — the cap did not trip.
+        assert!(
+            !matches!(err, crate::error::MarcError::FatalReaderError { .. }),
+            "strict mode should never produce FatalReaderError, got {err:?}"
         );
     }
 
