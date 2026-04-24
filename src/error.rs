@@ -370,6 +370,27 @@ pub enum MarcError {
         /// Human-readable description of the problem.
         message: String,
     },
+
+    /// The configured per-stream cap on recovered errors was exceeded.
+    ///
+    /// In [`crate::RecoveryMode::Lenient`] and [`crate::RecoveryMode::Permissive`],
+    /// each recovered parse failure allocates a diagnostic object. On a
+    /// pathological input stream, allowing these to accumulate without bound
+    /// would expose callers to unbounded memory growth. The three ISO 2709
+    /// readers therefore count each recovered event and raise this error once
+    /// the configured cap (see their respective `with_max_errors` builders)
+    /// is exceeded. After raising this error the reader is exhausted —
+    /// subsequent calls return `Ok(None)`.
+    FatalReaderError {
+        /// The configured cap value.
+        cap: usize,
+        /// Number of recovered errors counted at the moment the cap was hit.
+        errors_seen: usize,
+        /// 1-based record index during which the cap was hit, when known.
+        record_index: Option<usize>,
+        /// Source filename or stream identifier, when known.
+        source_name: Option<String>,
+    },
 }
 
 impl MarcError {
@@ -442,6 +463,7 @@ impl MarcError {
             MarcError::XmlError { .. } => "E401",
             MarcError::JsonError { .. } => "E402",
             MarcError::WriterError { .. } => "E404",
+            MarcError::FatalReaderError { .. } => "E099",
         }
     }
 
@@ -467,6 +489,7 @@ impl MarcError {
             MarcError::XmlError { .. } => "marcxml_invalid",
             MarcError::JsonError { .. } => "marcjson_invalid",
             MarcError::WriterError { .. } => "record_too_large_for_iso2709",
+            MarcError::FatalReaderError { .. } => "fatal_reader_error",
         }
     }
 
@@ -552,6 +575,13 @@ impl MarcError {
         {
             m.insert("expected_length".into(), opt_json(*expected_length));
             m.insert("actual_length".into(), opt_json(*actual_length));
+        }
+        if let MarcError::FatalReaderError {
+            cap, errors_seen, ..
+        } = self
+        {
+            m.insert("cap".into(), json!(*cap));
+            m.insert("errors_seen".into(), json!(*errors_seen));
         }
 
         // Cause chain: stringified single value, never nested. Walks
@@ -763,6 +793,7 @@ impl MarcError {
             MarcError::XmlError { .. } => "XmlError",
             MarcError::JsonError { .. } => "JsonError",
             MarcError::WriterError { .. } => "WriterError",
+            MarcError::FatalReaderError { .. } => "FatalReaderError",
         }
     }
 
@@ -828,6 +859,11 @@ impl MarcError {
                 if let (Some(exp), Some(act)) = (expected_length, actual_length) {
                     lines.push(("length:", format!("expected {exp} bytes, found {act}")));
                 }
+            },
+            MarcError::FatalReaderError {
+                cap, errors_seen, ..
+            } => {
+                lines.push(("cap:", format!("{errors_seen} errors seen, cap {cap}")));
             },
             _ => {},
         }
@@ -953,6 +989,9 @@ impl MarcError {
             MarcError::XmlError { cause, .. } => format!("XML parse error: {cause}"),
             MarcError::JsonError { cause, .. } => format!("JSON parse error: {cause}"),
             MarcError::WriterError { message, .. } => format!("writer error: {message}"),
+            MarcError::FatalReaderError {
+                cap, errors_seen, ..
+            } => format!("fatal reader error: recovered-error cap exceeded ({errors_seen} errors, cap {cap})"),
         }
     }
 
@@ -973,7 +1012,8 @@ impl MarcError {
             | MarcError::IoError { record_index, .. }
             | MarcError::XmlError { record_index, .. }
             | MarcError::JsonError { record_index, .. }
-            | MarcError::WriterError { record_index, .. } => *record_index,
+            | MarcError::WriterError { record_index, .. }
+            | MarcError::FatalReaderError { record_index, .. } => *record_index,
         }
     }
 
@@ -1101,7 +1141,8 @@ impl MarcError {
             | MarcError::EncodingError { source_name, .. }
             | MarcError::IoError { source_name, .. }
             | MarcError::XmlError { source_name, .. }
-            | MarcError::JsonError { source_name, .. } => source_name.as_deref(),
+            | MarcError::JsonError { source_name, .. }
+            | MarcError::FatalReaderError { source_name, .. } => source_name.as_deref(),
             _ => None,
         }
     }

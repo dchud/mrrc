@@ -30,6 +30,7 @@ use crate::error::Result;
 use crate::holdings_record::HoldingsRecord;
 use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
+use crate::reader::DEFAULT_MAX_ERRORS;
 use crate::recovery::RecoveryMode;
 use std::io::Read;
 
@@ -50,6 +51,8 @@ pub struct HoldingsMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
     ctx: ParseContext,
+    #[allow(dead_code)] // parity-only; no lenient recovery sites yet (see with_max_errors).
+    max_errors: usize,
 }
 
 impl<R: Read> HoldingsMarcReader<R> {
@@ -64,6 +67,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             reader,
             recovery_mode: RecoveryMode::Strict,
             ctx: ParseContext::new(),
+            max_errors: DEFAULT_MAX_ERRORS,
         }
     }
 
@@ -87,6 +91,24 @@ impl<R: Read> HoldingsMarcReader<R> {
     #[must_use]
     pub fn with_source(mut self, name: impl Into<String>) -> Self {
         self.ctx.source_name = Some(name.into());
+        self
+    }
+
+    /// Cap the number of recovered errors tolerated in one stream before the
+    /// reader raises [`crate::MarcError::FatalReaderError`] and halts.
+    ///
+    /// Present on all three ISO 2709 readers for API parity. The holdings
+    /// reader does not currently expose per-field lenient-recovery sites, so
+    /// setting this value on a [`HoldingsMarcReader`] is inert today. The
+    /// value is preserved so that recovery sites added later in this reader
+    /// can honor it without a breaking API change.
+    ///
+    /// See [`crate::MarcReader::with_max_errors`] for the active semantics;
+    /// passing `0` disables the cap (unbounded accumulation). Default when
+    /// not set is [`DEFAULT_MAX_ERRORS`].
+    #[must_use]
+    pub fn with_max_errors(mut self, n: usize) -> Self {
+        self.max_errors = n;
         self
     }
 }

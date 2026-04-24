@@ -198,6 +198,37 @@ Non-recoverable in general; the caller decides whether to retry.
 rather than a typed mrrc class — matches pymarc behavior. Catch `OSError`
 to handle alongside other I/O errors.
 
+### E099 — `fatal_reader_error` { #E099 }
+
+A fatal condition halted the reader. Currently raised when the
+per-stream recovered-error cap is exceeded in `RecoveryMode::Lenient`
+or `Permissive` — see [`MarcReader::with_max_errors`][with_max_errors].
+The code is reserved for future fatal-reader scenarios as well.
+
+**Context:** Parse-side, lenient/permissive only. Strict mode aborts
+on the first error, so this code never fires there.
+**Applies to:** `MarcReader`, `AuthorityMarcReader` (the holdings
+reader exposes the builder for parity but has no active recovery
+sites today).
+**Populates:** `cap` (the configured limit) and `errors_seen` (count
+at the moment of the trip). May also populate: `record_index`,
+`source`.
+
+**Common causes.** Feeding a pathological stream (mostly-malformed
+records) through a lenient/permissive reader. Without the cap the
+accumulated per-record diagnostics could exhaust memory.
+
+**How to recover.** If the cap is a false positive for the input,
+raise it (`reader.with_max_errors(n)` with a larger `n`, or `0` to
+disable). If it reflects the actual state of the input, investigate
+the source — large counts of recovered errors usually indicate
+upstream corruption.
+
+After this error is raised the reader is exhausted; subsequent
+`read_record()` calls return `Ok(None)`.
+
+[with_max_errors]: https://docs.rs/mrrc/latest/mrrc/struct.MarcReader.html#method.with_max_errors
+
 ---
 
 ## Directory / field header (E1xx)

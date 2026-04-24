@@ -195,6 +195,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (parse → serialize → parse-again stability), `parse_marcxml`,
   `parse_json` / `parse_marcjson`, and `decode_marc8`.
 
+### Added — per-stream recovered-error cap
+  ([#110](https://github.com/dchud/mrrc/issues/110))
+
+- **New `MarcReader::with_max_errors(n)` builder method** and the
+  matching `AuthorityMarcReader::with_max_errors` / `HoldingsMarcReader::with_max_errors`.
+  In `RecoveryMode::Lenient` and `RecoveryMode::Permissive`, the reader
+  counts each recovered parse failure and halts with the new
+  `MarcError::FatalReaderError` variant once the configured cap
+  (`DEFAULT_MAX_ERRORS = 10000`) is exceeded. Pass `0` to disable the
+  cap (unbounded accumulation — callers accept the memory risk
+  explicitly). After a cap hit the reader is exhausted; subsequent
+  `read_record()` calls return `Ok(None)`.
+- **New `MarcError::FatalReaderError` variant** wires up the
+  previously-reserved `FatalReaderError` Python class (code `E099`,
+  slug `fatal_reader_error`). Carries `cap` (the configured limit),
+  `errors_seen` (count at the moment of the trip), `record_index`, and
+  `source_name`. Exhaustive pattern matches on `MarcError` need a new
+  arm.
+- **`HoldingsMarcReader::with_max_errors`** is present for API parity
+  but is inert today because the holdings read path does not currently
+  expose per-field lenient recovery sites. The value is preserved so
+  recovery sites added later can honor it without a breaking change.
+
 ### Changed
 
 - **`MarcError` source-error chain now walks correctly** for I/O, XML,

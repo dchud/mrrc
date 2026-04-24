@@ -79,6 +79,7 @@ _CODE_TABLE = [
     (mrrc.BaseAddressNotFound, "E004", "base_address_not_found"),
     (mrrc.TruncatedRecord, "E005", "truncated_record"),
     (mrrc.EndOfRecordNotFound, "E006", "end_of_record_not_found"),
+    (mrrc.FatalReaderError, "E099", "fatal_reader_error"),
     (mrrc.RecordDirectoryInvalid, "E101", "directory_invalid"),
     (mrrc.FieldNotFound, "E105", "field_not_found"),
     (mrrc.InvalidField, "E106", "invalid_field"),
@@ -223,6 +224,22 @@ class TestPickleRoundTrip:
         assert restored.expected_length == 1024
         assert restored.actual_length == 640
         assert restored.record_index == 12
+
+    def test_round_trip_preserves_fatal_reader_error_cap_fields(self):
+        original = mrrc.FatalReaderError(
+            cap=100,
+            errors_seen=101,
+            record_index=7,
+            source="stream.mrc",
+        )
+        restored = pickle.loads(pickle.dumps(original))
+        assert restored.cap == 100
+        assert restored.errors_seen == 101
+        assert restored.record_index == 7
+        assert restored.source == "stream.mrc"
+        d = restored.to_dict()
+        assert d["cap"] == 100
+        assert d["errors_seen"] == 101
 
     def test_round_trip_preserves_invalid_field_message(self):
         original = mrrc.InvalidField(
