@@ -242,7 +242,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                 if field_bytes.len() < 2 {
                     continue;
                 }
-                self.ctx.current_field_tag = Some(tag.clone());
+                self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
                 self.ctx.stream_byte_offset = record_data_offset + field_data_start;
                 let parsed = iso2709::parse_data_field(
                     field_bytes,

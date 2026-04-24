@@ -193,7 +193,7 @@ impl<R: Read> HoldingsMarcReader<R> {
 
             let end = start + length;
             if end > data_section.len() {
-                self.ctx.current_field_tag = Some(tag.clone());
+                self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
                 return Err(self
                     .ctx
                     .err_invalid_field(format!("Field {tag} extends beyond data section")));
@@ -224,13 +224,13 @@ impl<R: Read> HoldingsMarcReader<R> {
 
             // Data field
             if field_data.len() < 3 {
-                self.ctx.current_field_tag = Some(tag.clone());
+                self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
                 return Err(self
                     .ctx
                     .err_invalid_field("Data field too short for indicators"));
             }
 
-            self.ctx.current_field_tag = Some(tag.clone());
+            self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
             self.ctx.stream_byte_offset = record_data_offset + directory_size + start;
             let parsed = iso2709::parse_data_field(
                 field_data,

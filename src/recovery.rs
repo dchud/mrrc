@@ -158,7 +158,7 @@ pub fn try_recover_record(
         if start_position < data_start || end_position > partial_data.len() {
             if mode == RecoveryMode::Strict {
                 let mut err_ctx = ctx.clone();
-                err_ctx.current_field_tag = Some(tag.clone());
+                err_ctx.current_field_tag = tag.as_bytes().try_into().ok();
                 return Err(err_ctx.err_invalid_field(format!(
                     "Field {tag} data not available (truncated record)"
                 )));

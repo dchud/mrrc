@@ -304,7 +304,7 @@ impl<R: Read> MarcReader<R> {
             let end_position = start_position + field_length;
             if end_position > data.len() {
                 if self.recovery_mode == RecoveryMode::Strict {
-                    self.ctx.current_field_tag = Some(tag.clone());
+                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
                     return Err(self.ctx.err_invalid_field(format!(
                         "Field {tag} exceeds data area (end {end_position} > {})",
                         data.len()
@@ -325,7 +325,7 @@ impl<R: Read> MarcReader<R> {
                                 }
                                 record.add_control_field(tag, value);
                             } else {
-                                self.ctx.current_field_tag = Some(tag.clone());
+                                self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
                                 self.ctx.stream_byte_offset =
                                     record_data_offset + data_start + start_position;
                                 if let Ok(field) = iso2709::parse_data_field(
@@ -363,7 +363,7 @@ impl<R: Read> MarcReader<R> {
                     // field's absolute start so any error raised inside
                     // carries a precise byte_offset for hex-dump caret
                     // alignment.
-                    self.ctx.current_field_tag = Some(tag.clone());
+                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
                     self.ctx.stream_byte_offset = record_data_offset + data_start + start_position;
                     let parsed = iso2709::parse_data_field(
                         field_data,
