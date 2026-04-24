@@ -252,6 +252,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pidfd_spawnp` is not supported). Setting `INSTA_WORKSPACE_ROOT` in
   the Miri job environment provides the workspace root up front and
   skips the spawn entirely.
+- **Read-path performance regression from structured-error refactor**
+  ([#117](https://github.com/dchud/mrrc/issues/117)): The v0.8-cycle
+  `ParseContext` refactor reshaped call sites enough that the
+  compiler's default inlining heuristic stopped inlining
+  `iso2709::parse_data_field` across the three readers, costing
+  ~15-17% on read hot paths vs v0.7.6 (Criterion, toolchain 1.95.0;
+  investigated in [#116](https://github.com/dchud/mrrc/issues/116)).
+  Restored by adding `#[inline(always)]` on `parse_data_field` paired
+  with shrinking `ParseContext::current_field_tag` to `Option<[u8; 3]>`
+  (MARC tags are format-mandated to be 3 ASCII bytes). Both pieces are
+  required: the compact context is what lets forced inlining avoid
+  ballooning L1-i cache usage on parallel workloads — applied to
+  main's 144-byte ctx alone, `#[inline(always)]` caused 30-44% parallel
+  regressions in measurement. Net vs v0.7.6: read and sequential
+  benchmarks recover to +9-11% (from +15-19%); parallel benchmarks
+  settle at +7-12% (from +5-9% — a 2-3% additional penalty relative to
+  main on parallel workloads is the cost of the read-path recovery).
+  `parallel_8x_1k_records` is measurement-unstable and its exact
+  number varies ±15% across runs.
 
 ## [0.7.6] - 2026-04-14
 
