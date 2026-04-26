@@ -205,11 +205,18 @@ impl<R: Read> AuthorityMarcReader<R> {
         let record_data_offset = self.ctx.stream_byte_offset;
         self.ctx.set_parse_buffer(&record_data, record_data_offset);
 
-        if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
-            return Err(self.ctx.err_truncated_record(
-                Some(record_length.saturating_sub(LEADER_LEN)),
-                Some(record_data.len()),
-            ));
+        if record_data.len() < (record_length - 24) {
+            if self.recovery_mode == RecoveryMode::Strict {
+                return Err(self.ctx.err_truncated_record(
+                    Some(record_length.saturating_sub(LEADER_LEN)),
+                    Some(record_data.len()),
+                ));
+            }
+            // Lenient/permissive: count the recovery and fall through to
+            // best-effort directory parsing. (An authority-specific
+            // try_recover_record salvage path is bd-lkcy territory; for now
+            // the per-field lenient branches below salvage what they can.)
+            self.note_recovery_error()?;
         }
 
         // Extract directory and data sections
@@ -250,14 +257,47 @@ impl<R: Read> AuthorityMarcReader<R> {
                 .map_err(|_| self.ctx.err_invalid_field("Invalid field tag"))?
                 .to_string();
 
-            let length = iso2709::parse_4digits(&directory[pos + 3..pos + 7])?;
-            let start = iso2709::parse_5digits(&directory[pos + 7..pos + 12])?;
+            let length = match iso2709::parse_4digits(&directory[pos + 3..pos + 7]) {
+                Ok(len) => len,
+                Err(e) => {
+                    if self.recovery_mode == RecoveryMode::Strict {
+                        return Err(e);
+                    }
+                    self.note_recovery_error()?;
+                    pos += 12;
+                    continue;
+                },
+            };
+            let start = match iso2709::parse_5digits(&directory[pos + 7..pos + 12]) {
+                Ok(s) => s,
+                Err(e) => {
+                    if self.recovery_mode == RecoveryMode::Strict {
+                        return Err(e);
+                    }
+                    self.note_recovery_error()?;
+                    pos += 12;
+                    continue;
+                },
+            };
 
             pos += 12;
 
-            // Extract field data
+            // Extract field data. In strict mode, a field whose claimed end
+            // exceeds the buffer is a hard error. In lenient/permissive mode
+            // we count the recovery and salvage what bytes are available.
             let field_data_start = data_start + start;
-            let field_data_end = std::cmp::min(field_data_start + length, record_data.len());
+            let field_data_end_unclamped = field_data_start + length;
+            if field_data_end_unclamped > record_data.len() {
+                if self.recovery_mode == RecoveryMode::Strict {
+                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
+                    return Err(self.ctx.err_invalid_field(format!(
+                        "Field {tag} exceeds data area (end {field_data_end_unclamped} > {})",
+                        record_data.len()
+                    )));
+                }
+                self.note_recovery_error()?;
+            }
+            let field_data_end = std::cmp::min(field_data_end_unclamped, record_data.len());
 
             if field_data_start >= record_data.len() {
                 continue;
@@ -399,6 +439,167 @@ mod tests {
         out.extend_from_slice(&directory);
         out.push(0x1D); // RECORD_TERMINATOR
         out
+    }
+
+    /// Wrap an arbitrary `directory` (must end with `\x1e` if it represents a
+    /// terminated directory) in a minimal valid authority leader and append a
+    /// record terminator. Optional `data` is the post-directory data area; if
+    /// empty, the record has no field data.
+    fn build_authority_record_with(directory: &[u8], data: &[u8]) -> Vec<u8> {
+        let base_address = 24 + directory.len();
+        let record_length = base_address + data.len() + 1;
+
+        let mut leader = Vec::new();
+        leader.extend_from_slice(format!("{record_length:05}").as_bytes());
+        leader.push(b'n'); // status
+        leader.push(b'z'); // type: authority
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.push(b'2');
+        leader.push(b'2');
+        leader.extend_from_slice(format!("{base_address:05}").as_bytes());
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.extend_from_slice(b"4500");
+        assert_eq!(leader.len(), 24);
+
+        let mut out = Vec::new();
+        out.extend_from_slice(&leader);
+        out.extend_from_slice(directory);
+        out.extend_from_slice(data);
+        out.push(0x1D); // RECORD_TERMINATOR
+        out
+    }
+
+    #[test]
+    fn test_authority_bad_field_length_strict_errors() {
+        // Directory entry with non-numeric bytes in the 4-digit field-length
+        // field. Strict mode should propagate the parse error.
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"245ABCD00000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_authority_record_with(&directory, &[]);
+
+        let mut reader =
+            AuthorityMarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Strict);
+        assert!(
+            reader.read_record().is_err(),
+            "strict mode should propagate bad field_length"
+        );
+    }
+
+    #[test]
+    fn test_authority_bad_field_length_lenient_recovers() {
+        // Same fixture: lenient mode should swallow the bad entry and return
+        // an (empty) authority record.
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"245ABCD00000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_authority_record_with(&directory, &[]);
+
+        let mut reader =
+            AuthorityMarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Lenient);
+        let rec = reader.read_record().expect("lenient should not error");
+        assert!(rec.is_some(), "lenient should yield a (partial) record");
+    }
+
+    #[test]
+    fn test_authority_bad_start_position_strict_errors() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"2450005XYZAB");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_authority_record_with(&directory, &[]);
+
+        let mut reader =
+            AuthorityMarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Strict);
+        assert!(
+            reader.read_record().is_err(),
+            "strict mode should propagate bad start_position"
+        );
+    }
+
+    #[test]
+    fn test_authority_bad_start_position_lenient_recovers() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"2450005XYZAB");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_authority_record_with(&directory, &[]);
+
+        let mut reader =
+            AuthorityMarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Lenient);
+        let rec = reader.read_record().expect("lenient should not error");
+        assert!(rec.is_some());
+    }
+
+    #[test]
+    fn test_authority_field_exceeds_data_strict_errors() {
+        // Directory entry claims length=999 starting at position 0, but the
+        // data area is empty. In strict mode this is a hard error; in
+        // lenient mode the (clamped) extraction yields an empty/short field
+        // that is silently skipped.
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"245099900000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_authority_record_with(&directory, &[]);
+
+        let mut reader =
+            AuthorityMarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Strict);
+        let err = reader.read_record().expect_err("strict should error");
+        assert!(
+            matches!(err, MarcError::InvalidField { ref message, .. } if message.contains("exceeds data area")),
+            "expected InvalidField about exceeded data area, got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_authority_field_exceeds_data_lenient_recovers() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"245099900000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_authority_record_with(&directory, &[]);
+
+        let mut reader =
+            AuthorityMarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Lenient);
+        let rec = reader.read_record().expect("lenient should not error");
+        assert!(rec.is_some());
+    }
+
+    #[test]
+    fn test_authority_max_errors_cap_trips_on_field_length_failures() {
+        // Each record has one bad-field-length entry → one note_recovery_error
+        // per record. Cap of 3 means the 4th read trips.
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"245ABCD00000");
+        directory.push(FIELD_TERMINATOR);
+        let one_record = build_authority_record_with(&directory, &[]);
+
+        let mut stream = Vec::new();
+        for _ in 0..5 {
+            stream.extend_from_slice(&one_record);
+        }
+        let mut reader = AuthorityMarcReader::new(Cursor::new(stream))
+            .with_recovery_mode(RecoveryMode::Lenient)
+            .with_max_errors(3);
+
+        for _ in 0..3 {
+            assert!(reader.read_record().unwrap().is_some());
+        }
+        let err = reader.read_record().expect_err("cap should trip");
+        assert!(
+            matches!(
+                err,
+                MarcError::FatalReaderError {
+                    cap: 3,
+                    errors_seen: 4,
+                    record_index: Some(4),
+                    ..
+                }
+            ),
+            "unexpected error: {err:?}"
+        );
+        assert!(reader.read_record().unwrap().is_none());
     }
 
     #[test]
