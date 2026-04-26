@@ -129,6 +129,7 @@ pub mod holdings_reader;
 pub mod holdings_record;
 pub mod holdings_writer;
 pub mod iso2709;
+pub mod iso2709_skeleton;
 pub mod json;
 pub mod leader;
 pub mod macros;
