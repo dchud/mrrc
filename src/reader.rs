@@ -33,19 +33,13 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::error::{MarcError, Result};
+use crate::error::Result;
 use crate::formats::FormatReader;
 use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
 use crate::record::Record;
-use crate::recovery::RecoveryMode;
+use crate::recovery::{RecoveryCap, RecoveryMode};
 use std::io::Read;
-
-/// Default cap on the number of recovered errors tolerated in one stream
-/// before the reader raises [`MarcError::FatalReaderError`] and halts. A
-/// [`MarcReader`] constructed via [`MarcReader::new`] starts with this cap;
-/// override it with [`MarcReader::with_max_errors`] (pass `0` to disable).
-pub const DEFAULT_MAX_ERRORS: usize = 10_000;
 
 /// Reader for ISO 2709 binary MARC format.
 ///
@@ -74,9 +68,7 @@ pub struct MarcReader<R: Read> {
     recovery_mode: RecoveryMode,
     records_read: usize,
     ctx: ParseContext,
-    max_errors: usize,
-    error_count: usize,
-    cap_exceeded: bool,
+    cap: RecoveryCap,
 }
 
 impl<R: Read> MarcReader<R> {
@@ -102,9 +94,7 @@ impl<R: Read> MarcReader<R> {
             recovery_mode: RecoveryMode::Strict,
             records_read: 0,
             ctx: ParseContext::new(),
-            max_errors: DEFAULT_MAX_ERRORS,
-            error_count: 0,
-            cap_exceeded: false,
+            cap: RecoveryCap::new(),
         }
     }
 
@@ -144,7 +134,7 @@ impl<R: Read> MarcReader<R> {
     }
 
     /// Cap the number of recovered errors tolerated in one stream before the
-    /// reader raises [`MarcError::FatalReaderError`] and halts.
+    /// reader raises [`crate::MarcError::FatalReaderError`] and halts.
     ///
     /// Only meaningful in [`RecoveryMode::Lenient`] and
     /// [`RecoveryMode::Permissive`]: in [`RecoveryMode::Strict`] the first
@@ -152,36 +142,14 @@ impl<R: Read> MarcReader<R> {
     ///
     /// Passing `0` disables the cap (unbounded accumulation — callers accept
     /// the memory risk explicitly). The default when the builder is not
-    /// called is [`DEFAULT_MAX_ERRORS`].
+    /// called is [`crate::recovery::DEFAULT_MAX_ERRORS`].
     ///
     /// After the cap is hit the reader is exhausted — subsequent
     /// [`MarcReader::read_record`] calls return `Ok(None)`.
     #[must_use]
     pub fn with_max_errors(mut self, n: usize) -> Self {
-        self.max_errors = n;
+        self.cap.set_max(n);
         self
-    }
-
-    /// Record a recovered parse failure against the stream cap.
-    ///
-    /// Returns `Err(MarcError::FatalReaderError)` the moment the configured
-    /// cap is exceeded, and flags the reader exhausted for future calls.
-    fn note_recovery_error(&mut self) -> Result<()> {
-        if self.max_errors == 0 {
-            return Ok(());
-        }
-        self.error_count += 1;
-        if self.error_count > self.max_errors {
-            self.cap_exceeded = true;
-            let idx = self.ctx.record_index;
-            return Err(MarcError::FatalReaderError {
-                cap: self.max_errors,
-                errors_seen: self.error_count,
-                record_index: if idx == 0 { None } else { Some(idx) },
-                source_name: self.ctx.source_name.clone(),
-            });
-        }
-        Ok(())
     }
 }
 
@@ -232,7 +200,7 @@ impl<R: Read> MarcReader<R> {
     pub fn read_record(&mut self) -> Result<Option<Record>> {
         // Stream halted: either cap already tripped, or caller kept reading
         // past the FatalReaderError error. Either way, no more records.
-        if self.cap_exceeded {
+        if self.cap.is_exhausted() {
             return Ok(None);
         }
 
@@ -283,7 +251,7 @@ impl<R: Read> MarcReader<R> {
         self.ctx.set_parse_buffer(&record_data, record_data_offset);
 
         if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
-            self.note_recovery_error()?;
+            self.cap.note(&self.ctx)?;
             return crate::recovery::try_recover_record(
                 leader,
                 &record_data,
@@ -331,7 +299,7 @@ impl<R: Read> MarcReader<R> {
                         "complete 12-byte directory entry",
                     ));
                 }
-                self.note_recovery_error()?;
+                self.cap.note(&self.ctx)?;
                 break;
             }
 
@@ -343,7 +311,7 @@ impl<R: Read> MarcReader<R> {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
-                    self.note_recovery_error()?;
+                    self.cap.note(&self.ctx)?;
                     pos += 12;
                     continue;
                 },
@@ -354,7 +322,7 @@ impl<R: Read> MarcReader<R> {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
-                    self.note_recovery_error()?;
+                    self.cap.note(&self.ctx)?;
                     pos += 12;
                     continue;
                 },
@@ -370,7 +338,7 @@ impl<R: Read> MarcReader<R> {
                         data.len()
                     )));
                 } else {
-                    self.note_recovery_error()?;
+                    self.cap.note(&self.ctx)?;
                     // Try to read what we have
                     let available_end = std::cmp::min(end_position, data.len());
                     if available_end > start_position {
@@ -440,7 +408,7 @@ impl<R: Read> MarcReader<R> {
                                 return Err(e);
                             }
                             // In lenient/permissive mode, skip this field and continue
-                            self.note_recovery_error()?;
+                            self.cap.note(&self.ctx)?;
                         },
                     }
                 }

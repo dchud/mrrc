@@ -26,12 +26,11 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::error::{MarcError, Result};
+use crate::error::Result;
 use crate::holdings_record::HoldingsRecord;
 use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
-use crate::reader::DEFAULT_MAX_ERRORS;
-use crate::recovery::RecoveryMode;
+use crate::recovery::{RecoveryCap, RecoveryMode};
 use std::io::Read;
 
 /// Reader for ISO 2709 binary MARC Holdings records.
@@ -51,9 +50,7 @@ pub struct HoldingsMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
     ctx: ParseContext,
-    max_errors: usize,
-    error_count: usize,
-    cap_exceeded: bool,
+    cap: RecoveryCap,
 }
 
 impl<R: Read> HoldingsMarcReader<R> {
@@ -68,9 +65,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             reader,
             recovery_mode: RecoveryMode::Strict,
             ctx: ParseContext::new(),
-            max_errors: DEFAULT_MAX_ERRORS,
-            error_count: 0,
-            cap_exceeded: false,
+            cap: RecoveryCap::new(),
         }
     }
 
@@ -102,30 +97,11 @@ impl<R: Read> HoldingsMarcReader<R> {
     ///
     /// See [`crate::MarcReader::with_max_errors`] for semantics; passing `0`
     /// disables the cap (unbounded accumulation). Default when not set is
-    /// [`DEFAULT_MAX_ERRORS`].
+    /// [`crate::recovery::DEFAULT_MAX_ERRORS`].
     #[must_use]
     pub fn with_max_errors(mut self, n: usize) -> Self {
-        self.max_errors = n;
+        self.cap.set_max(n);
         self
-    }
-
-    /// Record a recovered parse failure against the stream cap.
-    fn note_recovery_error(&mut self) -> Result<()> {
-        if self.max_errors == 0 {
-            return Ok(());
-        }
-        self.error_count += 1;
-        if self.error_count > self.max_errors {
-            self.cap_exceeded = true;
-            let idx = self.ctx.record_index;
-            return Err(MarcError::FatalReaderError {
-                cap: self.max_errors,
-                errors_seen: self.error_count,
-                record_index: if idx == 0 { None } else { Some(idx) },
-                source_name: self.ctx.source_name.clone(),
-            });
-        }
-        Ok(())
     }
 }
 
@@ -153,7 +129,7 @@ impl<R: Read> HoldingsMarcReader<R> {
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<HoldingsRecord>> {
-        if self.cap_exceeded {
+        if self.cap.is_exhausted() {
             return Ok(None);
         }
 
@@ -213,7 +189,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             // Lenient/permissive: count the recovery and fall through to
             // best-effort directory parsing. (A holdings-specific
             // try_recover_record salvage path is bd-lkcy territory.)
-            self.note_recovery_error()?;
+            self.cap.note(&self.ctx)?;
         }
 
         // Clamp directory + data slices to actual buffer length so a short
@@ -249,7 +225,7 @@ impl<R: Read> HoldingsMarcReader<R> {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
-                    self.note_recovery_error()?;
+                    self.cap.note(&self.ctx)?;
                     i += 12;
                     continue;
                 },
@@ -260,7 +236,7 @@ impl<R: Read> HoldingsMarcReader<R> {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
-                    self.note_recovery_error()?;
+                    self.cap.note(&self.ctx)?;
                     i += 12;
                     continue;
                 },
@@ -274,7 +250,7 @@ impl<R: Read> HoldingsMarcReader<R> {
                         .ctx
                         .err_invalid_field(format!("Field {tag} extends beyond data section")));
                 }
-                self.note_recovery_error()?;
+                self.cap.note(&self.ctx)?;
                 i += 12;
                 continue;
             }
@@ -310,7 +286,7 @@ impl<R: Read> HoldingsMarcReader<R> {
                         .ctx
                         .err_invalid_field("Data field too short for indicators"));
                 }
-                self.note_recovery_error()?;
+                self.cap.note(&self.ctx)?;
                 i += 12;
                 continue;
             }
@@ -330,7 +306,7 @@ impl<R: Read> HoldingsMarcReader<R> {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
-                    self.note_recovery_error()?;
+                    self.cap.note(&self.ctx)?;
                     i += 12;
                     continue;
                 },
@@ -365,6 +341,7 @@ impl<R: Read> HoldingsMarcReader<R> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::MarcError;
 
     #[test]
     fn test_read_holdings_record_roundtrip() {

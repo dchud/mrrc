@@ -29,11 +29,10 @@
 //! ```
 
 use crate::authority_record::AuthorityRecord;
-use crate::error::{MarcError, Result};
+use crate::error::Result;
 use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
-use crate::reader::DEFAULT_MAX_ERRORS;
-use crate::recovery::RecoveryMode;
+use crate::recovery::{RecoveryCap, RecoveryMode};
 use std::io::Read;
 
 /// Reader for ISO 2709 binary MARC Authority records.
@@ -53,9 +52,7 @@ pub struct AuthorityMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
     ctx: ParseContext,
-    max_errors: usize,
-    error_count: usize,
-    cap_exceeded: bool,
+    cap: RecoveryCap,
 }
 
 impl<R: Read> AuthorityMarcReader<R> {
@@ -70,9 +67,7 @@ impl<R: Read> AuthorityMarcReader<R> {
             reader,
             recovery_mode: RecoveryMode::Strict,
             ctx: ParseContext::new(),
-            max_errors: DEFAULT_MAX_ERRORS,
-            error_count: 0,
-            cap_exceeded: false,
+            cap: RecoveryCap::new(),
         }
     }
 
@@ -100,34 +95,15 @@ impl<R: Read> AuthorityMarcReader<R> {
     }
 
     /// Cap the number of recovered errors tolerated in one stream before the
-    /// reader raises [`MarcError::FatalReaderError`] and halts.
+    /// reader raises [`crate::MarcError::FatalReaderError`] and halts.
     ///
     /// See [`crate::MarcReader::with_max_errors`] for semantics; passing `0`
     /// disables the cap (unbounded accumulation). Default when not set is
-    /// [`DEFAULT_MAX_ERRORS`].
+    /// [`crate::recovery::DEFAULT_MAX_ERRORS`].
     #[must_use]
     pub fn with_max_errors(mut self, n: usize) -> Self {
-        self.max_errors = n;
+        self.cap.set_max(n);
         self
-    }
-
-    /// Record a recovered parse failure against the stream cap.
-    fn note_recovery_error(&mut self) -> Result<()> {
-        if self.max_errors == 0 {
-            return Ok(());
-        }
-        self.error_count += 1;
-        if self.error_count > self.max_errors {
-            self.cap_exceeded = true;
-            let idx = self.ctx.record_index;
-            return Err(MarcError::FatalReaderError {
-                cap: self.max_errors,
-                errors_seen: self.error_count,
-                record_index: if idx == 0 { None } else { Some(idx) },
-                source_name: self.ctx.source_name.clone(),
-            });
-        }
-        Ok(())
     }
 }
 
@@ -155,7 +131,7 @@ impl<R: Read> AuthorityMarcReader<R> {
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<AuthorityRecord>> {
-        if self.cap_exceeded {
+        if self.cap.is_exhausted() {
             return Ok(None);
         }
 
@@ -216,7 +192,7 @@ impl<R: Read> AuthorityMarcReader<R> {
             // best-effort directory parsing. (An authority-specific
             // try_recover_record salvage path is bd-lkcy territory; for now
             // the per-field lenient branches below salvage what they can.)
-            self.note_recovery_error()?;
+            self.cap.note(&self.ctx)?;
         }
 
         // Extract directory and data sections
@@ -248,7 +224,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                         "complete 12-byte directory entry",
                     ));
                 }
-                self.note_recovery_error()?;
+                self.cap.note(&self.ctx)?;
                 break;
             }
 
@@ -263,7 +239,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
-                    self.note_recovery_error()?;
+                    self.cap.note(&self.ctx)?;
                     pos += 12;
                     continue;
                 },
@@ -274,7 +250,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                     if self.recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
-                    self.note_recovery_error()?;
+                    self.cap.note(&self.ctx)?;
                     pos += 12;
                     continue;
                 },
@@ -295,7 +271,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                         record_data.len()
                     )));
                 }
-                self.note_recovery_error()?;
+                self.cap.note(&self.ctx)?;
             }
             let field_data_end = std::cmp::min(field_data_end_unclamped, record_data.len());
 
@@ -338,7 +314,7 @@ impl<R: Read> AuthorityMarcReader<R> {
                         if self.recovery_mode == RecoveryMode::Strict {
                             return Err(e);
                         }
-                        self.note_recovery_error()?;
+                        self.cap.note(&self.ctx)?;
                         continue;
                     },
                 };
@@ -387,6 +363,7 @@ impl<R: Read> AuthorityMarcReader<R> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::MarcError;
     use std::io::Cursor;
 
     #[test]
