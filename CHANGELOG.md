@@ -256,6 +256,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now clamped at the actual buffer length so a short read in
   lenient mode cannot panic.
 
+### Refactored — ISO 2709 directory-walk skeleton consolidation
+  ([#125](https://github.com/dchud/mrrc/issues/125))
+
+- **New `crate::iso2709_skeleton` module** with the `Iso2709Builder`
+  trait and the generic `parse_iso2709_record<R, B>` skeleton function.
+  The skeleton drives one record's parse — leader → record-type
+  validation → directory walk with cap-aware recovery branches at every
+  per-field error site → per-type field dispatch via the builder
+  callbacks → finalize. Each of the three reader types (`MarcReader`,
+  `AuthorityMarcReader`, `HoldingsMarcReader`) now implements
+  `Iso2709Builder` via a small adapter (~60 lines each) and its
+  `read_record` collapses to a one-line skeleton dispatch. Net result:
+  the ~200-line near-duplicate `read_record` body across the three
+  readers is replaced by one shared implementation in one place.
+- **New `crate::recovery::RecoveryCap` struct** (introduced earlier in
+  this cycle) consolidates the per-stream cap state machine that was
+  duplicated across the three readers from bd-uj7c / bd-lbsi / bd-jmrt.
+- The skeleton is parameterized `<R: Read, B: Iso2709Builder>` and
+  intentionally avoids `dyn` dispatch so trait method calls
+  monomorphize and inline at every call site, preserving the
+  bibliographic read path's hot-loop characteristics (per the bd-tcym /
+  bd-9kdt regression lesson).
+- **Behavior changes** that fall out of unifying the three readers
+  against the skeleton's shape:
+  - `AuthorityMarcReader` previously skipped data fields with
+    `field_bytes.len() < 2` *silently in all modes*; the skeleton now
+    treats this as a strict-Err / lenient-skip event with cap
+    accounting, matching every other recovery site.
+  - `HoldingsMarcReader`'s field-extends-beyond-data branch in
+    lenient/permissive mode previously skipped the entry; the skeleton
+    now attempts to salvage a clamped slice (matching the bibliographic
+    reader's behavior).
+  - `HoldingsMarcReader`'s "field exceeds data" error message changed
+    from `"Field {tag} extends beyond data section"` to
+    `"Field {tag} exceeds data area (end {N} > {M})"` — the latter
+    carries the actual numbers and is now uniform across all three
+    readers.
+- Per-type quirks preserved via trait-method overrides: authority
+  retains its tag UTF-8 strictness and trailing `0x1F` trim on control
+  fields; holdings retains its strict UTF-8 on control fields. The
+  wider strict-vs-lossy unification question is tracked in bd-bov7.
+
 ### Changed
 
 - **`MarcError` source-error chain now walks correctly** for I/O, XML,

@@ -35,10 +35,11 @@
 
 use crate::error::Result;
 use crate::formats::FormatReader;
-use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
+use crate::iso2709::{DataFieldParseConfig, ParseContext};
+use crate::iso2709_skeleton::{parse_iso2709_record, Iso2709Builder};
 use crate::leader::Leader;
-use crate::record::Record;
-use crate::recovery::{RecoveryCap, RecoveryMode};
+use crate::record::{Field, Record};
+use crate::recovery::{self, RecoveryCap, RecoveryMode};
 use std::io::Read;
 
 /// Reader for ISO 2709 binary MARC format.
@@ -196,232 +197,74 @@ impl<R: Read> MarcReader<R> {
     /// - The binary data is malformed
     /// - The record structure is invalid
     /// - An I/O error occurs
-    #[allow(clippy::too_many_lines, clippy::redundant_else)]
     pub fn read_record(&mut self) -> Result<Option<Record>> {
-        // Stream halted: either cap already tripped, or caller kept reading
-        // past the FatalReaderError error. Either way, no more records.
-        if self.cap.is_exhausted() {
-            return Ok(None);
-        }
-
-        // Read the leader (24 bytes). EOF here is a clean stream end.
-        let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
-            return Ok(None);
-        };
-
-        // We have a record — initialize the per-record positional context.
-        self.ctx.begin_record();
-
-        // Leader errors bypass ParseContext (Leader::from_bytes builds
-        // MarcError directly), so enrich any raised error with a byte
-        // window around the leader bytes for hex-dump rendering.
-        let leader_offset = self.ctx.stream_byte_offset;
-        let leader = Leader::from_bytes(&leader_bytes)
-            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
-        leader
-            .validate_for_reading()
-            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
-
-        // Calculate the size of the directory and data areas
-        let record_length = leader.record_length as usize;
-        let base_address = leader.data_base_address as usize;
-
-        // Directory starts after leader, ends at base_address
-        let directory_size = base_address - 24;
-
-        // The leader has been consumed.
-        self.ctx.advance(LEADER_LEN);
-
-        // Read the full record data. In non-Strict modes a short read returns
-        // `(buffer, true)`; salvage from a partial buffer is not implemented,
-        // so the recovery dispatch below is unreachable in practice (the read
-        // primitive returns a buffer of full length even on a short read).
-        let (record_data, _was_truncated) = iso2709::read_record_data(
+        let result = parse_iso2709_record::<R, BibBuilder>(
             &mut self.reader,
-            record_length,
+            &mut self.ctx,
+            &mut self.cap,
             self.recovery_mode,
-            &self.ctx,
         )?;
-
-        // Hand the loaded record buffer to the context so `err_*` helpers
-        // raised during directory/field parsing can capture a byte-window
-        // for hex-dump rendering. The record data starts at the stream
-        // offset just past the leader.
-        let record_data_offset = self.ctx.stream_byte_offset;
-        self.ctx.set_parse_buffer(&record_data, record_data_offset);
-
-        if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
-            self.cap.note(&self.ctx)?;
-            return crate::recovery::try_recover_record(
-                leader,
-                &record_data,
-                base_address,
-                self.recovery_mode,
-                &self.ctx,
-            )
-            .map(Some);
+        if result.is_some() {
+            self.records_read += 1;
         }
+        Ok(result)
+    }
+}
 
-        // Parse directory
-        let directory_end = std::cmp::min(directory_size, record_data.len());
-        let directory = if directory_end > 0 {
-            &record_data[..directory_end]
-        } else {
-            &[]
-        };
-        let data_start = std::cmp::min(base_address - 24, record_data.len());
-        let data = if data_start < record_data.len() {
-            &record_data[data_start..]
-        } else {
-            &[]
-        };
+/// Adapter for the bibliographic reader's per-record state. Wraps a
+/// [`Record`] and threads it through the shared [`parse_iso2709_record`]
+/// skeleton.
+struct BibBuilder {
+    record: Record,
+}
 
-        let mut record = Record::new(leader);
+impl Iso2709Builder for BibBuilder {
+    type Output = Record;
 
-        // Parse directory entries (12 bytes each: tag(3) + length(4) + start position(5))
-        // Directory is terminated with FIELD_TERMINATOR
-        let mut pos = 0;
-        while pos < directory.len() {
-            // Keep ctx.stream_byte_offset pointed at the current directory
-            // byte so errors raised below carry a precise byte_offset and
-            // the bytes_near hex-dump caret lands at the actual offending
-            // byte rather than column 0 of the first row.
-            self.ctx.stream_byte_offset = record_data_offset + pos;
-            if directory[pos] == FIELD_TERMINATOR {
-                // End of directory
-                break;
-            }
+    #[inline]
+    fn parse_config() -> DataFieldParseConfig {
+        DataFieldParseConfig::BIBLIOGRAPHIC
+    }
 
-            if pos + 12 > directory.len() {
-                if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(self.ctx.err_directory_invalid(
-                        Some(&directory[pos..]),
-                        "complete 12-byte directory entry",
-                    ));
-                }
-                self.cap.note(&self.ctx)?;
-                break;
-            }
-
-            let entry_chunk = &directory[pos..pos + 12];
-            let tag = String::from_utf8_lossy(&entry_chunk[0..3]).to_string();
-            let field_length = match iso2709::parse_4digits(&entry_chunk[3..7]) {
-                Ok(len) => len,
-                Err(e) => {
-                    if self.recovery_mode == RecoveryMode::Strict {
-                        return Err(e);
-                    }
-                    self.cap.note(&self.ctx)?;
-                    pos += 12;
-                    continue;
-                },
-            };
-            let start_position = match iso2709::parse_5digits(&entry_chunk[7..12]) {
-                Ok(pos) => pos,
-                Err(e) => {
-                    if self.recovery_mode == RecoveryMode::Strict {
-                        return Err(e);
-                    }
-                    self.cap.note(&self.ctx)?;
-                    pos += 12;
-                    continue;
-                },
-            };
-            pos += 12;
-
-            let end_position = start_position + field_length;
-            if end_position > data.len() {
-                if self.recovery_mode == RecoveryMode::Strict {
-                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                    return Err(self.ctx.err_invalid_field(format!(
-                        "Field {tag} exceeds data area (end {end_position} > {})",
-                        data.len()
-                    )));
-                } else {
-                    self.cap.note(&self.ctx)?;
-                    // Try to read what we have
-                    let available_end = std::cmp::min(end_position, data.len());
-                    if available_end > start_position {
-                        let field_data = &data[start_position..available_end];
-                        if tag != "LDR" {
-                            if iso2709::is_control_field_tag(&tag) {
-                                let value = String::from_utf8_lossy(
-                                    &field_data[..field_data.len().saturating_sub(1)],
-                                )
-                                .to_string();
-                                if tag == "001" {
-                                    self.ctx.record_control_number = Some(value.clone());
-                                }
-                                record.add_control_field(tag, value);
-                            } else {
-                                self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                                self.ctx.stream_byte_offset =
-                                    record_data_offset + data_start + start_position;
-                                if let Ok(field) = iso2709::parse_data_field(
-                                    field_data,
-                                    &tag,
-                                    DataFieldParseConfig::BIBLIOGRAPHIC,
-                                    &self.ctx,
-                                ) {
-                                    record.add_field(field);
-                                }
-                                self.ctx.current_field_tag = None;
-                            }
-                        }
-                    }
-                    continue;
-                }
-            }
-
-            let field_data = &data[start_position..end_position];
-
-            // Parse field (skip LDR as it's already parsed)
-            if tag != "LDR" {
-                if iso2709::is_control_field_tag(&tag) {
-                    // Control field (001-009): strip the trailing field terminator
-                    let value =
-                        String::from_utf8_lossy(&field_data[..field_data.len().saturating_sub(1)])
-                            .to_string();
-                    // Opportunistic 001 capture for downstream error context.
-                    if tag == "001" {
-                        self.ctx.record_control_number = Some(value.clone());
-                    }
-                    record.add_control_field(tag, value);
-                } else {
-                    // Data field (010+). Point stream_byte_offset at the
-                    // field's absolute start so any error raised inside
-                    // carries a precise byte_offset for hex-dump caret
-                    // alignment.
-                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                    self.ctx.stream_byte_offset = record_data_offset + data_start + start_position;
-                    let parsed = iso2709::parse_data_field(
-                        field_data,
-                        &tag,
-                        DataFieldParseConfig::BIBLIOGRAPHIC,
-                        &self.ctx,
-                    );
-                    self.ctx.current_field_tag = None;
-                    match parsed {
-                        Ok(field) => record.add_field(field),
-                        Err(e) => {
-                            if self.recovery_mode == RecoveryMode::Strict {
-                                return Err(e);
-                            }
-                            // In lenient/permissive mode, skip this field and continue
-                            self.cap.note(&self.ctx)?;
-                        },
-                    }
-                }
-            }
+    #[inline]
+    fn new_for(leader: Leader) -> Self {
+        BibBuilder {
+            record: Record::new(leader),
         }
+    }
 
-        // Reset stream_byte_offset to the end of the current record. The
-        // directory/field loop above moved it to mid-record for precise
-        // error-offset alignment; this line restores the invariant that
-        // stream_byte_offset equals bytes consumed from the stream.
-        self.ctx.stream_byte_offset = record_data_offset + record_length.saturating_sub(LEADER_LEN);
-        self.records_read += 1;
-        Ok(Some(record))
+    #[inline]
+    fn add_control_field(&mut self, tag: String, value: String) {
+        self.record.add_control_field(tag, value);
+    }
+
+    #[inline]
+    fn add_data_field(&mut self, _tag: String, field: Field) {
+        self.record.add_field(field);
+    }
+
+    /// Bibliographic reader honors the truncated-record salvage path via
+    /// [`recovery::try_recover_record`]; authority + holdings rely on the
+    /// trait's default `None` and fall through to best-effort parsing.
+    fn try_recover_truncated(
+        leader: Leader,
+        partial_data: &[u8],
+        base_address: usize,
+        mode: RecoveryMode,
+        ctx: &ParseContext,
+    ) -> Option<Result<Record>> {
+        Some(recovery::try_recover_record(
+            leader,
+            partial_data,
+            base_address,
+            mode,
+            ctx,
+        ))
+    }
+
+    #[inline]
+    fn finalize(self) -> Record {
+        self.record
     }
 }
 
@@ -442,7 +285,7 @@ mod tests {
     use super::*;
     use std::io::Cursor;
 
-    use crate::iso2709::{RECORD_TERMINATOR, SUBFIELD_DELIMITER};
+    use crate::iso2709::{FIELD_TERMINATOR, RECORD_TERMINATOR, SUBFIELD_DELIMITER};
 
     #[test]
     fn test_read_simple_record() {

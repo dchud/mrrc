@@ -30,8 +30,10 @@
 
 use crate::authority_record::AuthorityRecord;
 use crate::error::Result;
-use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
+use crate::iso2709::{DataFieldParseConfig, ParseContext};
+use crate::iso2709_skeleton::{parse_iso2709_record, Iso2709Builder};
 use crate::leader::Leader;
+use crate::record::Field;
 use crate::recovery::{RecoveryCap, RecoveryMode};
 use std::io::Read;
 
@@ -129,234 +131,111 @@ impl<R: Read> AuthorityMarcReader<R> {
     /// # Errors
     ///
     /// Returns an error if the binary data is malformed or an I/O error occurs.
-    #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<AuthorityRecord>> {
-        if self.cap.is_exhausted() {
-            return Ok(None);
-        }
+        parse_iso2709_record::<R, AuthorityBuilder>(
+            &mut self.reader,
+            &mut self.ctx,
+            &mut self.cap,
+            self.recovery_mode,
+        )
+    }
+}
 
-        // Read the leader (24 bytes). EOF here is a clean stream end.
-        let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
-            return Ok(None);
-        };
+/// Adapter for the authority reader's per-record state. Wraps an
+/// [`AuthorityRecord`] and dispatches data fields by tag into the
+/// record's semantic slots (heading, tracings, notes, linking entries).
+struct AuthorityBuilder {
+    record: AuthorityRecord,
+}
 
-        self.ctx.begin_record();
+impl Iso2709Builder for AuthorityBuilder {
+    type Output = AuthorityRecord;
 
-        // Leader errors bypass ParseContext; enrich with a byte window so
-        // `detailed()` can render a hex dump.
-        let leader_offset = self.ctx.stream_byte_offset;
-        let leader = Leader::from_bytes(&leader_bytes)
-            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
-        leader
-            .validate_for_reading()
-            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
+    fn parse_config() -> DataFieldParseConfig {
+        DataFieldParseConfig::AUTHORITY
+    }
 
-        // Verify this is an authority record (Type Z)
-        if leader.record_type != 'z' {
-            return Err(self.ctx.err_invalid_field(format!(
+    /// Authority records carry leader byte 6 = `'z'`; reject any other
+    /// record type.
+    fn validate_record_type(leader: &Leader, ctx: &ParseContext) -> Result<()> {
+        if leader.record_type == 'z' {
+            Ok(())
+        } else {
+            Err(ctx.err_invalid_field(format!(
                 "Expected authority record type 'z', got '{}'",
                 leader.record_type
-            )));
+            )))
         }
+    }
 
-        let record_length = leader.record_length as usize;
-        let base_address = leader.data_base_address as usize;
-        let directory_size = base_address - 24;
-
-        self.ctx.advance(LEADER_LEN);
-
-        // Read record data. In non-Strict modes a short read returns
-        // `(buffer, true)`; salvage from a partial buffer is not implemented,
-        // so the recovery dispatch below is unreachable in practice (the read
-        // primitive returns a buffer of full length even on a short read).
-        let (record_data, _was_truncated) = iso2709::read_record_data(
-            &mut self.reader,
-            record_length,
-            self.recovery_mode,
-            &self.ctx,
-        )?;
-
-        // Hand the record buffer to the context for bytes_near capture on
-        // any error raised during directory/field parsing.
-        let record_data_offset = self.ctx.stream_byte_offset;
-        self.ctx.set_parse_buffer(&record_data, record_data_offset);
-
-        if record_data.len() < (record_length - 24) {
-            if self.recovery_mode == RecoveryMode::Strict {
-                return Err(self.ctx.err_truncated_record(
-                    Some(record_length.saturating_sub(LEADER_LEN)),
-                    Some(record_data.len()),
-                ));
-            }
-            // Lenient/permissive: count the recovery and fall through to
-            // best-effort directory parsing. (An authority-specific
-            // try_recover_record salvage path is bd-lkcy territory; for now
-            // the per-field lenient branches below salvage what they can.)
-            self.cap.note(&self.ctx)?;
+    fn new_for(leader: Leader) -> Self {
+        AuthorityBuilder {
+            record: AuthorityRecord::new(leader),
         }
+    }
 
-        // Extract directory and data sections
-        let directory_end = std::cmp::min(directory_size, record_data.len());
-        let directory = if directory_end > 0 {
-            &record_data[..directory_end]
+    /// Authority control fields use the same lossy decode as the default
+    /// but additionally trim a trailing `SUBFIELD_DELIMITER` (0x1F) — a
+    /// historical quirk preserved here. Strict-vs-lossy UTF-8 unification
+    /// across readers is bd-bov7.
+    fn decode_control_field_value(
+        field_bytes: &[u8],
+        _tag: &str,
+        _ctx: &ParseContext,
+    ) -> Result<String> {
+        Ok(String::from_utf8_lossy(field_bytes)
+            .trim_end_matches(['\x1E', '\x1F'])
+            .to_string())
+    }
+
+    /// Authority skips data fields shorter than 2 bytes (can't read
+    /// indicators). The pre-bd-lkcy code skipped silently in all modes;
+    /// the skeleton now treats this as a strict-Err / lenient-skip event
+    /// (with cap accounting), matching the rest of the recovery shape.
+    fn validate_data_field_bytes(field_bytes: &[u8], _tag: &str, ctx: &ParseContext) -> Result<()> {
+        if field_bytes.len() < 2 {
+            Err(ctx.err_invalid_field("Data field too short for indicators"))
         } else {
-            &[]
-        };
-        let data_start = std::cmp::min(base_address - 24, record_data.len());
-
-        let mut record = AuthorityRecord::new(leader);
-
-        // Parse directory and extract fields
-        let mut pos = 0;
-        while pos < directory.len() {
-            // Move stream_byte_offset to the current directory byte so
-            // errors below carry a precise byte_offset (and the bytes_near
-            // hex-dump caret lands at the actual offending byte).
-            self.ctx.stream_byte_offset = record_data_offset + pos;
-            if directory[pos] == FIELD_TERMINATOR {
-                break;
-            }
-
-            if pos + 12 > directory.len() {
-                if self.recovery_mode == RecoveryMode::Strict {
-                    return Err(self.ctx.err_directory_invalid(
-                        Some(&directory[pos..]),
-                        "complete 12-byte directory entry",
-                    ));
-                }
-                self.cap.note(&self.ctx)?;
-                break;
-            }
-
-            // Parse directory entry (12 bytes: tag + length + start position)
-            let tag = std::str::from_utf8(&directory[pos..pos + 3])
-                .map_err(|_| self.ctx.err_invalid_field("Invalid field tag"))?
-                .to_string();
-
-            let length = match iso2709::parse_4digits(&directory[pos + 3..pos + 7]) {
-                Ok(len) => len,
-                Err(e) => {
-                    if self.recovery_mode == RecoveryMode::Strict {
-                        return Err(e);
-                    }
-                    self.cap.note(&self.ctx)?;
-                    pos += 12;
-                    continue;
-                },
-            };
-            let start = match iso2709::parse_5digits(&directory[pos + 7..pos + 12]) {
-                Ok(s) => s,
-                Err(e) => {
-                    if self.recovery_mode == RecoveryMode::Strict {
-                        return Err(e);
-                    }
-                    self.cap.note(&self.ctx)?;
-                    pos += 12;
-                    continue;
-                },
-            };
-
-            pos += 12;
-
-            // Extract field data. In strict mode, a field whose claimed end
-            // exceeds the buffer is a hard error. In lenient/permissive mode
-            // we count the recovery and salvage what bytes are available.
-            let field_data_start = data_start + start;
-            let field_data_end_unclamped = field_data_start + length;
-            if field_data_end_unclamped > record_data.len() {
-                if self.recovery_mode == RecoveryMode::Strict {
-                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                    return Err(self.ctx.err_invalid_field(format!(
-                        "Field {tag} exceeds data area (end {field_data_end_unclamped} > {})",
-                        record_data.len()
-                    )));
-                }
-                self.cap.note(&self.ctx)?;
-            }
-            let field_data_end = std::cmp::min(field_data_end_unclamped, record_data.len());
-
-            if field_data_start >= record_data.len() {
-                continue;
-            }
-
-            let field_bytes = &record_data[field_data_start..field_data_end];
-
-            // Check if this is a control field (00X-009)
-            if iso2709::is_control_field_tag(&tag) {
-                // Control field - no indicators or subfields
-                let value = String::from_utf8_lossy(field_bytes)
-                    .trim_end_matches(['\x1E', '\x1F'])
-                    .to_string();
-                if tag == "001" {
-                    self.ctx.record_control_number = Some(value.clone());
-                }
-                record.add_control_field(tag, value);
-            } else {
-                // Data field - has indicators and subfields. Authority preserves
-                // its historical permissive/lossy behavior via the AUTHORITY
-                // config; bytes in field_bytes shorter than 2 are ignored to
-                // match the prior `if field_bytes.len() < 2 { continue }` guard.
-                if field_bytes.len() < 2 {
-                    continue;
-                }
-                self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                self.ctx.stream_byte_offset = record_data_offset + field_data_start;
-                let parsed = iso2709::parse_data_field(
-                    field_bytes,
-                    &tag,
-                    DataFieldParseConfig::AUTHORITY,
-                    &self.ctx,
-                );
-                self.ctx.current_field_tag = None;
-                let field = match parsed {
-                    Ok(f) => f,
-                    Err(e) => {
-                        if self.recovery_mode == RecoveryMode::Strict {
-                            return Err(e);
-                        }
-                        self.cap.note(&self.ctx)?;
-                        continue;
-                    },
-                };
-
-                // Organize field by its function based on tag
-                match tag.as_str() {
-                    "100" | "110" | "111" | "130" | "148" | "150" | "151" | "155" => {
-                        // 1XX fields - the main heading
-                        record.set_heading(field);
-                    },
-                    "400" | "410" | "411" | "430" | "448" | "450" | "451" | "455" => {
-                        // 4XX fields - see from tracings
-                        record.add_see_from_tracing(field);
-                    },
-                    "500" | "510" | "511" | "530" | "548" | "550" | "551" | "555" => {
-                        // 5XX fields - see also from tracings
-                        record.add_see_also_tracing(field);
-                    },
-                    "660" | "661" | "662" | "663" | "664" | "665" | "666" | "667" | "668"
-                    | "669" | "670" | "671" | "672" | "673" | "674" | "675" | "676" | "677"
-                    | "678" | "679" | "680" | "681" | "682" | "683" | "684" | "685" | "686"
-                    | "687" | "688" | "689" => {
-                        // 66X-68X fields - notes
-                        record.add_note(field);
-                    },
-                    "700" | "710" | "711" | "730" | "748" | "750" | "751" | "755" => {
-                        // 7XX fields - heading linking entries
-                        record.add_linking_entry(field);
-                    },
-                    _ => {
-                        // Other fields
-                        record.add_field(field);
-                    },
-                }
-            }
+            Ok(())
         }
+    }
 
-        // Restore stream_byte_offset to the end of the current record.
-        // The directory/field loop above moved it mid-record for precise
-        // error alignment; this restores the bytes-consumed invariant.
-        self.ctx.stream_byte_offset = record_data_offset + record_length.saturating_sub(LEADER_LEN);
-        Ok(Some(record))
+    fn add_control_field(&mut self, tag: String, value: String) {
+        self.record.add_control_field(tag, value);
+    }
+
+    fn add_data_field(&mut self, tag: String, field: Field) {
+        match tag.as_str() {
+            // 1XX — the main heading
+            "100" | "110" | "111" | "130" | "148" | "150" | "151" | "155" => {
+                self.record.set_heading(field);
+            },
+            // 4XX — see from tracings
+            "400" | "410" | "411" | "430" | "448" | "450" | "451" | "455" => {
+                self.record.add_see_from_tracing(field);
+            },
+            // 5XX — see also from tracings
+            "500" | "510" | "511" | "530" | "548" | "550" | "551" | "555" => {
+                self.record.add_see_also_tracing(field);
+            },
+            // 66X–68X — notes
+            "660" | "661" | "662" | "663" | "664" | "665" | "666" | "667" | "668" | "669"
+            | "670" | "671" | "672" | "673" | "674" | "675" | "676" | "677" | "678" | "679"
+            | "680" | "681" | "682" | "683" | "684" | "685" | "686" | "687" | "688" | "689" => {
+                self.record.add_note(field);
+            },
+            // 7XX — heading linking entries
+            "700" | "710" | "711" | "730" | "748" | "750" | "751" | "755" => {
+                self.record.add_linking_entry(field);
+            },
+            _ => {
+                self.record.add_field(field);
+            },
+        }
+    }
+
+    fn finalize(self) -> AuthorityRecord {
+        self.record
     }
 }
 
@@ -364,6 +243,7 @@ impl<R: Read> AuthorityMarcReader<R> {
 mod tests {
     use super::*;
     use crate::error::MarcError;
+    use crate::iso2709::FIELD_TERMINATOR;
     use std::io::Cursor;
 
     #[test]

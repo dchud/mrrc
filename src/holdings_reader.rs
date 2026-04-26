@@ -28,8 +28,10 @@
 
 use crate::error::Result;
 use crate::holdings_record::HoldingsRecord;
-use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
+use crate::iso2709::{DataFieldParseConfig, ParseContext};
+use crate::iso2709_skeleton::{parse_iso2709_record, Iso2709Builder};
 use crate::leader::Leader;
+use crate::record::Field;
 use crate::recovery::{RecoveryCap, RecoveryMode};
 use std::io::Read;
 
@@ -127,214 +129,101 @@ impl<R: Read> HoldingsMarcReader<R> {
     /// # Errors
     ///
     /// Returns an error if the binary data is malformed or an I/O error occurs.
-    #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<HoldingsRecord>> {
-        if self.cap.is_exhausted() {
-            return Ok(None);
-        }
+        parse_iso2709_record::<R, HoldingsBuilder>(
+            &mut self.reader,
+            &mut self.ctx,
+            &mut self.cap,
+            self.recovery_mode,
+        )
+    }
+}
 
-        // Read the leader (24 bytes). EOF here is a clean stream end.
-        let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
-            return Ok(None);
-        };
+/// Adapter for the holdings reader's per-record state. Wraps a
+/// [`HoldingsRecord`] and dispatches data fields by tag into the
+/// record's semantic slots (locations, captions, enumeration, textual
+/// holdings, item information).
+struct HoldingsBuilder {
+    record: HoldingsRecord,
+}
 
-        self.ctx.begin_record();
+impl Iso2709Builder for HoldingsBuilder {
+    type Output = HoldingsRecord;
 
-        // Leader errors bypass ParseContext; enrich with a byte window so
-        // `detailed()` can render a hex dump.
-        let leader_offset = self.ctx.stream_byte_offset;
-        let leader = Leader::from_bytes(&leader_bytes)
-            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
-        leader
-            .validate_for_reading()
-            .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
+    fn parse_config() -> DataFieldParseConfig {
+        DataFieldParseConfig::HOLDINGS
+    }
 
-        // Verify this is a holdings record (Type x/y/v/u)
-        if !matches!(leader.record_type, 'x' | 'y' | 'v' | 'u') {
-            return Err(self.ctx.err_invalid_field(format!(
+    /// Holdings records carry leader byte 6 in `{x, y, v, u}`; reject any
+    /// other record type.
+    fn validate_record_type(leader: &Leader, ctx: &ParseContext) -> Result<()> {
+        if matches!(leader.record_type, 'x' | 'y' | 'v' | 'u') {
+            Ok(())
+        } else {
+            Err(ctx.err_invalid_field(format!(
                 "Expected holdings record type (x/y/v/u), got '{}'",
                 leader.record_type
-            )));
+            )))
         }
+    }
 
-        let record_length = leader.record_length as usize;
-        let base_address = leader.data_base_address as usize;
-        let directory_size = base_address - 24;
-
-        self.ctx.advance(LEADER_LEN);
-
-        // Read record data. In non-Strict modes a short read returns
-        // `(buffer, true)`; salvage from a partial buffer is not implemented,
-        // so the recovery dispatch below is unreachable in practice (the read
-        // primitive returns a buffer of full length even on a short read).
-        let (record_data, _was_truncated) = iso2709::read_record_data(
-            &mut self.reader,
-            record_length,
-            self.recovery_mode,
-            &self.ctx,
-        )?;
-
-        // Hand the record buffer to the context for bytes_near capture on
-        // any error raised during directory/field parsing.
-        let record_data_offset = self.ctx.stream_byte_offset;
-        self.ctx.set_parse_buffer(&record_data, record_data_offset);
-
-        if record_data.len() < (record_length - 24) {
-            if self.recovery_mode == RecoveryMode::Strict {
-                return Err(self.ctx.err_truncated_record(
-                    Some(record_length.saturating_sub(LEADER_LEN)),
-                    Some(record_data.len()),
-                ));
-            }
-            // Lenient/permissive: count the recovery and fall through to
-            // best-effort directory parsing. (A holdings-specific
-            // try_recover_record salvage path is bd-lkcy territory.)
-            self.cap.note(&self.ctx)?;
+    fn new_for(leader: Leader) -> Self {
+        HoldingsBuilder {
+            record: HoldingsRecord::new(leader),
         }
+    }
 
-        // Clamp directory + data slices to actual buffer length so a short
-        // read in lenient mode does not panic.
-        let directory_end = std::cmp::min(directory_size, record_data.len());
-        let directory_bytes = &record_data[..directory_end];
-        let data_section = if directory_end < record_data.len() {
-            &record_data[directory_end..]
+    /// Holdings is uniquely strict on UTF-8 here — the pre-bd-lkcy code
+    /// raised `EncodingError` on bad bytes, and the skeleton preserves
+    /// that policy via this hook. The wider strict-vs-lossy unification
+    /// question across readers is bd-bov7.
+    fn decode_control_field_value(
+        field_bytes: &[u8],
+        tag: &str,
+        ctx: &ParseContext,
+    ) -> Result<String> {
+        let raw = field_bytes
+            .get(..field_bytes.len().saturating_sub(1))
+            .unwrap_or(&[]);
+        std::str::from_utf8(raw)
+            .map(str::to_string)
+            .map_err(|e| ctx.err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}")))
+    }
+
+    /// Holdings rejects data fields shorter than 3 bytes (must hold both
+    /// indicators and at least one byte of subfield data); strict-Err /
+    /// lenient-skip dispatched by the skeleton.
+    fn validate_data_field_bytes(field_bytes: &[u8], _tag: &str, ctx: &ParseContext) -> Result<()> {
+        if field_bytes.len() < 3 {
+            Err(ctx.err_invalid_field("Data field too short for indicators"))
         } else {
-            &[][..]
-        };
-
-        let mut record = HoldingsRecord::new(leader);
-
-        let mut i = 0;
-        while i + 12 <= directory_bytes.len() {
-            // Move stream_byte_offset to the current directory byte so
-            // errors below carry a precise byte_offset and the bytes_near
-            // hex-dump caret lands at the actual offending byte.
-            self.ctx.stream_byte_offset = record_data_offset + i;
-            // Stop on directory terminator (consistent with bib + authority).
-            if directory_bytes[i] == FIELD_TERMINATOR {
-                break;
-            }
-
-            let tag = std::str::from_utf8(&directory_bytes[i..i + 3])
-                .map_err(|_| self.ctx.err_invalid_field("Invalid tag encoding"))?
-                .to_string();
-
-            let length = match iso2709::parse_4digits(&directory_bytes[i + 3..i + 7]) {
-                Ok(len) => len,
-                Err(e) => {
-                    if self.recovery_mode == RecoveryMode::Strict {
-                        return Err(e);
-                    }
-                    self.cap.note(&self.ctx)?;
-                    i += 12;
-                    continue;
-                },
-            };
-            let start = match iso2709::parse_5digits(&directory_bytes[i + 7..i + 12]) {
-                Ok(s) => s,
-                Err(e) => {
-                    if self.recovery_mode == RecoveryMode::Strict {
-                        return Err(e);
-                    }
-                    self.cap.note(&self.ctx)?;
-                    i += 12;
-                    continue;
-                },
-            };
-
-            let end = start + length;
-            if end > data_section.len() {
-                if self.recovery_mode == RecoveryMode::Strict {
-                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                    return Err(self
-                        .ctx
-                        .err_invalid_field(format!("Field {tag} extends beyond data section")));
-                }
-                self.cap.note(&self.ctx)?;
-                i += 12;
-                continue;
-            }
-
-            let field_data = &data_section[start..end];
-
-            if iso2709::is_control_field_tag(&tag) {
-                // Control field: strip the trailing field terminator. Holdings
-                // historically used strict UTF-8 here, so propagate that
-                // behavior via the EncodingError variant.
-                let raw = field_data
-                    .get(..field_data.len().saturating_sub(1))
-                    .unwrap_or(&[]);
-                let value = std::str::from_utf8(raw)
-                    .map_err(|e| {
-                        self.ctx
-                            .err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}"))
-                    })?
-                    .to_string();
-                if tag == "001" {
-                    self.ctx.record_control_number = Some(value.clone());
-                }
-                record.add_control_field(tag, value);
-                i += 12;
-                continue;
-            }
-
-            // Data field
-            if field_data.len() < 3 {
-                if self.recovery_mode == RecoveryMode::Strict {
-                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                    return Err(self
-                        .ctx
-                        .err_invalid_field("Data field too short for indicators"));
-                }
-                self.cap.note(&self.ctx)?;
-                i += 12;
-                continue;
-            }
-
-            self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-            self.ctx.stream_byte_offset = record_data_offset + directory_size + start;
-            let parsed = iso2709::parse_data_field(
-                field_data,
-                &tag,
-                DataFieldParseConfig::HOLDINGS,
-                &self.ctx,
-            );
-            self.ctx.current_field_tag = None;
-            let field = match parsed {
-                Ok(f) => f,
-                Err(e) => {
-                    if self.recovery_mode == RecoveryMode::Strict {
-                        return Err(e);
-                    }
-                    self.cap.note(&self.ctx)?;
-                    i += 12;
-                    continue;
-                },
-            };
-
-            match tag.as_str() {
-                "852" => record.add_location(field),
-                "853" => record.add_captions_basic(field),
-                "854" => record.add_captions_supplements(field),
-                "855" => record.add_captions_indexes(field),
-                "863" => record.add_enumeration_basic(field),
-                "864" => record.add_enumeration_supplements(field),
-                "865" => record.add_enumeration_indexes(field),
-                "866" => record.add_textual_holdings_basic(field),
-                "867" => record.add_textual_holdings_supplements(field),
-                "868" => record.add_textual_holdings_indexes(field),
-                "876" | "877" | "878" => record.add_item_information(field),
-                _ => record.add_field(field),
-            }
-
-            i += 12;
+            Ok(())
         }
+    }
 
-        // Restore stream_byte_offset to the end of the current record.
-        // The directory/field loop above moved it mid-record for precise
-        // error alignment; this restores the bytes-consumed invariant.
-        self.ctx.stream_byte_offset = record_data_offset + record_length.saturating_sub(LEADER_LEN);
-        Ok(Some(record))
+    fn add_control_field(&mut self, tag: String, value: String) {
+        self.record.add_control_field(tag, value);
+    }
+
+    fn add_data_field(&mut self, tag: String, field: Field) {
+        match tag.as_str() {
+            "852" => self.record.add_location(field),
+            "853" => self.record.add_captions_basic(field),
+            "854" => self.record.add_captions_supplements(field),
+            "855" => self.record.add_captions_indexes(field),
+            "863" => self.record.add_enumeration_basic(field),
+            "864" => self.record.add_enumeration_supplements(field),
+            "865" => self.record.add_enumeration_indexes(field),
+            "866" => self.record.add_textual_holdings_basic(field),
+            "867" => self.record.add_textual_holdings_supplements(field),
+            "868" => self.record.add_textual_holdings_indexes(field),
+            "876" | "877" | "878" => self.record.add_item_information(field),
+            _ => self.record.add_field(field),
+        }
+    }
+
+    fn finalize(self) -> HoldingsRecord {
+        self.record
     }
 }
 
@@ -342,6 +231,7 @@ impl<R: Read> HoldingsMarcReader<R> {
 mod tests {
     use super::*;
     use crate::error::MarcError;
+    use crate::iso2709::FIELD_TERMINATOR;
 
     #[test]
     fn test_read_holdings_record_roundtrip() {
@@ -504,7 +394,7 @@ mod tests {
             .with_recovery_mode(RecoveryMode::Strict);
         let err = reader.read_record().expect_err("strict should error");
         assert!(
-            matches!(err, MarcError::InvalidField { ref message, .. } if message.contains("extends beyond data section")),
+            matches!(err, MarcError::InvalidField { ref message, .. } if message.contains("exceeds data area")),
             "expected InvalidField about extends-beyond, got: {err:?}"
         );
     }
