@@ -79,23 +79,6 @@ pub trait Iso2709Builder: Sized {
     /// their functional role (heading, tracings, locations, captions, etc.).
     fn add_data_field(&mut self, tag: String, field: Field);
 
-    /// Decode the 3-byte tag from a directory entry. The default is lossy
-    /// UTF-8 — tag bytes are ASCII per the spec, so non-ASCII bytes are
-    /// pathological data either way. Authority and holdings historically
-    /// used strict UTF-8 here; that asymmetry is tracked in bd-bov7 and
-    /// preserved by this hook for now.
-    ///
-    /// # Errors
-    ///
-    /// Returns `MarcError` when the implementing reader applies a strict
-    /// decode policy and the bytes are not valid UTF-8. The default
-    /// (lossy) implementation never errors.
-    #[inline]
-    fn decode_tag(bytes: &[u8], ctx: &ParseContext) -> Result<String> {
-        let _ = ctx;
-        Ok(String::from_utf8_lossy(bytes).to_string())
-    }
-
     /// Decode a control field's bytes into its string value. The default
     /// strips the trailing `FIELD_TERMINATOR` byte and decodes lossily.
     /// Authority overrides to also strip a trailing `SUBFIELD_DELIMITER`;
@@ -296,7 +279,7 @@ where
         }
 
         let entry_chunk = &directory[pos..pos + 12];
-        let tag = B::decode_tag(&entry_chunk[0..3], ctx)?;
+        let tag = String::from_utf8_lossy(&entry_chunk[0..3]).to_string();
         let field_length = match parse_4digits(&entry_chunk[3..7]) {
             Ok(len) => len,
             Err(e) => {

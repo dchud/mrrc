@@ -9,393 +9,170 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking
 
-- **`MarcError` variants restructured from string-message tuple variants
-  to structured struct variants.** Each variant now carries positional
-  metadata: `record_index`, `byte_offset`, `record_byte_offset`,
-  `record_control_number`, `field_tag`, `indicator_position`,
-  `subfield_code`, `found` (bytes capped at 32), `expected`, and
-  `source_name`. Wrapping variants (`IoError`, `XmlError`, `JsonError`)
-  carry their underlying cause via `#[source]` so
-  `std::error::Error::source()` walks the chain. Direct callers that
-  constructed or pattern-matched `MarcError` variants need to update for
-  the new struct shape. The `Display` output format has changed for
-  every variant — anyone snapshot-testing or grepping log output sees
-  different strings.
-- **`MarcError::InvalidRecord` variant removed.** Use the new specific
-  variants (`DirectoryInvalid`, `RecordLengthInvalid`, etc.) or
-  `InvalidField` as the fall-through.
+- **`MarcError` variants restructured to struct form** carrying
+  positional metadata (`record_index`, `byte_offset`,
+  `record_byte_offset`, `record_control_number`, `field_tag`,
+  `indicator_position`, `subfield_code`, `found`, `expected`,
+  `source_name`). Wrapping variants (`IoError`, `XmlError`, `JsonError`)
+  chain via `#[source]` so `Error::source()` walks correctly; `Display`
+  output changed for every variant. Direct constructors and pattern
+  matches need updating. **Migration:** match on `.code()` (`"E001"`–
+  `"E099"`, `"E101"`+) instead of variant names — codes are stable
+  across future enum changes.
+- **`MarcError::InvalidRecord` removed.** Use the new specific variants
+  (`DirectoryInvalid`, `RecordLengthInvalid`, …) or `InvalidField` as
+  the fall-through.
+- **`recovery::RecoveryContext` removed from the public re-exports.**
+  No external consumer; the type was an internal helper that
+  accumulated messages and dropped them. Pattern-match on
+  `MarcError` instead.
 
-### Added — shared ISO 2709 parsing primitives
+### Added
 
-- **`ParseContext` parsing context type and per-context error helpers**
-  in `src/iso2709.rs`. The context tracks per-stream and per-record
-  positional state; the `ctx.err_*` family of methods constructs the
-  appropriate `MarcError` variant with all positional fields
-  auto-populated.
-- **Shared subfield-parsing primitives** `iso2709::parse_data_field` and
-  `iso2709::parse_subfields` with three named profiles
-  (`DataFieldParseConfig::BIBLIOGRAPHIC`, `AUTHORITY`, `HOLDINGS`)
-  capturing each existing reader's historical behavior for two
-  orthogonal axes (lossy/strict UTF-8, error/skip on unrecognized
-  bytes).
-
-### Added — structured positional error context and typed Python exceptions
-
-- **Structured positional context on every parse error.** Each
-  `MarcError` carries the record index in the stream, absolute and
-  record-relative byte offsets, the 001 control number when available,
-  the field tag and (where applicable) indicator position or subfield
-  code being parsed, the bad bytes (capped at 32), and the source
-  filename.
-- **`with_source` builder method and `from_path` constructor** on
-  `MarcReader`, `AuthorityMarcReader`, and `HoldingsMarcReader`.
-  `from_path` opens the file and sets the source name from the path so
-  emitted errors include the filename.
-- **Opportunistic 001 extraction** during reading so errors raised after
-  the 001 control field is decoded include `record_control_number`.
-- **`MarcError::detailed()` multi-line diagnostic** rendering with all
-  populated positional fields visible in aligned columns. The default
-  `Display` format produces a one-liner with byte offset visually
-  subordinate.
-- **mrrc-specific Python exception subclasses** (`InvalidIndicator`,
-  `BadSubfieldCode`, `InvalidField`, `TruncatedRecord`, `EncodingError`,
-  `XmlError`, `JsonError`, `WriterError`) extending the closest
-  pymarc-named parent so existing pymarc-style `except` clauses keep
-  catching the same conditions while mrrc-aware code can opt into finer
-  granularity.
-- **Positional attributes on every Python exception class** as keyword
-  arguments, with bare-constructor compatibility preserved
-  (`raise RecordLeaderInvalid()` still works) and pickle round-trip
-  support via `__reduce__`/`__setstate__`. `__setstate__` whitelists
-  incoming attribute names for defense-in-depth.
-- **Python `_format()` and `detailed()` methods on every exception
-  class**, producing output byte-for-byte identical to the corresponding
-  Rust `Display` and `MarcError::detailed()` outputs.
-- **PyO3 typed-exception construction** in
-  `src-python/src/error.rs::marc_error_to_py_err` so each `MarcError`
-  variant maps to its corresponding Python typed exception class with
-  kwargs, replacing the previous bare `PyValueError`/`PyIOError`
-  mapping. Falls through to bare `PyValueError` with `__cause__`
-  chained when typed construction fails.
-- **`docs/reference/error-handling.md`** documenting the exception
-  hierarchy, pymarc compatibility surface, per-variant fields, position
-  semantics by format, source plumbing, recovery-mode interaction, and
-  pickle behavior.
-- **Snapshot tests for the externally-visible error format** via
-  `insta` (Rust) and `syrupy` (Python). Run `cargo insta review` and
-  `pytest --snapshot-update` to refresh baselines when the format
-  intentionally changes.
-
-### Added — stable error codes
-
-- **Stable error codes on every `MarcError` variant.** New `code()` and
-  `slug()` methods return the canonical `Exxx` identifier (e.g., `"E201"`)
-  and human-friendly slug (e.g., `"invalid_indicator"`). Match on the code
-  rather than the variant name to keep handlers stable across enum
-  restructures.
-- **Matching `code` / `slug` class attributes + `help_url()` method on
-  every Python exception class.** `mrrc.InvalidIndicator.code == "E201"`,
-  `err.help_url()` resolves to the corresponding `#E201` anchor on
+- **Structured positional context on every parse error** — record
+  index, absolute and record-relative byte offsets, 001 control number,
+  field tag (and indicator position or subfield code where applicable),
+  offending bytes (capped at 32), and source filename. New
+  `MarcError::detailed()` multi-line diagnostic includes a hex-dump of
+  the byte window around the error offset; the default `Display` is a
+  one-liner. Both produce byte-for-byte identical output across Rust
+  and Python via matching `_format()` / `detailed()` methods on every
+  Python exception class.
+- **Typed Python exception subclasses** for every `MarcError` variant
+  (e.g. `InvalidIndicator`, `BadSubfieldCode`, `TruncatedRecord`,
+  `XmlError`, `JsonError`, `WriterError`, `FatalReaderError`)
+  extending the closest pymarc-named parent so existing pymarc-style
+  `except` clauses keep catching the same conditions. Each carries
+  positional kwargs, supports pickle round-trip, and survives the
+  PyO3 boundary with all attributes intact.
+- **Stable error codes** (`E001`–`E007`, `E099`, `E101`, `E105`,
+  `E106`, `E201`, `E202`, `E301`, `E401`, `E402`, `E404`) on every
+  variant via `MarcError::code()` / `slug()`, with matching `code` /
+  `slug` / `help_url()` on every Python class. Codes never get
+  renumbered (policy in `CONTRIBUTING.md`); `MRRC_DOCS_BASE_URL`
+  overrides the help-URL host. All codes documented in
   `docs/reference/error-codes.md`.
-- **`MRRC_DOCS_BASE_URL` environment variable** overrides the default
-  GitHub Pages docs URL — useful for enterprise deployments that mirror
-  the docs internally. Honored by both the Rust core and the Python
-  bindings.
-- **`docs/reference/error-codes.md`** documents all initial codes with
-  Context / Applies to / Populates metadata, common causes, recovery
-  hints, and the corresponding Python class.
-- **Stability policy** documented in `CONTRIBUTING.md`: codes never get
-  re-purposed or renumbered; URLs stay resolving forever.
-
-### Added — structured error serialization and hex-dump diagnostics
-
-- **`to_dict()` / `to_json()` on every `MrrcException`** emit a JSON-ready
-  dict suitable for structured logging pipelines (ELK, Datadog, Splunk).
-  Bytes fields get hex-encoded under a `_hex`-suffixed key; `_cause`
-  surfaces the exception chain as a flat string.
-  `to_dict(include_traceback=True)` adds a formatted traceback. A
-  `schema_version: 1` key is included so consumers can branch on it if
-  the shape changes later (pre-1.0, the shape may still evolve).
-- **Matching `MarcError::to_json_value()` / `to_json()`** on the Rust side
-  via `serde_json`. Same shape; `pub const SCHEMA_VERSION: u32` for the
-  version key.
-- **Hex-dump in `detailed()` output** (both Rust and Python). When the
-  parser captures a byte window around the error offset, `detailed()`
-  appends a 16 + 16 byte hex + ASCII dump with a caret pointing at the
-  offending byte. Byte-for-byte identical output across languages.
-- **`bytes_near` / `bytes_near_offset` attributes** on parse-path
-  exceptions carry the byte window; populated by the `MARCReader`,
-  `AuthorityMarcReader`, and `HoldingsMarcReader` paths for directory
-  and data-field errors. `ctx.stream_byte_offset` advances through
-  directory/field iteration so the hex-dump caret lands at the actual
-  offending byte, not column 0 of the first row.
-- **Typed `MarcError` now survives the Python FFI boundary.** The
-  `PyMARCReader` parse path previously collapsed any `MarcError` into
-  a generic `ParseError::invalid_record("Failed to parse …")`, which
-  erased the variant, positional fields, and (when added) `bytes_near`.
-  The parse result is now routed through `marc_error_to_py_err`
-  directly, so Python callers receive the typed `MrrcException`
-  subclass with every attribute populated.
-- **`BytesNear` public struct** in `mrrc` exposes the window type and a
-  `BytesNear::capture(buffer, base_offset, absolute_offset)` helper.
-- **Structured-serialization notes** in `docs/reference/error-handling.md`:
-  sample output, the `_hex`-suffix convention, the flat `_cause`, and the
-  bounded payload size (via the 32-byte `found` cap + 32-byte hex-dump
-  window).
-
-### Added — expanded property-test suite
-
-- **`tests/properties.rs` now runs 8 property tests** covering binary,
-  MARCXML, and MARCJSON round-trips plus four structural invariants on the
-  emitted ISO 2709 bytes: leader-length matches byte count, directory
-  entries tile the data area without gaps or overlaps, indicator bytes are
-  digits or spaces, and subfield codes are lowercase-alphanumeric. Tied to
-  `ProptestConfig { cases: 64 }` so the full suite completes in ~3s
-  locally.
-- **Broadened record strategy** covers zero-control-field and
-  zero-data-field records, and MARCXML/MARCJSON strategies deliberately
-  include format-specific metacharacters (`< > & " '` for XML;
-  `\t \n \r \\ "` for JSON) to exercise escaping edge cases.
-- **Removed stray commented `#proptest = "1.0"`** from the main
-  `[dependencies]` section of `Cargo.toml`; the real entry has always been
-  in `[dev-dependencies]`.
-
-### Added — coverage-guided fuzzing infrastructure
-
-- **`fuzz/` standalone Cargo workspace with `cargo-fuzz`**
-  ([#90](https://github.com/dchud/mrrc/issues/90)): first coverage-guided
-  fuzz target, `parse_record`, exercises `MarcReader::read_record` over
-  arbitrary byte streams. The harness discards the `Result` so libfuzzer
-  only flags panics, OOMs, and timeouts — `Err(MarcError)` on malformed
-  input is correct behavior, not a bug. Seed corpus is drawn from small
-  binary fixtures under `tests/data/*.mrc` (simple book, music score,
-  authority record, control fields, multi-record stream).
-- **Standalone workspace design** (`fuzz/Cargo.toml` declares its own
-  `[workspace]`): isolates the fuzz crate from the root workspace so
-  `cargo build --workspace`, `cargo clippy --all-targets`, and
-  `.cargo/check.sh` do not try to compile it under stable 1.95.0. The
-  `fuzz/rust-toolchain.toml` pins nightly, which `libfuzzer-sys` requires
-  for its `-C passes=sancov-*` instrumentation.
-- **Nightly CI workflow** at `.github/workflows/fuzz.yml` runs
-  `parse_record` for 5 minutes daily at 03:00 UTC (offset from the 02:00
-  memory-safety ASAN job), plus on-demand via `workflow_dispatch` with a
-  configurable time budget. A crash fails the job and uploads
-  `fuzz/artifacts/` as a workflow artifact with 30-day retention. No
-  auto-filing — the red mark on the Actions dashboard is the notification
-  and triage is manual. The job is not a PR gate; fuzz findings get
-  copied into `tests/` as regressions that run on every PR.
-- **Documentation** at `docs/contributing/fuzzing.md` covers install,
-  local run, the reproduce-minimize-fix-regress triage flow, the seed
-  corpus policy (curated seeds tracked; mutator-discovered additions
-  local-only), and the relationship with the larger formal-methods
-  pyramid being built jointly with the
-  [mrrc-testbed](https://github.com/dchud/mrrc-testbed) repo.
-- **`roundtrip_binary` fuzz target**
-  ([#115](https://github.com/dchud/mrrc/issues/115)): couples the reader
-  and writer. Every record `MarcReader::read_record` extracts is fed
-  through `MarcWriter::write_record` and the serialized bytes are
-  re-parsed. mrrc does not promise byte-for-byte round-trip stability
-  (the writer canonicalizes the leader and regenerates the directory),
-  so the only assertion is that neither the writer path nor the second
-  reader panics. `Err(MarcError)` returns from the writer (e.g., records
-  exceeding the 4 GiB representable limit) or the second reader are
-  correct behavior and discarded. Nightly CI runs the target alongside
-  `parse_record` via a workflow matrix; seed corpus mirrors the
-  `parse_record` curated seeds.
-- **Follow-up fuzz targets tracked separately:** `parse_leader` (small
-  24-byte state space, fastest convergence), `parse_marcxml`,
-  `parse_json` / `parse_marcjson`, and `decode_marc8`.
-
-### Added — per-stream recovered-error cap
-  ([#110](https://github.com/dchud/mrrc/issues/110))
-
-- **New `MarcReader::with_max_errors(n)` builder method** and the
-  matching `AuthorityMarcReader::with_max_errors` / `HoldingsMarcReader::with_max_errors`.
-  In `RecoveryMode::Lenient` and `RecoveryMode::Permissive`, the reader
-  counts each recovered parse failure and halts with the new
-  `MarcError::FatalReaderError` variant once the configured cap
-  (`DEFAULT_MAX_ERRORS = 10000`) is exceeded. Pass `0` to disable the
-  cap (unbounded accumulation — callers accept the memory risk
-  explicitly). After a cap hit the reader is exhausted; subsequent
-  `read_record()` calls return `Ok(None)`.
-- **New `MarcError::FatalReaderError` variant** wires up the
-  previously-reserved `FatalReaderError` Python class (code `E099`,
-  slug `fatal_reader_error`). Carries `cap` (the configured limit),
-  `errors_seen` (count at the moment of the trip), `record_index`, and
-  `source_name`. Exhaustive pattern matches on `MarcError` need a new
-  arm.
-- **`HoldingsMarcReader::with_max_errors`** is present for API parity
-  but is inert today because the holdings read path does not currently
-  expose per-field lenient recovery sites. The value is preserved so
-  recovery sites added later can honor it without a breaking change.
-
-### Added — AuthorityMarcReader: per-field lenient recovery parity with bib
-  ([#121](https://github.com/dchud/mrrc/issues/121))
-
-- **`AuthorityMarcReader` now honors `RecoveryMode::Lenient` /
-  `Permissive` at three previously-strict-only per-field error sites**:
-  bad field-length digits, bad start-position digits, and field claimed
-  to extend past the data area. Strict mode preserves the prior
-  behavior of returning the first error; lenient/permissive mode now
-  skips the offending entry, counts the recovery against the per-stream
-  cap, and continues. Each new site is hooked into the
-  `with_max_errors` cap from the previous entry.
-- **Truncated-record dispatch fixed**: in lenient/permissive mode the
-  reader no longer returns a hard error on a short read; instead it
-  notes the recovery and falls through to best-effort directory
-  parsing (an authority-specific `try_recover_record` salvage path
-  remains future work). Strict-mode behavior is unchanged.
-
-### Added — HoldingsMarcReader: per-field lenient/permissive recovery
-  ([#122](https://github.com/dchud/mrrc/issues/122))
-
-- **`HoldingsMarcReader` now honors `RecoveryMode::Lenient` /
-  `Permissive` at five per-field error sites** that previously returned
-  the first error in all modes: bad field-length digits, bad
-  start-position digits, field-extends-beyond-data-section,
-  data-field-too-short-for-indicators, and `parse_data_field` failure.
-  Strict-mode behavior is unchanged at every site; lenient/permissive
-  mode skips the offending entry, counts the recovery, and continues.
-- **`HoldingsMarcReader::with_max_errors` is now active** (no longer
-  inert as documented under the bd-uj7c entry). Each new lenient
-  branch participates in the per-stream cap; the docstring caveat is
-  removed.
-- **Truncated-record dispatch fixed**, mirroring the authority-reader
-  change: lenient/permissive mode no longer returns a hard error on a
-  short read; instead it notes the recovery and falls through to
-  best-effort directory parsing. The directory/data slicing is also
-  now clamped at the actual buffer length so a short read in
-  lenient mode cannot panic.
-
-### Refactored — ISO 2709 directory-walk skeleton consolidation
-  ([#125](https://github.com/dchud/mrrc/issues/125))
-
-- **New `crate::iso2709_skeleton` module** with the `Iso2709Builder`
-  trait and the generic `parse_iso2709_record<R, B>` skeleton function.
-  The skeleton drives one record's parse — leader → record-type
-  validation → directory walk with cap-aware recovery branches at every
-  per-field error site → per-type field dispatch via the builder
-  callbacks → finalize. Each of the three reader types (`MarcReader`,
-  `AuthorityMarcReader`, `HoldingsMarcReader`) now implements
-  `Iso2709Builder` via a small adapter (~60 lines each) and its
-  `read_record` collapses to a one-line skeleton dispatch. Net result:
-  the ~200-line near-duplicate `read_record` body across the three
-  readers is replaced by one shared implementation in one place.
-- **New `crate::recovery::RecoveryCap` struct** (introduced earlier in
-  this cycle) consolidates the per-stream cap state machine that was
-  duplicated across the three readers from bd-uj7c / bd-lbsi / bd-jmrt.
-- The skeleton is parameterized `<R: Read, B: Iso2709Builder>` and
-  intentionally avoids `dyn` dispatch so trait method calls
-  monomorphize and inline at every call site, preserving the
-  bibliographic read path's hot-loop characteristics (per the bd-tcym /
-  bd-9kdt regression lesson).
-- **Behavior changes** that fall out of unifying the three readers
-  against the skeleton's shape:
-  - `AuthorityMarcReader` previously skipped data fields with
-    `field_bytes.len() < 2` *silently in all modes*; the skeleton now
-    treats this as a strict-Err / lenient-skip event with cap
-    accounting, matching every other recovery site.
-  - `HoldingsMarcReader`'s field-extends-beyond-data branch in
-    lenient/permissive mode previously skipped the entry; the skeleton
-    now attempts to salvage a clamped slice (matching the bibliographic
-    reader's behavior).
-  - `HoldingsMarcReader`'s "field exceeds data" error message changed
-    from `"Field {tag} extends beyond data section"` to
-    `"Field {tag} exceeds data area (end {N} > {M})"` — the latter
-    carries the actual numbers and is now uniform across all three
-    readers.
-- Per-type quirks preserved via trait-method overrides: authority
-  retains its tag UTF-8 strictness and trailing `0x1F` trim on control
-  fields; holdings retains its strict UTF-8 on control fields. The
-  wider strict-vs-lossy unification question is tracked in bd-bov7.
+- **Structured error serialization** via `to_dict()` / `to_json()` on
+  every Python exception (suitable for ELK / Datadog / Splunk) and
+  `MarcError::to_json_value()` / `to_json()` on the Rust side; bytes
+  fields hex-encoded, `_cause` flattens the exception chain,
+  `schema_version: 1` for forward-compat. New `BytesNear` public
+  struct exposes the captured byte window.
+- **`with_source()` / `from_path()` builder methods** on `MarcReader`,
+  `AuthorityMarcReader`, and `HoldingsMarcReader`. `from_path` populates
+  the source name from the file path so emitted errors carry the
+  filename.
+- **Per-stream recovered-error cap**
+  ([#110](https://github.com/dchud/mrrc/issues/110)) via
+  `with_max_errors(n)` on all three readers. In `Lenient` /
+  `Permissive` modes the reader counts each recovered failure and
+  halts with `MarcError::FatalReaderError` (E099) once the cap
+  (default 10000) trips. Pass `0` to disable.
+- **Per-field lenient/permissive recovery parity across all three
+  ISO 2709 readers** ([#121](https://github.com/dchud/mrrc/issues/121),
+  [#122](https://github.com/dchud/mrrc/issues/122)).
+  `AuthorityMarcReader` and `HoldingsMarcReader` now honor the same
+  per-field error sites the bibliographic reader does (bad
+  field-length / start-position digits, field-extends-past-data,
+  data-field-too-short-for-indicators, `parse_data_field` failure).
+  Strict-mode behavior unchanged at every site; lenient/permissive
+  mode skips the offending entry, counts the recovery against the
+  per-stream cap, and continues. Truncated-record dispatch in
+  lenient/permissive mode no longer returns a hard error on a short
+  read; instead it notes the recovery and falls through to
+  best-effort directory parsing.
+- **8 property tests** (`tests/properties.rs`) covering binary,
+  MARCXML, and MARCJSON round-trips plus four ISO 2709 structural
+  invariants (leader length, directory tiling, indicator byte set,
+  subfield code shape). `ProptestConfig { cases: 64 }`; full suite
+  ~3s locally. Primer at `docs/contributing/formal-methods.md`
+  ([#111](https://github.com/dchud/mrrc/issues/111)).
+- **Coverage-guided fuzzing**
+  ([#90](https://github.com/dchud/mrrc/issues/90),
+  [#115](https://github.com/dchud/mrrc/issues/115)). Standalone
+  `fuzz/` Cargo workspace with cargo-fuzz; nightly CI matrix runs
+  `parse_record` (full reader) and `roundtrip_binary` (reader →
+  writer → reader coupling) for 5 minutes daily at 03:00 UTC.
+  Findings are not a PR gate; reproducers get copied into
+  `tests/data/fuzz-regressions/` to run on every PR. Triage playbook
+  in `docs/contributing/fuzzing.md`.
+- **`docs` extra in `pyproject.toml`** for mkdocs site dependencies;
+  CI builds via `uv sync --extra docs --no-install-project` so the
+  docs-only job doesn't need a Rust toolchain.
 
 ### Changed
 
-- **`MarcError` source-error chain now walks correctly** for I/O, XML,
-  and JSON variants (was previously empty). Callers walking error chains
-  see new entries; code that was checking for `Error::source() == None`
-  may need to update.
-- **`From<io::Error> for MarcError`** continues to work for `?`
-  propagation but now produces the new `IoError { cause, .. }` struct
-  shape rather than the previous tuple form.
-- **`src-python/src/parse_error.rs`**: `ParseError::to_py_err` now routes
-  each variant through the main `marc_error_to_py_err` so the
-  boundary-scanner / buffered-reader paths raise the same typed Python
-  exception classes as the synchronous reader path. The `ParseError`
-  enum API itself is unchanged so existing call sites need no edits.
-- **Shared ISO 2709 parsing primitives** (`src/iso2709.rs`) now own the
-  leader read, truncation-aware record-data read, single-entry directory
-  parsing, ASCII numeric helpers, and the control-field-tag predicate;
-  the three readers delegate. The bibliographic, authority, and holdings
-  readers' near-duplicate inline subfield-parsing loops are replaced with
-  a single `iso2709::parse_data_field` call configured per-reader.
+- **Shared ISO 2709 parsing primitives + generic skeleton**
+  ([#125](https://github.com/dchud/mrrc/issues/125)). `src/iso2709.rs`
+  owns the leader read, truncation-aware record-data read,
+  single-entry directory parsing, ASCII numeric helpers, and the
+  control-field-tag predicate. New `iso2709_skeleton::Iso2709Builder`
+  trait + `parse_iso2709_record<R, B>` skeleton drives one record's
+  parse end-to-end; each reader implements `Iso2709Builder` via a
+  small adapter (~60 lines each) so `read_record` collapses to a
+  one-line dispatch. ~200 lines of near-duplicate `read_record` body
+  across three readers replaced by one shared implementation. New
+  `recovery::RecoveryCap` struct consolidates the per-stream cap
+  state machine that had been duplicated. Behavior changes that
+  fall out of the unification: `AuthorityMarcReader` now treats
+  too-short data fields as a strict-Err / lenient-skip event with
+  cap accounting (was silently skipped in all modes);
+  `HoldingsMarcReader`'s field-extends-beyond-data lenient branch now
+  salvages a clamped slice (matching bib); the holdings "field
+  exceeds data" error message changed wording to match the other two
+  readers. The skeleton is `<R: Read, B: Iso2709Builder>` with no
+  `dyn` dispatch so trait calls monomorphize and inline at every
+  call site, preserving hot-loop characteristics. Per-type quirks
+  (authority's tag UTF-8 strictness + trailing `0x1F` trim, holdings'
+  strict UTF-8 on control fields) preserved via trait-method
+  overrides; the wider strict-vs-lossy unification is tracked in
+  bd-bov7.
+- **`HoldingsMarcReader::with_max_errors`** is now active. Originally
+  landed inert when the cap was introduced (no recovery sites in the
+  holdings path); the recovery sites added in this cycle hook into it.
+- **`MarcError` source-error chain walks correctly** for `IoError`,
+  `XmlError`, `JsonError` (was previously empty). Code that was
+  checking `Error::source() == None` may need updating.
 - **Pinned Rust toolchain to 1.95.0**
   ([#96](https://github.com/dchud/mrrc/issues/96),
-  [#97](https://github.com/dchud/mrrc/pull/97)): Added
-  `rust-toolchain.toml` at the repo root so local development and CI
-  resolve to identical Rust + clippy versions. Contributors using rustup
-  get the pinned toolchain auto-installed on first `cargo` invocation.
-  The library's published MSRV (`Cargo.toml` → `rust-version = "1.71"`)
-  is separate and unchanged. Updated
-  `docs/contributing/development-setup.md` to document this, warn
-  against installing Rust via Homebrew (incompatible with
-  `rust-toolchain.toml`), and refresh the troubleshooting section.
+  [#97](https://github.com/dchud/mrrc/pull/97)) via
+  `rust-toolchain.toml`. Library MSRV
+  (`Cargo.toml` → `rust-version = "1.71"`) is unchanged.
 
 ### Fixed
 
-- **CI Clippy failure on `main`**
-  ([#96](https://github.com/dchud/mrrc/issues/96),
-  [#97](https://github.com/dchud/mrrc/pull/97)): Rust stable advanced to
-  1.95.0 on GitHub Actions and expanded `clippy::collapsible_match` to
-  catch 4 pre-existing cases in `src/bibframe/converter.rs`. With
-  `-D warnings` in the lint workflow, these became hard errors. Fixed by
-  collapsing each flagged match arm from `'x' => { if cond { ... } }` to
-  `'x' if cond => { ... }`; behaviour preserved (each `match` ends in
-  `_ => {}` so fall-through is identical).
-- **CI ASAN job failed with `-Zbuild-std` on stable toolchain**
-  ([#105](https://github.com/dchud/mrrc/pull/105)): The AddressSanitizer
-  job in `memory-safety.yml` installed nightly but cargo picked up
-  `rust-toolchain.toml`'s stable 1.95.0 pin, so `-Zbuild-std` failed
-  with "the -Z flag is only accepted on the nightly channel". Set
-  `RUSTUP_TOOLCHAIN=nightly` on the ASAN step to override the pin; the
-  rest of the CI matrix stays on pinned stable.
-- **CI Miri job could not run `insta` snapshot tests**
-  ([#106](https://github.com/dchud/mrrc/pull/106)): `insta`'s
-  `get_cargo_workspace()` spawns `cargo metadata` on first use, which
-  Miri rejects because it can't execute subprocesses (extern static
-  `pidfd_spawnp` is not supported). Setting `INSTA_WORKSPACE_ROOT` in
-  the Miri job environment provides the workspace root up front and
-  skips the spawn entirely.
+- **MARCXML reader: missing XML 1.1 §2.11 end-of-line normalization
+  in text and CDATA content**
+  ([#112](https://github.com/dchud/mrrc/issues/112)). Switched both
+  arms of `read_leaf_text` from `decode()` to `xml_content()` so
+  CR / CRLF / NEL / LSEP normalize to LF per spec. Domain impact is
+  small (MARC field content rarely carries line separators) but the
+  divergence from spec was real.
 - **Read-path performance regression from structured-error refactor**
-  ([#117](https://github.com/dchud/mrrc/issues/117)): The v0.8-cycle
-  `ParseContext` refactor reshaped call sites enough that the
-  compiler's default inlining heuristic stopped inlining
-  `iso2709::parse_data_field` across the three readers, costing
-  ~15-17% on read hot paths vs v0.7.6 (Criterion, toolchain 1.95.0;
-  investigated in [#116](https://github.com/dchud/mrrc/issues/116)).
-  Restored by adding `#[inline(always)]` on `parse_data_field` paired
-  with shrinking `ParseContext::current_field_tag` to `Option<[u8; 3]>`
-  (MARC tags are format-mandated to be 3 ASCII bytes). Both pieces are
-  required: the compact context is what lets forced inlining avoid
-  ballooning L1-i cache usage on parallel workloads — applied to
-  main's 144-byte ctx alone, `#[inline(always)]` caused 30-44% parallel
-  regressions in measurement. Net vs v0.7.6: read and sequential
-  benchmarks recover to +9-11% (from +15-19%); parallel benchmarks
-  settle at +7-12% (from +5-9% — a 2-3% additional penalty relative to
-  main on parallel workloads is the cost of the read-path recovery).
-  `parallel_8x_1k_records` is measurement-unstable and its exact
-  number varies ±15% across runs.
-- **MARCXML reader: missing XML 1.1 §2.11 end-of-line normalization in
-  text and CDATA content** ([#112](https://github.com/dchud/mrrc/issues/112)).
-  `read_leaf_text` decoded text events via `BytesText::decode()` and
-  CDATA via raw `std::str::from_utf8`, both of which skip the spec-
-  required CR / CRLF / NEL / LSEP → LF normalization. Switched both
-  arms to `xml_content()` (alias for `xml11_content()`); quick-xml's
-  own docs flag the previous call as the wrong default. The CDATA arm
-  additionally now honors the reader's declared encoding for free.
-  Domain impact is small (MARC field content rarely contains line
-  separators), but the divergence from spec is real and could surface
-  in records produced by editors using non-Unix line endings.
+  ([#117](https://github.com/dchud/mrrc/issues/117)). The
+  `ParseContext` refactor stopped the compiler from inlining
+  `parse_data_field`, costing ~15-17% on read hot paths vs v0.7.6
+  (investigated in
+  [#116](https://github.com/dchud/mrrc/issues/116)). Restored to
+  within +9-11% of baseline via `#[inline(always)]` on
+  `parse_data_field` paired with shrinking
+  `ParseContext::current_field_tag` to `Option<[u8; 3]>`. The
+  compact context is what lets forced inlining avoid ballooning L1-i
+  cache usage on parallel workloads.
+- **CI: Clippy `collapsible_match` errors** in
+  `src/bibframe/converter.rs` after Rust stable advanced to 1.95.0
+  ([#96](https://github.com/dchud/mrrc/issues/96),
+  [#97](https://github.com/dchud/mrrc/pull/97)).
+- **CI: ASAN job** failed with `-Zbuild-std` on stable; sets
+  `RUSTUP_TOOLCHAIN=nightly` on the ASAN step
+  ([#105](https://github.com/dchud/mrrc/pull/105)).
+- **CI: Miri job** could not run `insta` snapshot tests; setting
+  `INSTA_WORKSPACE_ROOT` skips the `cargo metadata` spawn
+  ([#106](https://github.com/dchud/mrrc/pull/106)).
+- **CI: docs deploy** broke when [#130](https://github.com/dchud/mrrc/pull/130)
+  switched the install line to build mrrc itself; now uses
+  `uv sync --extra docs --no-install-project`
+  ([#131](https://github.com/dchud/mrrc/pull/131)).
 
 ## [0.7.6] - 2026-04-14
 

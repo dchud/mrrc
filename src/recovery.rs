@@ -101,60 +101,6 @@ pub enum RecoveryMode {
     Permissive,
 }
 
-/// Recovery context for handling malformed data
-#[derive(Debug)]
-pub struct RecoveryContext {
-    /// Current recovery mode
-    pub mode: RecoveryMode,
-    /// Whether warnings/recoveries were needed
-    pub has_errors: bool,
-    /// List of recovery messages
-    pub recovery_messages: Vec<String>,
-}
-
-impl Default for RecoveryContext {
-    fn default() -> Self {
-        RecoveryContext {
-            mode: RecoveryMode::Strict,
-            has_errors: false,
-            recovery_messages: Vec::new(),
-        }
-    }
-}
-
-impl RecoveryContext {
-    /// Create a new recovery context with the given mode
-    #[must_use]
-    pub fn new(mode: RecoveryMode) -> Self {
-        RecoveryContext {
-            mode,
-            has_errors: false,
-            recovery_messages: Vec::new(),
-        }
-    }
-
-    /// Record a recovery message
-    fn add_message(&mut self, message: String) {
-        self.has_errors = true;
-        self.recovery_messages.push(message);
-    }
-
-    /// Try to recover from an error based on the recovery mode
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if in strict mode, otherwise records the error and returns Ok(None).
-    pub fn recover<T>(&mut self, error: MarcError, context: &str) -> Result<Option<T>> {
-        match self.mode {
-            RecoveryMode::Strict => Err(error),
-            RecoveryMode::Lenient | RecoveryMode::Permissive => {
-                self.add_message(format!("{context}: {error}"));
-                Ok(None)
-            },
-        }
-    }
-}
-
 const FIELD_TERMINATOR: u8 = 0x1E;
 const SUBFIELD_DELIMITER: u8 = 0x1F;
 
@@ -176,7 +122,6 @@ pub fn try_recover_record(
     mode: RecoveryMode,
     ctx: &ParseContext,
 ) -> Result<Record> {
-    let mut context = RecoveryContext::new(mode);
     let mut record = Record::new(leader);
 
     // Try to extract whatever valid directory entries we can find
@@ -196,11 +141,9 @@ pub fn try_recover_record(
             break;
         }
 
-        // Check if we have enough bytes for a complete entry
+        // Stop on incomplete final entry (lenient/permissive — strict has
+        // already returned by this point in the calling skeleton).
         if pos + 12 > directory.len() {
-            if mode != RecoveryMode::Strict {
-                context.add_message("Incomplete directory entry at end of record".to_string());
-            }
             break;
         }
 
@@ -214,7 +157,6 @@ pub fn try_recover_record(
         } else if let Ok(len) = parse_4digits(&entry_chunk[3..7]) {
             len
         } else {
-            context.add_message(format!("Invalid field length for tag {tag}"));
             pos += 12;
             continue;
         };
@@ -224,7 +166,6 @@ pub fn try_recover_record(
         } else if let Ok(p) = parse_digits(&entry_chunk[7..12]) {
             p
         } else {
-            context.add_message(format!("Invalid start position for tag {tag}"));
             pos += 12;
             continue;
         };
@@ -243,9 +184,8 @@ pub fn try_recover_record(
                     "Field {tag} data not available (truncated record)"
                 )));
             }
-            context.add_message(format!("Field {tag} data truncated"));
 
-            // Try to read what we have
+            // Salvage: read what's available within the buffer.
             let available_end = std::cmp::min(end_position, partial_data.len());
             if available_end > data_start {
                 if let Ok(field) = try_parse_field(
@@ -274,9 +214,10 @@ pub fn try_recover_record(
                 FIELD_TERMINATOR,
             ) {
                 record.add_field(field);
-            } else if mode != RecoveryMode::Strict {
-                context.add_message(format!("Failed to parse field {tag}"));
             }
+            // Unparseable data fields in lenient/permissive mode are
+            // silently skipped here (the surrounding skeleton's cap
+            // accounting catches the broader pattern).
         }
     }
 
@@ -370,35 +311,4 @@ fn parse_digits(bytes: &[u8]) -> Result<usize> {
     let s = String::from_utf8_lossy(bytes);
     s.parse::<usize>()
         .map_err(|_| MarcError::invalid_field_msg(format!("Invalid numeric field: '{s}'")))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_recovery_context_default() {
-        let ctx = RecoveryContext::default();
-        assert_eq!(ctx.mode, RecoveryMode::Strict);
-        assert!(!ctx.has_errors);
-        assert!(ctx.recovery_messages.is_empty());
-    }
-
-    #[test]
-    fn test_recovery_mode_lenient() {
-        let mut ctx = RecoveryContext::new(RecoveryMode::Lenient);
-        let error = MarcError::invalid_field_msg("test".to_string());
-        let result: Result<Option<()>> = ctx.recover(error, "test context");
-        assert!(result.is_ok());
-        assert!(ctx.has_errors);
-        assert!(!ctx.recovery_messages.is_empty());
-    }
-
-    #[test]
-    fn test_recovery_mode_strict() {
-        let mut ctx = RecoveryContext::new(RecoveryMode::Strict);
-        let error = MarcError::invalid_field_msg("test".to_string());
-        let result: Result<Option<()>> = ctx.recover(error, "test context");
-        assert!(result.is_err());
-    }
 }

@@ -25,16 +25,12 @@ pub const BYTES_NEAR_BEFORE: usize = 16;
 pub const BYTES_NEAR_AFTER: usize = 16;
 
 /// Truncate a byte slice to at most [`FOUND_BYTES_CAP`] bytes.
-///
-/// Returns `(bytes, was_truncated)`. The caller is responsible for surfacing
-/// the truncation in any rendering it produces (the conventional marker is a
-/// trailing `…`).
 #[must_use]
-pub fn truncate_bytes(input: &[u8]) -> (Vec<u8>, bool) {
+pub fn truncate_bytes(input: &[u8]) -> Vec<u8> {
     if input.len() > FOUND_BYTES_CAP {
-        (input[..FOUND_BYTES_CAP].to_vec(), true)
+        input[..FOUND_BYTES_CAP].to_vec()
     } else {
-        (input.to_vec(), false)
+        input.to_vec()
     }
 }
 
@@ -103,12 +99,8 @@ pub enum MarcError {
         record_byte_offset: Option<usize>,
         /// Source filename or stream identifier, when known.
         source_name: Option<String>,
-        /// The bytes that triggered the error, capped at [`FOUND_BYTES_CAP`].
-        found: Option<Vec<u8>>,
-        /// Human-readable description of what was expected.
-        expected: Option<String>,
-        /// Underlying cause as a string (e.g., from a leader validation routine).
-        cause: Option<String>,
+        /// Human-readable description of the leader validation failure.
+        message: String,
         /// Byte window captured near the error offset, for hex-dump rendering.
         bytes_near: Option<BytesNear>,
     },
@@ -626,8 +618,7 @@ impl MarcError {
 
     fn found_field(&self) -> Option<&[u8]> {
         match self {
-            MarcError::InvalidLeader { found, .. }
-            | MarcError::RecordLengthInvalid { found, .. }
+            MarcError::RecordLengthInvalid { found, .. }
             | MarcError::BaseAddressInvalid { found, .. }
             | MarcError::DirectoryInvalid { found, .. }
             | MarcError::InvalidIndicator { found, .. } => found.as_deref(),
@@ -637,8 +628,7 @@ impl MarcError {
 
     fn expected_field(&self) -> Option<&str> {
         match self {
-            MarcError::InvalidLeader { expected, .. }
-            | MarcError::RecordLengthInvalid { expected, .. }
+            MarcError::RecordLengthInvalid { expected, .. }
             | MarcError::BaseAddressInvalid { expected, .. }
             | MarcError::DirectoryInvalid { expected, .. }
             | MarcError::InvalidIndicator { expected, .. } => expected.as_deref(),
@@ -764,13 +754,11 @@ impl MarcError {
     /// Canonical docs URL for this error code, pointing at the `#Exxx`
     /// anchor on the error-codes reference page.
     ///
-    /// The base URL defaults to the GitHub Pages-hosted docs site. Set the
-    /// `MRRC_DOCS_BASE_URL` environment variable to override (e.g., to
-    /// redirect to an internal mirror). The variable holds the docs site
-    /// root; this method appends `/reference/error-codes/#Exxx`.
+    /// The base URL is the GitHub Pages-hosted docs site;
+    /// this method appends `/reference/error-codes/#Exxx`.
     #[must_use]
     pub fn help_url(&self) -> String {
-        format!("{}/reference/error-codes/#{}", docs_base_url(), self.code())
+        format!("{DOCS_BASE_URL}/reference/error-codes/#{}", self.code())
     }
 
     /// Short `PascalCase` name for the variant, used in `detailed()` headers
@@ -918,19 +906,7 @@ impl MarcError {
     /// trailing byte offset.
     fn body_text(&self) -> String {
         match self {
-            MarcError::InvalidLeader {
-                found,
-                expected,
-                cause,
-                ..
-            } => match (found, expected, cause) {
-                (Some(f), Some(e), _) => format!(
-                    "invalid leader: found {} — expected {e}",
-                    format_found_bytes_python_repr(f)
-                ),
-                (_, _, Some(c)) => format!("invalid leader: {c}"),
-                _ => "invalid leader".to_string(),
-            },
+            MarcError::InvalidLeader { message, .. } => format!("invalid leader: {message}"),
             MarcError::RecordLengthInvalid {
                 found, expected, ..
             } => match (found, expected) {
@@ -1190,17 +1166,15 @@ impl MarcError {
         }
     }
 
-    /// Construct an [`MarcError::InvalidLeader`] from a textual cause.
+    /// Construct an [`MarcError::InvalidLeader`] from a textual message.
     #[must_use]
-    pub(crate) fn leader_msg(cause: impl Into<String>) -> Self {
+    pub(crate) fn leader_msg(message: impl Into<String>) -> Self {
         MarcError::InvalidLeader {
             record_index: None,
             byte_offset: None,
             record_byte_offset: None,
             source_name: None,
-            found: None,
-            expected: None,
-            cause: Some(cause.into()),
+            message: message.into(),
             bytes_near: None,
         }
     }
@@ -1238,9 +1212,8 @@ fn format_found_bytes_python_repr(bytes: &[u8]) -> String {
     out
 }
 
-/// Default base URL for the docs site. Used by [`MarcError::help_url`] when
-/// the `MRRC_DOCS_BASE_URL` environment variable is not set.
-pub const DEFAULT_DOCS_BASE_URL: &str = "https://dchud.github.io/mrrc";
+/// Base URL for the docs site. Used by [`MarcError::help_url`].
+pub const DOCS_BASE_URL: &str = "https://dchud.github.io/mrrc";
 
 /// Schema identifier included in [`MarcError::to_json_value`] output so
 /// consumers can branch on it if the shape changes later. Pre-1.0, the
@@ -1333,16 +1306,6 @@ pub fn render_hex_dump(window: &BytesNear, byte_offset: Option<usize>) -> String
     out
 }
 
-fn docs_base_url() -> String {
-    std::env::var("MRRC_DOCS_BASE_URL")
-        .ok()
-        .filter(|s| !s.is_empty())
-        .map_or_else(
-            || DEFAULT_DOCS_BASE_URL.to_string(),
-            |s| s.trim_end_matches('/').to_string(),
-        )
-}
-
 /// Convenience type alias for [`std::result::Result`] with [`MarcError`].
 pub type Result<T> = std::result::Result<T, MarcError>;
 
@@ -1365,17 +1328,13 @@ mod tests {
 
     #[test]
     fn truncate_bytes_short_input_passes_through() {
-        let (out, truncated) = truncate_bytes(b"hello");
-        assert_eq!(out, b"hello");
-        assert!(!truncated);
+        assert_eq!(truncate_bytes(b"hello"), b"hello");
     }
 
     #[test]
     fn truncate_bytes_long_input_capped() {
         let input = vec![b'x'; 100];
-        let (out, truncated) = truncate_bytes(&input);
-        assert_eq!(out.len(), FOUND_BYTES_CAP);
-        assert!(truncated);
+        assert_eq!(truncate_bytes(&input).len(), FOUND_BYTES_CAP);
     }
 
     #[test]
@@ -1502,7 +1461,7 @@ mod tests {
     #[test]
     fn snapshot_display_directory_invalid_with_truncated_found() {
         let big_input: Vec<u8> = (b'a'..=b'z').cycle().take(60).collect();
-        let (truncated, _was_truncated) = truncate_bytes(&big_input);
+        let truncated = truncate_bytes(&big_input);
         let err = MarcError::DirectoryInvalid {
             record_index: Some(3),
             byte_offset: Some(0x100),
@@ -1532,229 +1491,58 @@ mod tests {
         insta::assert_snapshot!(err.detailed());
     }
 
+    /// The (code, slug) pairs the public API exposes. New variants must
+    /// add an entry here and to the Python mirror in
+    /// `tests/python/test_errors.py::_CODE_TABLE`.
+    const ERROR_CODES: &[(&str, &str)] = &[
+        ("E001", "record_length_invalid"),
+        ("E002", "leader_invalid"),
+        ("E003", "base_address_invalid"),
+        ("E004", "base_address_not_found"),
+        ("E005", "truncated_record"),
+        ("E006", "end_of_record_not_found"),
+        ("E007", "io_error"),
+        ("E099", "fatal_reader_error"),
+        ("E101", "directory_invalid"),
+        ("E105", "field_not_found"),
+        ("E106", "invalid_field"),
+        ("E201", "invalid_indicator"),
+        ("E202", "bad_subfield_code"),
+        ("E301", "utf8_invalid"),
+        ("E401", "marcxml_invalid"),
+        ("E402", "marcjson_invalid"),
+        ("E404", "record_too_large_for_iso2709"),
+    ];
+
     #[test]
-    #[allow(clippy::too_many_lines)]
-    fn code_slug_help_url_for_every_variant() {
-        // One representative instance per variant. If a variant is added
-        // and the test panics on missing arms, add the variant + its
-        // expected (code, slug) pair to the table — and don't forget to
-        // mirror it in the Python _CODE_TABLE in tests/python/test_errors.py.
-        let cases: Vec<(MarcError, &'static str, &'static str)> = vec![
-            (
-                MarcError::RecordLengthInvalid {
-                    record_index: None,
-                    byte_offset: None,
-                    source_name: None,
-                    found: None,
-                    expected: None,
-                    bytes_near: None,
-                },
-                "E001",
-                "record_length_invalid",
-            ),
-            (
-                MarcError::InvalidLeader {
-                    record_index: None,
-                    byte_offset: None,
-                    record_byte_offset: None,
-                    source_name: None,
-                    found: None,
-                    expected: None,
-                    cause: None,
-                    bytes_near: None,
-                },
-                "E002",
-                "leader_invalid",
-            ),
-            (
-                MarcError::BaseAddressInvalid {
-                    record_index: None,
-                    byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    found: None,
-                    expected: None,
-                    bytes_near: None,
-                },
-                "E003",
-                "base_address_invalid",
-            ),
-            (
-                MarcError::BaseAddressNotFound {
-                    record_index: None,
-                    byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    bytes_near: None,
-                },
-                "E004",
-                "base_address_not_found",
-            ),
-            (
-                MarcError::TruncatedRecord {
-                    record_index: None,
-                    byte_offset: None,
-                    record_byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    expected_length: None,
-                    actual_length: None,
-                    bytes_near: None,
-                },
-                "E005",
-                "truncated_record",
-            ),
-            (
-                MarcError::EndOfRecordNotFound {
-                    record_index: None,
-                    byte_offset: None,
-                    record_byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    bytes_near: None,
-                },
-                "E006",
-                "end_of_record_not_found",
-            ),
-            (
-                MarcError::IoError {
-                    cause: std::io::Error::other("test"),
-                    record_index: None,
-                    byte_offset: None,
-                    source_name: None,
-                },
-                "E007",
-                "io_error",
-            ),
-            (
-                MarcError::DirectoryInvalid {
-                    record_index: None,
-                    byte_offset: None,
-                    record_byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    field_tag: None,
-                    found: None,
-                    expected: None,
-                    bytes_near: None,
-                },
-                "E101",
-                "directory_invalid",
-            ),
-            (
-                MarcError::FieldNotFound {
-                    record_index: None,
-                    record_control_number: None,
-                    field_tag: "245".into(),
-                },
-                "E105",
-                "field_not_found",
-            ),
-            (
-                MarcError::InvalidField {
-                    record_index: None,
-                    byte_offset: None,
-                    record_byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    field_tag: None,
-                    message: "test".into(),
-                    bytes_near: None,
-                },
-                "E106",
-                "invalid_field",
-            ),
-            (
-                MarcError::InvalidIndicator {
-                    record_index: None,
-                    byte_offset: None,
-                    record_byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    field_tag: None,
-                    indicator_position: None,
-                    found: None,
-                    expected: None,
-                    bytes_near: None,
-                },
-                "E201",
-                "invalid_indicator",
-            ),
-            (
-                MarcError::BadSubfieldCode {
-                    record_index: None,
-                    byte_offset: None,
-                    record_byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    field_tag: None,
-                    subfield_code: 0,
-                    bytes_near: None,
-                },
-                "E202",
-                "bad_subfield_code",
-            ),
-            (
-                MarcError::EncodingError {
-                    record_index: None,
-                    byte_offset: None,
-                    source_name: None,
-                    record_control_number: None,
-                    field_tag: None,
-                    message: "test".into(),
-                    bytes_near: None,
-                },
-                "E301",
-                "utf8_invalid",
-            ),
-            (
-                MarcError::XmlError {
-                    cause: Box::new(std::io::Error::other("test")),
-                    record_index: None,
-                    byte_offset: None,
-                    source_name: None,
-                },
-                "E401",
-                "marcxml_invalid",
-            ),
-            (
-                MarcError::JsonError {
-                    cause: serde_json::from_str::<serde_json::Value>("not json").unwrap_err(),
-                    record_index: None,
-                    byte_offset: None,
-                    source_name: None,
-                },
-                "E402",
-                "marcjson_invalid",
-            ),
-            (
-                MarcError::WriterError {
-                    record_index: None,
-                    record_control_number: None,
-                    message: "test".into(),
-                },
-                "E404",
-                "record_too_large_for_iso2709",
-            ),
-        ];
-        let mut codes = std::collections::HashSet::new();
-        let mut slugs = std::collections::HashSet::new();
-        for (err, expected_code, expected_slug) in cases {
-            assert_eq!(err.code(), expected_code, "wrong code for {err:?}");
-            assert_eq!(err.slug(), expected_slug, "wrong slug for {err:?}");
-            assert_eq!(
-                err.help_url(),
-                format!("{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{expected_code}"),
-            );
-            assert!(
-                codes.insert(expected_code),
-                "duplicate code {expected_code}"
-            );
-            assert!(
-                slugs.insert(expected_slug),
-                "duplicate slug {expected_slug}"
-            );
-        }
+    fn error_codes_and_slugs_are_unique() {
+        let codes: std::collections::HashSet<_> = ERROR_CODES.iter().map(|(c, _)| *c).collect();
+        let slugs: std::collections::HashSet<_> = ERROR_CODES.iter().map(|(_, s)| *s).collect();
+        assert_eq!(
+            codes.len(),
+            ERROR_CODES.len(),
+            "duplicate code in ERROR_CODES"
+        );
+        assert_eq!(
+            slugs.len(),
+            ERROR_CODES.len(),
+            "duplicate slug in ERROR_CODES"
+        );
+    }
+
+    #[test]
+    fn help_url_anchors_on_docs_page() {
+        // One representative instance is enough; `code()` is exhaustive
+        // (no `_` arm), so the compiler enforces every variant has a code.
+        let err = MarcError::FieldNotFound {
+            record_index: None,
+            record_control_number: None,
+            field_tag: "245".into(),
+        };
+        assert_eq!(
+            err.help_url(),
+            format!("{DOCS_BASE_URL}/reference/error-codes/#E105"),
+        );
     }
 
     #[test]

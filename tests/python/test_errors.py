@@ -108,29 +108,11 @@ class TestErrorCodes:
         if cls is mrrc.BadSubfieldCodeWarning:
             pytest.skip("BadSubfieldCodeWarning is a warning, not an exception")
         instance = cls()
-        from mrrc.exceptions import DEFAULT_DOCS_BASE_URL
+        from mrrc.exceptions import DOCS_BASE_URL
         assert (
             instance.help_url()
-            == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{code}"
+            == f"{DOCS_BASE_URL}/reference/error-codes/#{code}"
         )
-
-    def test_help_url_respects_env_var_override(self, monkeypatch):
-        """Setting MRRC_DOCS_BASE_URL must redirect help_url() output —
-        useful for enterprise mirrors and offline docs serving."""
-        monkeypatch.setenv("MRRC_DOCS_BASE_URL", "https://docs.internal/mrrc")
-        err = mrrc.InvalidIndicator()
-        assert err.help_url() == "https://docs.internal/mrrc/reference/error-codes/#E201"
-
-    def test_help_url_strips_trailing_slash_from_env_var(self, monkeypatch):
-        monkeypatch.setenv("MRRC_DOCS_BASE_URL", "https://docs.internal/mrrc/")
-        err = mrrc.InvalidIndicator()
-        assert err.help_url() == "https://docs.internal/mrrc/reference/error-codes/#E201"
-
-    def test_help_url_empty_env_var_falls_back_to_default(self, monkeypatch):
-        monkeypatch.setenv("MRRC_DOCS_BASE_URL", "")
-        from mrrc.exceptions import DEFAULT_DOCS_BASE_URL
-        err = mrrc.InvalidIndicator()
-        assert err.help_url() == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#E201"
 
     def test_codes_are_unique(self):
         codes = [code for _cls, code, _slug in _CODE_TABLE]
@@ -637,7 +619,7 @@ class TestFfiTypedExceptions:
         `slug`, and `help_url()` values as a Python-constructed instance.
         """
         import io
-        from mrrc.exceptions import DEFAULT_DOCS_BASE_URL
+        from mrrc.exceptions import DOCS_BASE_URL
 
         leader = b"00010nam a2200025 i 4500"
         reader = mrrc.MARCReader(io.BytesIO(leader))
@@ -650,7 +632,7 @@ class TestFfiTypedExceptions:
         assert err.slug
         assert (
             err.help_url()
-            == f"{DEFAULT_DOCS_BASE_URL}/reference/error-codes/#{err.code}"
+            == f"{DOCS_BASE_URL}/reference/error-codes/#{err.code}"
         )
 
     def test_pre_parse_error_from_buffered_reader_carries_bytes_near(self):

@@ -177,6 +177,6 @@ pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
 pub use record_builder_generic::GenericRecordBuilder;
 pub use record_helpers::RecordHelpers;
 pub use record_validation::RecordStructureValidator;
-pub use recovery::{RecoveryContext, RecoveryMode};
+pub use recovery::RecoveryMode;
 pub use validation::IndicatorValidator;
 pub use writer::MarcWriter;
