@@ -218,6 +218,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expose per-field lenient recovery sites. The value is preserved so
   recovery sites added later can honor it without a breaking change.
 
+### Added — AuthorityMarcReader: per-field lenient recovery parity with bib
+  ([#121](https://github.com/dchud/mrrc/issues/121))
+
+- **`AuthorityMarcReader` now honors `RecoveryMode::Lenient` /
+  `Permissive` at three previously-strict-only per-field error sites**:
+  bad field-length digits, bad start-position digits, and field claimed
+  to extend past the data area. Strict mode preserves the prior
+  behavior of returning the first error; lenient/permissive mode now
+  skips the offending entry, counts the recovery against the per-stream
+  cap, and continues. Each new site is hooked into the
+  `with_max_errors` cap from the previous entry.
+- **Truncated-record dispatch fixed**: in lenient/permissive mode the
+  reader no longer returns a hard error on a short read; instead it
+  notes the recovery and falls through to best-effort directory
+  parsing (an authority-specific `try_recover_record` salvage path
+  remains future work). Strict-mode behavior is unchanged.
+
 ### Changed
 
 - **`MarcError` source-error chain now walks correctly** for I/O, XML,
