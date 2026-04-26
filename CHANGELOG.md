@@ -385,6 +385,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   main on parallel workloads is the cost of the read-path recovery).
   `parallel_8x_1k_records` is measurement-unstable and its exact
   number varies ±15% across runs.
+- **MARCXML reader: missing XML 1.1 §2.11 end-of-line normalization in
+  text and CDATA content** ([#112](https://github.com/dchud/mrrc/issues/112)).
+  `read_leaf_text` decoded text events via `BytesText::decode()` and
+  CDATA via raw `std::str::from_utf8`, both of which skip the spec-
+  required CR / CRLF / NEL / LSEP → LF normalization. Switched both
+  arms to `xml_content()` (alias for `xml11_content()`); quick-xml's
+  own docs flag the previous call as the wrong default. The CDATA arm
+  additionally now honors the reader's declared encoding for free.
+  Domain impact is small (MARC field content rarely contains line
+  separators), but the divergence from spec is real and could surface
+  in records produced by editors using non-Unix line endings.
 
 ## [0.7.6] - 2026-04-14
 
