@@ -19,8 +19,10 @@
 //! intentionally avoids `dyn` dispatch — every call site monomorphizes the
 //! function for its concrete builder, so trait method calls inline at
 //! generated-code level. This preserves the bibliographic read path's
-//! hot-loop characteristics (see bd-tcym / bd-9kdt for the prior regression
-//! lesson).
+//! hot-loop characteristics; switching to a trait object dispatch here
+//! has been measured to regress parallel reader benchmarks
+//! significantly. Re-verify with `cargo bench --bench parallel_benchmarks`
+//! before changing dispatch shape.
 //!
 //! [`MarcReader`]: crate::MarcReader
 //! [`AuthorityMarcReader`]: crate::AuthorityMarcReader
@@ -83,8 +85,8 @@ pub trait Iso2709Builder: Sized {
     /// strips the trailing `FIELD_TERMINATOR` byte and decodes lossily.
     /// Authority overrides to also strip a trailing `SUBFIELD_DELIMITER`;
     /// holdings overrides to use strict UTF-8 (raising
-    /// [`crate::MarcError::EncodingError`] on bad bytes). The wider
-    /// strict-vs-lossy policy question is bd-bov7 territory.
+    /// [`crate::MarcError::EncodingError`] on bad bytes). The hook lets
+    /// each reader keep its historical strict-vs-lossy policy.
     ///
     /// # Errors
     ///

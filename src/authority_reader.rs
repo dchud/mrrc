@@ -176,8 +176,8 @@ impl Iso2709Builder for AuthorityBuilder {
 
     /// Authority control fields use the same lossy decode as the default
     /// but additionally trim a trailing `SUBFIELD_DELIMITER` (0x1F) — a
-    /// historical quirk preserved here. Strict-vs-lossy UTF-8 unification
-    /// across readers is bd-bov7.
+    /// historical quirk in real-world authority data preserved here for
+    /// bytewise compatibility.
     fn decode_control_field_value(
         field_bytes: &[u8],
         _tag: &str,
@@ -189,9 +189,10 @@ impl Iso2709Builder for AuthorityBuilder {
     }
 
     /// Authority skips data fields shorter than 2 bytes (can't read
-    /// indicators). The pre-bd-lkcy code skipped silently in all modes;
-    /// the skeleton now treats this as a strict-Err / lenient-skip event
-    /// (with cap accounting), matching the rest of the recovery shape.
+    /// indicators). Treated as a strict-Err / lenient-skip event with cap
+    /// accounting, matching the rest of the recovery shape across readers
+    /// — silently dropping fields would diverge from the per-field
+    /// recovery contract the skeleton enforces everywhere else.
     fn validate_data_field_bytes(field_bytes: &[u8], _tag: &str, ctx: &ParseContext) -> Result<()> {
         if field_bytes.len() < 2 {
             Err(ctx.err_invalid_field("Data field too short for indicators"))

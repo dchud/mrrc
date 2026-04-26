@@ -173,10 +173,9 @@ impl Iso2709Builder for HoldingsBuilder {
         }
     }
 
-    /// Holdings is uniquely strict on UTF-8 here — the pre-bd-lkcy code
-    /// raised `EncodingError` on bad bytes, and the skeleton preserves
-    /// that policy via this hook. The wider strict-vs-lossy unification
-    /// question across readers is bd-bov7.
+    /// Holdings is uniquely strict on UTF-8 here — bad bytes raise
+    /// `EncodingError` rather than being decoded lossily, preserving the
+    /// historical reader behavior via this hook.
     fn decode_control_field_value(
         field_bytes: &[u8],
         tag: &str,

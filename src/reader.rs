@@ -221,11 +221,10 @@ struct BibBuilder {
 // `#[inline]` on the per-field trait methods below is a measured
 // requirement, not stylistic noise. Without these, monomorphization of
 // `parse_iso2709_record::<_, BibBuilder>` does not consistently inline
-// the per-field calls, and parallel benchmarks regress 11-25% (CodSpeed
-// reproduced this in PR #132 when the annotations were briefly removed
-// as a parity-with-authority cleanup). Pairs with the bd-tcym / bd-9kdt
-// (#117) `#[inline(always)]` decision on `iso2709::parse_data_field`.
-// Do not remove without re-running benches/parallel_benchmarks.rs.
+// the per-field calls, and parallel reader benchmarks regress measurably.
+// Pairs with the `#[inline(always)]` on `iso2709::parse_data_field`.
+// Re-verify with `cargo bench --bench parallel_benchmarks parallel_4x`
+// before changing.
 impl Iso2709Builder for BibBuilder {
     type Output = Record;
 
