@@ -33,7 +33,22 @@ cargo test --doc --package mrrc -q            # Doc tests
 uv run maturin develop --release              # Build Python extension
 uv run python -m pytest tests/python/ -m "not benchmark" -q  # Python tests
 uv run ruff check mrrc/ tests/python/         # Python lint
+
+# Documentation site (mkdocs-material)
+uv sync --all-extras                          # Install docs alongside test+dev
+uv run mkdocs build                           # Build site to ./site/
+uv run mkdocs serve                           # Live-reload preview at :8000
 ```
+
+The `docs` extra in `pyproject.toml` carries `mkdocs-material`,
+`mkdocstrings[python]`, and `pymdown-extensions`. CI installs it via
+`uv pip install --system "mrrc[docs]"`. Do not `uv pip install` these
+ad-hoc — track them in the extra so contributors and CI stay in sync.
+
+**Use `uv sync --all-extras`, not `uv sync --extra docs`.** `uv sync`
+is *replacing*, not additive — `--extra docs` alone drops `test` and
+`dev` deps from the venv, so the next pytest run breaks. `--all-extras`
+keeps everything resolved.
 
 ## Architecture
 

@@ -48,6 +48,15 @@ benchmark = [
     "pytest>=7.0",
     "pytest-benchmark>=4.0",
 ]
+# Documentation site dependencies — used by docs.yml CI workflow via
+# `mrrc[docs]` and by contributors running `uv sync --extra docs` to
+# preview the site locally with `uv run mkdocs serve` or
+# `uv run mkdocs build --strict`.
+docs = [
+    "mkdocs-material>=9.0",
+    "mkdocstrings[python]>=0.24",
+    "pymdown-extensions>=10.0",
+]
 
 [tool.maturin]
 python-packages = ["mrrc"]

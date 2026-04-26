@@ -100,6 +100,7 @@ nav:
     - contributing/index.md
     - Development Setup: contributing/development-setup.md
     - Testing: contributing/testing.md
+    - Formal Methods: contributing/formal-methods.md
     - Fuzzing: contributing/fuzzing.md
     - Release Procedure: contributing/release-procedure.md
     - Architecture: contributing/architecture.md
