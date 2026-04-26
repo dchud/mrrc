@@ -15,3 +15,8 @@ corpus/*/*
 !corpus/parse_record/simple_authority
 !corpus/parse_record/with_control_fields
 !corpus/parse_record/multi_records
+!corpus/roundtrip_binary/simple_book
+!corpus/roundtrip_binary/music_score
+!corpus/roundtrip_binary/simple_authority
+!corpus/roundtrip_binary/with_control_fields
+!corpus/roundtrip_binary/multi_records

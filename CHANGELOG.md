@@ -190,9 +190,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   local-only), and the relationship with the larger formal-methods
   pyramid being built jointly with the
   [mrrc-testbed](https://github.com/dchud/mrrc-testbed) repo.
+- **`roundtrip_binary` fuzz target**
+  ([#115](https://github.com/dchud/mrrc/issues/115)): couples the reader
+  and writer. Every record `MarcReader::read_record` extracts is fed
+  through `MarcWriter::write_record` and the serialized bytes are
+  re-parsed. mrrc does not promise byte-for-byte round-trip stability
+  (the writer canonicalizes the leader and regenerates the directory),
+  so the only assertion is that neither the writer path nor the second
+  reader panics. `Err(MarcError)` returns from the writer (e.g., records
+  exceeding the 4 GiB representable limit) or the second reader are
+  correct behavior and discarded. Nightly CI runs the target alongside
+  `parse_record` via a workflow matrix; seed corpus mirrors the
+  `parse_record` curated seeds.
 - **Follow-up fuzz targets tracked separately:** `parse_leader` (small
-  24-byte state space, fastest convergence), `roundtrip_binary`
-  (parse → serialize → parse-again stability), `parse_marcxml`,
+  24-byte state space, fastest convergence), `parse_marcxml`,
   `parse_json` / `parse_marcjson`, and `decode_marc8`.
 
 ### Added — per-stream recovered-error cap
