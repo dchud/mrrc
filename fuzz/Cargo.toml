@@ -27,3 +27,10 @@ path = "fuzz_targets/parse_record.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "roundtrip_binary"
+path = "fuzz_targets/roundtrip_binary.rs"
+test = false
+doc = false
+bench = false

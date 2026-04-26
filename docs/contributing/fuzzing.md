@@ -13,16 +13,27 @@ playbook for investigating CI findings.
 | Target | Entry point | Status |
 |--------|-------------|--------|
 | `parse_record` | `MarcReader::read_record` over the full ISO 2709 reader | Active |
+| `roundtrip_binary` | Parse → serialize → parse-again coupling | Active |
 | `parse_leader` | 24-byte leader parsing | Planned (bd-gbgx) |
-| `decode_marc8` | MARC-8 encoding state machine | Planned |
-| `parse_marcxml` | MARCXML reader | Planned |
+| `decode_marc8` | MARC-8 encoding state machine | Planned (bd-2dia) |
+| `parse_marcxml` | MARCXML reader | Planned (bd-3t62) |
 | `parse_json` / `parse_marcjson` | JSON readers | Planned (bd-uss1) |
-| `roundtrip_binary` | Parse → serialize → parse-again stability | Planned (bd-bokc) |
 
 `parse_record` is the first target and the highest-value one — any bytes
 passing through mrrc eventually hit its code paths. The other targets
 narrow the mutator's focus to smaller state spaces (faster convergence)
 or cross different axes of behavior (writer path, JSON/XML parsers).
+
+`roundtrip_binary` couples the reader and writer: every record the reader
+extracts is serialized via `MarcWriter` and re-parsed. mrrc does not
+guarantee byte-for-byte round-trip stability — the writer canonicalizes
+the leader and regenerates the directory — so the only assertion is that
+neither the writer path nor the second reader panics. `Err(MarcError)`
+returns from the writer (e.g., records exceeding the 4 GiB representable
+limit) or from the second reader are correct behavior and discarded. A
+stronger structural-equality variant (same field tags, subfield codes,
+and values across the round trip) can be layered later once the
+guarantees are documented.
 
 ## Installing cargo-fuzz
 
