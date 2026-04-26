@@ -752,40 +752,30 @@ mod tests {
         assert_eq!(fields[0].get_subfield('a'), Some(" "));
     }
 
-    /// XML 1.1 §2.11 requires the parser to normalize CR, CRLF, NEL, and
-    /// LSEP to LF in text content. Raw CRLF in subfield text must surface
-    /// as LF after parse.
+    /// XML 1.1 §2.11 requires CR, CRLF, NEL, and LSEP to normalize to LF
+    /// in both raw text and CDATA content (CDATA is part of the document
+    /// entity per the same section).
     #[test]
-    fn test_marcxml_normalizes_crlf_in_subfield_text() {
-        let xml = "<record>\
-            <leader>01234nam a2200289 a 4500</leader>\
-            <controlfield tag=\"001\">x</controlfield>\
-            <datafield tag=\"500\" ind1=\" \" ind2=\" \">\
-                <subfield code=\"a\">line1\r\nline2\rline3</subfield>\
-            </datafield>\
-        </record>";
+    fn test_marcxml_normalizes_eols_per_xml11_2_11() {
+        fn assert_subfield_a(payload: &str, expected: &str) {
+            let xml = format!(
+                "<record>\
+                    <leader>01234nam a2200289 a 4500</leader>\
+                    <controlfield tag=\"001\">x</controlfield>\
+                    <datafield tag=\"500\" ind1=\" \" ind2=\" \">\
+                        <subfield code=\"a\">{payload}</subfield>\
+                    </datafield>\
+                </record>"
+            );
+            let record = marcxml_to_record(&xml).unwrap();
+            let fields = record.get_fields("500").unwrap();
+            assert_eq!(fields[0].get_subfield('a'), Some(expected));
+        }
 
-        let record = marcxml_to_record(xml).unwrap();
-        let fields = record.get_fields("500").unwrap();
-        assert_eq!(fields[0].get_subfield('a'), Some("line1\nline2\nline3"));
-    }
-
-    /// CDATA section content is also part of the document entity per
-    /// XML 1.1 §2.11; quick-xml's plain `decode()` skips normalization, so
-    /// guard the `xml_content()` switch with a CDATA-specific case.
-    #[test]
-    fn test_marcxml_normalizes_crlf_in_cdata() {
-        let xml = "<record>\
-            <leader>01234nam a2200289 a 4500</leader>\
-            <controlfield tag=\"001\">x</controlfield>\
-            <datafield tag=\"500\" ind1=\" \" ind2=\" \">\
-                <subfield code=\"a\"><![CDATA[a\r\nb\rc]]></subfield>\
-            </datafield>\
-        </record>";
-
-        let record = marcxml_to_record(xml).unwrap();
-        let fields = record.get_fields("500").unwrap();
-        assert_eq!(fields[0].get_subfield('a'), Some("a\nb\nc"));
+        // Raw text: CR / CRLF / lone CR all collapse to LF.
+        assert_subfield_a("line1\r\nline2\rline3", "line1\nline2\nline3");
+        // CDATA: same normalization applies inside <![CDATA[...]]>.
+        assert_subfield_a("<![CDATA[a\r\nb\rc]]>", "a\nb\nc");
     }
 
     /// Round-trip a subfield carrying a literal LF: the writer preserves

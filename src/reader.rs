@@ -221,24 +221,20 @@ struct BibBuilder {
 impl Iso2709Builder for BibBuilder {
     type Output = Record;
 
-    #[inline]
     fn parse_config() -> DataFieldParseConfig {
         DataFieldParseConfig::BIBLIOGRAPHIC
     }
 
-    #[inline]
     fn new_for(leader: Leader) -> Self {
         BibBuilder {
             record: Record::new(leader),
         }
     }
 
-    #[inline]
     fn add_control_field(&mut self, tag: String, value: String) {
         self.record.add_control_field(tag, value);
     }
 
-    #[inline]
     fn add_data_field(&mut self, _tag: String, field: Field) {
         self.record.add_field(field);
     }
@@ -262,7 +258,6 @@ impl Iso2709Builder for BibBuilder {
         ))
     }
 
-    #[inline]
     fn finalize(self) -> Record {
         self.record
     }

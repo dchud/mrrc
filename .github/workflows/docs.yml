@@ -33,10 +33,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Install dependencies
-        # `--no-install-project` skips building the mrrc Rust+PyO3 extension
-        # (which would need a Rust toolchain + maturin in this docs-only job).
-        # The `docs` extra in pyproject.toml is the single source of truth for
-        # mkdocs-material, mkdocstrings[python], pymdown-extensions.
+        # See CLAUDE.md "Documentation site" for why `--no-install-project`.
         run: uv sync --extra docs --no-install-project
 
       - name: Build documentation

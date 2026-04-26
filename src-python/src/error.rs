@@ -58,16 +58,13 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             byte_offset,
             record_byte_offset,
             source_name,
-            found,
-            expected,
+            message,
             bytes_near,
-            ..
         } => {
             populate_common(py, &kwargs, *record_index, None, None, source_name)?;
             kwargs.set_item("byte_offset", *byte_offset)?;
             kwargs.set_item("record_byte_offset", *record_byte_offset)?;
-            set_found(py, &kwargs, found.as_deref())?;
-            kwargs.set_item("expected", expected)?;
+            kwargs.set_item("message", message)?;
             set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "RecordLeaderInvalid"
         },

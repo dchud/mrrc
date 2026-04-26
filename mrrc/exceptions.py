@@ -23,7 +23,6 @@ defense-in-depth measure — unpickling untrusted data remains the relevant
 attack surface regardless.
 """
 
-import os
 from typing import Optional
 
 
@@ -49,21 +48,9 @@ _POSITIONAL_FIELDS = (
 _HEX_DUMP_ROW_WIDTH = 16
 
 
-# Default base URL for the docs site. Overridable via the
-# MRRC_DOCS_BASE_URL environment variable — useful for enterprise users
-# who mirror the docs internally and want help_url() to point at their
-# mirror. The variable holds the docs site root; help_url() appends
+# Base URL for the docs site. Used by help_url() which appends
 # `/reference/error-codes/#Exxx`.
-DEFAULT_DOCS_BASE_URL = "https://dchud.github.io/mrrc"
-
-
-def _docs_base_url() -> str:
-    """Resolve the docs base URL from the env var (if set, non-empty) or
-    fall back to ``DEFAULT_DOCS_BASE_URL``. Trailing slashes are stripped
-    so the appended path is always well-formed.
-    """
-    override = os.environ.get("MRRC_DOCS_BASE_URL", "")
-    return (override or DEFAULT_DOCS_BASE_URL).rstrip("/")
+DOCS_BASE_URL = "https://dchud.github.io/mrrc"
 
 
 def _render_hex_dump(
@@ -307,11 +294,8 @@ class _MrrcExceptionBase:
         """Return the canonical docs URL for this exception class's error
         code, pointing at the ``#Exxx`` anchor on the error-codes reference
         page.
-
-        The base URL defaults to the GitHub Pages-hosted docs site. Set
-        the ``MRRC_DOCS_BASE_URL`` environment variable to override.
         """
-        return f"{_docs_base_url()}/reference/error-codes/#{cls.code}"
+        return f"{DOCS_BASE_URL}/reference/error-codes/#{cls.code}"
 
     # --- structured serialization --------------------------------------
     # to_dict / to_json emit a JSON-ready dict suitable for structured
@@ -409,10 +393,17 @@ class RecordLeaderInvalid(MrrcException):
 
     code = "E002"
     slug = "leader_invalid"
+    _pickle_extra_fields = ("message",)
+    _diagnostic_extra_fields = ("message",)
+    message: Optional[str]
+
+    def __init__(self, *args, message=None, **kwargs) -> None:
+        self.message = message
+        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
-        if self.found is not None and self.expected is not None:
-            return f"invalid leader: found {self.found!r} — expected {self.expected}"
+        if self.message:
+            return f"invalid leader: {self.message}"
         return "invalid leader"
 
 

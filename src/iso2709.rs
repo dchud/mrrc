@@ -75,15 +75,11 @@ pub struct ParseContext {
     /// 001 control field value, populated opportunistically once the field
     /// has been parsed. `None` for errors raised before 001 is available.
     pub record_control_number: Option<String>,
-    /// Field tag currently being parsed, when known. Stored as a 3-byte
-    /// array (MARC tags are format-mandated to be exactly 3 ASCII chars).
-    /// The primary reason for this representation — over `Option<String>` —
-    /// is that the smaller `ParseContext` lets `#[inline(always)]` on
-    /// `parse_data_field` fit in the L1 instruction cache comfortably;
-    /// with the larger 24-byte `Option<String>` variant forcing inlining
-    /// blew parallel benchmarks up by 30-44% vs the baseline. Converted
-    /// to `String` lazily at error-construction time via the private
-    /// `field_tag_as_string` helper.
+    /// Field tag currently being parsed (3 ASCII bytes per MARC spec).
+    /// The fixed-size representation keeps `ParseContext` compact enough
+    /// that `parse_data_field` can be `#[inline(always)]` without busting
+    /// L1-i cache on parallel workloads — see `parse_data_field` for the
+    /// pairing. Converted to `String` lazily via `field_tag_as_string`.
     pub current_field_tag: Option<[u8; 3]>,
     /// Subfield code currently being parsed, when known.
     pub current_subfield_code: Option<u8>,
@@ -180,28 +176,6 @@ impl ParseContext {
         BytesNear::capture(buffer, base, self.stream_byte_offset)
     }
 
-    /// Construct an [`MarcError::InvalidLeader`] inheriting the current
-    /// stream/record positional state.
-    #[must_use]
-    pub fn err_invalid_leader(
-        &self,
-        found: Option<&[u8]>,
-        expected: impl Into<String>,
-        cause: Option<String>,
-    ) -> MarcError {
-        let found_bytes = found.map(|b| crate::error::truncate_bytes(b).0);
-        MarcError::InvalidLeader {
-            record_index: self.record_index_opt(),
-            byte_offset: Some(self.stream_byte_offset),
-            record_byte_offset: Some(self.record_byte_offset()),
-            source_name: self.source_name.clone(),
-            found: found_bytes,
-            expected: Some(expected.into()),
-            cause,
-            bytes_near: self.capture_bytes_near(),
-        }
-    }
-
     /// Construct an [`MarcError::RecordLengthInvalid`] inheriting the current
     /// stream/record positional state.
     #[must_use]
@@ -210,7 +184,7 @@ impl ParseContext {
         found: Option<&[u8]>,
         expected: impl Into<String>,
     ) -> MarcError {
-        let found_bytes = found.map(|b| crate::error::truncate_bytes(b).0);
+        let found_bytes = found.map(crate::error::truncate_bytes);
         MarcError::RecordLengthInvalid {
             record_index: self.record_index_opt(),
             byte_offset: Some(self.stream_byte_offset),
@@ -229,7 +203,7 @@ impl ParseContext {
         found: Option<&[u8]>,
         expected: impl Into<String>,
     ) -> MarcError {
-        let found_bytes = found.map(|b| crate::error::truncate_bytes(b).0);
+        let found_bytes = found.map(crate::error::truncate_bytes);
         MarcError::BaseAddressInvalid {
             record_index: self.record_index_opt(),
             byte_offset: Some(self.stream_byte_offset),
@@ -262,7 +236,7 @@ impl ParseContext {
         found: Option<&[u8]>,
         expected: impl Into<String>,
     ) -> MarcError {
-        let found_bytes = found.map(|b| crate::error::truncate_bytes(b).0);
+        let found_bytes = found.map(crate::error::truncate_bytes);
         MarcError::DirectoryInvalid {
             record_index: self.record_index_opt(),
             byte_offset: Some(self.stream_byte_offset),
@@ -321,7 +295,7 @@ impl ParseContext {
         found: &[u8],
         expected: impl Into<String>,
     ) -> MarcError {
-        let (found_bytes, _) = crate::error::truncate_bytes(found);
+        let found_bytes = crate::error::truncate_bytes(found);
         MarcError::InvalidIndicator {
             record_index: self.record_index_opt(),
             byte_offset: Some(self.stream_byte_offset),
@@ -650,23 +624,10 @@ impl DataFieldParseConfig {
 /// applicable in future enrichment work), or [`MarcError::EncodingError`] if
 /// `config.utf8` is [`Utf8DecodeMode::Strict`] and a subfield value contains
 /// invalid UTF-8.
-// Force inlining. The v0.8 structured-error refactor added
-// `ParseContext` threading throughout the parse path, which by itself
-// cost ~15-17% on the read hot path vs v0.7.6 because the compiler
-// stopped inlining `parse_data_field` across the new function-boundary
-// noise (measured via bd-tcym investigation, Criterion, toolchain
-// 1.95.0). Plain `#[inline]` is not enough — the default cost model
-// still refuses. Forcing inline recovers most of the gap AND goes
-// further: it inlines across `parse_subfields`, letting the compiler
-// see the full hot loop. The 3 call sites (bibliographic / authority /
-// holdings readers) bound the code-bloat risk.
-//
-// Pairs with `current_field_tag: Option<[u8; 3]>` in `ParseContext`:
-// the 3-byte representation keeps `ParseContext` compact (120 bytes
-// vs 144 with `Option<String>`) so inlining does not balloon L1-i
-// cache usage on parallel workloads. Forcing inline with the larger
-// 144-byte ctx caused 30-44% regressions on parallel benchmarks.
-#[allow(clippy::inline_always)] // measured necessity — see comment above
+// Forced inline: removing this regresses read-hot-path throughput
+// ~15% (see CHANGELOG v0.8 perf restoration entry). Pairs with the
+// compact `current_field_tag: Option<[u8; 3]>` in `ParseContext`.
+#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn parse_data_field(
     field_data: &[u8],

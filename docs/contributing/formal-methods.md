@@ -15,18 +15,8 @@ property-based testing.
     coverage-guided fuzzing (cargo-fuzz) to falsify a finite set of
     invariants on a large but bounded sample of inputs. We do **not**
     prove the codec correct, run a model checker, or maintain a
-    formal specification in TLA+ / Coq / Lean. The techniques on
-    this page are modest by formal-methods standards — they catch
-    real bugs cheaply, but they are sampling, not proof. See
-    [What this page is *not*](#what-this-page-is-not) below for the
-    fuller picture of where this sits in the broader spectrum.
-
-By the end you should know:
-
-1. What property-based testing is and why it complements unit tests.
-2. Which invariants mrrc actually asserts and where to find them.
-3. How accepted regression seeds become permanent guards.
-4. Where coverage-guided fuzzing fits in alongside property tests.
+    formal specification. The techniques on this page catch real bugs
+    cheaply, but they are sampling, not proof.
 
 The runnable suite lives in `tests/properties.rs`; the fuzz
 infrastructure is documented separately in [Fuzzing](fuzzing.md).
@@ -183,15 +173,7 @@ build*; fuzzing finds bugs in the *code paths that turn arbitrary
 bytes into records*. Both feed regression tests that run on every
 PR. Neither replaces the other.
 
-## What this page is *not*
-
-The phrase "formal methods" covers a wide spectrum, from informal
-specifications all the way to mechanically-checked proofs in tools
-like [TLA+], [Coq], or [Lean]. mrrc operates at the **lightweight
-end** of that spectrum — property-based testing and coverage-guided
-fuzzing — and does not currently use full formal verification. We do
-not prove the codec correct; we falsify a finite set of properties on
-a large but bounded sample of inputs.
+## Where this sits in the broader picture
 
 The companion [mrrc-testbed][testbed] repo's
 [formal-methods-verification-strategy.md][testbed-strategy]
@@ -237,14 +219,3 @@ The most approachable starting points if you want to learn more:
 [Kani]: https://model-checking.github.io/kani/
 [testbed]: https://github.com/dchud/mrrc-testbed
 [testbed-strategy]: https://github.com/dchud/mrrc-testbed/blob/main/formal-methods-verification-strategy.md
-
-## Suite history
-
-The current proptest suite was established in
-[#91](https://github.com/dchud/mrrc/issues/91) (bd-ouji, "Enable
-proptest with round-trip and structural invariant properties"), which
-landed the binary round-trip, the four ISO 2709 structural
-invariants, and the MARCXML / MARCJSON round-trips. Before that the
-project had only unit tests; the move to properties was driven by
-the realization that the codec's correctness is naturally specified
-as round-trip equality, which a unit test can only sample.

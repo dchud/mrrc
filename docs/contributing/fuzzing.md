@@ -406,15 +406,11 @@ stable 1.95.0.
 
 ## Related work
 
-- [Formal methods verification strategy](https://github.com/dchud/mrrc-testbed/blob/main/formal-methods-verification-strategy.md)
-  in mrrc-testbed places fuzzing on level 4 of a 5-level verification
-  pyramid. Property-based tests (level 3) define invariants fuzzing then
-  tries to violate; bounded model checking with Kani (level 5, future)
-  would prove properties exhaustively for small inputs.
 - [Formal Methods](formal-methods.md) — primer on the property-based
   tests (`tests/properties.rs`) that sit underneath fuzzing in the
-  pyramid, and the regression-seed policy that turns accepted
-  failures into permanent guards.
+  5-level verification pyramid; covers the pyramid framing, the
+  regression-seed policy, and the relationship to the broader
+  mrrc-testbed verification strategy.
 - `.github/workflows/memory-safety.yml` — nightly ASAN run, complementary
   to fuzzing (ASAN instruments the test suite; fuzzing instruments a
   dedicated harness).
