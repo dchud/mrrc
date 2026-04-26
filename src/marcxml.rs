@@ -252,18 +252,24 @@ fn read_leaf_text<B: std::io::BufRead>(
             .map_err(|e| ctx.err_xml(e))?
         {
             Event::Text(t) => {
-                // quick-xml 0.39 splits `&entity;` out into GeneralRef events,
-                // so Text events carry no XML escapes — decode() is enough.
-                let decoded = t.decode().map_err(|e| {
+                // xml_content() applies XML 1.1 §2.11 end-of-line normalization
+                // (CR, CRLF, NEL, LSEP → LF) per spec. quick-xml's plain decode()
+                // skips that pass; quick-xml's own docs flag it as the wrong
+                // default ("Usually you need xml_content() instead").
+                let decoded = t.xml_content().map_err(|e| {
                     MarcError::invalid_field_msg(format!("Invalid text encoding: {e}"))
                 })?;
                 out.push_str(&decoded);
             },
             Event::CData(c) => {
-                let s = std::str::from_utf8(&c).map_err(|e| {
-                    MarcError::invalid_field_msg(format!("Invalid UTF-8 in CDATA: {e}"))
+                // CDATA section content is part of the document entity and is
+                // also subject to XML 1.1 §2.11 EOL normalization. xml_content()
+                // additionally honors the reader's declared encoding, so this
+                // is a strict improvement over a raw UTF-8 conversion.
+                let decoded = c.xml_content().map_err(|e| {
+                    MarcError::invalid_field_msg(format!("Invalid CDATA encoding: {e}"))
                 })?;
-                out.push_str(s);
+                out.push_str(&decoded);
             },
             Event::GeneralRef(r) => {
                 // `&#NN;` / `&#xHH;` numeric character references, plus the
@@ -744,6 +750,58 @@ mod tests {
 
         let fields = restored.get_fields("245").unwrap();
         assert_eq!(fields[0].get_subfield('a'), Some(" "));
+    }
+
+    /// XML 1.1 §2.11 requires the parser to normalize CR, CRLF, NEL, and
+    /// LSEP to LF in text content. Raw CRLF in subfield text must surface
+    /// as LF after parse.
+    #[test]
+    fn test_marcxml_normalizes_crlf_in_subfield_text() {
+        let xml = "<record>\
+            <leader>01234nam a2200289 a 4500</leader>\
+            <controlfield tag=\"001\">x</controlfield>\
+            <datafield tag=\"500\" ind1=\" \" ind2=\" \">\
+                <subfield code=\"a\">line1\r\nline2\rline3</subfield>\
+            </datafield>\
+        </record>";
+
+        let record = marcxml_to_record(xml).unwrap();
+        let fields = record.get_fields("500").unwrap();
+        assert_eq!(fields[0].get_subfield('a'), Some("line1\nline2\nline3"));
+    }
+
+    /// CDATA section content is also part of the document entity per
+    /// XML 1.1 §2.11; quick-xml's plain `decode()` skips normalization, so
+    /// guard the `xml_content()` switch with a CDATA-specific case.
+    #[test]
+    fn test_marcxml_normalizes_crlf_in_cdata() {
+        let xml = "<record>\
+            <leader>01234nam a2200289 a 4500</leader>\
+            <controlfield tag=\"001\">x</controlfield>\
+            <datafield tag=\"500\" ind1=\" \" ind2=\" \">\
+                <subfield code=\"a\"><![CDATA[a\r\nb\rc]]></subfield>\
+            </datafield>\
+        </record>";
+
+        let record = marcxml_to_record(xml).unwrap();
+        let fields = record.get_fields("500").unwrap();
+        assert_eq!(fields[0].get_subfield('a'), Some("a\nb\nc"));
+    }
+
+    /// Round-trip a subfield carrying a literal LF: the writer preserves
+    /// the byte and the reader's normalization leaves LF unchanged.
+    #[test]
+    fn test_marcxml_roundtrip_subfield_with_newline() {
+        let mut record = Record::new(make_test_leader());
+        let mut field = Field::new("500".to_string(), ' ', ' ');
+        field.add_subfield('a', "first\nsecond".to_string());
+        record.add_field(field);
+
+        let xml = record_to_marcxml(&record).unwrap();
+        let restored = marcxml_to_record(&xml).unwrap();
+
+        let fields = restored.get_fields("500").unwrap();
+        assert_eq!(fields[0].get_subfield('a'), Some("first\nsecond"));
     }
 
     #[test]
