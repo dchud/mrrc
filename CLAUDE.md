@@ -42,8 +42,11 @@ uv run mkdocs serve                           # Live-reload preview at :8000
 
 The `docs` extra in `pyproject.toml` carries `mkdocs-material`,
 `mkdocstrings[python]`, and `pymdown-extensions`. CI installs it via
-`uv pip install --system "mrrc[docs]"`. Do not `uv pip install` these
-ad-hoc — track them in the extra so contributors and CI stay in sync.
+`uv sync --extra docs --no-install-project` — `--no-install-project`
+skips building the mrrc Rust+PyO3 extension, which would require a
+Rust toolchain + maturin in the docs-only job. Do not `uv pip install`
+these ad-hoc — track them in the extra so contributors and CI stay in
+sync.
 
 **Use `uv sync --all-extras`, not `uv sync --extra docs`.** `uv sync`
 is *replacing*, not additive — `--extra docs` alone drops `test` and
