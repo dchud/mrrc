@@ -411,8 +411,10 @@ stable 1.95.0.
   pyramid. Property-based tests (level 3) define invariants fuzzing then
   tries to violate; bounded model checking with Kani (level 5, future)
   would prove properties exhaustively for small inputs.
-- `tests/properties.rs` — proptest-based property tests that sit
-  underneath fuzzing in the pyramid.
+- [Formal Methods](formal-methods.md) — primer on the property-based
+  tests (`tests/properties.rs`) that sit underneath fuzzing in the
+  pyramid, and the regression-seed policy that turns accepted
+  failures into permanent guards.
 - `.github/workflows/memory-safety.yml` — nightly ASAN run, complementary
   to fuzzing (ASAN instruments the test suite; fuzzing instruments a
   dedicated harness).

@@ -33,7 +33,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Install dependencies
-        run: uv pip install --system mkdocs-material mkdocstrings[python] pymdown-extensions
+        run: uv pip install --system "mrrc[docs]"
 
       - name: Build documentation
         # Note: --strict removed until cross-linking fixes are complete (mrrc-s3ug)
