@@ -235,6 +235,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parsing (an authority-specific `try_recover_record` salvage path
   remains future work). Strict-mode behavior is unchanged.
 
+### Added — HoldingsMarcReader: per-field lenient/permissive recovery
+  ([#122](https://github.com/dchud/mrrc/issues/122))
+
+- **`HoldingsMarcReader` now honors `RecoveryMode::Lenient` /
+  `Permissive` at five per-field error sites** that previously returned
+  the first error in all modes: bad field-length digits, bad
+  start-position digits, field-extends-beyond-data-section,
+  data-field-too-short-for-indicators, and `parse_data_field` failure.
+  Strict-mode behavior is unchanged at every site; lenient/permissive
+  mode skips the offending entry, counts the recovery, and continues.
+- **`HoldingsMarcReader::with_max_errors` is now active** (no longer
+  inert as documented under the bd-uj7c entry). Each new lenient
+  branch participates in the per-stream cap; the docstring caveat is
+  removed.
+- **Truncated-record dispatch fixed**, mirroring the authority-reader
+  change: lenient/permissive mode no longer returns a hard error on a
+  short read; instead it notes the recovery and falls through to
+  best-effort directory parsing. The directory/data slicing is also
+  now clamped at the actual buffer length so a short read in
+  lenient mode cannot panic.
+
 ### Changed
 
 - **`MarcError` source-error chain now walks correctly** for I/O, XML,

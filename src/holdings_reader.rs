@@ -26,7 +26,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::error::Result;
+use crate::error::{MarcError, Result};
 use crate::holdings_record::HoldingsRecord;
 use crate::iso2709::{self, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN};
 use crate::leader::Leader;
@@ -51,8 +51,9 @@ pub struct HoldingsMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
     ctx: ParseContext,
-    #[allow(dead_code)] // parity-only; no lenient recovery sites yet (see with_max_errors).
     max_errors: usize,
+    error_count: usize,
+    cap_exceeded: bool,
 }
 
 impl<R: Read> HoldingsMarcReader<R> {
@@ -68,6 +69,8 @@ impl<R: Read> HoldingsMarcReader<R> {
             recovery_mode: RecoveryMode::Strict,
             ctx: ParseContext::new(),
             max_errors: DEFAULT_MAX_ERRORS,
+            error_count: 0,
+            cap_exceeded: false,
         }
     }
 
@@ -97,19 +100,32 @@ impl<R: Read> HoldingsMarcReader<R> {
     /// Cap the number of recovered errors tolerated in one stream before the
     /// reader raises [`crate::MarcError::FatalReaderError`] and halts.
     ///
-    /// Present on all three ISO 2709 readers for API parity. The holdings
-    /// reader does not currently expose per-field lenient-recovery sites, so
-    /// setting this value on a [`HoldingsMarcReader`] is inert today. The
-    /// value is preserved so that recovery sites added later in this reader
-    /// can honor it without a breaking API change.
-    ///
-    /// See [`crate::MarcReader::with_max_errors`] for the active semantics;
-    /// passing `0` disables the cap (unbounded accumulation). Default when
-    /// not set is [`DEFAULT_MAX_ERRORS`].
+    /// See [`crate::MarcReader::with_max_errors`] for semantics; passing `0`
+    /// disables the cap (unbounded accumulation). Default when not set is
+    /// [`DEFAULT_MAX_ERRORS`].
     #[must_use]
     pub fn with_max_errors(mut self, n: usize) -> Self {
         self.max_errors = n;
         self
+    }
+
+    /// Record a recovered parse failure against the stream cap.
+    fn note_recovery_error(&mut self) -> Result<()> {
+        if self.max_errors == 0 {
+            return Ok(());
+        }
+        self.error_count += 1;
+        if self.error_count > self.max_errors {
+            self.cap_exceeded = true;
+            let idx = self.ctx.record_index;
+            return Err(MarcError::FatalReaderError {
+                cap: self.max_errors,
+                errors_seen: self.error_count,
+                record_index: if idx == 0 { None } else { Some(idx) },
+                source_name: self.ctx.source_name.clone(),
+            });
+        }
+        Ok(())
     }
 }
 
@@ -137,6 +153,10 @@ impl<R: Read> HoldingsMarcReader<R> {
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     #[allow(clippy::too_many_lines)]
     pub fn read_record(&mut self) -> Result<Option<HoldingsRecord>> {
+        if self.cap_exceeded {
+            return Ok(None);
+        }
+
         // Read the leader (24 bytes). EOF here is a clean stream end.
         let Some(leader_bytes) = iso2709::read_leader_bytes(&mut self.reader)? else {
             return Ok(None);
@@ -183,15 +203,28 @@ impl<R: Read> HoldingsMarcReader<R> {
         let record_data_offset = self.ctx.stream_byte_offset;
         self.ctx.set_parse_buffer(&record_data, record_data_offset);
 
-        if record_data.len() < (record_length - 24) && self.recovery_mode != RecoveryMode::Strict {
-            return Err(self.ctx.err_truncated_record(
-                Some(record_length.saturating_sub(LEADER_LEN)),
-                Some(record_data.len()),
-            ));
+        if record_data.len() < (record_length - 24) {
+            if self.recovery_mode == RecoveryMode::Strict {
+                return Err(self.ctx.err_truncated_record(
+                    Some(record_length.saturating_sub(LEADER_LEN)),
+                    Some(record_data.len()),
+                ));
+            }
+            // Lenient/permissive: count the recovery and fall through to
+            // best-effort directory parsing. (A holdings-specific
+            // try_recover_record salvage path is bd-lkcy territory.)
+            self.note_recovery_error()?;
         }
 
-        let directory_bytes = &record_data[..directory_size];
-        let data_section = &record_data[directory_size..];
+        // Clamp directory + data slices to actual buffer length so a short
+        // read in lenient mode does not panic.
+        let directory_end = std::cmp::min(directory_size, record_data.len());
+        let directory_bytes = &record_data[..directory_end];
+        let data_section = if directory_end < record_data.len() {
+            &record_data[directory_end..]
+        } else {
+            &[][..]
+        };
 
         let mut record = HoldingsRecord::new(leader);
 
@@ -210,15 +243,40 @@ impl<R: Read> HoldingsMarcReader<R> {
                 .map_err(|_| self.ctx.err_invalid_field("Invalid tag encoding"))?
                 .to_string();
 
-            let length = iso2709::parse_4digits(&directory_bytes[i + 3..i + 7])?;
-            let start = iso2709::parse_5digits(&directory_bytes[i + 7..i + 12])?;
+            let length = match iso2709::parse_4digits(&directory_bytes[i + 3..i + 7]) {
+                Ok(len) => len,
+                Err(e) => {
+                    if self.recovery_mode == RecoveryMode::Strict {
+                        return Err(e);
+                    }
+                    self.note_recovery_error()?;
+                    i += 12;
+                    continue;
+                },
+            };
+            let start = match iso2709::parse_5digits(&directory_bytes[i + 7..i + 12]) {
+                Ok(s) => s,
+                Err(e) => {
+                    if self.recovery_mode == RecoveryMode::Strict {
+                        return Err(e);
+                    }
+                    self.note_recovery_error()?;
+                    i += 12;
+                    continue;
+                },
+            };
 
             let end = start + length;
             if end > data_section.len() {
-                self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                return Err(self
-                    .ctx
-                    .err_invalid_field(format!("Field {tag} extends beyond data section")));
+                if self.recovery_mode == RecoveryMode::Strict {
+                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
+                    return Err(self
+                        .ctx
+                        .err_invalid_field(format!("Field {tag} extends beyond data section")));
+                }
+                self.note_recovery_error()?;
+                i += 12;
+                continue;
             }
 
             let field_data = &data_section[start..end];
@@ -246,10 +304,15 @@ impl<R: Read> HoldingsMarcReader<R> {
 
             // Data field
             if field_data.len() < 3 {
-                self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                return Err(self
-                    .ctx
-                    .err_invalid_field("Data field too short for indicators"));
+                if self.recovery_mode == RecoveryMode::Strict {
+                    self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
+                    return Err(self
+                        .ctx
+                        .err_invalid_field("Data field too short for indicators"));
+                }
+                self.note_recovery_error()?;
+                i += 12;
+                continue;
             }
 
             self.ctx.current_field_tag = tag.as_bytes().try_into().ok();
@@ -261,7 +324,17 @@ impl<R: Read> HoldingsMarcReader<R> {
                 &self.ctx,
             );
             self.ctx.current_field_tag = None;
-            let field = parsed?;
+            let field = match parsed {
+                Ok(f) => f,
+                Err(e) => {
+                    if self.recovery_mode == RecoveryMode::Strict {
+                        return Err(e);
+                    }
+                    self.note_recovery_error()?;
+                    i += 12;
+                    continue;
+                },
+            };
 
             match tag.as_str() {
                 "852" => record.add_location(field),
@@ -359,6 +432,207 @@ mod tests {
 
         let record = marc_reader.read_record().expect("Failed to read");
         assert!(record.is_none());
+    }
+
+    /// Wrap an arbitrary `directory` (must end with `\x1e` if it represents a
+    /// terminated directory) and `data` in a minimal valid holdings leader
+    /// (type 'x') and append a record terminator.
+    fn build_holdings_record_with(directory: &[u8], data: &[u8]) -> Vec<u8> {
+        let base_address = 24 + directory.len();
+        let record_length = base_address + data.len() + 1;
+
+        let mut leader = Vec::new();
+        leader.extend_from_slice(format!("{record_length:05}").as_bytes());
+        leader.push(b'n'); // status
+        leader.push(b'x'); // type: holdings (single-part item)
+        leader.push(b'|'); // bibliographic level
+        leader.push(b' ');
+        leader.push(b' ');
+        leader.push(b'2');
+        leader.push(b'2');
+        leader.extend_from_slice(format!("{base_address:05}").as_bytes());
+        leader.push(b'1');
+        leader.push(b'a');
+        leader.push(b' ');
+        leader.extend_from_slice(b"4500");
+        assert_eq!(leader.len(), 24);
+
+        let mut out = Vec::new();
+        out.extend_from_slice(&leader);
+        out.extend_from_slice(directory);
+        out.extend_from_slice(data);
+        out.push(0x1D); // RECORD_TERMINATOR
+        out
+    }
+
+    #[test]
+    fn test_holdings_bad_field_length_strict_errors() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"852ABCD00000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_holdings_record_with(&directory, &[]);
+
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(bytes))
+            .with_recovery_mode(RecoveryMode::Strict);
+        assert!(reader.read_record().is_err(), "strict should propagate");
+    }
+
+    #[test]
+    fn test_holdings_bad_field_length_lenient_recovers() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"852ABCD00000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_holdings_record_with(&directory, &[]);
+
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(bytes))
+            .with_recovery_mode(RecoveryMode::Lenient);
+        let rec = reader.read_record().expect("lenient should not error");
+        assert!(rec.is_some());
+    }
+
+    #[test]
+    fn test_holdings_bad_start_position_strict_errors() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"8520005XYZAB");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_holdings_record_with(&directory, &[]);
+
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(bytes))
+            .with_recovery_mode(RecoveryMode::Strict);
+        assert!(reader.read_record().is_err(), "strict should propagate");
+    }
+
+    #[test]
+    fn test_holdings_bad_start_position_lenient_recovers() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"8520005XYZAB");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_holdings_record_with(&directory, &[]);
+
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(bytes))
+            .with_recovery_mode(RecoveryMode::Lenient);
+        let rec = reader.read_record().expect("lenient should not error");
+        assert!(rec.is_some());
+    }
+
+    #[test]
+    fn test_holdings_field_exceeds_data_strict_errors() {
+        // Directory entry claims length=999 starting at position 0; data area empty.
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"852099900000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_holdings_record_with(&directory, &[]);
+
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(bytes))
+            .with_recovery_mode(RecoveryMode::Strict);
+        let err = reader.read_record().expect_err("strict should error");
+        assert!(
+            matches!(err, MarcError::InvalidField { ref message, .. } if message.contains("extends beyond data section")),
+            "expected InvalidField about extends-beyond, got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_holdings_field_exceeds_data_lenient_recovers() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"852099900000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_holdings_record_with(&directory, &[]);
+
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(bytes))
+            .with_recovery_mode(RecoveryMode::Lenient);
+        let rec = reader.read_record().expect("lenient should not error");
+        assert!(rec.is_some());
+    }
+
+    #[test]
+    fn test_holdings_data_field_too_short_strict_errors() {
+        // Directory entry: data field tag with length=1 (less than 3 → too short
+        // for indicators+terminator). One byte of data: 'A'.
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"852000100000");
+        directory.push(FIELD_TERMINATOR);
+        let data = b"A";
+        let bytes = build_holdings_record_with(&directory, data);
+
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(bytes))
+            .with_recovery_mode(RecoveryMode::Strict);
+        let err = reader.read_record().expect_err("strict should error");
+        assert!(
+            matches!(err, MarcError::InvalidField { ref message, .. } if message.contains("too short")),
+            "expected InvalidField about too-short, got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_holdings_data_field_too_short_lenient_recovers() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"852000100000");
+        directory.push(FIELD_TERMINATOR);
+        let data = b"A";
+        let bytes = build_holdings_record_with(&directory, data);
+
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(bytes))
+            .with_recovery_mode(RecoveryMode::Lenient);
+        let rec = reader.read_record().expect("lenient should not error");
+        assert!(rec.is_some());
+    }
+
+    #[test]
+    fn test_holdings_max_errors_cap_trips() {
+        // Each record has one bad-field-length entry → one note_recovery_error.
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"852ABCD00000");
+        directory.push(FIELD_TERMINATOR);
+        let one_record = build_holdings_record_with(&directory, &[]);
+
+        let mut stream = Vec::new();
+        for _ in 0..5 {
+            stream.extend_from_slice(&one_record);
+        }
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(stream))
+            .with_recovery_mode(RecoveryMode::Lenient)
+            .with_max_errors(3);
+
+        for _ in 0..3 {
+            assert!(reader.read_record().unwrap().is_some());
+        }
+        let err = reader.read_record().expect_err("cap should trip");
+        assert!(
+            matches!(
+                err,
+                MarcError::FatalReaderError {
+                    cap: 3,
+                    errors_seen: 4,
+                    record_index: Some(4),
+                    ..
+                }
+            ),
+            "unexpected error: {err:?}"
+        );
+        assert!(reader.read_record().unwrap().is_none());
+    }
+
+    #[test]
+    fn test_holdings_max_errors_zero_disables() {
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"852ABCD00000");
+        directory.push(FIELD_TERMINATOR);
+        let one_record = build_holdings_record_with(&directory, &[]);
+
+        let mut stream = Vec::new();
+        for _ in 0..20 {
+            stream.extend_from_slice(&one_record);
+        }
+        let mut reader = HoldingsMarcReader::new(std::io::Cursor::new(stream))
+            .with_recovery_mode(RecoveryMode::Lenient)
+            .with_max_errors(0);
+
+        let mut count = 0;
+        while reader.read_record().unwrap().is_some() {
+            count += 1;
+        }
+        assert_eq!(count, 20);
     }
 
     #[test]
