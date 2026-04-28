@@ -3,8 +3,20 @@ name: Lint and Format
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'LICENSE'
+      - '.gitignore'
 
 env:
   RUST_BACKTRACE: 1

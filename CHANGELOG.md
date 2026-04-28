@@ -138,6 +138,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [#97](https://github.com/dchud/mrrc/pull/97)) via
   `rust-toolchain.toml`. Library MSRV
   (`Cargo.toml` → `rust-version = "1.71"`) is unchanged.
+- **CI: skip workflows on docs-only changes.** Added `paths-ignore`
+  for `**.md`, `docs/**`, `mkdocs.yml`, `LICENSE`, and `.gitignore` to
+  `lint`, `test`, `build`, `python-build`, `benchmark-python`, and
+  `benchmark-rust` workflows. A docs-only push or PR previously fired
+  ~47 jobs across the six workflows; it now fires zero. Mixed PRs
+  (code + docs) still run normally — `paths-ignore` skips only when
+  every changed path matches.
 
 ### Fixed
 
