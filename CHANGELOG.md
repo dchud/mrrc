@@ -174,6 +174,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `uv sync --extra docs --no-install-project`
   ([#131](https://github.com/dchud/mrrc/pull/131)).
 
+### Dependencies
+
+- Bump ruff from 0.15.11 to 0.15.12
+- Bump mypy from 1.20.1 to 1.20.2
+- Bump pyright from 1.1.408 to 1.1.409
+
 ## [0.7.6] - 2026-04-14
 
 ### Added
