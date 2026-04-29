@@ -837,7 +837,7 @@ class Record:
         """Add one or more fields to the record."""
         for field in fields:
             if field.is_control_field():
-                self._inner.add_control_field(field.tag, field.data)
+                self._inner.add_control_field(field.tag, field.data or '')
             else:
                 self._inner.add_field(field._inner)
     
@@ -882,7 +882,7 @@ class Record:
         """Add fields maintaining tag sort order (pymarc compatibility)."""
         for field in fields:
             if field.is_control_field():
-                self._inner.add_control_field(field.tag, field.data)
+                self._inner.add_control_field(field.tag, field.data or '')
             else:
                 existing = list(self._inner.fields())
                 insert_idx = len(existing)
@@ -897,7 +897,7 @@ class Record:
         """Add fields after the last field with the same tag (pymarc compatibility)."""
         for field in fields:
             if field.is_control_field():
-                self._inner.add_control_field(field.tag, field.data)
+                self._inner.add_control_field(field.tag, field.data or '')
                 continue
             existing = list(self._inner.fields())
             last_idx = None

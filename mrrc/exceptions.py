@@ -23,7 +23,20 @@ defense-in-depth measure — unpickling untrusted data remains the relevant
 attack surface regardless.
 """
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+
+# Type-only base for `_MrrcExceptionBase`. At runtime this resolves to
+# ``object`` so the mixin design (separate from the Exception inheritance
+# chain on `MrrcException`) is preserved exactly. At type-check time it
+# resolves to `Exception`, so the type checker sees `__cause__`,
+# `__context__`, and `__traceback__` on instances, and
+# `traceback.format_exception(type(self), self, ...)` calls type-check
+# without needing per-call `cast()` or `# type: ignore`.
+if TYPE_CHECKING:
+    _MixinBase = Exception
+else:
+    _MixinBase = object
 
 
 _POSITIONAL_FIELDS = (
@@ -98,13 +111,15 @@ def _render_hex_dump(
     return "\n".join(lines)
 
 
-class _MrrcExceptionBase:
+class _MrrcExceptionBase(_MixinBase):
     """Mixin providing positional context attributes, formatting, and pickle
     support for every mrrc exception class.
 
     Kept separate from the actual base ``MrrcException`` so subclasses can
     override ``_body_text`` independently of the inheritance chain to
-    Exception itself.
+    Exception itself. The `_MixinBase` parent is `object` at runtime
+    (preserving that separation) and `Exception` at type-check time
+    (so `__cause__` / `__context__` / `__traceback__` resolve cleanly).
     """
 
     # Stable error-code identifiers. Every leaf exception class overrides
