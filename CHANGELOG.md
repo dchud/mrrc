@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.8.0] - 2026-04-29
+
 ### Breaking
 
 - **`MarcError` variants restructured to struct form** carrying
