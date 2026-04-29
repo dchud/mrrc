@@ -37,7 +37,8 @@ jobs:
         run: uv sync --extra docs --no-install-project
 
       - name: Build documentation
-        # Note: --strict removed until cross-linking fixes are complete (mrrc-s3ug)
+        # Not run with --strict: pre-existing cross-link warnings under
+        # docs/design/profiling/ would otherwise fail the build.
         run: uv run mkdocs build
 
       - name: Upload artifact
