@@ -73,6 +73,14 @@ if [ "$QUICK" = false ]; then
     uv run python -m pytest tests/python/ -m "not benchmark" -q
 
     echo ""
+    echo "=== Python type check (mypy on mrrc/) ==="
+    uv run mypy mrrc/
+
+    echo ""
+    echo "=== Python type check (pyright on mrrc/) ==="
+    uv run pyright mrrc/
+
+    echo ""
     echo "=== Documentation site build (mkdocs) ==="
     # Needs the `docs` extra: run `uv sync --all-extras` if mkdocs is missing.
     # No --strict yet; cross-link fixes are tracked in mrrc-s3ug.

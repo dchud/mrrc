@@ -158,10 +158,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Python typing fidelity improvements.** Stub gaps in `mrrc/_mrrc.pyi`
   closed (`parse_batch_parallel` / `parse_batch_parallel_limited`
   signatures, `Field.delete_subfield`, `Record.to_marc21`,
-  module-level `__version__`) and two wrapper-side narrowing issues
-  fixed (`add_control_field` call sites, `_MrrcExceptionBase`
-  inherited Exception attributes). Type-only — no runtime behavior
-  change.
+  module-level `__version__`) and several wrapper-side narrowing
+  issues fixed. `mypy mrrc/` and `pyright mrrc/` now both report zero
+  errors and run in `.cargo/check.sh` full mode. Type-only — no
+  runtime behavior change.
 - **MARCXML reader: missing XML 1.1 §2.11 end-of-line normalization
   in text and CDATA content**
   ([#112](https://github.com/dchud/mrrc/issues/112)). Switched both
