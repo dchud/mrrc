@@ -1,6 +1,6 @@
 # Migration Guide: pymarc to mrrc
 
-This guide helps existing pymarc users migrate to mrrc (MARC Rust Crate), a high-performance Rust-based MARC library with Python bindings.
+This guide helps existing pymarc users migrate to mrrc, a high-performance Rust-based MARC library with Python bindings.
 
 ## Overview
 

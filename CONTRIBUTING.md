@@ -1,6 +1,6 @@
 # Contributing to MRRC
 
-Thank you for your interest in contributing to MRRC (MARC Rust Crate)! This document provides guidelines and instructions for getting involved.
+Thank you for your interest in contributing to MRRC! This document provides guidelines and instructions for getting involved.
 
 ## Code of Conduct
 

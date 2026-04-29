@@ -8,7 +8,7 @@
 // without addressing a real performance concern (errors are off the hot path).
 #![allow(clippy::result_large_err)]
 
-//! # MRRC: MARC Rust Crate
+//! # MRRC
 //!
 //! A high-performance Rust library for reading, writing, and manipulating MARC bibliographic
 //! records in the ISO 2709 binary format.

@@ -1,4 +1,4 @@
-# MRRC — MARC Rust Crate
+# MRRC
 
 Rust library for MARC bibliographic records (ISO 2709) with pymarc-compatible
 Python bindings via PyO3/maturin.
