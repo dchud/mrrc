@@ -83,7 +83,8 @@ if [ "$QUICK" = false ]; then
     echo ""
     echo "=== Documentation site build (mkdocs) ==="
     # Needs the `docs` extra: run `uv sync --all-extras` if mkdocs is missing.
-    # No --strict yet; cross-link fixes are tracked in mrrc-s3ug.
+    # Not run with --strict: pre-existing cross-link warnings under
+    # docs/design/profiling/ would otherwise fail the build.
     uv run mkdocs build
 fi
 
