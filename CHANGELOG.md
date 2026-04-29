@@ -145,11 +145,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ~47 jobs across the six workflows; it now fires zero. Mixed PRs
   (code + docs) still run normally — `paths-ignore` skips only when
   every changed path matches.
-- **`.cargo/check.sh` now builds the docs site** (`mkdocs build`)
-  in full mode. Catches broken cross-links in PRs before `docs.yml`
-  picks them up post-merge. Skipped under `--quick`. Requires the
-  `docs` extra (`uv sync --all-extras`); `--strict` mode stays off
-  pending mrrc-s3ug.
+- **`.cargo/check.sh` builds the docs site** (`mkdocs build`) in full
+  mode, surfacing broken cross-links pre-push. Skipped under `--quick`.
+  Requires the `docs` extra (`uv sync --all-extras`).
 - **mkdocs warnings cleanup.** Excluded `docs/history/` (archival per
   CLAUDE.md) from the published site, removed its nav entry, and
   fixed broken cross-links and a stale anchor in active docs. Build
@@ -157,26 +155,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`mrrc/_mrrc.pyi` stub gaps surfaced by a pre-tag mypy/pyright
-  audit (bd-mgfg).** Four typing-only fixes — runtime behavior
-  unchanged. Updated `parse_batch_parallel` /
-  `parse_batch_parallel_limited` to take `(boundaries, buffer[,
-  limit])` instead of `(data[, max_records])`, matching the actual
-  Rust signatures. Added missing `Field.delete_subfield`,
-  `Record.to_marc21`, and module-level `__version__` declarations.
-  mypy default-mode errors in `mrrc/` dropped 27 → 18; pyright
-  16 → 13.
-- **Type-narrowing follow-up from the bd-mgfg audit.** Two more
-  typing-only fixes — runtime behavior unchanged. Wrap
-  `field.data` with `or ''` at the three `add_control_field`
-  call sites (`Record.add_field` /
-  `add_ordered_field` / `add_grouped_field`); the runtime invariant
-  guarantees non-`None` for control fields but the type system can't
-  see it. Switched `_MrrcExceptionBase` to a `TYPE_CHECKING`-gated
-  `Exception` parent so `__cause__` / `__context__` /
-  `__traceback__` resolve cleanly for type checkers; runtime mixin
-  design (parent is `object`) preserved exactly. mypy default-mode
-  errors in `mrrc/` dropped 18 → 10; pyright 13 → 4.
+- **Python typing fidelity improvements.** Stub gaps in `mrrc/_mrrc.pyi`
+  closed (`parse_batch_parallel` / `parse_batch_parallel_limited`
+  signatures, `Field.delete_subfield`, `Record.to_marc21`,
+  module-level `__version__`) and two wrapper-side narrowing issues
+  fixed (`add_control_field` call sites, `_MrrcExceptionBase`
+  inherited Exception attributes). Type-only — no runtime behavior
+  change.
 - **MARCXML reader: missing XML 1.1 §2.11 end-of-line normalization
   in text and CDATA content**
   ([#112](https://github.com/dchud/mrrc/issues/112)). Switched both

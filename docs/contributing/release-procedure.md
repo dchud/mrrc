@@ -452,6 +452,19 @@ should follow these conventions so `scripts/lint-changelog.sh` (wired into
   columns. Fenced code blocks are exempt; inline markdown links are not,
   so wrap bullets that contain links so the URL lands on its own
   continuation line if needed.
+- **Entry length.** Each bullet is one short paragraph (~25–40 words,
+  ≤4–6 wrapped lines). Lead with the user-visible *what* and why a
+  user would care. Per-file enumerations, error-count tables,
+  before/after metrics, audit deltas, and "verified by …" notes
+  belong in the commit message body and PR description, not the
+  CHANGELOG. The lint script doesn't enforce this — it's a
+  reviewer-eyeball convention.
+- **No process labels.** Don't reference internal bead IDs
+  (`bd-XXXX`), milestone names, or planning phases in entries.
+  Linked PR/issue numbers are fine (they're permanent provenance);
+  bead IDs are project-tracking artifacts and don't help users
+  reading "what's new in X.Y.Z". (This is a project-wide rule for
+  persistent artifacts, not just CHANGELOG.)
 
 ### 4.1 Validate Changelog Structure
 
