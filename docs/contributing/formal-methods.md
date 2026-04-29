@@ -1,8 +1,8 @@
 # Formal methods: property tests and fuzzing
 
 This page explains the lightweight formal-methods toolkit mrrc uses to
-catch the kinds of bugs unit tests are bad at finding. It is pitched
-at a reader who has written assert-style tests before but is new to
+catch the kinds of bugs unit tests are bad at finding. It is aimed at
+readers who have written assert-style tests before but are new to
 property-based testing.
 
 !!! note "Scope: lightweight, not full verification"
@@ -16,7 +16,10 @@ property-based testing.
     invariants on a large but bounded sample of inputs. We do **not**
     prove the codec correct, run a model checker, or maintain a
     formal specification. The techniques on this page catch real bugs
-    cheaply, but they are sampling, not proof.
+    cheaply, but they are sampling, not proof. The
+    [verification pyramid](#where-this-sits-in-the-broader-picture) at
+    the end of the page sketches the broader spectrum and points at
+    extensions mrrc could grow into.
 
 The runnable suite lives in `tests/properties.rs`; the fuzz
 infrastructure is documented separately in [Fuzzing](fuzzing.md).
