@@ -2,6 +2,8 @@
 
 from typing import Iterator, Optional, List, BinaryIO, Any
 
+__version__: str
+
 # =============================================================================
 # Core Data Types
 # =============================================================================
@@ -155,6 +157,20 @@ class Field:
             ValueError: If code is empty
         """
         ...
+    def delete_subfield(self, code: str) -> Optional[str]:
+        """Delete the first subfield with the given code, returning its value.
+
+        Args:
+            code: Subfield code (single character)
+
+        Returns:
+            The deleted subfield's value, or None if no matching subfield was
+            present.
+
+        Raises:
+            ValueError: If code is empty.
+        """
+        ...
     def to_marc21(self) -> bytes:
         """Serialize field to ISO 2709 binary format.
 
@@ -269,6 +285,9 @@ class Record:
     def to_xml(self) -> str: ...
     def to_dublin_core(self) -> str: ...
     def to_marcjson(self) -> str: ...
+    def to_marc21(self) -> bytes:
+        """Serialize the record to ISO 2709 binary format."""
+        ...
 
 class AuthorityRecord:
     """A MARC authority record."""
@@ -650,5 +669,12 @@ class ProducerConsumerPipeline:
     """Pipeline for parallel record processing."""
     def __init__(self, num_workers: int = 4) -> None: ...
 
-def parse_batch_parallel(data: bytes) -> List[Record]: ...
-def parse_batch_parallel_limited(data: bytes, max_records: int) -> List[Record]: ...
+def parse_batch_parallel(
+    boundaries: List[tuple[int, int]],
+    buffer: bytes,
+) -> List[Record]: ...
+def parse_batch_parallel_limited(
+    boundaries: List[tuple[int, int]],
+    buffer: bytes,
+    limit: int,
+) -> List[Record]: ...

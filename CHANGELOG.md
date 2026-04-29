@@ -157,6 +157,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`mrrc/_mrrc.pyi` stub gaps surfaced by a pre-tag mypy/pyright
+  audit (bd-mgfg).** Four typing-only fixes — runtime behavior
+  unchanged. Updated `parse_batch_parallel` /
+  `parse_batch_parallel_limited` to take `(boundaries, buffer[,
+  limit])` instead of `(data[, max_records])`, matching the actual
+  Rust signatures. Added missing `Field.delete_subfield`,
+  `Record.to_marc21`, and module-level `__version__` declarations.
+  mypy default-mode errors in `mrrc/` dropped 27 → 18; pyright
+  16 → 13.
 - **MARCXML reader: missing XML 1.1 §2.11 end-of-line normalization
   in text and CDATA content**
   ([#112](https://github.com/dchud/mrrc/issues/112)). Switched both
