@@ -671,10 +671,10 @@ class ProducerConsumerPipeline:
 
 def parse_batch_parallel(
     boundaries: List[tuple[int, int]],
-    buffer: bytes,
+    buffer: bytes | bytearray,
 ) -> List[Record]: ...
 def parse_batch_parallel_limited(
     boundaries: List[tuple[int, int]],
-    buffer: bytes,
+    buffer: bytes | bytearray,
     limit: int,
 ) -> List[Record]: ...

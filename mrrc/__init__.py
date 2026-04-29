@@ -141,7 +141,7 @@ class Indicators:
         if isinstance(other, Indicators):
             return self.ind1 == other.ind1 and self.ind2 == other.ind2
         elif isinstance(other, (tuple, list)) and len(other) == 2:
-            return self.ind1 == other[0] and self.ind2 == other[1]
+            return bool(self.ind1 == other[0] and self.ind2 == other[1])
         return False
     
     def __repr__(self) -> str:
@@ -165,7 +165,7 @@ class Field:
     Data fields use indicators and subfields as before.
     """
 
-    def __init__(self, tag: str, indicator1: str = ' ', indicator2: str = ' ', *, subfields=None, indicators=None, data=None):
+    def __init__(self, tag: str, indicator1: str = ' ', indicator2: str = ' ', *, subfields=None, indicators=None, data: Optional[str] = None):
         """Create a new Field.
 
         Args:
@@ -309,7 +309,7 @@ class Field:
 
     def subfields_as_dict(self) -> dict:
         """Return subfields as dictionary mapping code to list of values."""
-        result = {}
+        result: dict[str, list[str]] = {}
         try:
             for sf in self._inner.subfields():
                 code = sf.code
@@ -744,7 +744,7 @@ class Leader:
          """Compare leaders by content."""
          if not isinstance(other, Leader):
              return False
-         return self._rust_leader == other._rust_leader
+         return bool(self._rust_leader == other._rust_leader)
      
      def __hash__(self) -> int:
          """Hash based on rust leader."""
@@ -1341,7 +1341,7 @@ class Record:
     
     def as_dict(self) -> dict:
         """Return pymarc-compatible MARC-in-JSON dict (code4lib schema)."""
-        fields_list = []
+        fields_list: list[dict[str, Any]] = []
         for tag, value in self._inner.control_fields():
             fields_list.append({tag: value})
         for field in self._inner.fields():
@@ -1630,11 +1630,17 @@ def get_leader_is_valid_value(position: int, value: str) -> bool:
     return _Leader.is_valid_value(position, value)
 
 
-# Expose as class methods on the Leader class
-Leader.get_valid_values = staticmethod(get_leader_valid_values)
-Leader.describe_value = staticmethod(get_leader_value_description)
-Leader.is_valid_value = staticmethod(get_leader_is_valid_value)
-Leader.get_value_description = staticmethod(get_leader_value_description)
+# Mirror module-level MARC leader spec helpers onto the Leader class so
+# both `Leader.describe_value(...)` and `mrrc.get_leader_value_description(...)`
+# resolve to the same implementation (which delegates to the Rust Leader).
+# This is a deliberate override of the equivalently-named @classmethods on
+# the Leader class above; the runtime behavior chooses the Rust spec as the
+# single source of truth. mypy / pyright can't see through this assignment
+# pattern, so the per-line ignores below are intentional.
+Leader.get_valid_values = staticmethod(get_leader_valid_values)  # type: ignore[method-assign]
+Leader.describe_value = staticmethod(get_leader_value_description)  # type: ignore[attr-defined]
+Leader.is_valid_value = staticmethod(get_leader_is_valid_value)  # type: ignore[method-assign]
+Leader.get_value_description = staticmethod(get_leader_value_description)  # type: ignore[method-assign]
 
 
 # Format-agnostic reader helper
@@ -1772,7 +1778,7 @@ def write(records, path: Union[str, Any], format: Optional[str] = None) -> int:
 # BIBFRAME Conversion Functions (LOC Linked Data Format)
 # =============================================================================
 
-def marc_to_bibframe(record, config: BibframeConfig = None) -> RdfGraph:
+def marc_to_bibframe(record, config: Optional[BibframeConfig] = None) -> RdfGraph:
     """Convert a MARC record to a BIBFRAME RDF graph.
 
     This function transforms a MARC bibliographic record into a BIBFRAME 2.0
