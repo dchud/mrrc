@@ -166,6 +166,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Record.to_marc21`, and module-level `__version__` declarations.
   mypy default-mode errors in `mrrc/` dropped 27 → 18; pyright
   16 → 13.
+- **Type-narrowing follow-up from the bd-mgfg audit.** Two more
+  typing-only fixes — runtime behavior unchanged. Wrap
+  `field.data` with `or ''` at the three `add_control_field`
+  call sites (`Record.add_field` /
+  `add_ordered_field` / `add_grouped_field`); the runtime invariant
+  guarantees non-`None` for control fields but the type system can't
+  see it. Switched `_MrrcExceptionBase` to a `TYPE_CHECKING`-gated
+  `Exception` parent so `__cause__` / `__context__` /
+  `__traceback__` resolve cleanly for type checkers; runtime mixin
+  design (parent is `object`) preserved exactly. mypy default-mode
+  errors in `mrrc/` dropped 18 → 10; pyright 13 → 4.
 - **MARCXML reader: missing XML 1.1 §2.11 end-of-line normalization
   in text and CDATA content**
   ([#112](https://github.com/dchud/mrrc/issues/112)). Switched both
