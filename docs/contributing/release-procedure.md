@@ -4,7 +4,7 @@
 **Estimated Duration**: 30-45 minutes for a standard release  
 **Last Updated**: 2026-02-10
 
-This document provides a step-by-step, executable procedure for preparing, testing, and publishing a new release of MRRC (MARC Rust Crate). Follow these steps sequentially to ensure nothing is missed.
+This document provides a step-by-step, executable procedure for preparing, testing, and publishing a new release of MRRC. Follow these steps sequentially to ensure nothing is missed.
 
 ## Quick Start for Agents
 
