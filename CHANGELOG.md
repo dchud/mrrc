@@ -150,6 +150,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   picks them up post-merge. Skipped under `--quick`. Requires the
   `docs` extra (`uv sync --all-extras`); `--strict` mode stays off
   pending mrrc-s3ug.
+- **mkdocs warnings cleanup.** Excluded `docs/history/` (archival per
+  CLAUDE.md) from the published site, removed its nav entry, and
+  fixed broken cross-links and a stale anchor in active docs. Build
+  warnings down from 18 to 4.
 
 ### Fixed
 
