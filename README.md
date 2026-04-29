@@ -102,7 +102,7 @@ Pre-built Python wheels are available for:
 
 ## Roadmap
 
-Version 0.7.0 is suitable for testing but remains experimental. Before a 1.0 release, we plan to complete:
+Version 0.8.0 is suitable for testing but remains experimental. Before a 1.0 release, we plan to complete:
 
 1. **Real-world data testing** — Validate against large-scale MARC datasets from LOC, Internet Archive, and other sources to discover edge cases
 2. **Code review** — Thorough review of the codebase, particularly the Rust core and `PyO3` bindings

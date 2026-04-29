@@ -16,7 +16,7 @@ Add Rayon to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mrrc = "0.6"
+mrrc = "0.8"
 rayon = "1.8"
 ```
 
