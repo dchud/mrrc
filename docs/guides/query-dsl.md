@@ -323,4 +323,4 @@ except ValueError as e:
 
 - [MARC 21 Format for Bibliographic Data](https://www.loc.gov/marc/bibliographic/) - Field and indicator definitions
 - [Library of Congress Subject Headings](https://id.loc.gov/authorities/subjects.html) - LCSH (indicator2='0')
-- [tests/python/test_query_dsl.py](../../tests/python/test_query_dsl.py) - Comprehensive test examples
+- [tests/python/test_query_dsl.py](https://github.com/dchud/mrrc/blob/main/tests/python/test_query_dsl.py) - Comprehensive test examples

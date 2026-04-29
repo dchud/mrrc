@@ -7,6 +7,15 @@ site_description: MARC library for Rust and Python
 repo_url: https://github.com/dchud/mrrc
 repo_name: dchud/mrrc
 
+# docs/history/ is archival per CLAUDE.md ("do not modify") — the 90+
+# files there are internal planning artifacts (audits, plan revisions,
+# code-review notes) with intentionally stale cross-links, and they are
+# not user-facing documentation. Kept on disk for `git blame` archeology
+# but excluded from the published site so their stale links don't drown
+# the build log in warnings.
+exclude_docs: |
+  history/
+
 theme:
   name: material
   palette:
@@ -105,7 +114,6 @@ nav:
     - Release Procedure: contributing/release-procedure.md
     - Architecture: contributing/architecture.md
     - Design: design/index.md
-    - History: history/index.md
   - Benchmarks:
     - benchmarks/index.md
     - Results: benchmarks/results.md

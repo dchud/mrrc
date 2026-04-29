@@ -152,7 +152,7 @@ for record in MARCReader("records.mrc", recovery_mode="lenient"):
     print(f"Got {len(record.get_fields())} fields")
 ```
 
-See the [migration guide](../guides/migration-from-pymarc.md#error-handling)
+See the [error handling reference](../../reference/error-handling.md#recovery-modes-and-errors)
 for details on the differences between `permissive` and `recovery_mode`.
 
 ## Complete Example

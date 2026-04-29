@@ -246,7 +246,7 @@ head -150 CHANGELOG.md
 
 **Checklist**:
 
-- [ ] All recent features are listed in [Unreleased] section
+- [ ] All recent features are listed in `[Unreleased]` section
 - [ ] All breaking changes are documented with migration guidance
 - [ ] All bug fixes are noted
 - [ ] All performance improvements documented
@@ -255,7 +255,7 @@ head -150 CHANGELOG.md
 **Breaking Changes Specific Check**:
 If this release includes breaking changes:
 
-- [ ] **REQUIRED**: Migration guide exists in [Unreleased] or referenced
+- [ ] **REQUIRED**: Migration guide exists in `[Unreleased]` or referenced
 - [ ] **REQUIRED**: Deprecation notices were given in previous release (if applicable)
 - [ ] **REQUIRED**: Major version bump scheduled (e.g., 0.x → 1.0)
 
@@ -320,7 +320,7 @@ Note the reason for the chosen version increment in your release notes/commit me
 
 Update version numbers in all configuration files. **Do this in order** and **verify each file** before proceeding.
 
-The VERSION variable is used throughout. Ensure `$VERSION` is set before starting (see [Preflight Dependencies](#preflight-dependencies--setup)).
+The VERSION variable is used throughout. Ensure `$VERSION` is set before starting (see [Preflight Dependencies](#preflight-dependencies-setup)).
 
 ### 3.1 Update Root Cargo.toml
 
@@ -1022,11 +1022,11 @@ Link to release: https://github.com/dchud/mrrc/releases/tag/vX.Y.Z" \
 
 ### 10.3 Begin Next Development Cycle
 
-After release, update the [Unreleased] section to reflect the next development direction.
+After release, update the `[Unreleased]` section to reflect the next development direction.
 
 **File**: `CHANGELOG.md`
 
-The [Unreleased] section should remain mostly empty with just subsection headers:
+The `[Unreleased]` section should remain mostly empty with just subsection headers:
 
 ```markdown
 ## [Unreleased]
@@ -1049,14 +1049,14 @@ If you have identified planned work items for the next release, create beads iss
 Example workflow:
 1. After release, review roadmap and open issues
 2. Create new issues for planned work: `br create "Feature: ..." -p 2`
-3. Link major items in README roadmap or docs/RELEASES.md (but NOT in CHANGELOG [Unreleased])
-4. The [Unreleased] section fills up organically as work is completed during development
+3. Link major items in README roadmap or docs/RELEASES.md (but NOT in CHANGELOG `[Unreleased]`)
+4. The `[Unreleased]` section fills up organically as work is completed during development
 
 **Why?** CHANGELOG documents what was released, not what's planned. Planning belongs in the issue tracker (beads).
 
 **Checklist**:
 
-- [ ] [Unreleased] section has empty subsections ready for new content
+- [ ] `[Unreleased]` section has empty subsections ready for new content
 - [ ] Major planned work items created as beads issues (not hardcoded in CHANGELOG)
 - [ ] Issue tracker (beads) reflects the development roadmap
 - [ ] README or docs reflect high-level roadmap if needed
@@ -1234,7 +1234,7 @@ twine upload dist/mrrc-*.whl
 
 - [ ] `.cargo/check.sh` passes all checks
 - [ ] Git status is clean
-- [ ] [Unreleased] section is complete and accurate
+- [ ] `[Unreleased]` section is complete and accurate
 - [ ] Breaking changes checked (if any)
 
 **Phase 2: Version Number Selection**
@@ -1251,8 +1251,8 @@ twine upload dist/mrrc-*.whl
 
 **Phase 4: Changelog & Documentation**
 
-- [ ] CHANGELOG.md: [Unreleased] → [X.Y.Z]
-- [ ] New [Unreleased] section created
+- [ ] CHANGELOG.md: `[Unreleased]` → `[X.Y.Z]`
+- [ ] New `[Unreleased]` section created
 - [ ] README.md reviewed and updated
 - [ ] docs/ directory scanned for version refs
 - [ ] Example code compiles and runs
@@ -1291,7 +1291,7 @@ twine upload dist/mrrc-*.whl
 **Phase 9: Post-Release Setup**
 
 - [ ] Beads sync completed
-- [ ] [Unreleased] section cleaned (empty subsections)
+- [ ] `[Unreleased]` section cleaned (empty subsections)
 - [ ] Post-release commit pushed (if any)
 - [ ] Next development issues created (if planned)
 

@@ -150,6 +150,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   picks them up post-merge. Skipped under `--quick`. Requires the
   `docs` extra (`uv sync --all-extras`); `--strict` mode stays off
   pending mrrc-s3ug.
+- **mkdocs warnings cleanup.** Excluded `docs/history/` (archival per
+  CLAUDE.md, ~90 internal planning artifacts with intentionally stale
+  cross-links) from the published site via `exclude_docs` in
+  `mkdocs.yml`, and removed the corresponding nav entry. Fixed bare
+  `[Unreleased]` / `[X.Y.Z]` references in
+  `docs/contributing/release-procedure.md` that mkdocs-autorefs was
+  treating as broken cross-references. Repointed
+  `docs/tutorials/python/reading-records.md` from a broken
+  `migration-from-pymarc.md#error-handling` link to the
+  `reference/error-handling.md#recovery-modes-and-errors` anchor.
+  Fixed slug typo (`#preflight-dependencies--setup` →
+  `#preflight-dependencies-setup`) and converted the
+  `tests/python/test_query_dsl.py` link in `guides/query-dsl.md` to a
+  GitHub URL since the target lives outside the docs tree.
 
 ### Fixed
 
