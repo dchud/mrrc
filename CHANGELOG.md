@@ -22,10 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`MarcError::InvalidRecord` removed.** Use the new specific variants
   (`DirectoryInvalid`, `RecordLengthInvalid`, …) or `InvalidField` as
   the fall-through.
+- **`MarcError::ParseError` removed.** Same migration as
+  `InvalidRecord`: the new specific variants and `InvalidField`
+  cover the cases that `ParseError` used to wrap. Match on `.code()`
+  for stable identity.
 - **`recovery::RecoveryContext` removed from the public re-exports.**
   No external consumer; the type was an internal helper that
   accumulated messages and dropped them. Pattern-match on
   `MarcError` instead.
+- **`recovery::try_recover_record` takes a `&ParseContext`** as a
+  fifth parameter. The previous v0.7 signature constructed
+  `RecoveryContext` internally; v0.8 callers pass the
+  `ParseContext` that carries record-index / byte-offset state.
 
 ### Added
 
