@@ -71,6 +71,12 @@ if [ "$QUICK" = false ]; then
     echo ""
     echo "=== Python tests (core functionality, excludes benchmarks) ==="
     uv run python -m pytest tests/python/ -m "not benchmark" -q
+
+    echo ""
+    echo "=== Documentation site build (mkdocs) ==="
+    # Needs the `docs` extra: run `uv sync --all-extras` if mkdocs is missing.
+    # No --strict yet; cross-link fixes are tracked in mrrc-s3ug.
+    uv run mkdocs build
 fi
 
 # ASAN memory safety checks (optional, nightly feature)
