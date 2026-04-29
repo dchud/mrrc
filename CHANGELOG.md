@@ -145,6 +145,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ~47 jobs across the six workflows; it now fires zero. Mixed PRs
   (code + docs) still run normally — `paths-ignore` skips only when
   every changed path matches.
+- **`.cargo/check.sh` now builds the docs site** (`mkdocs build`)
+  in full mode. Catches broken cross-links in PRs before `docs.yml`
+  picks them up post-merge. Skipped under `--quick`. Requires the
+  `docs` extra (`uv sync --all-extras`); `--strict` mode stays off
+  pending mrrc-s3ug.
 
 ### Fixed
 
