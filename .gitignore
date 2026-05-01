@@ -79,3 +79,6 @@ tools/
 
 # Claude Code local data (user-specific permissions, memory, worktrees)
 .claude/
+
+# Project-local scratch directory (use this rather than system /tmp).
+tmp/
