@@ -66,6 +66,7 @@ rayon = "1.7"
 tempfile = "3.8"
 smallvec = { version = "1.11", features = ["union", "serde"] }
 insta = "1"
+toml = "0.8"
 
 # Lint configuration following Rust API Guidelines
 [lints.rust]

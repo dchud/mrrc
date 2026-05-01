@@ -34,6 +34,10 @@ test = [
     "pytest>=7.0",
     "pytest-benchmark>=4.0",
     "syrupy>=4.0",
+    # tomllib is stdlib on 3.11+; tomli is the upstream backport for 3.10.
+    # The error-coverage harness reads tests/error_coverage.toml at import
+    # time and falls back to tomli when running under Python 3.10.
+    "tomli>=2.0; python_version < '3.11'",
 ]
 # Developer tooling (linters, type checkers) on top of the test deps.
 # Self-references `mrrc[test]` so the test deps stay listed in exactly one
@@ -47,6 +51,7 @@ dev = [
 benchmark = [
     "pytest>=7.0",
     "pytest-benchmark>=4.0",
+    "tomli>=2.0; python_version < '3.11'",
 ]
 docs = [
     "mkdocs-material>=9.0",

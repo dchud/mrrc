@@ -1,0 +1,341 @@
+# Error-handling test coverage manifest.
+#
+# Documentation-as-spec for mrrc's error handling: every documented
+# error code in docs/reference/error-codes.md is paired here with one
+# or more cases that should trigger it. The harness
+# (tests/error_coverage.rs and the Python equivalent) reads this
+# manifest and asserts the documented variant, code, slug, and
+# positional context fire when the parser exercises the trigger —
+# not when an error is constructed in test code.
+#
+# A single code can have multiple cases when the docs describe
+# multiple distinct trigger patterns (e.g., E101 fires on both
+# "non-digit length in a directory entry" and "missing field
+# terminator before base address"). Each case is exercised
+# independently; wiring is tracked per case, not per code, so the
+# coverage tally reflects the granularity of the spec.
+#
+# Cases marked `wired = false` describe trigger patterns where the
+# parser does not currently produce the documented variant for the
+# given input. The `skip_reason` field states what happens today, in
+# technical terms, so a contributor implementing the missing detection
+# knows what they are replacing. Adding a new error code requires
+# adding a case here AND a fixture (or other trigger mechanism).
+#
+# Schema:
+#   id               unique identifier "<code>_<short_trigger>"; used
+#                    as the test display name and disambiguates cases
+#                    that share a code
+#   code             "Exxx" identifier (stable across releases)
+#   variant          MarcError variant name (Rust)
+#   slug             snake_case slug (stable across releases)
+#   trigger_kind     how the harness exercises the trigger:
+#                      "parse_iso2709"  — feed bytes to MarcReader
+#                      "parse_marcxml"  — feed string to marcxml_to_record
+#                      "parse_marcjson" — feed string to marcjson_to_record
+#                      "io_error"       — inject a Read source that errors
+#                      "recovery_cap"   — drive lenient mode past max_errors
+#                      "accessor"       — call a Record accessor on a parsed record
+#                      "writer"         — construct a record and attempt to write it
+#                    The current harness implements parse_iso2709,
+#                    parse_marcxml, and parse_marcjson; other kinds skip
+#                    with a manifest-driven reason until the matching
+#                    harness mechanism lands.
+#   trigger_fixture  path to fixture bytes (parse_iso2709) or text
+#                    (parse_marcxml / parse_marcjson) that should fire
+#                    `code`. Required for parse_* kinds; optional for
+#                    others (their semantics are described in the
+#                    case's `description` and `skip_reason`).
+#   description      one-line description of the malformation or trigger
+#   expected_context positional fields the variant must populate when
+#                    fired (per docs/reference/error-codes.md)
+#   recovery_modes   recovery modes the harness exercises on this case
+#                    (parse kinds only; declared so the harness can
+#                    extend without manifest churn)
+#   wired            true if the parser currently emits the documented
+#                    variant for this trigger
+#   skip_reason      required when wired = false; describes current
+#                    behavior in technical terms
+
+schema_version = 1
+
+# === Stream / leader (E0xx) =========================================
+
+# E001: leader bytes 0-4 not five ASCII digits.
+[[case]]
+id = "e001_record_length_non_digit"
+code = "E001"
+variant = "RecordLengthInvalid"
+slug = "record_length_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e001_record_length_non_digit.bin"
+description = "Leader byte 0 ('0' of '00150') replaced with 'X'."
+expected_context = ["record_index", "byte_offset"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "Leader::validate_for_reading uses MarcError::leader_msg unconditionally and produces InvalidLeader (E002) for any malformed leader byte; the dedicated RecordLengthInvalid variant exists with a ParseContext helper but no parse path constructs it"
+
+# E002: leader byte 10 (indicator count, normally '2') is non-digit.
+# Audit note: docs/reference/error-codes.md describes E002 as also
+# firing on malformations like "reserved bytes 20-23 not '4500'" or
+# "encoding indicator out of range", but the current parser does not
+# inspect those bytes. Today's E002 path covers indicator count parse
+# failure, subfield code count parse failure, and (overlapping with
+# the docs-claimed E001/E003 paths) record_length < 24 and
+# data_base_address < 24. The reserved-field check is a docs-vs-code
+# gap separate from the wiring work for E001/E003/E004.
+[[case]]
+id = "e002_indicator_count_non_digit"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_indicator_count_non_digit.bin"
+description = "Leader byte 10 (indicator count, normally '2') replaced with 'X'."
+expected_context = ["bytes_near"]
+recovery_modes = ["strict"]
+wired = true
+
+# E003: leader bytes 12-16 not five ASCII digits.
+[[case]]
+id = "e003_base_address_non_digit"
+code = "E003"
+variant = "BaseAddressInvalid"
+slug = "base_address_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e003_base_address_non_digit.bin"
+description = "Leader byte 12 ('0' of base address '00061') replaced with 'X'."
+expected_context = ["record_index", "byte_offset"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "Leader::validate_for_reading uses MarcError::leader_msg unconditionally and produces InvalidLeader (E002); the dedicated BaseAddressInvalid variant exists with a ParseContext helper but no parse path constructs it"
+
+# E004: base address claims a value past the available bytes.
+[[case]]
+id = "e004_base_address_past_record"
+code = "E004"
+variant = "BaseAddressNotFound"
+slug = "base_address_not_found"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e004_base_address_past_record.bin"
+description = "Leader bytes 12-16 set to '99999' (> 150-byte record length)."
+expected_context = ["record_index", "byte_offset"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "no parse path verifies that the leader's claimed base address falls within the record's claimed length; the dedicated BaseAddressNotFound variant exists with a ParseContext helper but no parse path constructs it"
+
+# E005: stream EOF before reading the leader-claimed record length.
+[[case]]
+id = "e005_truncated_record"
+code = "E005"
+variant = "TruncatedRecord"
+slug = "truncated_record"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e005_truncated_record.bin"
+description = "Record claims 150 bytes; stream ends after 100."
+expected_context = ["record_index", "byte_offset", "record_byte_offset"]
+recovery_modes = ["strict"]
+wired = true
+
+# E006: byte at the leader's claimed end position is not 0x1D.
+[[case]]
+id = "e006_no_record_terminator"
+code = "E006"
+variant = "EndOfRecordNotFound"
+slug = "end_of_record_not_found"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e006_no_record_terminator.bin"
+description = "Final byte (0x1D RECORD_TERMINATOR) replaced with 0x00."
+expected_context = ["record_index", "byte_offset", "record_byte_offset"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "no parse path verifies that the byte at the leader's claimed end position is the RECORD_TERMINATOR; the dedicated EndOfRecordNotFound variant exists with a ParseContext helper but no parse path constructs it"
+
+# E007: underlying I/O error from the reader source. Wired in the
+# parser (read_record_data and friends construct MarcError::IoError
+# when the underlying Read fails); the harness exercises it once a
+# trigger_kind=io_error mechanism lands.
+[[case]]
+id = "e007_io_failure"
+code = "E007"
+variant = "IoError"
+slug = "io_error"
+trigger_kind = "io_error"
+description = "Reader source returns std::io::Error from read()."
+expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
+# E099: lenient/permissive recovered-error cap exceeded. Wired in
+# MarcReader::read_record (constructs MarcError::FatalReaderError when
+# the per-stream cap is hit); the harness exercises it once a
+# trigger_kind=recovery_cap mechanism lands.
+[[case]]
+id = "e099_recovery_cap_exceeded"
+code = "E099"
+variant = "FatalReaderError"
+slug = "fatal_reader_error"
+trigger_kind = "recovery_cap"
+description = "Stream of malformed records exceeds MarcReader::with_max_errors(N)."
+expected_context = []
+recovery_modes = ["lenient", "permissive"]
+wired = true
+
+# === Directory / field header (E1xx) ================================
+
+# E101: directory has no FIELD_TERMINATOR before base address.
+[[case]]
+id = "e101_no_field_terminator"
+code = "E101"
+variant = "DirectoryInvalid"
+slug = "directory_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e101_directory_no_terminator.bin"
+description = "Byte 60 (FIELD_TERMINATOR 0x1E ending the directory) replaced with '0', producing a partial trailing entry."
+expected_context = ["record_index", "byte_offset", "record_byte_offset"]
+recovery_modes = ["strict"]
+wired = true
+
+# E101: directory entry length field contains a non-digit byte.
+[[case]]
+id = "e101_non_digit_length"
+code = "E101"
+variant = "DirectoryInvalid"
+slug = "directory_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e101_directory_non_digit_length.bin"
+description = "Directory entry length field 'X025' (was '0025') for the 100 entry."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "field_tag"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "parse_4digits returns InvalidField (E106) for any non-digit byte; the directory walker forwards that without wrapping it as DirectoryInvalid, so non-digit length/start fields produce E106 instead of the documented E101"
+
+# E105: accessor lookup for a tag the record does not contain.
+[[case]]
+id = "e105_field_not_found"
+code = "E105"
+variant = "FieldNotFound"
+slug = "field_not_found"
+trigger_kind = "accessor"
+description = "Parse simple_book.mrc cleanly, then call record.get_field('999')."
+expected_context = ["field_tag"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "no accessor method raises FieldNotFound; Record::get_field and analogous methods return Option<&Field>/None instead"
+
+# E106: directory entry claims a field length larger than the data area.
+[[case]]
+id = "e106_field_length_past_data"
+code = "E106"
+variant = "InvalidField"
+slug = "invalid_field"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e106_field_length_past_data.bin"
+description = "Directory entry for tag 100 claims length '9999' (was '0025'); declared field bytes extend past the data area."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "field_tag"]
+recovery_modes = ["strict"]
+wired = true
+
+# === Subfield / indicator (E2xx) ====================================
+
+# E201: indicator byte not digit/space.
+[[case]]
+id = "e201_bad_indicator_245"
+code = "E201"
+variant = "InvalidIndicator"
+slug = "invalid_indicator"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e201_bad_indicator.bin"
+description = "First indicator byte of field 245 is ':' (not digit/space)."
+expected_context = [
+    "record_index",
+    "byte_offset",
+    "record_byte_offset",
+    "field_tag",
+    "indicator_position",
+    "found",
+    "expected",
+]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "parse_data_field accepts any byte as an indicator and produces a field with the raw byte cast to char; no parse path constructs InvalidIndicator"
+
+# E202: subfield code byte not printable ASCII.
+[[case]]
+id = "e202_non_printable_subfield_code"
+code = "E202"
+variant = "BadSubfieldCode"
+slug = "bad_subfield_code"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e202_non_printable_subfield_code.bin"
+description = "Byte 64 (subfield code 'a' after 0x1F at byte 63) replaced with 0x00."
+expected_context = [
+    "record_index",
+    "byte_offset",
+    "record_byte_offset",
+    "field_tag",
+    "subfield_code",
+]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "parse_subfields accepts any byte as a subfield code; no parse path constructs BadSubfieldCode"
+
+# === Encoding (E3xx) ================================================
+
+# E301: subfield value contains invalid UTF-8 bytes.
+[[case]]
+id = "e301_invalid_utf8_in_subfield"
+code = "E301"
+variant = "EncodingError"
+slug = "utf8_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e301_invalid_utf8_in_subfield.bin"
+description = "Byte 70 (inside the 100$a 'Fitzgerald' subfield value) replaced with 0xFF."
+expected_context = ["record_index"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "the bibliographic reader's default UTF-8 conversion is lossy (substituting U+FFFD); EncodingError fires from the holdings reader's strict-UTF-8 path. A holdings-record fixture is needed to exercise this code through the parse path"
+
+# === Serialization (E4xx) ===========================================
+
+# E401: malformed MARCXML (mismatched closing tag).
+[[case]]
+id = "e401_marcxml_close_tag_mismatch"
+code = "E401"
+variant = "XmlError"
+slug = "marcxml_invalid"
+trigger_kind = "parse_marcxml"
+trigger_fixture = "tests/data/error_fixtures/e401_malformed_marcxml.xml"
+description = "Subfield 'a' closing tag is </WRONG> instead of </subfield>."
+expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
+# E402: malformed MARCJSON (truncated JSON).
+[[case]]
+id = "e402_marcjson_truncated"
+code = "E402"
+variant = "JsonError"
+slug = "marcjson_invalid"
+trigger_kind = "parse_marcjson"
+trigger_fixture = "tests/data/error_fixtures/e402_malformed_marcjson.json"
+description = "JSON document is truncated mid-string in a subfield value."
+expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
+# E404: writer attempts to serialize a record exceeding the ISO 2709
+# length limit. Wired in the writer path (MARCWriter and analogues
+# construct MarcError::WriterError when total length or base address
+# exceeds 99999); the harness exercises it once a trigger_kind=writer
+# mechanism lands.
+[[case]]
+id = "e404_record_too_large_for_iso2709"
+code = "E404"
+variant = "WriterError"
+slug = "record_too_large_for_iso2709"
+trigger_kind = "writer"
+description = "Construct a record whose total length or base address exceeds 99999 and attempt to serialize it."
+expected_context = ["record_index"]
+recovery_modes = ["strict"]
+wired = true
