@@ -29,11 +29,13 @@ deltas on the dashboard. Use it as a generic "is anything weird" signal —
 **not** as a hard gate, because cross-machine variance on the public CI
 runner makes precise threshold enforcement (2-5% range) unreliable.
 
-## The error-handling perf budget (bd-0x73 epic)
+## The error-handling perf budget
 
-The bd-0x73 epic adds per-byte detection logic to the hot ISO 2709 parse
-path. We track its cost as a cumulative budget against a v0.8.0-equivalent
-baseline:
+Wiring per-byte detection logic (indicator validation, subfield-code
+validation, directory-walker recharacterization, end-of-record
+verification) into the hot ISO 2709 parse path adds work to every record
+read. We track its cost as a cumulative budget against a
+v0.8.0-equivalent baseline:
 
 - **+2%** cumulative regression on any scenario → pause and assess the
   trade-off before merging
@@ -49,9 +51,10 @@ Two tools enforce this budget; they answer different questions.
 locally and compares each scenario's mean against the numbers in
 `benches/baselines/error_handling_v080.json`. Use this on the **same machine
 class** that captured the committed baseline (Apple Silicon for the
-file in this repo) before claiming a Phase B PR is ready. Cross-machine
-comparison against a checked-in baseline is not statistically valid at
-the 2%/5% threshold — that is what the CI workflow is for.
+file in this repo) before claiming a detection-wiring PR is ready.
+Cross-machine comparison against a checked-in baseline is not
+statistically valid at the 2%/5% threshold — that is what the CI workflow
+is for.
 
 ```sh
 # Run benches and report deltas vs the checked-in baseline:
@@ -109,5 +112,5 @@ recorded machine class, then update the `mean_ns`, `std_dev_ns`, and
 | `cargo bench` (any) | absolute Rust hot-path cost | local + Codspeed | per-PR signal, exploration |
 | `pytest --benchmark-only` | FFI overhead | local + Codspeed | Python-binding regressions |
 | Codspeed | broad PR-vs-main drift | CI dashboard | continuous awareness |
-| `scripts/check_error_handling_perf.py` | cumulative budget vs v0.8.0 | local (same-machine) | Phase B "ready to ship" |
+| `scripts/check_error_handling_perf.py` | cumulative budget vs v0.8.0 | local (same-machine) | detection-wiring "ready to ship" |
 | `error-handling-perf-gate.yml` | PR-vs-main on the same runner | CI gate | merge gate at 2%/5% |

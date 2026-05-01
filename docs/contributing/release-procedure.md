@@ -274,7 +274,7 @@ The script fails if:
 - A `###` subsection heading appears more than once. Topic-grouped
   `### Added — <topic>` entries with distinct topics are allowed; a bare
   `### Added` mixed with `### Added — <topic>` entries is flagged as
-  drift (this is the pre-bd-95ho shape the lint was written to prevent).
+  drift (this is the shape the lint was written to prevent).
 - Subsections are out of Keep-a-Changelog order. Canonical order is
   `Breaking, Added, Changed, Deprecated, Removed, Fixed, Security,
   Dependencies`; `### Added — <topic>` variants all rank as `Added`.
