@@ -38,6 +38,17 @@ pub struct BatchedUnifiedReader {
     /// Target batch size for read_batch() calls
     /// Fixed at 100 for initial implementation (validated in C.Gate)
     batch_size: usize,
+
+    /// Count of records successfully read from the source so far.
+    /// Used to attach `record_index` (1-based) to errors fired during
+    /// the next record's read attempt.
+    records_read: usize,
+
+    /// Absolute byte offset of the start of the next record to read,
+    /// equivalently: the total byte count of all successfully-read
+    /// records emitted so far. Used to attach `byte_offset` to errors
+    /// when the leaf reader knows only its record-relative offset.
+    bytes_consumed: usize,
 }
 
 impl BatchedUnifiedReader {
@@ -64,6 +75,8 @@ impl BatchedUnifiedReader {
             queue_capacity_bytes: 0,
             eof_reached: false,
             batch_size: 100,
+            records_read: 0,
+            bytes_consumed: 0,
         })
     }
 
@@ -154,6 +167,8 @@ impl BatchedUnifiedReader {
             match self.unified_reader.read_next_bytes(py) {
                 Ok(Some(record_bytes)) => {
                     bytes_read = bytes_read.saturating_add(record_bytes.len());
+                    self.records_read = self.records_read.saturating_add(1);
+                    self.bytes_consumed = self.bytes_consumed.saturating_add(record_bytes.len());
                     batch.push(SmallVec::from_slice(&record_bytes));
                 },
                 Ok(None) => {
@@ -161,8 +176,20 @@ impl BatchedUnifiedReader {
                     break;
                 },
                 Err(e) => {
-                    // I/O or boundary error
-                    return Err(e);
+                    // Attach the inter-record positional context the
+                    // leaf reader couldn't see: which record (1-based)
+                    // the error was raised against, and the absolute
+                    // stream byte offset of the start of that record's
+                    // body (the leaf reader sets `record_byte_offset`
+                    // for the within-record position).
+                    let next_record_index = self.records_read.saturating_add(1);
+                    let absolute_offset = match e.context.record_byte_offset {
+                        Some(intra) => self.bytes_consumed.saturating_add(intra),
+                        None => self.bytes_consumed,
+                    };
+                    return Err(e
+                        .with_record_index(next_record_index)
+                        .with_byte_offset(absolute_offset));
                 },
             }
         }

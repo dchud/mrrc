@@ -8,7 +8,7 @@
 use crate::parse_error::ParseError;
 use pyo3::prelude::*;
 use std::fs::File;
-use std::io::{Cursor, Read};
+use std::io::{Cursor, ErrorKind, Read};
 
 /// Unified backend interface for reading MARC records from different sources
 ///
@@ -200,22 +200,39 @@ impl ReaderBackend {
             .with_bytes_near(&leader, 0));
         }
 
-        // Read remainder of record (record_length - 24 bytes)
-        let mut record_data = vec![0u8; record_length - 24];
-        match reader.read_exact(&mut record_data) {
-            Ok(()) => {},
-            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                return Err(ParseError::truncated_record(
-                    record_length - 24,
-                    record_data.len(),
-                ));
-            },
-            Err(e) => {
-                return Err(ParseError::io_error(format!(
-                    "Failed to read record data: {}",
-                    e
-                )))
-            },
+        // Read remainder of record (record_length - 24 bytes). Use a
+        // manual loop rather than `read_exact` so we can report the
+        // actual bytes-read count when the stream ends short — same
+        // pattern the Rust core uses in `read_record_data`. `read_exact`
+        // doesn't expose partial-read state on EOF, which produced
+        // wrong `actual_length` values on the typed Python exception.
+        let expected_body_len = record_length - 24;
+        let mut record_data = vec![0u8; expected_body_len];
+        let mut bytes_read = 0usize;
+        loop {
+            match reader.read(&mut record_data[bytes_read..]) {
+                Ok(0) => break,
+                Ok(n) => {
+                    bytes_read += n;
+                    if bytes_read == expected_body_len {
+                        break;
+                    }
+                },
+                Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+                Err(e) => {
+                    return Err(ParseError::io_error(format!(
+                        "Failed to read record data: {}",
+                        e
+                    )));
+                },
+            }
+        }
+        if bytes_read != expected_body_len {
+            // Truncation: the leader (24 bytes) was read, then the
+            // body fell short. record_byte_offset = 24 marks where
+            // within the record the truncation was detected.
+            return Err(ParseError::truncated_record(expected_body_len, bytes_read)
+                .with_record_byte_offset(24));
         }
 
         // Assemble complete record bytes
@@ -286,10 +303,10 @@ impl ReaderBackend {
             .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
 
         if record_data.len() != record_length - 24 {
-            return Err(ParseError::truncated_record(
-                record_length - 24,
-                record_data.len(),
-            ));
+            return Err(
+                ParseError::truncated_record(record_length - 24, record_data.len())
+                    .with_record_byte_offset(24),
+            );
         }
 
         // Assemble complete record

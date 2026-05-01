@@ -177,7 +177,11 @@ impl UnifiedReader {
             .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
 
         if record_data.len() != remaining {
-            return Err(ParseError::truncated_record(remaining, record_data.len()));
+            // The 5-byte length prefix was already read before this
+            // call; record_byte_offset = 5 marks where the body read
+            // attempt began within the current record.
+            return Err(ParseError::truncated_record(remaining, record_data.len())
+                .with_record_byte_offset(5));
         }
 
         // Assemble complete record

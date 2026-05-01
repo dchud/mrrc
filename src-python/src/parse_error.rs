@@ -14,10 +14,17 @@ use pyo3::PyErr;
 use std::fmt;
 
 /// Error type for record parsing operations.
+///
+/// `context` is boxed so the `Result<_, ParseError>` returned from the
+/// reader hot paths stays small (`kind` plus a single pointer) and the
+/// `clippy::result_large_err` lint is satisfied. The context struct
+/// itself carries an optional bytes-near hex-dump window and several
+/// optional positional fields whose combined size dominates an
+/// unboxed layout.
 #[derive(Debug, Clone)]
 pub struct ParseError {
     pub kind: ParseErrorKind,
-    pub context: ParseErrorContext,
+    pub context: Box<ParseErrorContext>,
 }
 
 /// Discriminator for [`ParseError`] kinds. Exposed publicly so callers can
@@ -47,6 +54,8 @@ pub struct ParseErrorContext {
     pub record_index: Option<usize>,
     /// Absolute byte offset within the input stream.
     pub byte_offset: Option<usize>,
+    /// Byte offset relative to the current record's start.
+    pub record_byte_offset: Option<usize>,
     /// Source filename or stream identifier.
     pub source_name: Option<String>,
     /// Byte window around the error for hex-dump rendering.
@@ -92,7 +101,7 @@ impl ParseError {
     pub fn invalid_record(msg: impl Into<String>) -> Self {
         Self {
             kind: ParseErrorKind::InvalidRecord(msg.into()),
-            context: ParseErrorContext::default(),
+            context: Box::new(ParseErrorContext::default()),
         }
     }
 
@@ -101,7 +110,7 @@ impl ParseError {
     pub fn record_boundary_error(msg: impl Into<String>) -> Self {
         Self {
             kind: ParseErrorKind::RecordBoundaryError(msg.into()),
-            context: ParseErrorContext::default(),
+            context: Box::new(ParseErrorContext::default()),
         }
     }
 
@@ -116,7 +125,7 @@ impl ParseError {
                 expected_length: Some(expected_length),
                 actual_length: Some(actual_length),
             },
-            context: ParseErrorContext::default(),
+            context: Box::new(ParseErrorContext::default()),
         }
     }
 
@@ -125,7 +134,7 @@ impl ParseError {
     pub fn io_error(msg: impl Into<String>) -> Self {
         Self {
             kind: ParseErrorKind::IoError(msg.into()),
-            context: ParseErrorContext::default(),
+            context: Box::new(ParseErrorContext::default()),
         }
     }
 
@@ -140,6 +149,16 @@ impl ParseError {
     #[must_use]
     pub fn with_byte_offset(mut self, n: usize) -> Self {
         self.context.byte_offset = Some(n);
+        self
+    }
+
+    /// Attach a byte offset relative to the current record's start. Used
+    /// by leaf call sites (e.g., the boundary scanner) that know how far
+    /// into a record the error occurred but not the absolute stream
+    /// offset; the caller layer attaches the absolute offset separately.
+    #[must_use]
+    pub fn with_record_byte_offset(mut self, n: usize) -> Self {
+        self.context.record_byte_offset = Some(n);
         self
     }
 
@@ -178,7 +197,7 @@ impl ParseError {
             ParseErrorKind::InvalidRecord(msg) => MarcError::InvalidField {
                 record_index: self.context.record_index,
                 byte_offset: self.context.byte_offset,
-                record_byte_offset: None,
+                record_byte_offset: self.context.record_byte_offset,
                 source_name: self.context.source_name.clone(),
                 record_control_number: None,
                 field_tag: None,
@@ -188,7 +207,7 @@ impl ParseError {
             ParseErrorKind::RecordBoundaryError(msg) => MarcError::InvalidField {
                 record_index: self.context.record_index,
                 byte_offset: self.context.byte_offset,
-                record_byte_offset: None,
+                record_byte_offset: self.context.record_byte_offset,
                 source_name: self.context.source_name.clone(),
                 record_control_number: None,
                 field_tag: None,
@@ -201,7 +220,7 @@ impl ParseError {
             } => MarcError::TruncatedRecord {
                 record_index: self.context.record_index,
                 byte_offset: self.context.byte_offset,
-                record_byte_offset: None,
+                record_byte_offset: self.context.record_byte_offset,
                 source_name: self.context.source_name.clone(),
                 record_control_number: None,
                 expected_length: *expected_length,
