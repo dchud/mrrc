@@ -147,8 +147,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   call site, preserving hot-loop characteristics. Per-type quirks
   (authority's tag UTF-8 strictness + trailing `0x1F` trim, holdings'
   strict UTF-8 on control fields) preserved via trait-method
-  overrides; the wider strict-vs-lossy unification is tracked in
-  bd-bov7.
+  overrides; the wider strict-vs-lossy unification is tracked
+  separately as a follow-up.
 - **`HoldingsMarcReader::with_max_errors`** is now active. Originally
   landed inert when the cap was introduced (no recovery sites in the
   holdings path); the recovery sites added in this cycle hook into it.

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "purpose": "Cumulative perf budget reference for the error-handling detection work. The numbers here represent the parser's hot-path cost at v0.8.0 (before any per-byte detection wiring lands). The local comparison script (scripts/check_error_handling_perf.py) reads this file and reports current bench numbers as deltas vs these means.",
+  "captured_at": "2026-04-30",
+  "captured_against_commit": "a52338a33105b0e9a70f7492c912ac804a131465",
+  "captured_against_commit_note": "main HEAD at the time the benches were committed. The parser code on this commit is identical to the v0.8.0 release tag; only commits between v0.8.0 and a52338a are bead bookkeeping, the python-release.yml step reorder (PR #158), and the error-coverage harness scaffold (PR #159) — none of which touch the hot path.",
+  "machine": {
+    "kernel": "Darwin 25.4.0",
+    "arch": "arm64 (Apple Silicon)",
+    "note": "Numbers below are intended for use ONLY when the comparison runs on the same machine class. Cross-machine comparison is not statistically valid at the 2%/5% threshold; for cross-machine cases, use the same-runner before/after CI workflow instead."
+  },
+  "methodology": "criterion default profile: 100 samples over a ~6s collection per scenario; mean/std_dev as reported by criterion's estimates.json after the run. Re-run with `cargo bench --bench error_handling_benchmarks` and re-extract from `target/criterion/<name>/new/estimates.json`.",
+  "thresholds": {
+    "warn_pct": 2.0,
+    "fail_pct": 5.0,
+    "context": "Cumulative regression vs this baseline across the error-handling detection work. The 2% warning threshold prompts manual assessment of the trade-off; the 5% threshold blocks PRs that wire detection without explicit acceptance of the cost."
+  },
+  "scenarios": {
+    "parse_10k_clean_strict": {
+      "fixture": "tests/data/fixtures/10k_records.mrc",
+      "description": "Happy path: 10,000 well-formed records, strict recovery mode. The number every user pays. The most regression-sensitive scenario.",
+      "mean_ns": 11955534,
+      "std_dev_ns": 158239,
+      "median_ns": 11927837,
+      "relative_stddev_pct": 1.32
+    },
+    "parse_10k_bad_indicators_strict": {
+      "fixture": "tests/data/fixtures/10k_records.mrc (pre-mutated in setup so every record's 245 first-indicator byte is ':')",
+      "description": "Strict recovery mode over a 10,000-record stream where every record has a non-digit/non-space first indicator on field 245. Today equivalent to the clean baseline because no parse path constructs MarcError::InvalidIndicator. Once indicator-byte detection is wired, the delta vs parse_10k_clean_strict measures the per-byte detection cost in absolute terms.",
+      "mean_ns": 11821127,
+      "std_dev_ns": 71958,
+      "median_ns": 11817425,
+      "relative_stddev_pct": 0.61
+    }
+  }
+}

@@ -111,6 +111,7 @@ nav:
     - Testing: contributing/testing.md
     - Formal Methods: contributing/formal-methods.md
     - Fuzzing: contributing/fuzzing.md
+    - Benchmarking: contributing/benchmarking.md
     - Release Procedure: contributing/release-procedure.md
     - Architecture: contributing/architecture.md
     - Design: design/index.md

@@ -14,10 +14,10 @@ playbook for investigating CI findings.
 |--------|-------------|--------|
 | `parse_record` | `MarcReader::read_record` over the full ISO 2709 reader | Active |
 | `roundtrip_binary` | Parse → serialize → parse-again coupling | Active |
-| `parse_leader` | 24-byte leader parsing | Planned (bd-gbgx) |
-| `decode_marc8` | MARC-8 encoding state machine | Planned (bd-2dia) |
-| `parse_marcxml` | MARCXML reader | Planned (bd-3t62) |
-| `parse_json` / `parse_marcjson` | JSON readers | Planned (bd-uss1) |
+| `parse_leader` | 24-byte leader parsing | Planned |
+| `decode_marc8` | MARC-8 encoding state machine | Planned |
+| `parse_marcxml` | MARCXML reader | Planned |
+| `parse_json` / `parse_marcjson` | JSON readers | Planned |
 
 `parse_record` is the first target and the highest-value one — any bytes
 passing through mrrc eventually hit its code paths. The other targets

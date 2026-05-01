@@ -233,9 +233,10 @@ fn arb_control_value_xml() -> BoxedStrategy<String> {
 /// Generate a structurally valid MARC record using the given subfield-value
 /// and control-value strategies.
 ///
-/// Ranges cover edge cases called out in bd-ouji: `0..=3` control fields
-/// (including zero → no 001, no record-control-number dependency) and
-/// `0..=10` data fields (including zero → control-only records).
+/// Ranges cover the structural edge cases: `0..=3` control fields
+/// (including zero, so the no-001 / no-record-control-number case is
+/// exercised) and `0..=10` data fields (including zero, so control-only
+/// records are exercised).
 fn arb_record_with(
     subfield_value: BoxedStrategy<String>,
     control_value: BoxedStrategy<String>,
