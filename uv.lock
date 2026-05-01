@@ -544,6 +544,7 @@ source = { editable = "." }
 benchmark = [
     { name = "pytest" },
     { name = "pytest-benchmark" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 dev = [
     { name = "mypy" },
@@ -552,6 +553,7 @@ dev = [
     { name = "pytest-benchmark" },
     { name = "ruff" },
     { name = "syrupy" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 docs = [
     { name = "mkdocs-material" },
@@ -562,6 +564,7 @@ test = [
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "syrupy" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
 [package.metadata]
@@ -578,6 +581,8 @@ requires-dist = [
     { name = "pytest-benchmark", marker = "extra == 'test'", specifier = ">=4.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1" },
     { name = "syrupy", marker = "extra == 'test'", specifier = ">=4.0" },
+    { name = "tomli", marker = "python_full_version < '3.11' and extra == 'benchmark'", specifier = ">=2.0" },
+    { name = "tomli", marker = "python_full_version < '3.11' and extra == 'test'", specifier = ">=2.0" },
 ]
 provides-extras = ["test", "dev", "benchmark", "docs"]
 

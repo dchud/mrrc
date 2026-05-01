@@ -1,0 +1,96 @@
+name: "Error-handling perf gate"
+
+# Same-runner before/after comparison for the error-handling perf
+# budget. Cross-machine variance defeats the 2%/5% threshold for any
+# scheme that uses a checked-in baseline file across runners; running
+# main and the PR HEAD on the same physical CI runner in the same
+# workflow job keeps the variance low enough that the threshold has
+# real signal.
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'src-python/**'
+      - 'benches/error_handling_benchmarks.rs'
+      - 'scripts/check_error_handling_perf.py'
+      - '.github/workflows/error-handling-perf-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  perf-gate:
+    name: Compare PR vs main (same runner)
+    runs-on: ubuntu-latest
+    # Skip when the PR's base branch is not main (e.g., stacked PRs);
+    # the comparison only makes sense against the integration target.
+    if: github.event.pull_request.base.ref == 'main'
+    steps:
+      - name: Checkout PR HEAD with full history
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: error-handling-perf-gate
+
+      # Phase 1: capture baseline (main HEAD) on this runner.
+      - name: Switch to main and run baseline benches
+        run: |
+          set -euxo pipefail
+          git fetch origin main:main
+          # Pre-resolve to a SHA so the rest of the job is deterministic
+          # even if main moves while the workflow runs.
+          BASELINE_SHA=$(git rev-parse main)
+          echo "BASELINE_SHA=$BASELINE_SHA" >> "$GITHUB_ENV"
+          # Stash files the baseline checkout doesn't have. We need:
+          #   - the bench file itself (it may not yet be on main if
+          #     this workflow runs on the PR that adds the bench file)
+          #   - this workflow file (immaterial for the bench run)
+          #   - the comparison script
+          mkdir -p .perf-overlay
+          if [ -f benches/error_handling_benchmarks.rs ]; then
+            cp benches/error_handling_benchmarks.rs .perf-overlay/error_handling_benchmarks.rs
+          fi
+          if [ -f scripts/check_error_handling_perf.py ]; then
+            cp scripts/check_error_handling_perf.py .perf-overlay/check_error_handling_perf.py
+          fi
+          if [ -f benches/baselines/error_handling_v080.json ]; then
+            cp benches/baselines/error_handling_v080.json .perf-overlay/error_handling_v080.json
+          fi
+          git checkout "$BASELINE_SHA" -- .
+          # Restore the overlay so we can run the same bench definitions
+          # against main's parser code.
+          mkdir -p benches/baselines scripts
+          cp .perf-overlay/error_handling_benchmarks.rs benches/error_handling_benchmarks.rs
+          cp .perf-overlay/check_error_handling_perf.py scripts/check_error_handling_perf.py
+          cp .perf-overlay/error_handling_v080.json benches/baselines/error_handling_v080.json
+          # Make sure Cargo.toml has the [[bench]] entry; if main lacks
+          # it (because the bench file is new on the PR), add it.
+          if ! grep -q '"error_handling_benchmarks"' Cargo.toml; then
+            printf '\n[[bench]]\nname = "error_handling_benchmarks"\nharness = false\n' >> Cargo.toml
+          fi
+          cargo bench --bench error_handling_benchmarks
+          mv target/criterion baseline-criterion
+          # Restore PR working tree.
+          git checkout "${{ github.event.pull_request.head.sha }}" -- .
+
+      # Phase 2: run the same benches on PR HEAD.
+      - name: Run PR benches
+        run: cargo bench --bench error_handling_benchmarks
+
+      # Phase 3: compare. The script's exit code drives the gate.
+      - name: Compare PR vs baseline
+        run: |
+          python3 scripts/check_error_handling_perf.py \
+            --baseline-criterion-dir baseline-criterion \
+            --current-criterion-dir target/criterion \
+            --no-bench
