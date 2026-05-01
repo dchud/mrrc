@@ -166,19 +166,16 @@ jobs:
       id-token: write
       contents: write
     steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
       - uses: actions/download-artifact@v8
         with:
           pattern: release-wheels-*
           path: dist
           merge-multiple: true
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-
-      - uses: actions/checkout@v6
-        with:
-          sparse-checkout: CHANGELOG.md
-          sparse-checkout-cone-mode: false
 
       - name: Extract release notes from CHANGELOG
         id: changelog
@@ -188,6 +185,9 @@ jobs:
           NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md)
           # Write to file to avoid shell quoting issues
           echo "$NOTES" > release_notes.md
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3

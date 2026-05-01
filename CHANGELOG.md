@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Release workflow now attaches wheel assets to the GitHub Release
+  page automatically. Previously, `actions/checkout` ran after
+  `download-artifact` and wiped `dist/` before the gh-release step,
+  leaving the release page with notes but zero assets. Steps reordered
+  so checkout runs first.
+
 ## [0.8.0] - 2026-04-29
 
 ### Breaking
