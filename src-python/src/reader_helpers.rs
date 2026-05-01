@@ -158,6 +158,7 @@ pub fn read_record_bytes_from_python_file(py_obj: &Bound<'_, PyAny>) -> PyResult
             record_length - 24,
             record_data.len(),
         )
+        .with_record_byte_offset(24)
         .to_py_err());
     }
 

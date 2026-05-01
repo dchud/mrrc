@@ -56,21 +56,10 @@ _CASES: list[dict[str, Any]] = _MANIFEST["case"]
 
 # Cases the Rust core handles correctly but where the Python binding's
 # Rust→Python error conversion currently drops or fails to populate
-# positional-context fields. The harness skips these with the
-# documented reason so the gap is visible in CI output. Each entry
-# reflects a real binding-level regression that should be removed (and
-# the case un-skipped) once the corresponding fix lands.
-_PYTHON_BINDING_REGRESSIONS: dict[str, str] = {
-    "e005_truncated_record": (
-        "Python binding's ParseError → MarcError conversion in "
-        "src-python/src/parse_error.rs::to_py_err hardcodes "
-        "record_byte_offset = None and inherits record_index / "
-        "byte_offset from ParseErrorContext, which is left default "
-        "at the boundary-scanner call site that detects truncation. "
-        "The Rust core's TruncatedRecord carries the populated fields; "
-        "they are dropped at the FFI boundary."
-    ),
-}
+# positional-context fields. Empty when no such regression is in flight;
+# entries list a technical reason for each documented gap so the skip
+# is visible in CI output until the binding-level fix lands.
+_PYTHON_BINDING_REGRESSIONS: dict[str, str] = {}
 
 
 def _fixture_path(case: dict[str, Any]) -> Path:
