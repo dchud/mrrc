@@ -1,0 +1,110 @@
+# Error-handling test coverage manifest.
+#
+# Documentation-as-spec for mrrc's error handling: every documented
+# error code in docs/reference/error-codes.md is paired here with one
+# or more malformed-input fixtures that should trigger it. The harness
+# (tests/error_coverage.rs and the Python equivalent) reads this
+# manifest and asserts the documented variant, code, slug, and
+# positional context fire when the parser reads the fixture bytes —
+# not when an error is constructed in test code.
+#
+# A single code can have multiple cases when the docs describe
+# multiple distinct trigger patterns (e.g., E101 fires on both
+# "non-digit length in a directory entry" and "missing field
+# terminator before base address"). Each case is exercised
+# independently; wiring is tracked per case, not per code, so the
+# coverage tally reflects the granularity of the spec.
+#
+# Cases marked `wired = false` describe trigger patterns where the
+# parser does not currently produce the documented variant for the
+# fixture bytes. The `skip_reason` field states what the parser
+# actually does today, in technical terms, so a contributor
+# implementing the missing detection knows what they are replacing.
+# Adding a new error code requires adding a case here AND a fixture.
+#
+# Schema:
+#   id               unique identifier "<code>_<short_trigger>"; used
+#                    as the test display name and disambiguates cases
+#                    that share a code
+#   code             "Exxx" identifier (stable across releases)
+#   variant          MarcError variant name (Rust)
+#   slug             snake_case slug (stable across releases)
+#   trigger_fixture  path to fixture bytes that should fire `code`
+#   description      one-line description of the malformation
+#   expected_context positional fields the variant must populate when
+#                    fired (per docs/reference/error-codes.md)
+#   recovery_modes   recovery modes the harness exercises on this
+#                    fixture
+#   wired            true if the parser currently emits the documented
+#                    variant for this fixture
+#   skip_reason      required when wired = false; describes current
+#                    behavior in technical terms (no work-tracking
+#                    references; those live in commits / PR bodies)
+
+schema_version = 1
+
+# -- E101 DirectoryInvalid (no field terminator before base address) ---
+# Mutates simple_book.mrc byte 60 (the FIELD_TERMINATOR 0x1E ending the
+# directory) to '0', so the directory walker passes the three complete
+# entries and reaches a partial trailing entry of one byte. The
+# `pos + 12 > directory.len()` path in the directory walker fires
+# DirectoryInvalid for this case.
+[[case]]
+id = "e101_no_field_terminator"
+code = "E101"
+variant = "DirectoryInvalid"
+slug = "directory_invalid"
+trigger_fixture = "tests/data/error_fixtures/e101_directory_no_terminator.bin"
+description = "Directory has no FIELD_TERMINATOR before base address (partial trailing entry)."
+expected_context = ["record_index", "byte_offset", "record_byte_offset"]
+recovery_modes = ["strict"]
+wired = true
+
+# -- E101 DirectoryInvalid (non-digit length in directory entry) -------
+# Mutates simple_book.mrc byte 30 ('5' in the length field "0025" of
+# the 100 directory entry) to 'X'. Per docs/reference/error-codes.md
+# this is one of the canonical E101 triggers. The parser today routes
+# this to InvalidField (E106) because parse_4digits / parse_5digits
+# return InvalidField unconditionally; the directory walker forwards
+# that without recharacterizing it. Correct behavior is for the
+# directory walker to wrap helper errors as DirectoryInvalid so the
+# variant matches where the malformation occurred (directory entry
+# vs data field), not which helper detected the byte.
+[[case]]
+id = "e101_non_digit_length"
+code = "E101"
+variant = "DirectoryInvalid"
+slug = "directory_invalid"
+trigger_fixture = "tests/data/error_fixtures/e101_directory_non_digit_length.bin"
+description = "Directory entry length field contains a non-ASCII-digit byte."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "field_tag"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "parse_4digits returns InvalidField (E106) for any non-digit byte; the directory walker forwards that without wrapping it as DirectoryInvalid, so non-digit length/start fields produce E106 instead of the documented E101"
+
+# -- E201 InvalidIndicator (non-digit/non-space indicator byte) --------
+# Mutates simple_book.mrc byte 86 ('1' first indicator of field 245)
+# to ':'. Per docs/reference/error-codes.md, indicator bytes outside
+# the universal "digit or space" set should fire InvalidIndicator. The
+# parser today casts the byte directly to char and emits the field
+# without validating the byte range, so malformed indicators pass
+# silently — there is no parse path that constructs this variant.
+[[case]]
+id = "e201_bad_indicator_245"
+code = "E201"
+variant = "InvalidIndicator"
+slug = "invalid_indicator"
+trigger_fixture = "tests/data/error_fixtures/e201_bad_indicator.bin"
+description = "First indicator byte of field 245 is ':' (not digit/space)."
+expected_context = [
+    "record_index",
+    "byte_offset",
+    "record_byte_offset",
+    "field_tag",
+    "indicator_position",
+    "found",
+    "expected",
+]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "parse_data_field accepts any byte as an indicator and produces a field with the raw byte cast to char; no parse path constructs InvalidIndicator"
