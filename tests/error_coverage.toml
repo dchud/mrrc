@@ -92,7 +92,7 @@ slug = "leader_invalid"
 trigger_kind = "parse_iso2709"
 trigger_fixture = "tests/data/error_fixtures/e002_indicator_count_non_digit.bin"
 description = "Leader byte 10 (indicator count, normally '2') replaced with 'X'."
-expected_context = ["bytes_near"]
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
 recovery_modes = ["strict"]
 wired = true
 
