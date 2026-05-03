@@ -854,7 +854,19 @@ class Record:
         if field:
             return _wrap_field(field)
         return None
-    
+
+    def get_field_or_err(self, tag: str) -> 'Field':
+        """Get first field with given tag, raising :class:`mrrc.FieldNotFound`
+        (E105) when the tag is not present.
+
+        Strict-mode counterpart to :meth:`get_field`. Use this when an
+        absent field is a programming error worth the typed exception
+        and its diagnostic context (``record_control_number``,
+        ``field_tag``); use :meth:`get_field` when ``None`` is the
+        expected sentinel.
+        """
+        return _wrap_field(self._inner.get_field_or_err(tag))
+
     def remove_field(self, *fields: Union['Field', str]) -> None:
         """Remove one or more fields from the record (pymarc compatibility).
 

@@ -212,11 +212,11 @@ code = "E105"
 variant = "FieldNotFound"
 slug = "field_not_found"
 trigger_kind = "accessor"
-description = "Parse simple_book.mrc cleanly, then call record.get_field('999')."
+trigger_fixture = "tests/data/simple_book.mrc"
+description = "Parse simple_book.mrc cleanly, then call record.get_field_or_err('999')."
 expected_context = ["field_tag"]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "no accessor method raises FieldNotFound; Record::get_field and analogous methods return Option<&Field>/None instead"
+wired = true
 
 # E106: directory entry claims a field length larger than the data area.
 [[case]]

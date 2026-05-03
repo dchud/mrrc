@@ -20,9 +20,13 @@
 //!     in strict mode and capture the first error
 //!   * `parse_marcxml` — feed UTF-8 text to
 //!     [`mrrc::marcxml::marcxml_to_record`] and capture the error
+//!   * `accessor` — parse the fixture cleanly, then call a hard-coded
+//!     accessor whose lookup is documented to raise the case's variant
+//!     (currently only `e105_field_not_found` →
+//!     `Record::get_field_or_err("999")`)
 //!
 //! Other kinds (`parse_marcjson`, `io_error`, `recovery_cap`,
-//! `accessor`, `writer`) skip with a per-kind reason; their cases
+//! `writer`) skip with a per-kind reason; their cases
 //! remain in the manifest so the docs-vs-implementation gap is tracked.
 
 use std::fs;
@@ -101,6 +105,40 @@ enum TriggerOutcome {
     UnsupportedKind(String),
 }
 
+/// Exercise an accessor case: parse the fixture cleanly, then invoke
+/// the accessor whose lookup is documented to fire the case's variant.
+/// New `accessor` cases need their case-id branch wired here — accessor
+/// names and arguments aren't yet expressed in the manifest schema.
+fn exercise_accessor(case: &Case) -> TriggerOutcome {
+    let bytes = fixture_bytes(case);
+    let mut reader = MarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Strict);
+    let record = match reader.read_record() {
+        Ok(Some(r)) => r,
+        Ok(None) => {
+            return TriggerOutcome::UnsupportedKind(format!(
+                "{}: fixture parsed to no records; accessor cannot be exercised",
+                case.id
+            ))
+        },
+        Err(e) => {
+            return TriggerOutcome::UnsupportedKind(format!(
+                "{}: fixture failed to parse cleanly ({e}); accessor cannot be exercised",
+                case.id
+            ))
+        },
+    };
+
+    match case.id.as_str() {
+        "e105_field_not_found" => match record.get_field_or_err("999") {
+            Ok(_) => TriggerOutcome::NoError,
+            Err(e) => TriggerOutcome::Fired(e),
+        },
+        other => TriggerOutcome::UnsupportedKind(format!(
+            "trigger_kind=accessor: case {other} has no harness branch; add one in exercise_accessor"
+        )),
+    }
+}
+
 /// Drive `MarcReader` over `bytes` in `mode` and return the first
 /// error encountered. Successful records and EOF (`Ok(None)`) both
 /// resolve to `None`.
@@ -137,9 +175,7 @@ fn fire_trigger(case: &Case) -> TriggerOutcome {
         "recovery_cap" => TriggerOutcome::UnsupportedKind(
             "trigger_kind=recovery_cap requires building a multi-record malformed stream and configuring max_errors".to_string(),
         ),
-        "accessor" => TriggerOutcome::UnsupportedKind(
-            "trigger_kind=accessor requires constructing the accessor call from test code".to_string(),
-        ),
+        "accessor" => exercise_accessor(case),
         "writer" => TriggerOutcome::UnsupportedKind(
             "trigger_kind=writer requires constructing an oversize record from test code".to_string(),
         ),
@@ -236,7 +272,7 @@ fn manifest_is_well_formed() {
 
         if matches!(
             case.trigger_kind.as_str(),
-            "parse_iso2709" | "parse_marcxml" | "parse_marcjson"
+            "parse_iso2709" | "parse_marcxml" | "parse_marcjson" | "accessor"
         ) {
             assert!(
                 case.trigger_fixture.is_some(),
