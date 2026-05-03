@@ -145,8 +145,7 @@ trigger_fixture = "tests/data/error_fixtures/e006_no_record_terminator.bin"
 description = "Final byte (0x1D RECORD_TERMINATOR) replaced with 0x00."
 expected_context = ["record_index", "byte_offset", "record_byte_offset"]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "no parse path verifies that the byte at the leader's claimed end position is the RECORD_TERMINATOR; the dedicated EndOfRecordNotFound variant exists with a ParseContext helper but no parse path constructs it"
+wired = true
 
 # E007: underlying I/O error from the reader source. Wired in the
 # parser (read_record_data and friends construct MarcError::IoError

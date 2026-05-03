@@ -247,6 +247,20 @@ where
         }
     }
 
+    // The byte at the leader's claimed end-of-record position must be
+    // RECORD_TERMINATOR (0x1D); a different byte means the leader's record
+    // length disagrees with the data — the record either runs past or stops
+    // short of where the leader said. Strict mode surfaces this as E006;
+    // lenient/permissive let directory parsing proceed and absorb the
+    // disagreement via the existing recovery cap.
+    if recovery_mode == RecoveryMode::Strict
+        && record_data.len() == record_length - LEADER_LEN
+        && record_data.last() != Some(&iso2709::RECORD_TERMINATOR)
+    {
+        ctx.stream_byte_offset = record_data_offset + record_data.len() - 1;
+        return Err(ctx.err_end_of_record_not_found());
+    }
+
     // Clamp directory + data slices at the actual buffer length so a short
     // read in lenient mode does not panic.
     let directory_end = std::cmp::min(directory_size, record_data.len());
