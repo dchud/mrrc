@@ -118,9 +118,35 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
             "not yet implemented"
         )
     elif kind == "accessor":
+        bytes_ = _fixture_path(case).read_bytes()
+        reader = mrrc.MARCReader(bytes_, recovery_mode="strict")
+        try:
+            record = next(iter(reader))
+        except StopIteration:
+            pytest.fail(
+                f"{case['id']} ({case['code']}): fixture parsed to no records; "
+                "accessor cannot be exercised"
+            )
+        except mrrc.MrrcException as e:
+            pytest.fail(
+                f"{case['id']} ({case['code']}): fixture failed to parse cleanly "
+                f"({e}); accessor cannot be exercised"
+            )
+        # Per-case branch: accessor names + arguments aren't yet expressed
+        # in the manifest schema, so each accessor case wires its trigger
+        # here. New accessor cases need a branch added.
+        if case["id"] == "e105_field_not_found":
+            try:
+                record.get_field_or_err("999")
+            except mrrc.MrrcException as e:
+                return e
+            pytest.fail(
+                f"{case['id']} ({case['code']}): get_field_or_err('999') returned "
+                "a field on simple_book.mrc; expected FieldNotFound"
+            )
         pytest.skip(
-            "trigger_kind=accessor requires constructing the accessor call "
-            "from test code; harness mechanism not yet implemented"
+            f"{case['id']}: trigger_kind=accessor case has no harness branch; "
+            "add one in test_error_coverage.py"
         )
     elif kind == "writer":
         pytest.skip(

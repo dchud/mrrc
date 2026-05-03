@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Record::get_field_or_err(tag)` (Rust) and
+  `record.get_field_or_err(tag)` (Python) — strict-mode counterparts to
+  `get_field` that raise `FieldNotFound` (E105) with `field_tag` and
+  `record_control_number` populated when the tag is not present.
+  Existing `get_field` continues to return `Option<&Field>` / `None`
+  for pymarc-compatible callers; the typed variant is opt-in.
 - Strict-mode parsing now verifies that the byte at the leader's
   claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
   different byte fires `EndOfRecordNotFound` (E006). Previously the
