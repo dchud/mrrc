@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Strict-mode parsing now verifies that the byte at the leader's
+  claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
+  different byte fires `EndOfRecordNotFound` (E006). Previously the
+  byte was unchecked and a malformed record with the wrong terminator
+  parsed silently. Lenient and permissive modes are unchanged — the
+  recovery cap continues to absorb the disagreement via existing
+  directory/field paths.
+
 ### Changed
 
 - Leader-validation errors now fire the field-specific variants their
