@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "purpose": "Cumulative perf budget reference for the error-handling detection work. `parse_10k_clean_strict` is pinned to v0.8.0 (the parser's hot-path cost before any per-byte detection wiring lands) and tracks cumulative cost across the wiring effort. `parse_10k_bad_indicators_lenient` is a post-E201 baseline (E201 wiring changed both the bench's recovery mode and its semantics, so it has no v0.8.0 counterpart); it tracks the cost of the per-byte indicator-validation path going forward.",
-  "captured_at": "2026-04-30 (clean_strict) / 2026-05-03 (bad_indicators_lenient, post-E201)",
-  "captured_against_commit": "a52338a33105b0e9a70f7492c912ac804a131465 (clean_strict)",
-  "captured_against_commit_note": "clean_strict captured against a52338a — main HEAD at the time the benches were committed. The parser code on this commit is identical to the v0.8.0 release tag; only commits between v0.8.0 and a52338a are bead bookkeeping, the python-release.yml step reorder (PR #158), and the error-coverage harness scaffold (PR #159) — none of which touch the hot path. bad_indicators_lenient captured locally on the PR that wires E201, since that wiring is what made the lenient variant meaningful.",
+  "purpose": "Cumulative perf budget reference for the error-handling detection work. The numbers here represent the parser's hot-path cost at v0.8.0 (before any per-byte detection wiring lands). The local comparison script (scripts/check_error_handling_perf.py) reads this file and reports current bench numbers as deltas vs these means.",
+  "captured_at": "2026-04-30",
+  "captured_against_commit": "a52338a33105b0e9a70f7492c912ac804a131465",
+  "captured_against_commit_note": "main HEAD at the time the benches were committed. The parser code on this commit is identical to the v0.8.0 release tag; only commits between v0.8.0 and a52338a are bead bookkeeping, the python-release.yml step reorder (PR #158), and the error-coverage harness scaffold (PR #159) — none of which touch the hot path.",
   "machine": {
     "kernel": "Darwin 25.4.0",
     "arch": "arm64 (Apple Silicon)",
@@ -23,14 +23,6 @@
       "std_dev_ns": 158239,
       "median_ns": 11927837,
       "relative_stddev_pct": 1.32
-    },
-    "parse_10k_bad_indicators_lenient": {
-      "fixture": "tests/data/fixtures/10k_records.mrc (pre-mutated in setup so every record's 245 first-indicator byte is ':')",
-      "description": "Lenient recovery mode with max_errors(0) over a 10,000-record stream where every record has a non-digit/non-space first indicator on field 245. The parser fires MarcError::InvalidIndicator (E201) per record; cap.note records the detection and the offending field is dropped. Measures the cost of per-byte indicator validation plus cap.note bookkeeping across all 10k records (vs clean_strict measures the cost of validation alone on records that pass).",
-      "mean_ns": 10893000,
-      "std_dev_ns": 96000,
-      "median_ns": 10893000,
-      "relative_stddev_pct": 0.88
     }
   }
 }
