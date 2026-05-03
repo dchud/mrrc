@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Leader-validation errors now fire the field-specific variants their
+  documentation describes: `RecordLengthInvalid` (E001) for non-digit
+  bytes 0-4 or `record_length < 24`, `BaseAddressInvalid` (E003) for
+  non-digit bytes 12-16 or `data_base_address < 24`, and
+  `BaseAddressNotFound` (E004) for `data_base_address > record_length`.
+  Previously all of these collapsed to `InvalidLeader` (E002) or, for
+  E004, fell through to a misleading `InvalidField` from directory
+  parsing.
+
 ### Fixed
 
 - Release workflow now attaches wheel assets to the GitHub Release

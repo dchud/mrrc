@@ -41,6 +41,12 @@ pub enum ParseErrorKind {
         expected_length: Option<usize>,
         actual_length: Option<usize>,
     },
+    /// The leader's record-length field (bytes 0-4) is invalid: not five
+    /// ASCII digits, or parsed to a value smaller than the leader itself.
+    /// Fires from the FFI segmenter before the core's `Leader::from_bytes`
+    /// runs, so the typed [`MarcError::RecordLengthInvalid`] (E001) surfaces
+    /// at the Python boundary as well as in pure-Rust paths.
+    RecordLengthInvalid { found: Vec<u8>, expected: String },
     /// I/O error reading from file or Python file object.
     IoError(String),
 }
@@ -73,6 +79,9 @@ impl fmt::Display for ParseError {
             } => match (expected_length, actual_length) {
                 (Some(e), Some(a)) => write!(f, "Truncated record: expected {e} bytes, got {a}"),
                 _ => write!(f, "Truncated record"),
+            },
+            ParseErrorKind::RecordLengthInvalid { expected, .. } => {
+                write!(f, "Invalid record length: expected {expected}")
             },
             ParseErrorKind::IoError(msg) => write!(f, "IO error: {msg}"),
         }
@@ -124,6 +133,21 @@ impl ParseError {
             kind: ParseErrorKind::TruncatedRecord {
                 expected_length: Some(expected_length),
                 actual_length: Some(actual_length),
+            },
+            context: Box::new(ParseErrorContext::default()),
+        }
+    }
+
+    /// Construct a `RecordLengthInvalid` error for a leader whose bytes 0-4
+    /// did not parse to a valid record length. `found` is the offending
+    /// byte slice (typically all five leader bytes); `expected` describes
+    /// what the parser was looking for ("5 ASCII digits", "at least 24",
+    /// etc.).
+    pub fn record_length_invalid(found: &[u8], expected: impl Into<String>) -> Self {
+        Self {
+            kind: ParseErrorKind::RecordLengthInvalid {
+                found: found.to_vec(),
+                expected: expected.into(),
             },
             context: Box::new(ParseErrorContext::default()),
         }
@@ -226,6 +250,16 @@ impl ParseError {
                 expected_length: *expected_length,
                 actual_length: *actual_length,
                 bytes_near: self.context.bytes_near.clone(),
+            },
+            ParseErrorKind::RecordLengthInvalid { found, expected } => {
+                MarcError::RecordLengthInvalid {
+                    record_index: self.context.record_index,
+                    byte_offset: self.context.byte_offset,
+                    source_name: self.context.source_name.clone(),
+                    found: Some(found.clone()),
+                    expected: Some(expected.clone()),
+                    bytes_near: self.context.bytes_near.clone(),
+                }
             },
             ParseErrorKind::IoError(msg) => MarcError::IoError {
                 cause: std::io::Error::other(msg.clone()),

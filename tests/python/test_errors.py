@@ -668,13 +668,14 @@ class TestFfiTypedExceptions:
         import io
 
         # record_length=50 clears the buffered_reader's >= 24 guard, but
-        # base_address=00010 fails Leader::validate_for_reading.
+        # base_address=00010 fails Leader::validate_for_reading and now
+        # surfaces as BaseAddressInvalid (E003).
         bad_leader = b"00050nam a2200010 i 4500" + b"\x00" * 26
         reader = mrrc.MARCReader(io.BytesIO(bad_leader))
         with pytest.raises(mrrc.MrrcException) as excinfo:
             list(reader)
         err = excinfo.value
-        assert isinstance(err, mrrc.RecordLeaderInvalid)
+        assert isinstance(err, mrrc.BaseAddressInvalid)
         assert err.bytes_near is not None
         assert len(err.bytes_near) > 0
         assert err.byte_offset == 0
