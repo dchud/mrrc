@@ -203,8 +203,7 @@ trigger_fixture = "tests/data/error_fixtures/e101_directory_non_digit_length.bin
 description = "Directory entry length field 'X025' (was '0025') for the 100 entry."
 expected_context = ["record_index", "byte_offset", "record_byte_offset", "field_tag"]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "parse_4digits returns InvalidField (E106) for any non-digit byte; the directory walker forwards that without wrapping it as DirectoryInvalid, so non-digit length/start fields produce E106 instead of the documented E101"
+wired = true
 
 # E105: accessor lookup for a tag the record does not contain.
 [[case]]
