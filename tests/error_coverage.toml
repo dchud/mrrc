@@ -252,8 +252,7 @@ expected_context = [
     "expected",
 ]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "parse_data_field accepts any byte as an indicator and produces a field with the raw byte cast to char; no parse path constructs InvalidIndicator"
+wired = true
 
 # E202: subfield code byte not printable ASCII.
 [[case]]

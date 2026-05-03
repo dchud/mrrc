@@ -638,12 +638,25 @@ pub fn parse_data_field(
     if field_data.len() < 2 {
         return Err(ctx.err_invalid_field("Data field too short (needs indicators)"));
     }
-    let indicator1 = field_data[0] as char;
-    let indicator2 = field_data[1] as char;
-    let mut field = Field::new(tag.to_string(), indicator1, indicator2);
+    let i1 = field_data[0];
+    let i2 = field_data[1];
+    // Per MARC 21, indicator bytes are ASCII digit (b'0'..=b'9') or
+    // space (b' '); any other byte fires `InvalidIndicator` (E201).
+    if !is_valid_indicator(i1) {
+        return Err(ctx.err_invalid_indicator(0, &[i1], "ASCII digit (0-9) or space"));
+    }
+    if !is_valid_indicator(i2) {
+        return Err(ctx.err_invalid_indicator(1, &[i2], "ASCII digit (0-9) or space"));
+    }
+    let mut field = Field::new(tag.to_string(), i1 as char, i2 as char);
     let subfields = parse_subfields(&field_data[2..], config, ctx)?;
     field.subfields = subfields;
     Ok(field)
+}
+
+#[inline]
+fn is_valid_indicator(b: u8) -> bool {
+    b.is_ascii_digit() || b == b' '
 }
 
 /// Walk the subfield bytes of a data field (everything after the two
