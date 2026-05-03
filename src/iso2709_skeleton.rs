@@ -303,27 +303,42 @@ where
 
         let entry_chunk = &directory[pos..pos + 12];
         let tag = String::from_utf8_lossy(&entry_chunk[0..3]).to_string();
-        let field_length = match parse_4digits(&entry_chunk[3..7]) {
-            Ok(len) => len,
-            Err(e) => {
-                if recovery_mode == RecoveryMode::Strict {
-                    return Err(e);
-                }
-                cap.note(ctx)?;
-                pos += 12;
-                continue;
-            },
+        // parse_4digits / parse_5digits build MarcError::InvalidField (E106)
+        // for any non-digit byte. In the directory-walker context the
+        // offending bytes describe a structurally invalid directory entry,
+        // not a malformed data field — recharacterize as DirectoryInvalid
+        // (E101) so the variant matches the docs. The InvalidField shape is
+        // preserved for the data-field call sites (parse_directory_entry,
+        // recovery::*) that share these helpers.
+        let Ok(field_length) = parse_4digits(&entry_chunk[3..7]) else {
+            ctx.current_field_tag = tag.as_bytes().try_into().ok();
+            ctx.stream_byte_offset = record_data_offset + pos + 3;
+            let err = ctx.err_directory_invalid(
+                Some(&entry_chunk[3..7]),
+                "4 ASCII digits (directory entry length)",
+            );
+            ctx.current_field_tag = None;
+            if recovery_mode == RecoveryMode::Strict {
+                return Err(err);
+            }
+            cap.note(ctx)?;
+            pos += 12;
+            continue;
         };
-        let start_position = match parse_5digits(&entry_chunk[7..12]) {
-            Ok(s) => s,
-            Err(e) => {
-                if recovery_mode == RecoveryMode::Strict {
-                    return Err(e);
-                }
-                cap.note(ctx)?;
-                pos += 12;
-                continue;
-            },
+        let Ok(start_position) = parse_5digits(&entry_chunk[7..12]) else {
+            ctx.current_field_tag = tag.as_bytes().try_into().ok();
+            ctx.stream_byte_offset = record_data_offset + pos + 7;
+            let err = ctx.err_directory_invalid(
+                Some(&entry_chunk[7..12]),
+                "5 ASCII digits (directory entry start position)",
+            );
+            ctx.current_field_tag = None;
+            if recovery_mode == RecoveryMode::Strict {
+                return Err(err);
+            }
+            cap.note(ctx)?;
+            pos += 12;
+            continue;
         };
         pos += 12;
 

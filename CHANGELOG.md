@@ -27,6 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Previously all of these collapsed to `InvalidLeader` (E002) or, for
   E004, fell through to a misleading `InvalidField` from directory
   parsing.
+- A non-digit byte in a directory entry's length or start-position
+  field now fires `DirectoryInvalid` (E101) carrying `field_tag` and
+  precise `byte_offset`. Previously the parser forwarded the
+  `InvalidField` (E106) raised by `parse_4digits`/`parse_5digits`
+  unchanged, even though the offending bytes describe a structurally
+  invalid directory entry, not a malformed data field. The
+  `InvalidField` shape is preserved for the data-field call sites
+  that share these helpers.
 
 ### Fixed
 
