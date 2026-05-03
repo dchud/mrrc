@@ -189,14 +189,21 @@ where
     ctx.begin_record();
 
     // Leader errors bypass ParseContext (Leader::from_bytes builds MarcError
-    // directly); enrich any raised error with a byte window around the leader
-    // bytes for hex-dump rendering.
+    // directly via leader_msg); enrich any raised error with positional
+    // context from the live ParseContext plus a byte window around the
+    // leader bytes for hex-dump rendering. Without with_position, callers
+    // see InvalidLeader (E002) without record_index / byte_offset /
+    // record_byte_offset / source_name — the structured-positional-context
+    // promise of the v0.8 error work.
     let leader_offset = ctx.stream_byte_offset;
-    let leader = Leader::from_bytes(&leader_bytes)
-        .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
-    leader
-        .validate_for_reading()
-        .map_err(|e| e.with_bytes_near(&leader_bytes, leader_offset))?;
+    let leader = Leader::from_bytes(&leader_bytes).map_err(|e| {
+        e.with_position(ctx)
+            .with_bytes_near(&leader_bytes, leader_offset)
+    })?;
+    leader.validate_for_reading().map_err(|e| {
+        e.with_position(ctx)
+            .with_bytes_near(&leader_bytes, leader_offset)
+    })?;
 
     B::validate_record_type(&leader, ctx)?;
 

@@ -751,6 +751,141 @@ impl MarcError {
         self
     }
 
+    /// Populate the positional-context fields (`record_index`,
+    /// `byte_offset`, `record_byte_offset`, `source_name`) on this error
+    /// from `ctx`. Used at call sites that construct `MarcError` outside
+    /// the `ParseContext::err_*` helper family — most commonly the
+    /// leader-validation path, where `Leader::from_bytes` /
+    /// `validate_for_reading` build errors directly via the crate-private
+    /// `leader_msg` constructor and the skeleton then enriches them.
+    ///
+    /// Variants that don't carry one of these fields skip that field
+    /// silently. Variants that already have a field set are
+    /// overwritten.
+    #[must_use]
+    pub fn with_position(mut self, ctx: &crate::iso2709::ParseContext) -> Self {
+        let ridx = if ctx.record_index == 0 {
+            None
+        } else {
+            Some(ctx.record_index)
+        };
+        *self.record_index_mut() = ridx;
+        if let Some(slot) = self.byte_offset_mut() {
+            *slot = Some(ctx.stream_byte_offset);
+        }
+        if let Some(slot) = self.record_byte_offset_mut() {
+            *slot = Some(ctx.record_byte_offset());
+        }
+        if let Some(slot) = self.source_name_mut() {
+            slot.clone_from(&ctx.source_name);
+        }
+        self
+    }
+
+    /// Mutable reference to the `record_index` field. Every variant
+    /// carries this field, so the return type is unconditional.
+    fn record_index_mut(&mut self) -> &mut Option<usize> {
+        match self {
+            MarcError::InvalidLeader { record_index, .. }
+            | MarcError::RecordLengthInvalid { record_index, .. }
+            | MarcError::BaseAddressInvalid { record_index, .. }
+            | MarcError::BaseAddressNotFound { record_index, .. }
+            | MarcError::DirectoryInvalid { record_index, .. }
+            | MarcError::TruncatedRecord { record_index, .. }
+            | MarcError::EndOfRecordNotFound { record_index, .. }
+            | MarcError::InvalidIndicator { record_index, .. }
+            | MarcError::BadSubfieldCode { record_index, .. }
+            | MarcError::InvalidField { record_index, .. }
+            | MarcError::EncodingError { record_index, .. }
+            | MarcError::FieldNotFound { record_index, .. }
+            | MarcError::IoError { record_index, .. }
+            | MarcError::XmlError { record_index, .. }
+            | MarcError::JsonError { record_index, .. }
+            | MarcError::WriterError { record_index, .. }
+            | MarcError::FatalReaderError { record_index, .. } => record_index,
+        }
+    }
+
+    /// Mutable reference to the `byte_offset` field, or `None` for
+    /// variants that don't carry one (`FieldNotFound`, `WriterError`,
+    /// `FatalReaderError`).
+    fn byte_offset_mut(&mut self) -> Option<&mut Option<usize>> {
+        match self {
+            MarcError::InvalidLeader { byte_offset, .. }
+            | MarcError::RecordLengthInvalid { byte_offset, .. }
+            | MarcError::BaseAddressInvalid { byte_offset, .. }
+            | MarcError::BaseAddressNotFound { byte_offset, .. }
+            | MarcError::DirectoryInvalid { byte_offset, .. }
+            | MarcError::TruncatedRecord { byte_offset, .. }
+            | MarcError::EndOfRecordNotFound { byte_offset, .. }
+            | MarcError::InvalidIndicator { byte_offset, .. }
+            | MarcError::BadSubfieldCode { byte_offset, .. }
+            | MarcError::InvalidField { byte_offset, .. }
+            | MarcError::EncodingError { byte_offset, .. }
+            | MarcError::IoError { byte_offset, .. }
+            | MarcError::XmlError { byte_offset, .. }
+            | MarcError::JsonError { byte_offset, .. } => Some(byte_offset),
+            MarcError::FieldNotFound { .. }
+            | MarcError::WriterError { .. }
+            | MarcError::FatalReaderError { .. } => None,
+        }
+    }
+
+    /// Mutable reference to the `record_byte_offset` field, or `None`
+    /// for variants whose failure precedes per-record offset semantics
+    /// (the leader-shape variants) or have no record context
+    /// (accessor / writer / format / I/O variants).
+    fn record_byte_offset_mut(&mut self) -> Option<&mut Option<usize>> {
+        match self {
+            MarcError::InvalidLeader {
+                record_byte_offset, ..
+            }
+            | MarcError::DirectoryInvalid {
+                record_byte_offset, ..
+            }
+            | MarcError::TruncatedRecord {
+                record_byte_offset, ..
+            }
+            | MarcError::EndOfRecordNotFound {
+                record_byte_offset, ..
+            }
+            | MarcError::InvalidIndicator {
+                record_byte_offset, ..
+            }
+            | MarcError::BadSubfieldCode {
+                record_byte_offset, ..
+            }
+            | MarcError::InvalidField {
+                record_byte_offset, ..
+            } => Some(record_byte_offset),
+            _ => None,
+        }
+    }
+
+    /// Mutable reference to the `source_name` field, or `None` for
+    /// variants that don't carry one.
+    fn source_name_mut(&mut self) -> Option<&mut Option<String>> {
+        match self {
+            MarcError::InvalidLeader { source_name, .. }
+            | MarcError::RecordLengthInvalid { source_name, .. }
+            | MarcError::BaseAddressInvalid { source_name, .. }
+            | MarcError::BaseAddressNotFound { source_name, .. }
+            | MarcError::DirectoryInvalid { source_name, .. }
+            | MarcError::TruncatedRecord { source_name, .. }
+            | MarcError::EndOfRecordNotFound { source_name, .. }
+            | MarcError::InvalidIndicator { source_name, .. }
+            | MarcError::BadSubfieldCode { source_name, .. }
+            | MarcError::InvalidField { source_name, .. }
+            | MarcError::EncodingError { source_name, .. }
+            | MarcError::IoError { source_name, .. }
+            | MarcError::XmlError { source_name, .. }
+            | MarcError::JsonError { source_name, .. } => Some(source_name),
+            MarcError::FieldNotFound { .. }
+            | MarcError::WriterError { .. }
+            | MarcError::FatalReaderError { .. } => None,
+        }
+    }
+
     /// Canonical docs URL for this error code, pointing at the `#Exxx`
     /// anchor on the error-codes reference page.
     ///
