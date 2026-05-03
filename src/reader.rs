@@ -543,13 +543,12 @@ mod tests {
         let leader = b"00010nam a2200025 i 4500";
         let cursor = Cursor::new(leader.to_vec());
         let mut reader = MarcReader::new(cursor);
-        let result = reader.read_record();
-        assert!(result.is_err(), "expected Err for record_length < 24");
-        let err = result.unwrap_err().to_string();
+        let err = reader.read_record().expect_err("record_length < 24");
         assert!(
-            err.contains("Record length must be at least 24"),
-            "got: {err}"
+            matches!(err, crate::error::MarcError::RecordLengthInvalid { .. }),
+            "expected RecordLengthInvalid, got: {err:?}"
         );
+        assert_eq!(err.code(), "E001");
     }
 
     /// Build a record with a single malformed directory entry (non-digit
@@ -659,12 +658,11 @@ mod tests {
         let leader = b"00050nam a2200010 i 4500";
         let cursor = Cursor::new(leader.to_vec());
         let mut reader = MarcReader::new(cursor);
-        let result = reader.read_record();
-        assert!(result.is_err(), "expected Err for base_address < 24");
-        let err = result.unwrap_err().to_string();
+        let err = reader.read_record().expect_err("base_address < 24");
         assert!(
-            err.contains("Base address of data must be at least 24"),
-            "got: {err}"
+            matches!(err, crate::error::MarcError::BaseAddressInvalid { .. }),
+            "expected BaseAddressInvalid, got: {err:?}"
         );
+        assert_eq!(err.code(), "E003");
     }
 }

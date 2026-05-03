@@ -195,7 +195,11 @@ impl Leader {
     ///
     /// # Errors
     ///
-    /// Returns an error if the bytes are invalid or too short.
+    /// Returns an error if the bytes are invalid or too short. Specifically:
+    /// [`MarcError::RecordLengthInvalid`] when bytes 0-4 are not five ASCII
+    /// digits, [`MarcError::BaseAddressInvalid`] when bytes 12-16 are not five
+    /// ASCII digits, and [`MarcError::InvalidLeader`] for other malformations
+    /// (length too short, non-digit indicator/subfield-code count).
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         if bytes.len() < 24 {
             return Err(MarcError::leader_msg(format!(
@@ -204,7 +208,15 @@ impl Leader {
             )));
         }
 
-        let record_length = parse_digits(&bytes[0..5])?;
+        let record_length =
+            parse_digits(&bytes[0..5]).ok_or_else(|| MarcError::RecordLengthInvalid {
+                record_index: None,
+                byte_offset: None,
+                source_name: None,
+                found: Some(crate::error::truncate_bytes(&bytes[0..5])),
+                expected: Some("5 ASCII digits".to_string()),
+                bytes_near: None,
+            })?;
         let record_status = bytes[5] as char;
         let record_type = bytes[6] as char;
         let bibliographic_level = bytes[7] as char;
@@ -230,7 +242,16 @@ impl Leader {
                 MarcError::leader_msg("Subfield code count exceeds valid range".to_string())
             })?;
 
-        let data_base_address = parse_digits(&bytes[12..17])?;
+        let data_base_address =
+            parse_digits(&bytes[12..17]).ok_or_else(|| MarcError::BaseAddressInvalid {
+                record_index: None,
+                byte_offset: None,
+                source_name: None,
+                record_control_number: None,
+                found: Some(crate::error::truncate_bytes(&bytes[12..17])),
+                expected: Some("5 ASCII digits".to_string()),
+                bytes_near: None,
+            })?;
         let encoding_level = bytes[17] as char;
         let cataloging_form = bytes[18] as char;
         let multipart_level = bytes[19] as char;
@@ -255,25 +276,49 @@ impl Leader {
 
     /// Validate that the leader is suitable for binary record reading.
     ///
-    /// Checks that `record_length` and `data_base_address` are at least 24,
-    /// which is required before performing arithmetic on these fields during
-    /// binary ISO 2709 parsing.
+    /// Checks structural invariants between the leader's `record_length` and
+    /// `data_base_address` fields before binary ISO 2709 parsing performs
+    /// arithmetic on them.
     ///
     /// # Errors
     ///
-    /// Returns an error if `record_length` or `data_base_address` is less than 24.
+    /// - [`MarcError::RecordLengthInvalid`] (E001) when `record_length < 24`.
+    ///   The leader alone occupies 24 bytes, so any smaller value is impossible.
+    /// - [`MarcError::BaseAddressInvalid`] (E003) when `data_base_address < 24`.
+    ///   A base address inside the leader is structurally invalid.
+    /// - [`MarcError::BaseAddressNotFound`] (E004) when `data_base_address >
+    ///   record_length`. The leader claims data starts past the record's own
+    ///   declared end.
     pub fn validate_for_reading(&self) -> Result<()> {
         if self.record_length < 24 {
-            return Err(MarcError::leader_msg(format!(
-                "Record length must be at least 24, got {}",
-                self.record_length
-            )));
+            return Err(MarcError::RecordLengthInvalid {
+                record_index: None,
+                byte_offset: None,
+                source_name: None,
+                found: None,
+                expected: Some(format!("at least 24, got {}", self.record_length)),
+                bytes_near: None,
+            });
         }
         if self.data_base_address < 24 {
-            return Err(MarcError::leader_msg(format!(
-                "Base address of data must be at least 24, got {}",
-                self.data_base_address
-            )));
+            return Err(MarcError::BaseAddressInvalid {
+                record_index: None,
+                byte_offset: None,
+                source_name: None,
+                record_control_number: None,
+                found: None,
+                expected: Some(format!("at least 24, got {}", self.data_base_address)),
+                bytes_near: None,
+            });
+        }
+        if self.data_base_address > self.record_length {
+            return Err(MarcError::BaseAddressNotFound {
+                record_index: None,
+                byte_offset: None,
+                source_name: None,
+                record_control_number: None,
+                bytes_near: None,
+            });
         }
         Ok(())
     }
@@ -316,18 +361,16 @@ impl Leader {
     }
 }
 
-/// Parse 5-digit ASCII number from bytes
-fn parse_digits(bytes: &[u8]) -> Result<u32> {
+/// Parse a 5-byte ASCII-digit field. Returns `None` when the slice is not
+/// exactly 5 bytes or when any byte is not an ASCII digit; callers map
+/// `None` to the appropriate field-specific error variant
+/// ([`MarcError::RecordLengthInvalid`] for bytes 0-4,
+/// [`MarcError::BaseAddressInvalid`] for bytes 12-16).
+fn parse_digits(bytes: &[u8]) -> Option<u32> {
     if bytes.len() != 5 {
-        return Err(MarcError::leader_msg(format!(
-            "Expected 5-digit field, got {} bytes",
-            bytes.len()
-        )));
+        return None;
     }
-
-    let s = String::from_utf8_lossy(bytes);
-    s.parse::<u32>()
-        .map_err(|_| MarcError::leader_msg(format!("Invalid numeric field: '{s}'")))
+    std::str::from_utf8(bytes).ok()?.parse::<u32>().ok()
 }
 
 #[cfg(test)]
@@ -494,13 +537,12 @@ mod tests {
         // Leader with record_length=00010 (< 24)
         let bytes = b"00010nam a2200025 i 4500";
         let leader = Leader::from_bytes(bytes).unwrap();
-        let result = leader.validate_for_reading();
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
+        let err = leader.validate_for_reading().unwrap_err();
         assert!(
-            err.contains("Record length must be at least 24"),
-            "got: {err}"
+            matches!(err, MarcError::RecordLengthInvalid { .. }),
+            "expected RecordLengthInvalid, got: {err:?}"
         );
+        assert_eq!(err.code(), "E001");
     }
 
     #[test]
@@ -508,12 +550,48 @@ mod tests {
         // Leader with valid record_length=00050 but base_address=00010 (< 24)
         let bytes = b"00050nam a2200010 i 4500";
         let leader = Leader::from_bytes(bytes).unwrap();
-        let result = leader.validate_for_reading();
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
+        let err = leader.validate_for_reading().unwrap_err();
         assert!(
-            err.contains("Base address of data must be at least 24"),
-            "got: {err}"
+            matches!(err, MarcError::BaseAddressInvalid { .. }),
+            "expected BaseAddressInvalid, got: {err:?}"
         );
+        assert_eq!(err.code(), "E003");
+    }
+
+    #[test]
+    fn test_validate_for_reading_rejects_base_address_past_record_length() {
+        // Leader with record_length=00050 but base_address=00099 (> 50).
+        let bytes = b"00050nam a2200099 i 4500";
+        let leader = Leader::from_bytes(bytes).unwrap();
+        let err = leader.validate_for_reading().unwrap_err();
+        assert!(
+            matches!(err, MarcError::BaseAddressNotFound { .. }),
+            "expected BaseAddressNotFound, got: {err:?}"
+        );
+        assert_eq!(err.code(), "E004");
+    }
+
+    #[test]
+    fn test_from_bytes_non_digit_record_length() {
+        // Leader byte 0 replaced with 'X'.
+        let bytes = b"X0150nam a2200061 i 4500";
+        let err = Leader::from_bytes(bytes).unwrap_err();
+        assert!(
+            matches!(err, MarcError::RecordLengthInvalid { .. }),
+            "expected RecordLengthInvalid, got: {err:?}"
+        );
+        assert_eq!(err.code(), "E001");
+    }
+
+    #[test]
+    fn test_from_bytes_non_digit_base_address() {
+        // Leader byte 12 replaced with 'X'.
+        let bytes = b"00150nam a22X0061 i 4500";
+        let err = Leader::from_bytes(bytes).unwrap_err();
+        assert!(
+            matches!(err, MarcError::BaseAddressInvalid { .. }),
+            "expected BaseAddressInvalid, got: {err:?}"
+        );
+        assert_eq!(err.code(), "E003");
     }
 }

@@ -183,21 +183,19 @@ impl ReaderBackend {
         }
 
         // Parse record length from leader (bytes 0-4, ASCII digits)
-        let record_length_str = String::from_utf8_lossy(&leader[0..5]);
-        let record_length: usize = record_length_str.trim().parse().map_err(|_| {
-            ParseError::invalid_record(format!(
-                "Invalid record length in leader: '{}'",
-                record_length_str
-            ))
-            .with_bytes_near(&leader, 0)
-        })?;
+        let record_length: usize = std::str::from_utf8(&leader[0..5])
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .ok_or_else(|| {
+                ParseError::record_length_invalid(&leader[0..5], "5 ASCII digits")
+                    .with_bytes_near(&leader, 0)
+            })?;
 
         if record_length < 24 {
-            return Err(ParseError::invalid_record(format!(
-                "Record length too small: {} (minimum 24)",
-                record_length
-            ))
-            .with_bytes_near(&leader, 0));
+            return Err(
+                ParseError::record_length_invalid(&leader[0..5], "at least 24")
+                    .with_bytes_near(&leader, 0),
+            );
         }
 
         // Read remainder of record (record_length - 24 bytes). Use a
@@ -273,21 +271,19 @@ impl ReaderBackend {
         }
 
         // Parse record length from leader
-        let record_length_str = String::from_utf8_lossy(&leader[0..5]);
-        let record_length: usize = record_length_str.trim().parse().map_err(|_| {
-            ParseError::invalid_record(format!(
-                "Invalid record length in leader: '{}'",
-                record_length_str
-            ))
-            .with_bytes_near(&leader, 0)
-        })?;
+        let record_length: usize = std::str::from_utf8(&leader[0..5])
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .ok_or_else(|| {
+                ParseError::record_length_invalid(&leader[0..5], "5 ASCII digits")
+                    .with_bytes_near(&leader, 0)
+            })?;
 
         if record_length < 24 {
-            return Err(ParseError::invalid_record(format!(
-                "Record length too small: {} (minimum 24)",
-                record_length
-            ))
-            .with_bytes_near(&leader, 0));
+            return Err(
+                ParseError::record_length_invalid(&leader[0..5], "at least 24")
+                    .with_bytes_near(&leader, 0),
+            );
         }
 
         // Read remainder of record

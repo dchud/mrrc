@@ -72,8 +72,7 @@ trigger_fixture = "tests/data/error_fixtures/e001_record_length_non_digit.bin"
 description = "Leader byte 0 ('0' of '00150') replaced with 'X'."
 expected_context = ["record_index", "byte_offset"]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "Leader::validate_for_reading uses MarcError::leader_msg unconditionally and produces InvalidLeader (E002) for any malformed leader byte; the dedicated RecordLengthInvalid variant exists with a ParseContext helper but no parse path constructs it"
+wired = true
 
 # E002: leader byte 10 (indicator count, normally '2') is non-digit.
 # Audit note: docs/reference/error-codes.md describes E002 as also
@@ -107,8 +106,7 @@ trigger_fixture = "tests/data/error_fixtures/e003_base_address_non_digit.bin"
 description = "Leader byte 12 ('0' of base address '00061') replaced with 'X'."
 expected_context = ["record_index", "byte_offset"]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "Leader::validate_for_reading uses MarcError::leader_msg unconditionally and produces InvalidLeader (E002); the dedicated BaseAddressInvalid variant exists with a ParseContext helper but no parse path constructs it"
+wired = true
 
 # E004: base address claims a value past the available bytes.
 [[case]]
@@ -121,8 +119,7 @@ trigger_fixture = "tests/data/error_fixtures/e004_base_address_past_record.bin"
 description = "Leader bytes 12-16 set to '99999' (> 150-byte record length)."
 expected_context = ["record_index", "byte_offset"]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "no parse path verifies that the leader's claimed base address falls within the record's claimed length; the dedicated BaseAddressNotFound variant exists with a ParseContext helper but no parse path constructs it"
+wired = true
 
 # E005: stream EOF before reading the leader-claimed record length.
 [[case]]
