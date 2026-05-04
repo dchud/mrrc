@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   accepted as-is. In lenient and permissive modes the offending field
   is dropped and the recovery cap is incremented; strict mode
   propagates the error.
+- Subfield code bytes are now validated in `parse_subfields`: each
+  must be printable non-space ASCII (matches MARC 21 a-z / 0-9
+  conventions and rejects NUL, control bytes, space, and high
+  bytes). A different byte fires `BadSubfieldCode` (E202) carrying
+  `field_tag` and the offending `subfield_code`. Previously the
+  byte was cast to char and accepted as-is. Recovery-mode dispatch
+  matches E201's shape: lenient and permissive drop the field via
+  the existing cap path; strict propagates.
 - Strict-mode parsing now verifies that the byte at the leader's
   claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
   different byte fires `EndOfRecordNotFound` (E006). Previously the

@@ -271,8 +271,7 @@ expected_context = [
     "subfield_code",
 ]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "parse_subfields accepts any byte as a subfield code; no parse path constructs BadSubfieldCode"
+wired = true
 
 # === Encoding (E3xx) ================================================
 
