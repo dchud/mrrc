@@ -23,14 +23,6 @@
       "std_dev_ns": 158239,
       "median_ns": 11927837,
       "relative_stddev_pct": 1.32
-    },
-    "parse_10k_bad_indicators_strict": {
-      "fixture": "tests/data/fixtures/10k_records.mrc (pre-mutated in setup so every record's 245 first-indicator byte is ':')",
-      "description": "Strict recovery mode over a 10,000-record stream where every record has a non-digit/non-space first indicator on field 245. Today equivalent to the clean baseline because no parse path constructs MarcError::InvalidIndicator. Once indicator-byte detection is wired, the delta vs parse_10k_clean_strict measures the per-byte detection cost in absolute terms.",
-      "mean_ns": 11821127,
-      "std_dev_ns": 71958,
-      "median_ns": 11817425,
-      "relative_stddev_pct": 0.61
     }
   }
 }

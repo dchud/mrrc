@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `record_control_number` populated when the tag is not present.
   Existing `get_field` continues to return `Option<&Field>` / `None`
   for pymarc-compatible callers; the typed variant is opt-in.
+- Indicator bytes are now validated in `parse_data_field`: each must
+  be an ASCII digit or space per MARC 21. A different byte fires
+  `InvalidIndicator` (E201) carrying `field_tag`, `indicator_position`,
+  `found`, and `expected`. Previously the byte was cast to char and
+  accepted as-is. In lenient and permissive modes the offending field
+  is dropped and the recovery cap is incremented; strict mode
+  propagates the error.
 - Strict-mode parsing now verifies that the byte at the leader's
   claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
   different byte fires `EndOfRecordNotFound` (E006). Previously the

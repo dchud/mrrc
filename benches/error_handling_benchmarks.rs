@@ -11,14 +11,16 @@
 //!   most consequential and the primary thing the cumulative perf
 //!   budget protects against.
 //!
-//! * `parse_10k_bad_indicators_strict` — every record's first
+//! * `parse_10k_bad_indicators_lenient` — every record's first
 //!   indicator on field 245 is mutated to a non-digit/non-space byte.
-//!   Today the parser silently accepts these (no parse path
-//!   constructs `MarcError::InvalidIndicator`), so the number tracks
-//!   the same hot path as the clean run. Once that wiring lands, the
-//!   delta between this scenario and the clean one measures the cost
-//!   of the new per-byte detection. Fixture is pre-mutated in setup
-//!   so the per-iteration work is just parsing.
+//!   The parse path constructs `MarcError::InvalidIndicator` (E201)
+//!   per record; the bench runs in lenient mode with `max_errors(0)`
+//!   so the per-record detection runs against all 10k records and
+//!   the offending fields are dropped via `cap.note` rather than
+//!   short-circuiting. Delta between this scenario and the clean
+//!   one measures the cost of per-byte indicator validation plus
+//!   the cap.note bookkeeping. Fixture is pre-mutated in setup so
+//!   the per-iteration work is just parsing.
 //!
 //! Recovery-mode cost (lenient / permissive over a stream with
 //! detected errors) is excluded from this file because the
@@ -119,20 +121,17 @@ fn benchmark_parse_10k_clean_strict(c: &mut Criterion) {
     });
 }
 
-fn benchmark_parse_10k_bad_indicators_strict(c: &mut Criterion) {
+fn benchmark_parse_10k_bad_indicators_lenient(c: &mut Criterion) {
     let mut fixture = load_fixture();
     let offsets = record_offsets(&fixture);
     mutate_245_first_indicator(&mut fixture, &offsets);
     let fixture = black_box(fixture);
-    c.bench_function("parse_10k_bad_indicators_strict", |b| {
+    c.bench_function("parse_10k_bad_indicators_lenient", |b| {
         b.iter(|| {
-            let mut reader =
-                MarcReader::new(Cursor::new(&fixture[..])).with_recovery_mode(RecoveryMode::Strict);
+            let mut reader = MarcReader::new(Cursor::new(&fixture[..]))
+                .with_recovery_mode(RecoveryMode::Lenient)
+                .with_max_errors(0);
             let mut count = 0usize;
-            // E201 is currently unwired so this loop completes the
-            // same way as the clean scenario; once the wiring lands
-            // the loop will short-circuit on the first record. The
-            // benchmark measures the parse hot path either way.
             while let Ok(Some(_)) = reader.read_record() {
                 count += 1;
             }
@@ -144,6 +143,6 @@ fn benchmark_parse_10k_bad_indicators_strict(c: &mut Criterion) {
 criterion_group!(
     error_handling_benches,
     benchmark_parse_10k_clean_strict,
-    benchmark_parse_10k_bad_indicators_strict,
+    benchmark_parse_10k_bad_indicators_lenient,
 );
 criterion_main!(error_handling_benches);
