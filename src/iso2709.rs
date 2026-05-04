@@ -702,7 +702,14 @@ pub fn parse_subfields(
         if pos >= bytes.len() {
             break;
         }
-        let code = bytes[pos] as char;
+        let code_byte = bytes[pos];
+        // Subfield codes must be printable, non-space ASCII per MARC 21
+        // (`is_ascii_graphic` covers a-z / 0-9 plus punctuation; rejects
+        // NUL, control bytes, space, and high bytes).
+        if !code_byte.is_ascii_graphic() {
+            return Err(ctx.err_bad_subfield_code(code_byte));
+        }
+        let code = code_byte as char;
         pos += 1;
         let mut end = pos;
         while end < bytes.len()
