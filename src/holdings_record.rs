@@ -24,6 +24,11 @@ pub struct HoldingsRecord {
     pub control_fields: IndexMap<String, Vec<String>>,
     /// Variable fields (010+) - unified storage, preserves insertion order
     pub fields: IndexMap<String, Vec<Field>>,
+    /// Non-fatal errors accumulated while parsing this record. Always
+    /// empty in `RecoveryMode::Strict`. Wrapped in `Arc` so cloning is
+    /// cheap. Skipped during serialization.
+    #[serde(skip)]
+    pub errors: std::sync::Arc<Vec<crate::error::MarcError>>,
 }
 
 /// Type of holdings record (Leader/06)
@@ -92,6 +97,7 @@ impl HoldingsRecord {
             leader,
             control_fields: IndexMap::new(),
             fields: IndexMap::new(),
+            errors: std::sync::Arc::new(Vec::new()),
         }
     }
 

@@ -654,6 +654,18 @@ impl PyRecord {
         self.inner.leader = leader.inner.clone();
     }
 
+    /// Non-fatal errors accumulated while parsing this record. Always
+    /// empty in `recovery_mode="strict"`. Populated in `lenient` /
+    /// `permissive` with one typed exception per recovered defect.
+    #[getter]
+    fn errors(&self, py: Python<'_>) -> Vec<Py<PyAny>> {
+        self.inner
+            .errors
+            .iter()
+            .map(|e| crate::error::marc_error_to_py_object(py, e))
+            .collect()
+    }
+
     /// Add a control field (000-009)
     pub fn add_control_field(&mut self, tag: &str, value: &str) -> PyResult<()> {
         if tag.len() != 3 {
@@ -1268,6 +1280,18 @@ impl PyAuthorityRecord {
         }
     }
 
+    /// Non-fatal errors accumulated while parsing this record. Always
+    /// empty in `recovery_mode="strict"`. Populated in `lenient` /
+    /// `permissive` with one typed exception per recovered defect.
+    #[getter]
+    fn errors(&self, py: Python<'_>) -> Vec<Py<PyAny>> {
+        self.inner
+            .errors
+            .iter()
+            .map(|e| crate::error::marc_error_to_py_object(py, e))
+            .collect()
+    }
+
     /// Get record type (single character)
     pub fn record_type(&self) -> String {
         self.inner.leader.record_type.to_string()
@@ -1384,6 +1408,18 @@ impl PyHoldingsRecord {
         PyLeader {
             inner: self.inner.leader.clone(),
         }
+    }
+
+    /// Non-fatal errors accumulated while parsing this record. Always
+    /// empty in `recovery_mode="strict"`. Populated in `lenient` /
+    /// `permissive` with one typed exception per recovered defect.
+    #[getter]
+    fn errors(&self, py: Python<'_>) -> Vec<Py<PyAny>> {
+        self.inner
+            .errors
+            .iter()
+            .map(|e| crate::error::marc_error_to_py_object(py, e))
+            .collect()
     }
 
     /// Get record type (single character: x, y, v, or u)

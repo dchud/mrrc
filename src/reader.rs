@@ -229,17 +229,65 @@ impl<R: Read> MarcReader<R> {
     /// - The record structure is invalid
     /// - An I/O error occurs
     pub fn read_record(&mut self) -> Result<Option<Record>> {
+        let mut errors = Vec::new();
         let result = parse_iso2709_record::<R, BibBuilder>(
             &mut self.reader,
             &mut self.ctx,
             &mut self.cap,
             self.recovery_mode,
             self.validation_level,
+            &mut errors,
         )?;
+        let result = result.map(|mut record| {
+            record.errors = std::sync::Arc::new(errors);
+            record
+        });
         if result.is_some() {
             self.records_read += 1;
         }
         Ok(result)
+    }
+
+    /// Iterate over records, yielding each paired with its accumulated
+    /// non-fatal errors. Equivalent to iterating with [`Self::read_record`]
+    /// and reading [`Record::errors`] from each yielded record — same data,
+    /// more ergonomic destructuring at the call site.
+    ///
+    /// In `RecoveryMode::Strict` the second tuple element is always empty
+    /// (a record either parses clean or the iterator yields `Err`). In
+    /// `Lenient`/`Permissive` the second element carries any diagnostics
+    /// captured during the record's parse.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use mrrc::{MarcReader, RecoveryMode};
+    /// use std::fs::File;
+    /// # fn doc() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut reader = MarcReader::new(File::open("records.mrc")?)
+    ///     .with_recovery_mode(RecoveryMode::Lenient);
+    /// for result in reader.iter_with_errors() {
+    ///     let (record, errors) = result?;
+    ///     if !errors.is_empty() {
+    ///         eprintln!("{} errors during parse", errors.len());
+    ///     }
+    ///     // ... use record
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn iter_with_errors(
+        &mut self,
+    ) -> impl Iterator<Item = Result<(Record, std::sync::Arc<Vec<crate::error::MarcError>>)>> + '_
+    {
+        std::iter::from_fn(move || match self.read_record() {
+            Ok(Some(record)) => {
+                let errors = record.errors.clone();
+                Some(Ok((record, errors)))
+            },
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+        })
     }
 }
 
@@ -291,6 +339,7 @@ impl Iso2709Builder for BibBuilder {
         base_address: usize,
         mode: RecoveryMode,
         ctx: &ParseContext,
+        errors: &mut Vec<crate::error::MarcError>,
     ) -> Option<Result<Record>> {
         Some(recovery::try_recover_record(
             leader,
@@ -298,6 +347,7 @@ impl Iso2709Builder for BibBuilder {
             base_address,
             mode,
             ctx,
+            errors,
         ))
     }
 

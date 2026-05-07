@@ -142,13 +142,39 @@ impl<R: Read> AuthorityMarcReader<R> {
     ///
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     pub fn read_record(&mut self) -> Result<Option<AuthorityRecord>> {
-        parse_iso2709_record::<R, AuthorityBuilder>(
+        let mut errors = Vec::new();
+        let result = parse_iso2709_record::<R, AuthorityBuilder>(
             &mut self.reader,
             &mut self.ctx,
             &mut self.cap,
             self.recovery_mode,
             self.validation_level,
-        )
+            &mut errors,
+        )?;
+        Ok(result.map(|mut record| {
+            record.errors = std::sync::Arc::new(errors);
+            record
+        }))
+    }
+
+    /// Iterate over records paired with accumulated parse errors. See
+    /// [`crate::MarcReader::iter_with_errors`] for semantics.
+    pub fn iter_with_errors(
+        &mut self,
+    ) -> impl Iterator<
+        Item = Result<(
+            AuthorityRecord,
+            std::sync::Arc<Vec<crate::error::MarcError>>,
+        )>,
+    > + '_ {
+        std::iter::from_fn(move || match self.read_record() {
+            Ok(Some(record)) => {
+                let errors = record.errors.clone();
+                Some(Ok((record, errors)))
+            },
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+        })
     }
 }
 

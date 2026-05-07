@@ -21,6 +21,25 @@ pub fn marc_error_to_py_err(err: MarcError) -> PyErr {
     })
 }
 
+/// Build a typed Python exception *instance* from a [`MarcError`] without
+/// raising it. Used to populate `record.errors` lists where errors are
+/// observed rather than thrown. Falls back to a `PyValueError` instance
+/// (carrying the construction failure as its cause) on the same shapes that
+/// [`marc_error_to_py_err`] handles via fallback.
+pub fn marc_error_to_py_object(py: Python<'_>, err: &MarcError) -> Py<PyAny> {
+    match build_typed(py, err) {
+        Ok(obj) => obj.into(),
+        Err(construction_err) => {
+            let py_err = match err {
+                MarcError::IoError { cause: io, .. } => PyIOError::new_err(io.to_string()),
+                other => PyValueError::new_err(other.to_string()),
+            };
+            py_err.set_cause(py, Some(construction_err));
+            py_err.into_value(py).into()
+        },
+    }
+}
+
 fn fallback_with_cause(py: Python<'_>, err: MarcError, cause: Option<PyErr>) -> PyErr {
     let py_err = match err {
         MarcError::IoError { cause: io, .. } => PyIOError::new_err(io.to_string()),

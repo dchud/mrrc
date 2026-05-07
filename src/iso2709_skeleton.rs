@@ -28,7 +28,7 @@
 //! [`AuthorityMarcReader`]: crate::AuthorityMarcReader
 //! [`HoldingsMarcReader`]: crate::HoldingsMarcReader
 
-use crate::error::Result;
+use crate::error::{MarcError, Result};
 use crate::iso2709::{
     self, is_control_field_tag, parse_4digits, parse_5digits, parse_data_field, read_leader_bytes,
     read_record_data, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN,
@@ -136,7 +136,9 @@ pub trait Iso2709Builder: Sized {
     /// the cap. `None` (the default) means "no per-type salvage path —
     /// fall through to best-effort directory parsing". The bibliographic
     /// reader overrides this to invoke
-    /// [`crate::recovery::try_recover_record`].
+    /// [`crate::recovery::try_recover_record`]. The `errors` accumulator
+    /// is the reader's per-record diagnostic list; the salvage path
+    /// pushes into it for any non-fatal recoveries it performs.
     #[must_use]
     fn try_recover_truncated(
         leader: Leader,
@@ -144,8 +146,9 @@ pub trait Iso2709Builder: Sized {
         base_address: usize,
         mode: RecoveryMode,
         ctx: &ParseContext,
+        errors: &mut Vec<MarcError>,
     ) -> Option<Result<Self::Output>> {
-        let _ = (leader, partial_data, base_address, mode, ctx);
+        let _ = (leader, partial_data, base_address, mode, ctx, errors);
         None
     }
 
@@ -181,6 +184,7 @@ pub fn parse_iso2709_record<R, B>(
     cap: &mut RecoveryCap,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    errors: &mut Vec<MarcError>,
 ) -> Result<Option<B::Output>>
 where
     R: Read,
@@ -235,12 +239,14 @@ where
     ctx.set_parse_buffer(&record_data, record_data_offset);
 
     if record_data.len() < (record_length - 24) {
+        let err = ctx.err_truncated_record(
+            Some(record_length.saturating_sub(LEADER_LEN)),
+            Some(record_data.len()),
+        );
         if recovery_mode == RecoveryMode::Strict {
-            return Err(ctx.err_truncated_record(
-                Some(record_length.saturating_sub(LEADER_LEN)),
-                Some(record_data.len()),
-            ));
+            return Err(err);
         }
+        errors.push(err);
         cap.note(ctx)?;
         // Per-type recovery hook (bibliographic uses try_recover_record;
         // authority + holdings fall through to best-effort directory parsing).
@@ -250,6 +256,7 @@ where
             base_address,
             recovery_mode,
             ctx,
+            errors,
         ) {
             return result.map(Some);
         }
@@ -299,12 +306,12 @@ where
         }
 
         if pos + 12 > directory.len() {
+            let err = ctx
+                .err_directory_invalid(Some(&directory[pos..]), "complete 12-byte directory entry");
             if recovery_mode == RecoveryMode::Strict {
-                return Err(ctx.err_directory_invalid(
-                    Some(&directory[pos..]),
-                    "complete 12-byte directory entry",
-                ));
+                return Err(err);
             }
+            errors.push(err);
             cap.note(ctx)?;
             break;
         }
@@ -329,6 +336,7 @@ where
             if recovery_mode == RecoveryMode::Strict {
                 return Err(err);
             }
+            errors.push(err);
             cap.note(ctx)?;
             pos += 12;
             continue;
@@ -344,6 +352,7 @@ where
             if recovery_mode == RecoveryMode::Strict {
                 return Err(err);
             }
+            errors.push(err);
             cap.note(ctx)?;
             pos += 12;
             continue;
@@ -352,13 +361,15 @@ where
 
         let end_position = start_position + field_length;
         if end_position > data.len() {
+            ctx.current_field_tag = tag.as_bytes().try_into().ok();
+            let err = ctx.err_invalid_field(format!(
+                "Field {tag} exceeds data area (end {end_position} > {})",
+                data.len()
+            ));
             if recovery_mode == RecoveryMode::Strict {
-                ctx.current_field_tag = tag.as_bytes().try_into().ok();
-                return Err(ctx.err_invalid_field(format!(
-                    "Field {tag} exceeds data area (end {end_position} > {})",
-                    data.len()
-                )));
+                return Err(err);
             }
+            errors.push(err);
             cap.note(ctx)?;
             // Salvage what bytes we have — extract a clamped slice and try
             // to parse. If the parse fails, silently skip; we already counted
@@ -408,6 +419,7 @@ where
                     if recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
+                    errors.push(e);
                     cap.note(ctx)?;
                     continue;
                 },
@@ -424,6 +436,7 @@ where
             if recovery_mode == RecoveryMode::Strict {
                 return Err(e);
             }
+            errors.push(e);
             cap.note(ctx)?;
             continue;
         }
@@ -441,6 +454,7 @@ where
                 if recovery_mode == RecoveryMode::Strict {
                     return Err(e);
                 }
+                errors.push(e);
                 cap.note(ctx)?;
             },
         }

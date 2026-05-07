@@ -132,7 +132,10 @@ const SUBFIELD_DELIMITER: u8 = 0x1F;
 /// `ctx` carries the per-stream/per-record positional metadata that the
 /// caller (a [`crate::MarcReader`]) is tracking; errors raised by this
 /// function inherit those fields so recovered-mode errors carry the same
-/// positional shape as strict-mode errors.
+/// positional shape as strict-mode errors. The `errors` accumulator
+/// captures any per-field directory failures that are silently skipped
+/// during the salvage walk so callers can inspect them via
+/// [`Record::errors`](crate::Record::errors).
 ///
 /// # Errors
 ///
@@ -144,6 +147,7 @@ pub fn try_recover_record(
     base_address: usize,
     mode: RecoveryMode,
     ctx: &ParseContext,
+    errors: &mut Vec<MarcError>,
 ) -> Result<Record> {
     let mut record = Record::new(leader);
 
@@ -177,20 +181,28 @@ pub fn try_recover_record(
         // Parse field length and position with error handling
         let field_length = if mode == RecoveryMode::Strict {
             parse_4digits(&entry_chunk[3..7])?
-        } else if let Ok(len) = parse_4digits(&entry_chunk[3..7]) {
-            len
         } else {
-            pos += 12;
-            continue;
+            match parse_4digits(&entry_chunk[3..7]) {
+                Ok(len) => len,
+                Err(e) => {
+                    errors.push(e);
+                    pos += 12;
+                    continue;
+                },
+            }
         };
 
         let start_position = if mode == RecoveryMode::Strict {
             parse_digits(&entry_chunk[7..12])?
-        } else if let Ok(p) = parse_digits(&entry_chunk[7..12]) {
-            p
         } else {
-            pos += 12;
-            continue;
+            match parse_digits(&entry_chunk[7..12]) {
+                Ok(p) => p,
+                Err(e) => {
+                    errors.push(e);
+                    pos += 12;
+                    continue;
+                },
+            }
         };
 
         pos += 12;
