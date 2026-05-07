@@ -112,7 +112,7 @@ impl Record {
             leader,
             control_fields: IndexMap::new(),
             fields: IndexMap::new(),
-            errors: std::sync::Arc::new(Vec::new()),
+            errors: crate::error::empty_errors_arc(),
         }
     }
 
@@ -153,7 +153,7 @@ impl Record {
                 leader,
                 control_fields: IndexMap::new(),
                 fields: IndexMap::new(),
-                errors: std::sync::Arc::new(Vec::new()),
+                errors: crate::error::empty_errors_arc(),
             },
         }
     }

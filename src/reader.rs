@@ -239,7 +239,9 @@ impl<R: Read> MarcReader<R> {
             &mut errors,
         )?;
         let result = result.map(|mut record| {
-            record.errors = std::sync::Arc::new(errors);
+            if !errors.is_empty() {
+                record.errors = std::sync::Arc::new(errors);
+            }
             record
         });
         if result.is_some() {

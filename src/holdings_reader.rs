@@ -150,7 +150,9 @@ impl<R: Read> HoldingsMarcReader<R> {
             &mut errors,
         )?;
         Ok(result.map(|mut record| {
-            record.errors = std::sync::Arc::new(errors);
+            if !errors.is_empty() {
+                record.errors = std::sync::Arc::new(errors);
+            }
             record
         }))
     }
