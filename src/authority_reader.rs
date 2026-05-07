@@ -142,13 +142,21 @@ impl<R: Read> AuthorityMarcReader<R> {
     ///
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     pub fn read_record(&mut self) -> Result<Option<AuthorityRecord>> {
-        parse_iso2709_record::<R, AuthorityBuilder>(
+        let mut errors = Vec::new();
+        let result = parse_iso2709_record::<R, AuthorityBuilder>(
             &mut self.reader,
             &mut self.ctx,
             &mut self.cap,
             self.recovery_mode,
             self.validation_level,
-        )
+            &mut errors,
+        )?;
+        Ok(result.map(|mut record| {
+            if !errors.is_empty() {
+                record.errors = std::sync::Arc::new(errors);
+            }
+            record
+        }))
     }
 
     /// Iterate over records paired with accumulated parse errors. See
@@ -177,7 +185,6 @@ impl<R: Read> AuthorityMarcReader<R> {
 /// record's semantic slots (heading, tracings, notes, linking entries).
 struct AuthorityBuilder {
     record: AuthorityRecord,
-    errors: Vec<crate::error::MarcError>,
 }
 
 impl Iso2709Builder for AuthorityBuilder {
@@ -203,12 +210,7 @@ impl Iso2709Builder for AuthorityBuilder {
     fn new_for(leader: Leader) -> Self {
         AuthorityBuilder {
             record: AuthorityRecord::new(leader),
-            errors: Vec::new(),
         }
-    }
-
-    fn add_error(&mut self, err: crate::error::MarcError) {
-        self.errors.push(err);
     }
 
     /// Authority control fields trim a trailing `SUBFIELD_DELIMITER`
@@ -290,10 +292,7 @@ impl Iso2709Builder for AuthorityBuilder {
         }
     }
 
-    fn finalize(mut self) -> AuthorityRecord {
-        if !self.errors.is_empty() {
-            self.record.errors = std::sync::Arc::new(self.errors);
-        }
+    fn finalize(self) -> AuthorityRecord {
         self.record
     }
 }

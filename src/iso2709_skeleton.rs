@@ -82,13 +82,6 @@ pub trait Iso2709Builder: Sized {
     /// their functional role (heading, tracings, locations, captions, etc.).
     fn add_data_field(&mut self, tag: String, field: Field);
 
-    /// Capture a non-fatal parse error against the in-progress output.
-    /// Called by the skeleton at every recovery site (where the strict
-    /// path would have raised) in lenient/permissive modes; `finalize`
-    /// is responsible for attaching the accumulated errors to the
-    /// per-type output.
-    fn add_error(&mut self, err: MarcError);
-
     /// Decode a control field's bytes into its string value. The
     /// default strips the trailing `FIELD_TERMINATOR` byte and dispatches
     /// on `level`: lossy under [`ValidationLevel::Structural`], strict
@@ -191,17 +184,12 @@ pub fn parse_iso2709_record<R, B>(
     cap: &mut RecoveryCap,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    errors: &mut Vec<MarcError>,
 ) -> Result<Option<B::Output>>
 where
     R: Read,
     B: Iso2709Builder,
 {
-    // Pre-builder error stash: the truncation site fires before
-    // `B::new_for(leader)` is reached, so we cannot push directly
-    // to the builder yet. Empty `Vec::new()` is `const` (zero alloc);
-    // push happens only on the truncation branch; the drain into the
-    // builder below is a no-op when nothing was pushed.
-    let mut pre_builder_errors: Vec<MarcError> = Vec::new();
     if cap.is_exhausted() {
         return Ok(None);
     }
@@ -258,20 +246,17 @@ where
         if recovery_mode == RecoveryMode::Strict {
             return Err(err);
         }
-        pre_builder_errors.push(err);
+        errors.push(err);
         cap.note(ctx)?;
-        // Per-type recovery hook (bibliographic uses try_recover_record
-        // and consumes the pre-builder errors into its returned record;
-        // authority + holdings fall through to best-effort directory
-        // parsing, in which case the errors are transferred to the
-        // builder below).
+        // Per-type recovery hook (bibliographic uses try_recover_record;
+        // authority + holdings fall through to best-effort directory parsing).
         if let Some(result) = B::try_recover_truncated(
             leader.clone(),
             &record_data,
             base_address,
             recovery_mode,
             ctx,
-            &mut pre_builder_errors,
+            errors,
         ) {
             return result.map(Some);
         }
@@ -308,13 +293,6 @@ where
 
     let mut builder = B::new_for(leader);
 
-    // Transfer any pre-builder errors (truncation paths where
-    // `try_recover_truncated` returned `None`). On the strict-clean
-    // path this is an empty drain (free).
-    for err in pre_builder_errors.drain(..) {
-        builder.add_error(err);
-    }
-
     // Walk directory entries (12 bytes each: tag(3) + length(4) + start(5)),
     // terminated by `FIELD_TERMINATOR`.
     let mut pos = 0;
@@ -333,7 +311,7 @@ where
             if recovery_mode == RecoveryMode::Strict {
                 return Err(err);
             }
-            builder.add_error(err);
+            errors.push(err);
             cap.note(ctx)?;
             break;
         }
@@ -358,7 +336,7 @@ where
             if recovery_mode == RecoveryMode::Strict {
                 return Err(err);
             }
-            builder.add_error(err);
+            errors.push(err);
             cap.note(ctx)?;
             pos += 12;
             continue;
@@ -374,7 +352,7 @@ where
             if recovery_mode == RecoveryMode::Strict {
                 return Err(err);
             }
-            builder.add_error(err);
+            errors.push(err);
             cap.note(ctx)?;
             pos += 12;
             continue;
@@ -391,7 +369,7 @@ where
             if recovery_mode == RecoveryMode::Strict {
                 return Err(err);
             }
-            builder.add_error(err);
+            errors.push(err);
             cap.note(ctx)?;
             // Salvage what bytes we have — extract a clamped slice and try
             // to parse. If the parse fails, silently skip; we already counted
@@ -441,7 +419,7 @@ where
                     if recovery_mode == RecoveryMode::Strict {
                         return Err(e);
                     }
-                    builder.add_error(e);
+                    errors.push(e);
                     cap.note(ctx)?;
                     continue;
                 },
@@ -458,7 +436,7 @@ where
             if recovery_mode == RecoveryMode::Strict {
                 return Err(e);
             }
-            builder.add_error(e);
+            errors.push(e);
             cap.note(ctx)?;
             continue;
         }
@@ -476,7 +454,7 @@ where
                 if recovery_mode == RecoveryMode::Strict {
                     return Err(e);
                 }
-                builder.add_error(e);
+                errors.push(e);
                 cap.note(ctx)?;
             },
         }

@@ -140,13 +140,21 @@ impl<R: Read> HoldingsMarcReader<R> {
     ///
     /// Returns an error if the binary data is malformed or an I/O error occurs.
     pub fn read_record(&mut self) -> Result<Option<HoldingsRecord>> {
-        parse_iso2709_record::<R, HoldingsBuilder>(
+        let mut errors = Vec::new();
+        let result = parse_iso2709_record::<R, HoldingsBuilder>(
             &mut self.reader,
             &mut self.ctx,
             &mut self.cap,
             self.recovery_mode,
             self.validation_level,
-        )
+            &mut errors,
+        )?;
+        Ok(result.map(|mut record| {
+            if !errors.is_empty() {
+                record.errors = std::sync::Arc::new(errors);
+            }
+            record
+        }))
     }
 
     /// Iterate over records paired with accumulated parse errors. See
@@ -172,7 +180,6 @@ impl<R: Read> HoldingsMarcReader<R> {
 /// holdings, item information).
 struct HoldingsBuilder {
     record: HoldingsRecord,
-    errors: Vec<crate::error::MarcError>,
 }
 
 impl Iso2709Builder for HoldingsBuilder {
@@ -198,12 +205,7 @@ impl Iso2709Builder for HoldingsBuilder {
     fn new_for(leader: Leader) -> Self {
         HoldingsBuilder {
             record: HoldingsRecord::new(leader),
-            errors: Vec::new(),
         }
-    }
-
-    fn add_error(&mut self, err: crate::error::MarcError) {
-        self.errors.push(err);
     }
 
     /// UTF-8 strictness follows `level`: lossy under
@@ -261,10 +263,7 @@ impl Iso2709Builder for HoldingsBuilder {
         }
     }
 
-    fn finalize(mut self) -> HoldingsRecord {
-        if !self.errors.is_empty() {
-            self.record.errors = std::sync::Arc::new(self.errors);
-        }
+    fn finalize(self) -> HoldingsRecord {
         self.record
     }
 }
