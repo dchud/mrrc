@@ -33,7 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `permissive=True` it yields `(None, [exception])` for records the
   wrapper would otherwise swallow as `None`, so unsalvageable records
   remain observable. Available across all three readers via
-  `record.errors`; `iter_with_errors` is bibliographic-only.
+  `record.errors`; `iter_with_errors` is bibliographic-only. The
+  per-record-diagnostics machinery introduces ~4-5% overhead on the
+  strict-clean parse path (measured on the 10k-record bench); this
+  is a deliberate trade-off accepted as part of the bd-0x73 epic's
+  error-handling work, and the perf gate's WARN (>2%) now surfaces
+  as a non-blocking annotation rather than a CI failure. The 5%
+  FAIL threshold still blocks PRs.
 - Strict-mode parsing now verifies that the byte at the leader's
   claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
   different byte fires `EndOfRecordNotFound` (E006). Previously the

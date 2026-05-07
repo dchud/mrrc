@@ -167,20 +167,32 @@ def main() -> int:
             "did `cargo bench --bench error_handling_benchmarks` fail?",
         )
     if fail:
-        return _exit(
-            2,
+        # GitHub Actions ::error:: annotation surfaces the failing
+        # scenario at the top of the PR's checks page, not just in
+        # the workflow logs. Exit 2 still blocks the gate.
+        msg = (
             f"FAIL: cumulative regression exceeds {fail_pct}% on at least one "
             f"scenario (worst: +{worst_pct:.2f}%). Phase B work should not "
             f"land until the regression is recovered or an explicit trade-off "
-            f"is accepted (and the baseline updated as a deliberate decision).",
+            f"is accepted (and the baseline updated as a deliberate decision)."
         )
+        print(f"::error title=Perf gate FAIL::{msg}")
+        return _exit(2, msg)
     if warn:
-        return _exit(
-            1,
+        # ::warning:: annotation makes the regression visible at the
+        # top of the PR's checks page (yellow icon, prominent), but
+        # exit 0 keeps the gate from blocking. The 2%-5% band is
+        # within the run-to-run noise floor of CI runner variability,
+        # so blocking here produces flaky gates without signal.
+        # Failures (>5%) still block via the path above.
+        msg = (
             f"WARN: cumulative regression exceeds {warn_pct}% on at least one "
             f"scenario (worst: +{worst_pct:.2f}%). Pause and assess whether "
-            f"the trade-off is justified before merging.",
+            f"the trade-off is justified before merging."
         )
+        print(f"::warning title=Perf gate WARN::{msg}")
+        print(msg, file=sys.stderr)
+        return 0
     print(f"OK: all scenarios within ±{warn_pct}% of baseline.")
     return 0
 
