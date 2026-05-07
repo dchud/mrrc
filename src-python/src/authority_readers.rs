@@ -7,7 +7,7 @@
 use crate::reader_helpers;
 use crate::wrappers::PyAuthorityRecord;
 use mrrc::authority_reader::AuthorityMarcReader;
-use mrrc::recovery::RecoveryMode;
+use mrrc::recovery::{RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
 use std::fs::File;
 use std::io::Cursor;
@@ -30,6 +30,7 @@ enum AuthorityReaderBackend {
 pub struct PyAuthorityMARCReader {
     backend: Option<AuthorityReaderBackend>,
     recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
 }
 
 #[pymethods]
@@ -39,26 +40,39 @@ impl PyAuthorityMARCReader {
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, bytes, or file-like object
     /// * `recovery_mode` - Error handling mode: 'strict' (default), 'lenient', 'permissive'
+    /// * `validation_level` - What counts as an error during parsing:
+    ///   'structural' (default) or 'strict_marc'.
     #[new]
-    #[pyo3(signature = (source, recovery_mode = "strict"))]
-    pub fn new(source: &Bound<'_, PyAny>, recovery_mode: &str) -> PyResult<Self> {
+    #[pyo3(signature = (source, recovery_mode = "strict", validation_level = "structural"))]
+    pub fn new(
+        source: &Bound<'_, PyAny>,
+        recovery_mode: &str,
+        validation_level: &str,
+    ) -> PyResult<Self> {
         let rec_mode = reader_helpers::parse_recovery_mode(recovery_mode)?;
+        let val_level = reader_helpers::parse_validation_level(validation_level)?;
 
         // Try file path (str or pathlib.Path)
         if let Some(file) = reader_helpers::try_open_as_path(source)? {
-            let reader = AuthorityMarcReader::new(file).with_recovery_mode(rec_mode);
+            let reader = AuthorityMarcReader::new(file)
+                .with_recovery_mode(rec_mode)
+                .with_validation_level(val_level);
             return Ok(PyAuthorityMARCReader {
                 backend: Some(AuthorityReaderBackend::RustFile(reader)),
                 recovery_mode: rec_mode,
+                validation_level: val_level,
             });
         }
 
         // Try bytes/bytearray
         if let Some(bytes) = reader_helpers::try_extract_bytes(source)? {
-            let reader = AuthorityMarcReader::new(Cursor::new(bytes)).with_recovery_mode(rec_mode);
+            let reader = AuthorityMarcReader::new(Cursor::new(bytes))
+                .with_recovery_mode(rec_mode)
+                .with_validation_level(val_level);
             return Ok(PyAuthorityMARCReader {
                 backend: Some(AuthorityReaderBackend::CursorBackend(reader)),
                 recovery_mode: rec_mode,
+                validation_level: val_level,
             });
         }
 
@@ -67,6 +81,7 @@ impl PyAuthorityMARCReader {
             return Ok(PyAuthorityMARCReader {
                 backend: Some(AuthorityReaderBackend::PythonFile(py_obj)),
                 recovery_mode: rec_mode,
+                validation_level: val_level,
             });
         }
 
@@ -114,8 +129,9 @@ impl PyAuthorityMARCReader {
                     None => Ok(None),
                     Some(bytes) => {
                         let cursor = Cursor::new(bytes);
-                        let mut parser =
-                            AuthorityMarcReader::new(cursor).with_recovery_mode(self.recovery_mode);
+                        let mut parser = AuthorityMarcReader::new(cursor)
+                            .with_recovery_mode(self.recovery_mode)
+                            .with_validation_level(self.validation_level);
                         match parser.read_record() {
                             Ok(Some(record)) => {
                                 self.backend = Some(AuthorityReaderBackend::PythonFile(py_obj));

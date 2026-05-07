@@ -1433,10 +1433,16 @@ class MARCReader:
             on errors), ``"lenient"`` (attempt to salvage valid fields), or
             ``"permissive"`` (very lenient, accept partial data). Cannot be
             combined with ``permissive=True``.
+        validation_level: What counts as an error during parsing — orthogonal
+            to ``recovery_mode``. ``"structural"`` (default) fires only ISO
+            2709 structural errors; UTF-8 decode is lossy across all readers.
+            ``"strict_marc"`` adds universal byte-level MARC 21 checks
+            (E201 indicator, E202 subfield code, E301 strict UTF-8).
     """
 
     def __init__(self, file_obj, to_unicode: bool = True, permissive: bool = False,
-                 recovery_mode: str = "strict"):
+                 recovery_mode: str = "strict",
+                 validation_level: str = "structural"):
         """Create a new MARC reader."""
         if not to_unicode:
             import warnings
@@ -1450,7 +1456,11 @@ class MARCReader:
                 "'strict' — they represent different error-handling strategies"
             )
         self._permissive = permissive
-        self._inner = _MARCReader(file_obj, recovery_mode=recovery_mode)
+        self._inner = _MARCReader(
+            file_obj,
+            recovery_mode=recovery_mode,
+            validation_level=validation_level,
+        )
 
     def __iter__(self):
         """Iterate over records."""

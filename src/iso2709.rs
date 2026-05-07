@@ -562,44 +562,117 @@ pub enum SubfieldStructureMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Utf8DecodeMode {
     /// Replace invalid UTF-8 sequences with the Unicode replacement
-    /// character. Matches the bibliographic and authority readers'
-    /// historical behavior.
+    /// character. Selected by [`crate::ValidationLevel::Structural`].
     Lossy,
     /// Raise an error if subfield value bytes are not valid UTF-8.
-    /// Matches the holdings reader's historical behavior.
+    /// Selected by [`crate::ValidationLevel::StrictMarc`].
+    Strict,
+}
+
+/// How to handle indicator bytes that aren't an ASCII digit (`0`-`9`)
+/// or space.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IndicatorMode {
+    /// Accept any byte as an indicator without validation. Selected by
+    /// [`crate::ValidationLevel::Structural`].
+    Lossy,
+    /// Raise [`crate::MarcError::InvalidIndicator`] (E201) on any
+    /// byte that isn't an ASCII digit or space. Selected by
+    /// [`crate::ValidationLevel::StrictMarc`].
+    Strict,
+}
+
+/// How to handle subfield-code bytes that aren't printable ASCII
+/// (`is_ascii_graphic`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SubfieldCodeMode {
+    /// Accept any byte as a subfield code without validation. Selected
+    /// by [`crate::ValidationLevel::Structural`].
+    Lossy,
+    /// Raise [`crate::MarcError::BadSubfieldCode`] (E202) on any byte
+    /// that isn't printable ASCII. Selected by
+    /// [`crate::ValidationLevel::StrictMarc`].
     Strict,
 }
 
 /// Configuration for [`parse_data_field`].
+///
+/// `structure` is per-reader-type (bibliographic = Strict, authority +
+/// holdings = Permissive). The other three flow from
+/// [`crate::ValidationLevel`]: every reader behaves the same way at
+/// each level.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DataFieldParseConfig {
     /// How to handle unrecognized bytes between subfields.
     pub structure: SubfieldStructureMode,
     /// How to decode subfield value bytes.
     pub utf8: Utf8DecodeMode,
+    /// How to handle out-of-range indicator bytes.
+    pub indicator: IndicatorMode,
+    /// How to handle out-of-range subfield-code bytes.
+    pub subfield_code: SubfieldCodeMode,
 }
 
 impl DataFieldParseConfig {
-    /// Configuration matching the bibliographic reader (strict structure,
-    /// lossy UTF-8).
-    pub const BIBLIOGRAPHIC: Self = Self {
-        structure: SubfieldStructureMode::Strict,
-        utf8: Utf8DecodeMode::Lossy,
-    };
+    /// Translate a [`crate::ValidationLevel`] into the
+    /// validation-level-driven mode triple (`utf8`, `indicator`,
+    /// `subfield_code`). The `structure` mode is owned by the per-reader
+    /// constructor below.
+    const fn modes_for(
+        level: crate::ValidationLevel,
+    ) -> (Utf8DecodeMode, IndicatorMode, SubfieldCodeMode) {
+        match level {
+            crate::ValidationLevel::Structural => (
+                Utf8DecodeMode::Lossy,
+                IndicatorMode::Lossy,
+                SubfieldCodeMode::Lossy,
+            ),
+            crate::ValidationLevel::StrictMarc => (
+                Utf8DecodeMode::Strict,
+                IndicatorMode::Strict,
+                SubfieldCodeMode::Strict,
+            ),
+        }
+    }
 
-    /// Configuration matching the authority reader (permissive structure,
-    /// lossy UTF-8).
-    pub const AUTHORITY: Self = Self {
-        structure: SubfieldStructureMode::Permissive,
-        utf8: Utf8DecodeMode::Lossy,
-    };
+    /// Bibliographic reader config (strict structure: any byte that
+    /// should be a subfield delimiter but isn't raises an error).
+    #[must_use]
+    pub const fn bibliographic(level: crate::ValidationLevel) -> Self {
+        let (utf8, indicator, subfield_code) = Self::modes_for(level);
+        Self {
+            structure: SubfieldStructureMode::Strict,
+            utf8,
+            indicator,
+            subfield_code,
+        }
+    }
 
-    /// Configuration matching the holdings reader (permissive structure,
-    /// strict UTF-8).
-    pub const HOLDINGS: Self = Self {
-        structure: SubfieldStructureMode::Permissive,
-        utf8: Utf8DecodeMode::Strict,
-    };
+    /// Authority reader config (permissive structure: unrecognized bytes
+    /// between subfields are silently skipped).
+    #[must_use]
+    pub const fn authority(level: crate::ValidationLevel) -> Self {
+        let (utf8, indicator, subfield_code) = Self::modes_for(level);
+        Self {
+            structure: SubfieldStructureMode::Permissive,
+            utf8,
+            indicator,
+            subfield_code,
+        }
+    }
+
+    /// Holdings reader config (permissive structure: unrecognized bytes
+    /// between subfields are silently skipped).
+    #[must_use]
+    pub const fn holdings(level: crate::ValidationLevel) -> Self {
+        let (utf8, indicator, subfield_code) = Self::modes_for(level);
+        Self {
+            structure: SubfieldStructureMode::Permissive,
+            utf8,
+            indicator,
+            subfield_code,
+        }
+    }
 }
 
 /// Parse a data field's indicator bytes followed by its subfields, producing
@@ -641,12 +714,16 @@ pub fn parse_data_field(
     let i1 = field_data[0];
     let i2 = field_data[1];
     // Per MARC 21, indicator bytes are ASCII digit (b'0'..=b'9') or
-    // space (b' '); any other byte fires `InvalidIndicator` (E201).
-    if !is_valid_indicator(i1) {
-        return Err(ctx.err_invalid_indicator(0, &[i1], "ASCII digit (0-9) or space"));
-    }
-    if !is_valid_indicator(i2) {
-        return Err(ctx.err_invalid_indicator(1, &[i2], "ASCII digit (0-9) or space"));
+    // space (b' '); any other byte fires `InvalidIndicator` (E201) at
+    // `IndicatorMode::Strict`. Under `IndicatorMode::Lossy` the byte
+    // is accepted as-is.
+    if config.indicator == IndicatorMode::Strict {
+        if !is_valid_indicator(i1) {
+            return Err(ctx.err_invalid_indicator(0, &[i1], "ASCII digit (0-9) or space"));
+        }
+        if !is_valid_indicator(i2) {
+            return Err(ctx.err_invalid_indicator(1, &[i2], "ASCII digit (0-9) or space"));
+        }
     }
     let mut field = Field::new(tag.to_string(), i1 as char, i2 as char);
     let subfields = parse_subfields(&field_data[2..], config, ctx)?;
@@ -705,8 +782,10 @@ pub fn parse_subfields(
         let code_byte = bytes[pos];
         // Subfield codes must be printable, non-space ASCII per MARC 21
         // (`is_ascii_graphic` covers a-z / 0-9 plus punctuation; rejects
-        // NUL, control bytes, space, and high bytes).
-        if !code_byte.is_ascii_graphic() {
+        // NUL, control bytes, space, and high bytes). At
+        // `SubfieldCodeMode::Strict` a violation raises E202; under
+        // `SubfieldCodeMode::Lossy` the byte is accepted as the code.
+        if config.subfield_code == SubfieldCodeMode::Strict && !code_byte.is_ascii_graphic() {
             return Err(ctx.err_bad_subfield_code(code_byte));
         }
         let code = code_byte as char;

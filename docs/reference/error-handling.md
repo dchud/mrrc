@@ -251,6 +251,39 @@ on emitted errors.
 The same `with_source` / `from_path` pattern is available on
 `AuthorityMARCReader` and `HoldingsMARCReader`.
 
+## Validation level vs recovery mode
+
+Two orthogonal axes govern parsing behavior:
+
+- **`validation_level`** — *what counts as an error*.
+- **`recovery_mode`** — *what to do when one fires*.
+
+The single rule, statable in one sentence: **`structural` is lossy
+across every reader; `strict_marc` is strict across every reader — every
+reader behaves the same way at each level.**
+
+Concretely:
+
+| | `validation_level="structural"` (default) | `validation_level="strict_marc"` |
+|---|---|---|
+| ISO 2709 structural errors (E001–E007, E101, E106) | fire | fire |
+| Indicator byte validation (E201) | skipped | fires |
+| Subfield-code byte validation (E202) | skipped | fires |
+| UTF-8 strictness (E301) | lossy decode (`U+FFFD` substitution) across bibliographic + authority + holdings | strict decode raises across all three readers |
+
+```python
+reader = mrrc.MARCReader(
+    file,
+    validation_level="structural",   # or "strict_marc"
+    recovery_mode="strict",          # or "lenient", "permissive"
+)
+```
+
+The two axes compose. `(strict_marc, lenient)` means *I want byte-level
+checks AND I want to keep iterating past one bad record* — strict_marc
+makes E201/E202/E301 fire, lenient absorbs them via the per-stream
+recovery cap.
+
 ## Recovery modes and errors
 
 The `RecoveryMode` setting (`Strict` / `Lenient` / `Permissive`) controls

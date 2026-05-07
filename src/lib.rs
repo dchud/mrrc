@@ -128,7 +128,9 @@ pub mod formats;
 pub mod holdings_reader;
 pub mod holdings_record;
 pub mod holdings_writer;
+#[doc(hidden)]
 pub mod iso2709;
+#[doc(hidden)]
 pub mod iso2709_skeleton;
 pub mod json;
 pub mod leader;
@@ -177,6 +179,6 @@ pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
 pub use record_builder_generic::GenericRecordBuilder;
 pub use record_helpers::RecordHelpers;
 pub use record_validation::RecordStructureValidator;
-pub use recovery::RecoveryMode;
+pub use recovery::{RecoveryMode, ValidationLevel};
 pub use validation::IndicatorValidator;
 pub use writer::MarcWriter;

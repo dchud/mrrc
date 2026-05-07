@@ -32,7 +32,7 @@ use crate::iso2709::{DataFieldParseConfig, ParseContext};
 use crate::iso2709_skeleton::{parse_iso2709_record, Iso2709Builder};
 use crate::leader::Leader;
 use crate::record::Field;
-use crate::recovery::{RecoveryCap, RecoveryMode};
+use crate::recovery::{RecoveryCap, RecoveryMode, ValidationLevel};
 use std::io::Read;
 
 /// Reader for ISO 2709 binary MARC Holdings records.
@@ -51,6 +51,7 @@ use std::io::Read;
 pub struct HoldingsMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
     ctx: ParseContext,
     cap: RecoveryCap,
 }
@@ -66,6 +67,7 @@ impl<R: Read> HoldingsMarcReader<R> {
         HoldingsMarcReader {
             reader,
             recovery_mode: RecoveryMode::Strict,
+            validation_level: ValidationLevel::default(),
             ctx: ParseContext::new(),
             cap: RecoveryCap::new(),
         }
@@ -81,6 +83,14 @@ impl<R: Read> HoldingsMarcReader<R> {
     #[must_use]
     pub fn with_recovery_mode(mut self, mode: RecoveryMode) -> Self {
         self.recovery_mode = mode;
+        self
+    }
+
+    /// Set the validation level. See [`crate::MarcReader::with_validation_level`]
+    /// for semantics.
+    #[must_use]
+    pub fn with_validation_level(mut self, level: ValidationLevel) -> Self {
+        self.validation_level = level;
         self
     }
 
@@ -135,6 +145,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             &mut self.ctx,
             &mut self.cap,
             self.recovery_mode,
+            self.validation_level,
         )
     }
 }
@@ -150,8 +161,8 @@ struct HoldingsBuilder {
 impl Iso2709Builder for HoldingsBuilder {
     type Output = HoldingsRecord;
 
-    fn parse_config() -> DataFieldParseConfig {
-        DataFieldParseConfig::HOLDINGS
+    fn parse_config(level: ValidationLevel) -> DataFieldParseConfig {
+        DataFieldParseConfig::holdings(level)
     }
 
     /// Holdings records carry leader byte 6 in `{x, y, v, u}`; reject any
@@ -173,20 +184,27 @@ impl Iso2709Builder for HoldingsBuilder {
         }
     }
 
-    /// Holdings is uniquely strict on UTF-8 here — bad bytes raise
-    /// `EncodingError` rather than being decoded lossily, preserving the
-    /// historical reader behavior via this hook.
+    /// UTF-8 strictness follows `level`: lossy under
+    /// [`ValidationLevel::Structural`], strict (raising
+    /// [`crate::MarcError::EncodingError`]) under
+    /// [`ValidationLevel::StrictMarc`].
     fn decode_control_field_value(
         field_bytes: &[u8],
         tag: &str,
         ctx: &ParseContext,
+        level: ValidationLevel,
     ) -> Result<String> {
         let raw = field_bytes
             .get(..field_bytes.len().saturating_sub(1))
             .unwrap_or(&[]);
-        std::str::from_utf8(raw)
-            .map(str::to_string)
-            .map_err(|e| ctx.err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}")))
+        match level {
+            ValidationLevel::Structural => Ok(String::from_utf8_lossy(raw).to_string()),
+            ValidationLevel::StrictMarc => {
+                std::str::from_utf8(raw).map(str::to_string).map_err(|e| {
+                    ctx.err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}"))
+                })
+            },
+        }
     }
 
     /// Holdings rejects data fields shorter than 3 bytes (must hold both

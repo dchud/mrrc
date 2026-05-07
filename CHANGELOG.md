@@ -15,21 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `record_control_number` populated when the tag is not present.
   Existing `get_field` continues to return `Option<&Field>` / `None`
   for pymarc-compatible callers; the typed variant is opt-in.
-- Indicator bytes are now validated in `parse_data_field`: each must
-  be an ASCII digit or space per MARC 21. A different byte fires
-  `InvalidIndicator` (E201) carrying `field_tag`, `indicator_position`,
-  `found`, and `expected`. Previously the byte was cast to char and
-  accepted as-is. In lenient and permissive modes the offending field
-  is dropped and the recovery cap is incremented; strict mode
-  propagates the error.
-- Subfield code bytes are now validated in `parse_subfields`: each
-  must be printable non-space ASCII (matches MARC 21 a-z / 0-9
-  conventions and rejects NUL, control bytes, space, and high
-  bytes). A different byte fires `BadSubfieldCode` (E202) carrying
-  `field_tag` and the offending `subfield_code`. Previously the
-  byte was cast to char and accepted as-is. Recovery-mode dispatch
-  matches E201's shape: lenient and permissive drop the field via
-  the existing cap path; strict propagates.
+- New `validation_level` reader kwarg (`"structural"` default,
+  `"strict_marc"`), orthogonal to `recovery_mode`. `structural` is
+  lossy across every reader (bibliographic, authority, holdings);
+  `strict_marc` is strict across every reader. At `strict_marc`,
+  indicator bytes (`InvalidIndicator` / E201), subfield-code bytes
+  (`BadSubfieldCode` / E202), and UTF-8 decoding (`EncodingError` /
+  E301) all enforce MARC 21 byte-level rules; at `structural` those
+  bytes are accepted as-is and UTF-8 falls back to `U+FFFD`
+  substitution. Single rule: every reader behaves the same way at
+  each level.
 - Strict-mode parsing now verifies that the byte at the leader's
   claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
   different byte fires `EndOfRecordNotFound` (E006). Previously the

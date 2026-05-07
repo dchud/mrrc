@@ -17,6 +17,20 @@ rust-version = "1.71"
 keywords = ["marc", "bibliographic", "library", "metadata"]
 categories = ["encoding", "parser-implementations"]
 
+# cargo-semver-checks: the iso2709 + iso2709_skeleton modules are
+# parse-skeleton plumbing — `pub` for cross-module access, not as
+# user extension points. They're now annotated `#[doc(hidden)]` to
+# match that reality. Hiding previously-visible items is itself
+# flagged as breaking by these two lints; allow them once so the
+# transition lands cleanly. Future hidden-item churn won't trip the
+# field/arity lints (those skip hidden items by default).
+[package.metadata.cargo-semver-checks.lints]
+struct_now_doc_hidden = "allow"
+trait_now_doc_hidden = "allow"
+enum_now_doc_hidden = "allow"
+function_now_doc_hidden = "allow"
+pub_module_level_const_now_doc_hidden = "allow"
+
 [features]
 default = []
 

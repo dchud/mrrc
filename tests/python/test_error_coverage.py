@@ -76,7 +76,11 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
 
     if kind == "parse_iso2709":
         bytes_ = _fixture_path(case).read_bytes()
-        reader = mrrc.MARCReader(bytes_, recovery_mode="strict")
+        reader = mrrc.MARCReader(
+            bytes_,
+            recovery_mode="strict",
+            validation_level=case.get("validation_level", "structural"),
+        )
         try:
             for _ in reader:
                 pass
