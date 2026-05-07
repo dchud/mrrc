@@ -303,7 +303,10 @@ A variable-data field's indicator byte is not a valid value for the given
 tag (e.g., not a digit or space).
 
 **Context:** Parse-side.
-**Applies to:** Bibliographic, Authority, Holdings readers.
+**Applies to:** Bibliographic, Authority, Holdings readers — fired
+uniformly when `validation_level="strict_marc"`. At the default
+`validation_level="structural"` indicator bytes are accepted as-is and
+this code does not fire.
 **Populates:** `record_index`, `byte_offset`, `record_byte_offset`,
 `field_tag`, `indicator_position`, `found`, `expected`. May also populate:
 `record_control_number`, `source`.
@@ -312,8 +315,9 @@ tag (e.g., not a digit or space).
 records round-tripped through non-conformant ILSes; sloppy cataloging
 from pre-2000s records.
 
-**How to recover.** `recovery_mode="lenient"` coerces unknown indicators
-to space (`0x20`). `recovery_mode="strict"` rejects.
+**How to recover.** Use `validation_level="structural"` (default) to
+accept the bytes silently, or `recovery_mode="lenient"` to keep iterating
+past the offending record under `strict_marc`.
 
 **Python class:** `mrrc.InvalidIndicator` (subclass of
 `mrrc.RecordDirectoryInvalid`).
@@ -324,7 +328,10 @@ A subfield code byte (immediately following a `0x1F` delimiter) is not a
 printable ASCII character.
 
 **Context:** Parse-side.
-**Applies to:** Bibliographic, Authority, Holdings readers.
+**Applies to:** Bibliographic, Authority, Holdings readers — fired
+uniformly when `validation_level="strict_marc"`. At the default
+`validation_level="structural"` subfield-code bytes are accepted as-is
+and this code does not fire.
 **Populates:** `record_index`, `byte_offset`, `record_byte_offset`,
 `field_tag`, `subfield_code` (the offending byte). May also populate:
 `record_control_number`, `source`.
@@ -332,8 +339,9 @@ printable ASCII character.
 **Common causes.** Bytes corrupted near a subfield boundary; encoder
 emitting non-ASCII codes for local-use subfields.
 
-**How to recover.** `recovery_mode="lenient"` skips the malformed
-subfield and continues.
+**How to recover.** Use `validation_level="structural"` (default) to
+accept the bytes silently, or `recovery_mode="lenient"` to keep iterating
+past the offending record under `strict_marc`.
 
 **Python class:** `mrrc.BadSubfieldCode` (subclass of
 `mrrc.RecordDirectoryInvalid`).
@@ -347,10 +355,11 @@ subfield and continues.
 A subfield value or control field contains bytes that are not valid UTF-8.
 
 **Context:** Parse-side (or wherever a string conversion runs).
-**Applies to:** Currently raised most often by the holdings reader, which
-uses strict UTF-8 decoding. The bibliographic and authority readers
-historically fall back to lossy decoding (replacement characters) and
-don't surface this code.
+**Applies to:** Bibliographic, authority, and holdings readers — fired
+uniformly when `validation_level="strict_marc"` and a value contains
+bytes that aren't valid UTF-8. At the default `validation_level="structural"`
+all three readers fall back to lossy decoding (`U+FFFD` substitution)
+and don't surface this code.
 **Populates:** `record_index`. May also populate: `field_tag`,
 `byte_offset`, `source`, `record_control_number`. The `message` attribute
 carries the underlying `std::str::Utf8Error` description.
@@ -359,9 +368,9 @@ carries the underlying `std::str::Utf8Error` description.
 character-coding leader byte; legacy records with embedded byte sequences
 that valid in MARC-8 but not in UTF-8.
 
-**How to recover.** Convert input to UTF-8 before parsing, or use the
-bibliographic reader's lossy-decoding mode if you don't need byte-perfect
-fidelity.
+**How to recover.** Convert input to UTF-8 before parsing, or set
+`validation_level="structural"` if you can tolerate `U+FFFD` substitutions
+and don't need byte-perfect fidelity.
 
 **Python class:** `mrrc.EncodingError`.
 

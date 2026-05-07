@@ -39,7 +39,7 @@ use crate::iso2709::{DataFieldParseConfig, ParseContext};
 use crate::iso2709_skeleton::{parse_iso2709_record, Iso2709Builder};
 use crate::leader::Leader;
 use crate::record::{Field, Record};
-use crate::recovery::{self, RecoveryCap, RecoveryMode};
+use crate::recovery::{self, RecoveryCap, RecoveryMode, ValidationLevel};
 use std::io::Read;
 
 /// Reader for ISO 2709 binary MARC format.
@@ -67,6 +67,7 @@ use std::io::Read;
 pub struct MarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
     records_read: usize,
     ctx: ParseContext,
     cap: RecoveryCap,
@@ -93,6 +94,7 @@ impl<R: Read> MarcReader<R> {
         MarcReader {
             reader,
             recovery_mode: RecoveryMode::Strict,
+            validation_level: ValidationLevel::default(),
             records_read: 0,
             ctx: ParseContext::new(),
             cap: RecoveryCap::new(),
@@ -121,6 +123,35 @@ impl<R: Read> MarcReader<R> {
     #[must_use]
     pub fn with_recovery_mode(mut self, mode: RecoveryMode) -> Self {
         self.recovery_mode = mode;
+        self
+    }
+
+    /// Set the validation level — what counts as an error during parsing.
+    ///
+    /// Orthogonal to [`MarcReader::with_recovery_mode`], which controls
+    /// what to *do* when one fires.
+    ///
+    /// - [`ValidationLevel::Structural`] (default): only ISO 2709
+    ///   structural errors fire; UTF-8 decode is lossy; indicator and
+    ///   subfield-code byte validation are skipped.
+    /// - [`ValidationLevel::StrictMarc`]: adds universal byte-level
+    ///   MARC 21 checks (E201 indicator, E202 subfield code, E301
+    ///   strict UTF-8).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mrrc::{MarcReader, ValidationLevel};
+    /// use std::io::Cursor;
+    ///
+    /// let data = vec![];
+    /// let cursor = Cursor::new(data);
+    /// let mut reader = MarcReader::new(cursor)
+    ///     .with_validation_level(ValidationLevel::StrictMarc);
+    /// ```
+    #[must_use]
+    pub fn with_validation_level(mut self, level: ValidationLevel) -> Self {
+        self.validation_level = level;
         self
     }
 
@@ -203,6 +234,7 @@ impl<R: Read> MarcReader<R> {
             &mut self.ctx,
             &mut self.cap,
             self.recovery_mode,
+            self.validation_level,
         )?;
         if result.is_some() {
             self.records_read += 1;
@@ -229,8 +261,8 @@ impl Iso2709Builder for BibBuilder {
     type Output = Record;
 
     #[inline]
-    fn parse_config() -> DataFieldParseConfig {
-        DataFieldParseConfig::BIBLIOGRAPHIC
+    fn parse_config(level: ValidationLevel) -> DataFieldParseConfig {
+        DataFieldParseConfig::bibliographic(level)
     }
 
     #[inline]

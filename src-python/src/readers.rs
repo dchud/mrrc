@@ -8,7 +8,7 @@
 use crate::batched_reader::BatchedMarcReader;
 use crate::batched_unified_reader::BatchedUnifiedReader;
 use crate::wrappers::PyRecord;
-use mrrc::{MarcReader, RecoveryMode};
+use mrrc::{MarcReader, RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
 use smallvec::SmallVec;
 
@@ -60,6 +60,9 @@ pub struct PyMARCReader {
     reader: Option<ReaderType>,
     /// Recovery mode for handling malformed records
     recovery_mode: RecoveryMode,
+    /// What counts as an error during parsing (orthogonal to
+    /// `recovery_mode`).
+    validation_level: ValidationLevel,
 }
 
 #[pymethods]
@@ -75,26 +78,25 @@ impl PyMARCReader {
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, bytes/bytearray, or file-like object
     /// * `recovery_mode` - Error handling mode: 'strict' (default), 'lenient', 'permissive'
+    /// * `validation_level` - What counts as an error during parsing:
+    ///   'structural' (default) or 'strict_marc'. Orthogonal to
+    ///   `recovery_mode`.
     #[new]
-    #[pyo3(signature = (source, recovery_mode = "strict"))]
-    pub fn new(source: &Bound<'_, PyAny>, recovery_mode: &str) -> PyResult<Self> {
-        let rec_mode = match recovery_mode {
-            "lenient" => RecoveryMode::Lenient,
-            "permissive" => RecoveryMode::Permissive,
-            "strict" => RecoveryMode::Strict,
-            _ => {
-                return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                    "Invalid recovery_mode '{}': must be 'strict', 'lenient', or 'permissive'",
-                    recovery_mode
-                )));
-            },
-        };
+    #[pyo3(signature = (source, recovery_mode = "strict", validation_level = "structural"))]
+    pub fn new(
+        source: &Bound<'_, PyAny>,
+        recovery_mode: &str,
+        validation_level: &str,
+    ) -> PyResult<Self> {
+        let rec_mode = crate::reader_helpers::parse_recovery_mode(recovery_mode)?;
+        let val_level = crate::reader_helpers::parse_validation_level(validation_level)?;
 
         // Try unified reader first (handles file paths and bytes)
         match BatchedUnifiedReader::new(source) {
             Ok(unified_reader) => Ok(PyMARCReader {
                 reader: Some(ReaderType::Unified(unified_reader)),
                 recovery_mode: rec_mode,
+                validation_level: val_level,
             }),
             Err(_) => {
                 // Fall back to legacy Python file wrapper
@@ -104,6 +106,7 @@ impl PyMARCReader {
                 Ok(PyMARCReader {
                     reader: Some(ReaderType::Python(batched_reader)),
                     recovery_mode: rec_mode,
+                    validation_level: val_level,
                 })
             },
         }
@@ -143,10 +146,13 @@ impl PyMARCReader {
                     // etc.) survive to the Python exception. Boxed to keep
                     // the Result small (clippy::result_large_err).
                     let rec_mode = self.recovery_mode;
+                    let val_level = self.validation_level;
                     let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py
                         .detach(|| {
                             let cursor = std::io::Cursor::new(bytes_owned.to_vec());
-                            let mut parser = MarcReader::new(cursor).with_recovery_mode(rec_mode);
+                            let mut parser = MarcReader::new(cursor)
+                                .with_recovery_mode(rec_mode)
+                                .with_validation_level(val_level);
                             parser.read_record().map_err(Box::new)
                         });
                     let record =
@@ -247,9 +253,12 @@ impl PyMARCReader {
         // Python exception — collapsing to a generic ParseError::invalid_record
         // here would lose the typed shape and drop `bytes_near`.
         let rec_mode = slf.recovery_mode;
+        let val_level = slf.validation_level;
         let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py.detach(|| {
             let cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
-            let mut parser = MarcReader::new(cursor).with_recovery_mode(rec_mode);
+            let mut parser = MarcReader::new(cursor)
+                .with_recovery_mode(rec_mode)
+                .with_validation_level(val_level);
             parser.read_record().map_err(Box::new)
         });
 

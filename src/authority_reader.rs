@@ -34,7 +34,7 @@ use crate::iso2709::{DataFieldParseConfig, ParseContext};
 use crate::iso2709_skeleton::{parse_iso2709_record, Iso2709Builder};
 use crate::leader::Leader;
 use crate::record::Field;
-use crate::recovery::{RecoveryCap, RecoveryMode};
+use crate::recovery::{RecoveryCap, RecoveryMode, ValidationLevel};
 use std::io::Read;
 
 /// Reader for ISO 2709 binary MARC Authority records.
@@ -53,6 +53,7 @@ use std::io::Read;
 pub struct AuthorityMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
     ctx: ParseContext,
     cap: RecoveryCap,
 }
@@ -68,6 +69,7 @@ impl<R: Read> AuthorityMarcReader<R> {
         AuthorityMarcReader {
             reader,
             recovery_mode: RecoveryMode::Strict,
+            validation_level: ValidationLevel::default(),
             ctx: ParseContext::new(),
             cap: RecoveryCap::new(),
         }
@@ -83,6 +85,14 @@ impl<R: Read> AuthorityMarcReader<R> {
     #[must_use]
     pub fn with_recovery_mode(mut self, mode: RecoveryMode) -> Self {
         self.recovery_mode = mode;
+        self
+    }
+
+    /// Set the validation level. See [`crate::MarcReader::with_validation_level`]
+    /// for semantics.
+    #[must_use]
+    pub fn with_validation_level(mut self, level: ValidationLevel) -> Self {
+        self.validation_level = level;
         self
     }
 
@@ -137,6 +147,7 @@ impl<R: Read> AuthorityMarcReader<R> {
             &mut self.ctx,
             &mut self.cap,
             self.recovery_mode,
+            self.validation_level,
         )
     }
 }
@@ -151,8 +162,8 @@ struct AuthorityBuilder {
 impl Iso2709Builder for AuthorityBuilder {
     type Output = AuthorityRecord;
 
-    fn parse_config() -> DataFieldParseConfig {
-        DataFieldParseConfig::AUTHORITY
+    fn parse_config(level: ValidationLevel) -> DataFieldParseConfig {
+        DataFieldParseConfig::authority(level)
     }
 
     /// Authority records carry leader byte 6 = `'z'`; reject any other
@@ -174,18 +185,36 @@ impl Iso2709Builder for AuthorityBuilder {
         }
     }
 
-    /// Authority control fields use the same lossy decode as the default
-    /// but additionally trim a trailing `SUBFIELD_DELIMITER` (0x1F) — a
+    /// Authority control fields trim a trailing `SUBFIELD_DELIMITER`
+    /// (0x1F) in addition to the usual `FIELD_TERMINATOR` (0x1E) — a
     /// historical quirk in real-world authority data preserved here for
-    /// bytewise compatibility.
+    /// bytewise compatibility. UTF-8 strictness follows `level`:
+    /// [`ValidationLevel::Structural`] decodes lossily;
+    /// [`ValidationLevel::StrictMarc`] raises
+    /// [`crate::MarcError::EncodingError`] on bad bytes.
     fn decode_control_field_value(
         field_bytes: &[u8],
-        _tag: &str,
-        _ctx: &ParseContext,
+        tag: &str,
+        ctx: &ParseContext,
+        level: ValidationLevel,
     ) -> Result<String> {
-        Ok(String::from_utf8_lossy(field_bytes)
-            .trim_end_matches(['\x1E', '\x1F'])
-            .to_string())
+        // Strip both the field terminator (last byte) and any further
+        // trailing 0x1E/0x1F bytes before decoding.
+        let raw: &[u8] = {
+            let mut end = field_bytes.len();
+            while end > 0 && matches!(field_bytes[end - 1], 0x1E | 0x1F) {
+                end -= 1;
+            }
+            &field_bytes[..end]
+        };
+        match level {
+            ValidationLevel::Structural => Ok(String::from_utf8_lossy(raw).to_string()),
+            ValidationLevel::StrictMarc => {
+                std::str::from_utf8(raw).map(str::to_string).map_err(|e| {
+                    ctx.err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}"))
+                })
+            },
+        }
     }
 
     /// Authority skips data fields shorter than 2 bytes (can't read

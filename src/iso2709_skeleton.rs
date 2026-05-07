@@ -35,7 +35,7 @@ use crate::iso2709::{
 };
 use crate::leader::Leader;
 use crate::record::Field;
-use crate::recovery::{RecoveryCap, RecoveryMode};
+use crate::recovery::{RecoveryCap, RecoveryMode, ValidationLevel};
 use std::io::Read;
 
 /// Per-type policy + per-record builder for the shared ISO 2709 parse
@@ -53,8 +53,9 @@ pub trait Iso2709Builder: Sized {
     /// authority `AuthorityRecord`, holdings `HoldingsRecord`).
     type Output;
 
-    /// The [`DataFieldParseConfig`] this reader uses for subfield parsing.
-    fn parse_config() -> DataFieldParseConfig;
+    /// The [`DataFieldParseConfig`] this reader uses for subfield
+    /// parsing at the given validation level.
+    fn parse_config(level: ValidationLevel) -> DataFieldParseConfig;
 
     /// Validate the parsed leader's `record_type` byte for this reader.
     /// Returns `Err` to abort the record (e.g., authority requires `'z'`).
@@ -81,29 +82,35 @@ pub trait Iso2709Builder: Sized {
     /// their functional role (heading, tracings, locations, captions, etc.).
     fn add_data_field(&mut self, tag: String, field: Field);
 
-    /// Decode a control field's bytes into its string value. The default
-    /// strips the trailing `FIELD_TERMINATOR` byte and decodes lossily.
-    /// Authority overrides to also strip a trailing `SUBFIELD_DELIMITER`;
-    /// holdings overrides to use strict UTF-8 (raising
-    /// [`crate::MarcError::EncodingError`] on bad bytes). The hook lets
-    /// each reader keep its historical strict-vs-lossy policy.
+    /// Decode a control field's bytes into its string value. The
+    /// default strips the trailing `FIELD_TERMINATOR` byte and dispatches
+    /// on `level`: lossy under [`ValidationLevel::Structural`], strict
+    /// (raising [`crate::MarcError::EncodingError`]) under
+    /// [`ValidationLevel::StrictMarc`]. Authority overrides to also
+    /// strip a trailing `SUBFIELD_DELIMITER`; holdings overrides for its
+    /// stricter byte-count guard but uses the same level dispatch.
     ///
     /// # Errors
     ///
-    /// Returns `MarcError` when the implementing reader applies a strict
-    /// decode policy and the bytes are not valid UTF-8. The default
-    /// (lossy) implementation never errors.
+    /// Returns `MarcError::EncodingError` when `level` is
+    /// [`ValidationLevel::StrictMarc`] and the bytes aren't valid UTF-8.
+    /// The lossy path never errors.
     #[inline]
     fn decode_control_field_value(
         field_bytes: &[u8],
         tag: &str,
         ctx: &ParseContext,
+        level: ValidationLevel,
     ) -> Result<String> {
-        let _ = (tag, ctx);
-        Ok(
-            String::from_utf8_lossy(&field_bytes[..field_bytes.len().saturating_sub(1)])
-                .to_string(),
-        )
+        let raw = &field_bytes[..field_bytes.len().saturating_sub(1)];
+        match level {
+            ValidationLevel::Structural => Ok(String::from_utf8_lossy(raw).to_string()),
+            ValidationLevel::StrictMarc => {
+                std::str::from_utf8(raw).map(str::to_string).map_err(|e| {
+                    ctx.err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}"))
+                })
+            },
+        }
     }
 
     /// Per-reader minimum data-field byte count guard. Returning `Err`
@@ -173,6 +180,7 @@ pub fn parse_iso2709_record<R, B>(
     ctx: &mut ParseContext,
     cap: &mut RecoveryCap,
     recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
 ) -> Result<Option<B::Output>>
 where
     R: Read,
@@ -360,7 +368,9 @@ where
                 let field_data = &data[start_position..available_end];
                 if tag != "LDR" {
                     if is_control_field_tag(&tag) {
-                        if let Ok(value) = B::decode_control_field_value(field_data, &tag, ctx) {
+                        if let Ok(value) =
+                            B::decode_control_field_value(field_data, &tag, ctx, validation_level)
+                        {
                             if tag == "001" {
                                 ctx.record_control_number = Some(value.clone());
                             }
@@ -369,9 +379,12 @@ where
                     } else if B::validate_data_field_bytes(field_data, &tag, ctx).is_ok() {
                         ctx.current_field_tag = tag.as_bytes().try_into().ok();
                         ctx.stream_byte_offset = record_data_offset + data_start + start_position;
-                        if let Ok(field) =
-                            parse_data_field(field_data, &tag, B::parse_config(), ctx)
-                        {
+                        if let Ok(field) = parse_data_field(
+                            field_data,
+                            &tag,
+                            B::parse_config(validation_level),
+                            ctx,
+                        ) {
                             builder.add_data_field(tag, field);
                         }
                         ctx.current_field_tag = None;
@@ -388,7 +401,8 @@ where
         }
 
         if is_control_field_tag(&tag) {
-            let value = match B::decode_control_field_value(field_data, &tag, ctx) {
+            let value = match B::decode_control_field_value(field_data, &tag, ctx, validation_level)
+            {
                 Ok(v) => v,
                 Err(e) => {
                     if recovery_mode == RecoveryMode::Strict {
@@ -419,7 +433,7 @@ where
         // byte_offset for hex-dump caret alignment.
         ctx.current_field_tag = tag.as_bytes().try_into().ok();
         ctx.stream_byte_offset = record_data_offset + data_start + start_position;
-        let parsed = parse_data_field(field_data, &tag, B::parse_config(), ctx);
+        let parsed = parse_data_field(field_data, &tag, B::parse_config(validation_level), ctx);
         ctx.current_field_tag = None;
         match parsed {
             Ok(field) => builder.add_data_field(tag, field),

@@ -4,7 +4,7 @@
 //! for common operations: recovery mode parsing, source file opening, and
 //! reading raw record bytes from Python file objects.
 
-use mrrc::recovery::RecoveryMode;
+use mrrc::recovery::{RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
 use std::fs::File;
 
@@ -19,6 +19,20 @@ pub fn parse_recovery_mode(mode: &str) -> PyResult<RecoveryMode> {
         _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
             "Invalid recovery_mode '{}': must be 'strict', 'lenient', or 'permissive'",
             mode
+        ))),
+    }
+}
+
+/// Parse a validation_level string into a ValidationLevel enum.
+///
+/// Returns `PyValueError` for invalid values.
+pub fn parse_validation_level(level: &str) -> PyResult<ValidationLevel> {
+    match level {
+        "structural" => Ok(ValidationLevel::Structural),
+        "strict_marc" => Ok(ValidationLevel::StrictMarc),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "Invalid validation_level '{}': must be 'structural' or 'strict_marc'",
+            level
         ))),
     }
 }

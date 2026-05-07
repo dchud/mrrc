@@ -1,6 +1,6 @@
 """Type stubs for the mrrc native extension module."""
 
-from typing import Iterator, Optional, List, BinaryIO, Any
+from typing import Iterator, Optional, List, Any
 
 __version__: str
 
@@ -389,7 +389,13 @@ class MARCReader:
                 futures = [executor.submit(process_file, f) for f in file_list]
                 results = [f.result() for f in futures]
     """
-    def __init__(self, file: Any, *, recovery_mode: str = "strict") -> None: ...
+    def __init__(
+        self,
+        file: Any,
+        *,
+        recovery_mode: str = "strict",
+        validation_level: str = "structural",
+    ) -> None: ...
     def __repr__(self) -> str: ...
     def __iter__(self) -> Iterator[Record]: ...
     def __next__(self) -> Record:
@@ -463,13 +469,25 @@ class MARCWriter:
 
 class AuthorityMARCReader:
     """Reader for MARC authority records."""
-    def __init__(self, file: BinaryIO) -> None: ...
+    def __init__(
+        self,
+        file: Any,
+        *,
+        recovery_mode: str = "strict",
+        validation_level: str = "structural",
+    ) -> None: ...
     def __iter__(self) -> Iterator[AuthorityRecord]: ...
     def __next__(self) -> AuthorityRecord: ...
 
 class HoldingsMARCReader:
     """Reader for MARC holdings records."""
-    def __init__(self, file: BinaryIO) -> None: ...
+    def __init__(
+        self,
+        file: Any,
+        *,
+        recovery_mode: str = "strict",
+        validation_level: str = "structural",
+    ) -> None: ...
     def __iter__(self) -> Iterator[HoldingsRecord]: ...
     def __next__(self) -> HoldingsRecord: ...
 

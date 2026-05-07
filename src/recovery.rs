@@ -101,6 +101,29 @@ pub enum RecoveryMode {
     Permissive,
 }
 
+/// What counts as an error during parsing — orthogonal to [`RecoveryMode`],
+/// which controls what to *do* when one fires.
+///
+/// Single rule across all readers (bibliographic, authority, holdings):
+/// [`Structural`](Self::Structural) is lossy everywhere;
+/// [`StrictMarc`](Self::StrictMarc) is strict everywhere.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ValidationLevel {
+    /// Only ISO 2709 structural errors fire (leader, directory, EOR,
+    /// base address, truncation). UTF-8 decode is lossy
+    /// (`U+FFFD` substitution); indicator and subfield-code byte
+    /// validation are skipped. The default — closest to historical
+    /// reader behavior and to pymarc 5.3.1.
+    #[default]
+    Structural,
+    /// Adds universal byte-level MARC 21 checks: indicator bytes
+    /// (`E201` `InvalidIndicator`), subfield-code bytes
+    /// (`E202` `BadSubfieldCode`), and strict UTF-8 decoding
+    /// (`E301` `EncodingError`). Applied uniformly across every
+    /// reader.
+    StrictMarc,
+}
+
 const FIELD_TERMINATOR: u8 = 0x1E;
 const SUBFIELD_DELIMITER: u8 = 0x1F;
 

@@ -252,6 +252,7 @@ expected_context = [
     "expected",
 ]
 recovery_modes = ["strict"]
+validation_level = "strict_marc"
 wired = true
 
 # E202: subfield code byte not printable ASCII.
@@ -271,6 +272,7 @@ expected_context = [
     "subfield_code",
 ]
 recovery_modes = ["strict"]
+validation_level = "strict_marc"
 wired = true
 
 # === Encoding (E3xx) ================================================
@@ -286,8 +288,8 @@ trigger_fixture = "tests/data/error_fixtures/e301_invalid_utf8_in_subfield.bin"
 description = "Byte 70 (inside the 100$a 'Fitzgerald' subfield value) replaced with 0xFF."
 expected_context = ["record_index"]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "the bibliographic reader's default UTF-8 conversion is lossy (substituting U+FFFD); EncodingError fires from the holdings reader's strict-UTF-8 path. A holdings-record fixture is needed to exercise this code through the parse path"
+validation_level = "strict_marc"
+wired = true
 
 # === Serialization (E4xx) ===========================================
 

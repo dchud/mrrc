@@ -33,7 +33,7 @@ use std::fs;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
-use mrrc::{MarcReader, RecoveryMode};
+use mrrc::{MarcReader, RecoveryMode, ValidationLevel};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -57,9 +57,27 @@ struct Case {
     description: String,
     expected_context: Vec<String>,
     recovery_modes: Vec<String>,
+    /// Validation level the harness should use when exercising the
+    /// trigger. Optional; defaults to `"structural"` (mrrc's
+    /// `MarcReader` default). Cases that require strict-MARC byte
+    /// validation (E201, E202, E301) should set this to
+    /// `"strict_marc"`.
+    #[serde(default)]
+    validation_level: Option<String>,
     wired: bool,
     #[serde(default)]
     skip_reason: Option<String>,
+}
+
+fn parse_validation_level(case: &Case) -> ValidationLevel {
+    match case.validation_level.as_deref() {
+        None | Some("structural") => ValidationLevel::Structural,
+        Some("strict_marc") => ValidationLevel::StrictMarc,
+        Some(other) => panic!(
+            "case {}: unknown validation_level {:?} (expected \"structural\" or \"strict_marc\")",
+            case.id, other
+        ),
+    }
 }
 
 fn default_trigger_kind() -> String {
@@ -139,11 +157,17 @@ fn exercise_accessor(case: &Case) -> TriggerOutcome {
     }
 }
 
-/// Drive `MarcReader` over `bytes` in `mode` and return the first
-/// error encountered. Successful records and EOF (`Ok(None)`) both
-/// resolve to `None`.
-fn first_iso2709_error(bytes: &[u8], mode: RecoveryMode) -> Option<mrrc::MarcError> {
-    let mut reader = MarcReader::new(Cursor::new(bytes)).with_recovery_mode(mode);
+/// Drive `MarcReader` over `bytes` in `mode` at `level` and return
+/// the first error encountered. Successful records and EOF
+/// (`Ok(None)`) both resolve to `None`.
+fn first_iso2709_error(
+    bytes: &[u8],
+    mode: RecoveryMode,
+    level: ValidationLevel,
+) -> Option<mrrc::MarcError> {
+    let mut reader = MarcReader::new(Cursor::new(bytes))
+        .with_recovery_mode(mode)
+        .with_validation_level(level);
     loop {
         match reader.read_record() {
             Ok(Some(_)) => {},
@@ -155,7 +179,11 @@ fn first_iso2709_error(bytes: &[u8], mode: RecoveryMode) -> Option<mrrc::MarcErr
 
 fn fire_trigger(case: &Case) -> TriggerOutcome {
     match case.trigger_kind.as_str() {
-        "parse_iso2709" => match first_iso2709_error(&fixture_bytes(case), RecoveryMode::Strict) {
+        "parse_iso2709" => match first_iso2709_error(
+            &fixture_bytes(case),
+            RecoveryMode::Strict,
+            parse_validation_level(case),
+        ) {
             Some(e) => TriggerOutcome::Fired(e),
             None => TriggerOutcome::NoError,
         },
