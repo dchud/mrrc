@@ -229,21 +229,13 @@ impl<R: Read> MarcReader<R> {
     /// - The record structure is invalid
     /// - An I/O error occurs
     pub fn read_record(&mut self) -> Result<Option<Record>> {
-        let mut errors = Vec::new();
         let result = parse_iso2709_record::<R, BibBuilder>(
             &mut self.reader,
             &mut self.ctx,
             &mut self.cap,
             self.recovery_mode,
             self.validation_level,
-            &mut errors,
         )?;
-        let result = result.map(|mut record| {
-            if !errors.is_empty() {
-                record.errors = std::sync::Arc::new(errors);
-            }
-            record
-        });
         if result.is_some() {
             self.records_read += 1;
         }
@@ -298,6 +290,7 @@ impl<R: Read> MarcReader<R> {
 /// skeleton.
 struct BibBuilder {
     record: Record,
+    errors: Vec<crate::error::MarcError>,
 }
 
 // `#[inline]` on the per-field trait methods below is a measured
@@ -319,6 +312,7 @@ impl Iso2709Builder for BibBuilder {
     fn new_for(leader: Leader) -> Self {
         BibBuilder {
             record: Record::new(leader),
+            errors: Vec::new(),
         }
     }
 
@@ -330,6 +324,11 @@ impl Iso2709Builder for BibBuilder {
     #[inline]
     fn add_data_field(&mut self, _tag: String, field: Field) {
         self.record.add_field(field);
+    }
+
+    #[inline]
+    fn add_error(&mut self, err: crate::error::MarcError) {
+        self.errors.push(err);
     }
 
     /// Bibliographic reader honors the truncated-record salvage path via
@@ -354,7 +353,10 @@ impl Iso2709Builder for BibBuilder {
     }
 
     #[inline]
-    fn finalize(self) -> Record {
+    fn finalize(mut self) -> Record {
+        if !self.errors.is_empty() {
+            self.record.errors = std::sync::Arc::new(self.errors);
+        }
         self.record
     }
 }
