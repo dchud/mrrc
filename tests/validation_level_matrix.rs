@@ -1,9 +1,8 @@
 //! Integration test for the `validation_level × recovery_mode` matrix.
 //!
 //! `validation_level` controls *what counts as an error*; `recovery_mode`
-//! controls *what to do when one fires*. Bd-0x73.10 introduced the
-//! orthogonal axis; this test verifies each of the six cells behaves as
-//! the bead's "Done when" says it should.
+//! controls *what to do when one fires*. This test verifies each of the
+//! six cells of the cross-product behaves as documented.
 //!
 //! Single rule under test: `structural` is lossy across every reader,
 //! `strict_marc` is strict across every reader. At `Structural`,
@@ -11,14 +10,15 @@
 //! `StrictMarc`, they do, and the recovery axis selects how the parser
 //! responds (raise / recover / swallow).
 //!
-//! The fixtures are reused from the bd-0x73.8 coverage harness so this
+//! The fixtures are reused from the error-coverage harness
+//! (`tests/error_coverage.rs` / `tests/error_coverage.toml`) so this
 //! test exercises real malformed bytes, not synthetic errors.
 //!
-//! Limitations: lenient/permissive paths *recover* and *swallow*
-//! respectively today; per-record diagnostic surfaces (bd-0x73.11) are
-//! a future bead, so the assertions verify the iteration shape (no
-//! raised error, record yielded or not) rather than the full
-//! diagnostic payload.
+//! The lenient/permissive cases assert the iteration shape only (no
+//! raised error). Per-record diagnostic surfaces — letting a caller
+//! inspect *which* record failed and how during a recovered
+//! iteration — are a separate piece of the error-handling work and
+//! are not exercised here.
 
 use std::fs;
 use std::io::Cursor;
