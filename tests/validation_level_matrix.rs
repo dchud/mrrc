@@ -64,6 +64,60 @@ fn drain(
     }
 }
 
+/// Run the matrix against one fixture, asserting `error_code` fires in
+/// every cell of the 2×3 grid. Used for errors that are unconditional —
+/// i.e., not gated on `validation_level` and not recoverable in
+/// `lenient`/`permissive`. Leader/structural errors that prevent the
+/// parser from establishing a record boundary (E001, E002 structural,
+/// E003, E004) are fatal in this sense: the recovery cap has nothing
+/// to absorb because there's no valid boundary to skip past.
+fn run_strict_only_matrix(fixture_name: &str, error_code: &'static str) {
+    let bytes = fixture_bytes(fixture_name);
+    for validation in [ValidationLevel::Structural, ValidationLevel::StrictMarc] {
+        for (recovery, expect_fire) in [
+            (RecoveryMode::Strict, true),
+            (RecoveryMode::Lenient, false),
+            (RecoveryMode::Permissive, false),
+        ] {
+            let outcome = drain(&bytes, validation, recovery);
+            match (expect_fire, outcome) {
+                (true, Err(actual)) => assert_eq!(
+                    actual, error_code,
+                    "fixture {fixture_name} at ({validation:?}, {recovery:?}): expected error {error_code}, got {actual}",
+                ),
+                (true, Ok(n)) => panic!(
+                    "fixture {fixture_name} at ({validation:?}, {recovery:?}): expected error {error_code}, got clean iteration ({n} records)",
+                ),
+                (false, Ok(_)) => {},
+                (false, Err(actual)) => panic!(
+                    "fixture {fixture_name} at ({validation:?}, {recovery:?}): expected clean iteration (recovery cap absorbs), got error {actual}",
+                ),
+            }
+        }
+    }
+}
+
+fn run_fatal_matrix(fixture_name: &str, error_code: &'static str) {
+    let bytes = fixture_bytes(fixture_name);
+    for validation in [ValidationLevel::Structural, ValidationLevel::StrictMarc] {
+        for recovery in [
+            RecoveryMode::Strict,
+            RecoveryMode::Lenient,
+            RecoveryMode::Permissive,
+        ] {
+            match drain(&bytes, validation, recovery) {
+                Err(actual) => assert_eq!(
+                    actual, error_code,
+                    "fixture {fixture_name} at ({validation:?}, {recovery:?}): expected fatal error {error_code}, got {actual}",
+                ),
+                Ok(n) => panic!(
+                    "fixture {fixture_name} at ({validation:?}, {recovery:?}): expected fatal error {error_code}, got clean iteration ({n} records)",
+                ),
+            }
+        }
+    }
+}
+
 /// Run the matrix against one fixture. `strict_error_code` is the error
 /// code expected to fire under `(StrictMarc, Strict)`.
 fn run_matrix(fixture_name: &str, strict_error_code: &'static str) {
@@ -145,4 +199,37 @@ fn matrix_e201_per_tag_indicator_245() {
 #[test]
 fn matrix_e002_invalid_record_status() {
     run_matrix("e002_invalid_record_status.bin", "E002");
+}
+
+// Fatal errors: fire in every cell regardless of validation_level or
+// recovery_mode. These assert the contract that a leader the parser
+// cannot construct or trust is unrecoverable — the recovery cap has
+// nothing to absorb because there's no valid record boundary to skip
+// past.
+
+#[test]
+fn fatal_e001_record_length_non_digit() {
+    run_fatal_matrix("e001_record_length_non_digit.bin", "E001");
+}
+
+#[test]
+fn fatal_e002_indicator_count_non_digit() {
+    run_fatal_matrix("e002_indicator_count_non_digit.bin", "E002");
+}
+
+#[test]
+fn fatal_e003_base_address_non_digit() {
+    run_fatal_matrix("e003_base_address_non_digit.bin", "E003");
+}
+
+#[test]
+fn fatal_e004_base_address_past_record() {
+    run_fatal_matrix("e004_base_address_past_record.bin", "E004");
+}
+
+// E006: strict-only, level-independent. The lenient/permissive recovery
+// cap absorbs the disagreement via existing directory/field paths.
+#[test]
+fn strict_only_e006_no_record_terminator() {
+    run_strict_only_matrix("e006_no_record_terminator.bin", "E006");
 }
