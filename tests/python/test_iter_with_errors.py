@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 import mrrc
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -115,3 +117,88 @@ def test_permissive_iter_with_errors_returns_records_when_clean() -> None:
     for record, errors in reader.iter_with_errors():
         assert record is not None
         assert errors == []
+
+
+# ---------------------------------------------------------------------
+# Recovery-mode coverage matrix per error code
+# ---------------------------------------------------------------------
+#
+# For each malformed-input fixture, exercise the documented recovery
+# contract. Three contracts:
+#
+# * "fatal"      — fires in every recovery_mode (cannot recover).
+# * "strict-only"— fires in strict; lenient/permissive recovery cap
+#                  absorbs (record yielded clean, no errors captured).
+# * "recoverable"— fires in strict; lenient/permissive yield the
+#                  record with the error captured on record.errors.
+
+
+@pytest.mark.parametrize(
+    ("fixture", "code"),
+    [
+        ("e001_record_length_non_digit.bin", "E001"),
+        ("e002_indicator_count_non_digit.bin", "E002"),
+        ("e003_base_address_non_digit.bin", "E003"),
+        ("e004_base_address_past_record.bin", "E004"),
+    ],
+)
+def test_fatal_errors_raise_in_every_mode(fixture: str, code: str) -> None:
+    """Leader/structural errors that prevent establishing a record
+    boundary are unrecoverable: lenient and permissive both surface
+    them rather than silently advancing."""
+    bytes_ = _read_fixture(fixture)
+    for recovery_mode in ("strict", "lenient"):
+        reader = mrrc.MARCReader(bytes_, recovery_mode=recovery_mode)
+        with pytest.raises(Exception) as exc_info:
+            list(reader)
+        assert getattr(exc_info.value, "code", None) == code, (
+            f"{fixture} at recovery_mode={recovery_mode}: "
+            f"expected {code}, got {exc_info.value!r}"
+        )
+
+
+def test_strict_only_e006_raises_in_strict_clean_in_lenient() -> None:
+    """E006 (no record terminator) is strict-only by design: lenient
+    and permissive let the recovery cap absorb it."""
+    bytes_ = _read_fixture("e006_no_record_terminator.bin")
+
+    reader = mrrc.MARCReader(bytes_, recovery_mode="strict")
+    with pytest.raises(Exception) as exc_info:
+        list(reader)
+    assert getattr(exc_info.value, "code", None) == "E006"
+
+    reader = mrrc.MARCReader(bytes_, recovery_mode="lenient")
+    records = list(reader)
+    assert len(records) == 1
+    assert records[0] is not None
+
+
+@pytest.mark.parametrize(
+    ("fixture", "code"),
+    [
+        ("e101_directory_non_digit_length.bin", "E101"),
+        ("e106_field_length_past_data.bin", "E106"),
+    ],
+)
+def test_recoverable_errors_captured_in_lenient(fixture: str, code: str) -> None:
+    """Mid-record recoverable errors land on record.errors in lenient
+    mode. The parser yields a (partially recovered) record rather than
+    propagating the error.
+
+    E005 (stream truncation) is exercised in the Rust harness only.
+    The Python wrapper's per-record byte-prefetch backend in
+    src-python/src/backend.rs raises on a short stream read before the
+    recovery-aware parser is invoked, so E005 surfaces as a raised
+    TruncatedRecord even at recovery_mode="lenient". Aligning that
+    layer with the parser's recovery contract is tracked separately.
+    """
+    bytes_ = _read_fixture(fixture)
+    reader = mrrc.MARCReader(bytes_, recovery_mode="lenient")
+    records = list(reader)
+    assert len(records) == 1
+    record = records[0]
+    assert record is not None
+    codes = [e.code for e in record.errors]
+    assert code in codes, (
+        f"{fixture}: expected {code} on record.errors, got {codes}"
+    )

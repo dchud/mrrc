@@ -245,11 +245,11 @@ where
     ctx.advance(LEADER_LEN);
 
     // Read the full record data. In non-Strict modes a short read returns
-    // `(buffer, true)`; salvage from a partial buffer is not implemented in
-    // the read primitive so the truncated-record dispatch below is the
-    // recovery point.
-    let (record_data, _was_truncated) =
-        read_record_data(reader, record_length, recovery_mode, ctx)?;
+    // a zero-padded buffer of `expected_len` plus the actual bytes_read;
+    // strict mode has already errored out via `?`. The truncated-record
+    // dispatch below is the lenient/permissive recovery point.
+    let (record_data, bytes_read) = read_record_data(reader, record_length, recovery_mode, ctx)?;
+    let expected_data_len = record_length.saturating_sub(LEADER_LEN);
 
     // Hand the loaded buffer to the context so `err_*` helpers raised during
     // directory/field parsing capture a bytes_near window for hex-dump
@@ -257,14 +257,9 @@ where
     let record_data_offset = ctx.stream_byte_offset;
     ctx.set_parse_buffer(&record_data, record_data_offset);
 
-    if record_data.len() < (record_length - 24) {
-        let err = ctx.err_truncated_record(
-            Some(record_length.saturating_sub(LEADER_LEN)),
-            Some(record_data.len()),
-        );
-        if recovery_mode == RecoveryMode::Strict {
-            return Err(err);
-        }
+    if bytes_read < expected_data_len {
+        // recovery_mode is Lenient or Permissive (Strict already returned).
+        let err = ctx.err_truncated_record(Some(expected_data_len), Some(bytes_read));
         errors.push(err);
         cap.note(ctx)?;
         // Per-type recovery hook (bibliographic uses try_recover_record;

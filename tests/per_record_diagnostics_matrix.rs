@@ -308,6 +308,21 @@ fn captures_e301_with_context() {
     assert_code_captured("e301_invalid_utf8_in_subfield.bin", "E301");
 }
 
+#[test]
+fn captures_e005_with_context() {
+    assert_code_captured("e005_truncated_record.bin", "E005");
+}
+
+#[test]
+fn captures_e101_with_context() {
+    assert_code_captured("e101_directory_non_digit_length.bin", "E101");
+}
+
+#[test]
+fn captures_e106_with_context() {
+    assert_code_captured("e106_field_length_past_data.bin", "E106");
+}
+
 // =====================================================================
 // Cross-reader smoke: authority + holdings expose the diagnostic surface
 // =====================================================================

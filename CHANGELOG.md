@@ -78,6 +78,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `TruncatedRecord` (E005) now correctly surfaces on
+  `record.errors` in `lenient` and `permissive` recovery modes
+  instead of being silently swallowed. The skeleton's
+  truncated-record dispatch was guarded on
+  `record_data.len() < expected_data_len`, but `read_record_data`
+  zero-pads the buffer to `expected_data_len`, making the guard
+  unreachable; downstream parsing of the zero region surfaced as
+  a cascading E201 with no E005 trail. Now the dispatch consults
+  the actual `bytes_read`. Strict mode is unchanged.
 - Release workflow now attaches wheel assets to the GitHub Release
   page automatically. Previously, `actions/checkout` ran after
   `download-artifact` and wiped `dist/` before the gh-release step,

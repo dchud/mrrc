@@ -445,7 +445,7 @@ pub fn read_record_data<R: Read>(
     record_length: usize,
     recovery_mode: RecoveryMode,
     ctx: &ParseContext,
-) -> Result<(Vec<u8>, bool)> {
+) -> Result<(Vec<u8>, usize)> {
     let expected_len = record_length.saturating_sub(LEADER_LEN);
     let mut data = vec![0u8; expected_len];
     let mut bytes_read = 0;
@@ -457,11 +457,10 @@ pub fn read_record_data<R: Read>(
             Err(e) => return Err(e.into()),
         }
     }
-    let was_truncated = bytes_read < expected_len;
-    if was_truncated && recovery_mode == RecoveryMode::Strict {
+    if bytes_read < expected_len && recovery_mode == RecoveryMode::Strict {
         return Err(ctx.err_truncated_record(Some(expected_len), Some(bytes_read)));
     }
-    Ok((data, was_truncated))
+    Ok((data, bytes_read))
 }
 
 /// A parsed 12-byte directory entry: tag, field length in bytes, and start
@@ -860,10 +859,10 @@ mod tests {
     fn read_record_data_full_read() {
         let mut reader = Cursor::new(vec![b'x'; 76]);
         let ctx = ParseContext::new();
-        let (data, truncated) =
+        let (data, bytes_read) =
             read_record_data(&mut reader, 100, RecoveryMode::Strict, &ctx).unwrap();
         assert_eq!(data.len(), 76);
-        assert!(!truncated);
+        assert_eq!(bytes_read, 76);
     }
 
     #[test]
@@ -891,13 +890,17 @@ mod tests {
     }
 
     #[test]
-    fn read_record_data_lenient_mode_returns_truncated_flag() {
+    fn read_record_data_lenient_mode_returns_truncated_count() {
         let mut reader = Cursor::new(vec![b'x'; 50]);
         let ctx = ParseContext::new();
-        let (data, truncated) =
+        let (data, bytes_read) =
             read_record_data(&mut reader, 100, RecoveryMode::Lenient, &ctx).unwrap();
-        assert_eq!(data.len(), 76);
-        assert!(truncated);
+        assert_eq!(
+            data.len(),
+            76,
+            "buffer is sized to expected_len, zero-padded"
+        );
+        assert_eq!(bytes_read, 50, "actual bytes read short of expected_len");
     }
 
     #[test]
