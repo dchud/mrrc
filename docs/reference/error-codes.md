@@ -87,8 +87,18 @@ salvages this — the next 24 bytes can't be trusted as a leader.
 ### E002 — `leader_invalid` { #E002 }
 
 The 24-byte leader is malformed in a way other than the record-length or
-base-address fields (e.g., reserved bytes 20–23 are not `4500`, encoding
-indicator out of range).
+base-address fields. Two failure shapes share this code:
+
+1. **Structural** (always fires): byte-level malformation — e.g., the
+   indicator-count byte (position 10) is not an ASCII digit, or the
+   reserved bytes 20–23 are not `4500`. Detected during `Leader::from_bytes`
+   regardless of `validation_level`.
+2. **MARC 21 semantics** (fires only at `validation_level="strict_marc"`):
+   the leader parses cleanly but a position carries a value not in the
+   MARC 21 allowed set — e.g., `record_status` (position 5) outside
+   `{a, c, d, n, p}`, `record_type` (position 6) outside the documented
+   set, `indicator_count` not equal to 2, `encoding_level` outside the
+   allowed set, etc.
 
 **Context:** Parse-side.
 **Applies to:** Bibliographic, Authority, Holdings readers.
@@ -96,11 +106,15 @@ indicator out of range).
 May also populate: `source`, `found`, `expected`.
 
 **Common causes.** Records hand-crafted in a text editor and saved in the
-wrong encoding; output from non-conformant exporters.
+wrong encoding; output from non-conformant exporters; pre-2000s records
+using deprecated leader values.
 
-**How to recover.** `recovery_mode="lenient"` does not currently fix
-leader-byte issues — leader validation runs before any field parsing.
-Edit the source bytes if the records have value.
+**How to recover.** Structural shape (1) fires before any field parsing
+and is not affected by `recovery_mode`. The MARC 21 semantic shape (2)
+respects `recovery_mode`: in `lenient`/`permissive` the violation is
+attached to the yielded record's `record.errors` list and parsing
+continues; in `strict` it raises immediately. To suppress (2) entirely,
+use the default `validation_level="structural"`.
 
 **Python class:** `mrrc.RecordLeaderInvalid`.
 
@@ -300,7 +314,20 @@ continues with the rest.
 ### E201 — `invalid_indicator` { #E201 }
 
 A variable-data field's indicator byte is not a valid value for the given
-tag (e.g., not a digit or space).
+tag. Two failure shapes are reported under this code at
+`validation_level="strict_marc"`:
+
+1. **Byte-level**: the indicator byte is not an ASCII digit (`0`-`9`) or
+   space. `expected` is `"ASCII digit (0-9) or space"`.
+2. **Per-tag MARC 21 semantics**: the byte passes (1) but violates the
+   per-tag rule for the field. For example, the first indicator of `245`
+   (Title statement) is restricted to `0` or `1` per MARC 21; a `9` is
+   byte-valid but tag-invalid. `expected` describes the tag-specific rule
+   (e.g., `"'0' or '1'"`, `"digit 0-9"`).
+
+The two shapes share an error code because they share a position
+(`field_tag`, `indicator_position`) and a remedy (fix the indicator); they
+differ only in the `expected` string.
 
 **Context:** Parse-side.
 **Applies to:** Bibliographic, Authority, Holdings readers — fired

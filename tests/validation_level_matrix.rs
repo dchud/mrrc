@@ -136,3 +136,13 @@ fn matrix_e202_bad_subfield_code() {
 fn matrix_e301_invalid_utf8() {
     run_matrix("e301_invalid_utf8_in_subfield.bin", "E301");
 }
+
+#[test]
+fn matrix_e201_per_tag_indicator_245() {
+    run_matrix("e201_per_tag_indicator_245.bin", "E201");
+}
+
+#[test]
+fn matrix_e002_invalid_record_status() {
+    run_matrix("e002_invalid_record_status.bin", "E002");
+}

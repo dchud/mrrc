@@ -47,6 +47,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parsed silently. Lenient and permissive modes are unchanged — the
   recovery cap continues to absorb the disagreement via existing
   directory/field paths.
+- `validation_level="strict_marc"` now also runs MARC 21
+  semantic checks: per-tag indicator rules (e.g., 245 first
+  indicator must be `0` or `1`) via `IndicatorValidator`, and
+  leader-byte semantics (`record_status`, `record_type`,
+  `bibliographic_level`, `encoding_level`, etc.) via
+  `RecordStructureValidator`. Violations fire E201 and E002
+  respectively, both recoverable in `lenient` / `permissive`.
+  `IsbnValidator` and `EncodingValidator` remain user-callable
+  opt-in helpers; see `docs/reference/validators.md`.
 
 ### Changed
 

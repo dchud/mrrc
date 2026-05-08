@@ -95,6 +95,22 @@ expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_
 recovery_modes = ["strict"]
 wired = true
 
+# E002: leader byte 5 (record_status) is byte-valid but not in the MARC 21
+# allowed set {a, c, d, n, p}. RecordStructureValidator runs only at
+# validation_level=strict_marc and reports this as InvalidLeader.
+[[case]]
+id = "e002_invalid_record_status"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_invalid_record_status.bin"
+description = "Leader byte 5 (record status) is 'x' (not in {a, c, d, n, p})."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
 # E003: leader bytes 12-16 not five ASCII digits.
 [[case]]
 id = "e003_base_address_non_digit"
@@ -242,6 +258,30 @@ slug = "invalid_indicator"
 trigger_kind = "parse_iso2709"
 trigger_fixture = "tests/data/error_fixtures/e201_bad_indicator.bin"
 description = "First indicator byte of field 245 is ':' (not digit/space)."
+expected_context = [
+    "record_index",
+    "byte_offset",
+    "record_byte_offset",
+    "field_tag",
+    "indicator_position",
+    "found",
+    "expected",
+]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E201: indicator byte is digit-valid but violates the per-tag MARC 21 rule
+# for the field. IndicatorValidator runs in addition to the universal
+# byte-validity check at strict_marc.
+[[case]]
+id = "e201_per_tag_indicator_245"
+code = "E201"
+variant = "InvalidIndicator"
+slug = "invalid_indicator"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e201_per_tag_indicator_245.bin"
+description = "First indicator of field 245 is '9' (byte-valid digit but per-tag rule allows only 0/1)."
 expected_context = [
     "record_index",
     "byte_offset",

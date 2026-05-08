@@ -67,6 +67,26 @@ impl IndicatorValidation {
             },
         }
     }
+
+    /// Human-readable description of allowed values for this rule, suitable
+    /// for use as the `expected:` field on [`MarcError::InvalidIndicator`].
+    #[must_use]
+    pub fn expected_human(&self) -> String {
+        match self {
+            IndicatorValidation::Undefined => "blank or '#'".to_string(),
+            IndicatorValidation::Any | IndicatorValidation::Obsolete => "any value".to_string(),
+            IndicatorValidation::Values(values) => {
+                let parts: Vec<String> = values.iter().map(|c| format!("'{c}'")).collect();
+                match parts.split_last() {
+                    None => "<no allowed values>".to_string(),
+                    Some((only, [])) => only.clone(),
+                    Some((last, [first])) => format!("{first} or {last}"),
+                    Some((last, rest)) => format!("{}, or {last}", rest.join(", ")),
+                }
+            },
+            IndicatorValidation::DigitRange { min, max } => format!("digit {min}-{max}"),
+        }
+    }
 }
 
 /// Semantic descriptions for indicator values

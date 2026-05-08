@@ -103,6 +103,7 @@ nav:
     - Character Encoding: reference/encoding.md
     - Error Handling: reference/error-handling.md
     - Error Codes: reference/error-codes.md
+    - Validators: reference/validators.md
   - Examples:
     - examples/index.md
   - Contributing:

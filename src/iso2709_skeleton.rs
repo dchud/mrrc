@@ -217,6 +217,25 @@ where
             .with_bytes_near(&leader_bytes, leader_offset)
     })?;
 
+    // At StrictMarc, run MARC 21 semantic leader validation: record_status,
+    // record_type, bibliographic_level, encoding_level, and friends. Surfaces
+    // as InvalidLeader (E002) with the same positional enrichment as
+    // structural leader errors. In lenient/permissive the violation is
+    // recorded against `errors` + `cap` and parsing continues with the
+    // (semantically dubious but structurally parseable) leader.
+    if validation_level == ValidationLevel::StrictMarc {
+        if let Err(e) = crate::RecordStructureValidator::validate_leader(&leader) {
+            let enriched = e
+                .with_position(ctx)
+                .with_bytes_near(&leader_bytes, leader_offset);
+            if recovery_mode == RecoveryMode::Strict {
+                return Err(enriched);
+            }
+            errors.push(enriched);
+            cap.note(ctx)?;
+        }
+    }
+
     B::validate_record_type(&leader, ctx)?;
 
     let record_length = leader.record_length as usize;
