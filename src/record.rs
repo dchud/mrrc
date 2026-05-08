@@ -70,6 +70,16 @@ pub struct Record {
     pub control_fields: IndexMap<String, Vec<String>>,
     /// Data fields (010+) - tag -> fields, preserves insertion order
     pub fields: IndexMap<String, Vec<Field>>,
+    /// Non-fatal errors accumulated while parsing this record. Always
+    /// empty in `RecoveryMode::Strict` (the parser returns `Err` on the
+    /// first error before the record is yielded). Populated in
+    /// `Lenient` and `Permissive` with the diagnostics that would have
+    /// been raised — same positional context, same code/slug. Wrapped in
+    /// `Arc` so cloning a record is cheap and `MarcError` doesn't need
+    /// to implement `Clone` (some variants carry non-Clone causes).
+    /// Skipped during serialization (parse-time diagnostics, not record data).
+    #[serde(skip)]
+    pub errors: std::sync::Arc<Vec<crate::error::MarcError>>,
 }
 
 /// A data field in a MARC record (fields 010 and higher)
@@ -102,6 +112,7 @@ impl Record {
             leader,
             control_fields: IndexMap::new(),
             fields: IndexMap::new(),
+            errors: crate::error::empty_errors_arc(),
         }
     }
 
@@ -142,6 +153,7 @@ impl Record {
                 leader,
                 control_fields: IndexMap::new(),
                 fields: IndexMap::new(),
+                errors: crate::error::empty_errors_arc(),
             },
         }
     }

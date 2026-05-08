@@ -1494,6 +1494,45 @@ class MARCReader:
         except StopIteration:
             return None
 
+    def iter_with_errors(self):
+        """Iterate yielding ``(record, errors)`` tuples.
+
+        Equivalent to iterating with ``__next__`` and reading
+        ``record.errors`` from each yielded record — same data, more
+        ergonomic destructuring at the call site, and observable in
+        ``permissive=True`` mode for records that ``__next__`` would
+        otherwise swallow as ``None``.
+
+        In ``recovery_mode="strict"`` the errors list is always empty
+        (the parser raises before the record is yielded). In
+        ``lenient`` / ``permissive`` it carries any diagnostics
+        captured during the record's parse.
+
+        With ``permissive=True``, records whose parse failed entirely
+        yield as ``(None, [exception])`` instead of being silently
+        skipped, so even unsalvageable records are observable.
+
+        Example::
+
+            for rec, errs in reader.iter_with_errors():
+                if rec is None:
+                    log.error(f"unsalvageable: {errs[0]}")
+                elif errs:
+                    log.warning(f"{len(errs)} issues parsing record")
+        """
+        while True:
+            try:
+                inner_record = next(self._inner)
+            except StopIteration:
+                return
+            except Exception as e:
+                if self._permissive:
+                    yield (None, [e])
+                    continue
+                raise
+            wrapped = _wrap_record(inner_record)
+            yield (wrapped, wrapped.errors)
+
 
 class MARCWriter:
     """MARC Writer wrapper."""

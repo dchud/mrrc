@@ -1457,6 +1457,22 @@ impl From<std::io::Error> for MarcError {
     }
 }
 
+/// Shared empty `Arc<Vec<MarcError>>` used as the default value for
+/// the `errors` field on freshly constructed records. Returned by
+/// `Record::new` / `AuthorityRecord::new` / `HoldingsRecord::new` and
+/// kept as-is by readers when no errors accumulate during a parse.
+///
+/// Avoids a heap allocation per record on the hot strict-clean parse
+/// path (where `errors` is always empty); only the populated case in
+/// lenient/permissive modes pays for an `Arc::new` allocation.
+#[must_use]
+pub fn empty_errors_arc() -> std::sync::Arc<Vec<MarcError>> {
+    static EMPTY: std::sync::OnceLock<std::sync::Arc<Vec<MarcError>>> = std::sync::OnceLock::new();
+    EMPTY
+        .get_or_init(|| std::sync::Arc::new(Vec::new()))
+        .clone()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

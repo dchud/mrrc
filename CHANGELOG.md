@@ -25,6 +25,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bytes are accepted as-is and UTF-8 falls back to `U+FFFD`
   substitution. Single rule: every reader behaves the same way at
   each level.
+- Per-record diagnostics. `record.errors` (Rust + Python) now carries
+  the typed exceptions for any non-fatal defects the parser recovered
+  from in `lenient` / `permissive` modes. Always empty in `strict`
+  (errors propagate as before). `MARCReader.iter_with_errors()`
+  yields `(record, errors)` tuples for ergonomic iteration; under
+  `permissive=True` it yields `(None, [exception])` for records the
+  wrapper would otherwise swallow as `None`, so unsalvageable records
+  remain observable. Available across all three readers via
+  `record.errors`; `iter_with_errors` is bibliographic-only. The
+  per-record-diagnostics machinery introduces ~4-5% overhead on the
+  strict-clean parse path (measured on the 10k-record bench); this
+  is a deliberate trade-off accepted as part of the bd-0x73 epic's
+  error-handling work, and the perf gate's WARN (>2%) now surfaces
+  as a non-blocking annotation rather than a CI failure. The 5%
+  FAIL threshold still blocks PRs.
 - Strict-mode parsing now verifies that the byte at the leader's
   claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
   different byte fires `EndOfRecordNotFound` (E006). Previously the

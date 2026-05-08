@@ -292,6 +292,68 @@ data, or is skipped. The structured positional metadata is populated
 identically in all three modes — the modes only differ in whether the
 error is propagated, suppressed, or used to inform a salvage attempt.
 
+## Inspecting per-record errors
+
+In `lenient` and `permissive` recovery modes, errors that would have
+been raised under `strict` are instead **attached to the yielded
+record** as `record.errors`. The list carries one typed exception per
+recovered defect, with the same positional context (record_index,
+byte_offset, field_tag, etc.) as if the error had been raised directly.
+
+```python
+reader = mrrc.MARCReader(file, recovery_mode="lenient")
+for record in reader:
+    if record.errors:
+        for err in record.errors:
+            log.warning(f"[{err.code}] {err}")
+    process(record)
+```
+
+In `strict` mode `record.errors` is always `[]` — the parser raises on
+the first error before the record is yielded. In `lenient` and
+`permissive` it carries diagnostics for every defect the parser
+recovered from (subject to `max_errors` cap).
+
+### `iter_with_errors()`
+
+`MARCReader.iter_with_errors()` is an alternate iterator yielding
+`(record, errors)` tuples instead of bare records. Equivalent to
+iterating + reading `record.errors`, but more discoverable for the
+"give-me-everything-defective" use case:
+
+```python
+for record, errors in reader.iter_with_errors():
+    if errors:
+        log.warning(f"{len(errors)} issues parsing record")
+    if record:
+        process(record)
+```
+
+Under `permissive=True`, records that the parser cannot salvage at all
+yield as `(None, [exception])` so even unsalvageable records are
+observable. Without `iter_with_errors`, those records are silently
+returned as `None` and the diagnostic is lost.
+
+```python
+reader = mrrc.MARCReader(file, permissive=True)
+for record, errors in reader.iter_with_errors():
+    if record is None:
+        log.error(f"unsalvageable: {errors[0]}")
+    else:
+        process(record)
+```
+
+`AuthorityMARCReader` and `HoldingsMARCReader` expose `record.errors`
+the same way (the load-bearing surface). They don't carry the
+`iter_with_errors` convenience method — that's a pymarc-shape ergonomic
+specific to `MARCReader`. Iterate normally and check `record.errors`:
+
+```python
+for record in mrrc.AuthorityMARCReader(file, recovery_mode="lenient"):
+    if record.errors:
+        log.warning(...)
+```
+
 ## Structured serialization (`to_dict` / `to_json`)
 
 Every `MrrcException` exposes `to_dict()` and `to_json()` for emitting the
