@@ -7,3 +7,4 @@ API documentation and technical reference.
 - [Format Support](formats.md) - Supported serialization formats
 - [MARC Primer](marc-primer.md) - Introduction to MARC record structure
 - [Character Encoding](encoding.md) - MARC-8 and UTF-8 encoding details
+- [Validators](validators.md) - Built-in validator types and when each runs

@@ -267,8 +267,10 @@ Concretely:
 | | `validation_level="structural"` (default) | `validation_level="strict_marc"` |
 |---|---|---|
 | ISO 2709 structural errors (E001–E007, E101, E106) | fire | fire |
-| Indicator byte validation (E201) | skipped | fires |
+| Indicator byte validation (E201, byte-level) | skipped | fires |
+| Per-tag MARC 21 indicator semantics (E201, e.g. 245 ind1 ∈ {0,1}) | skipped | fires |
 | Subfield-code byte validation (E202) | skipped | fires |
+| MARC 21 leader semantics (E002, e.g. record_status ∈ {a,c,d,n,p}) | skipped | fires |
 | UTF-8 strictness (E301) | lossy decode (`U+FFFD` substitution) across bibliographic + authority + holdings | strict decode raises across all three readers |
 
 ```python

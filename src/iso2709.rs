@@ -22,8 +22,17 @@
 use crate::error::{BytesNear, MarcError, Result};
 use crate::record::{Field, Subfield};
 use crate::recovery::RecoveryMode;
+use crate::validation::IndicatorValidator;
 use smallvec::SmallVec;
 use std::io::Read;
+use std::sync::OnceLock;
+
+/// MARC 21 per-tag indicator rules, lazily built once and reused by every
+/// `parse_data_field` call when `IndicatorMode::Strict` is selected.
+fn marc21_indicator_validator() -> &'static IndicatorValidator {
+    static V: OnceLock<IndicatorValidator> = OnceLock::new();
+    V.get_or_init(IndicatorValidator::new)
+}
 
 /// ASCII record terminator (`0x1D`).
 pub const RECORD_TERMINATOR: u8 = 0x1D;
@@ -723,6 +732,16 @@ pub fn parse_data_field(
         }
         if !is_valid_indicator(i2) {
             return Err(ctx.err_invalid_indicator(1, &[i2], "ASCII digit (0-9) or space"));
+        }
+        // Per-tag MARC 21 indicator semantics (e.g., 245 ind1 must be 0/1).
+        // Tags without rules are accepted as-is.
+        if let Some(rules) = marc21_indicator_validator().get_rules(tag) {
+            if !rules.indicator1.is_valid(i1 as char) {
+                return Err(ctx.err_invalid_indicator(0, &[i1], rules.indicator1.expected_human()));
+            }
+            if !rules.indicator2.is_valid(i2 as char) {
+                return Err(ctx.err_invalid_indicator(1, &[i2], rules.indicator2.expected_human()));
+            }
         }
     }
     let mut field = Field::new(tag.to_string(), i1 as char, i2 as char);
