@@ -224,8 +224,8 @@ wired = true
 # E101: directory entry tag contains a non-ASCII byte. Tags are 3 ASCII
 # bytes per the codec; lossy UTF-8 conversion would replace the byte
 # with U+FFFD (3 bytes), producing a tag the writer can't fit back into
-# the directory's fixed-width tag field. Round-trip-breaking, surfaced
-# by the bd-0x73.5 fuzz target.
+# the directory's fixed-width tag field. Round-trip-breaking; the
+# error-classification fuzz target's round-trip assertion surfaces it.
 [[case]]
 id = "e101_non_ascii_tag"
 code = "E101"

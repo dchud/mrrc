@@ -44,34 +44,13 @@
 
 use crate::error::{MarcError, Result};
 use crate::formats::FormatWriter;
+use crate::iso2709::validate_directory_tag;
 use crate::record::Record;
 use std::io::Write;
 
 const FIELD_TERMINATOR: u8 = 0x1E;
 const SUBFIELD_DELIMITER: u8 = 0x1F;
 const RECORD_TERMINATOR: u8 = 0x1D;
-
-/// Reject any field tag that isn't exactly 3 ASCII bytes. Tags with
-/// non-ASCII characters re-encode to more than 3 bytes via UTF-8 and
-/// would overflow the directory entry's fixed-width tag field, breaking
-/// round-trip. The reader enforces the same rule on parse.
-fn validate_tag(
-    tag: &str,
-    record_index: Option<usize>,
-    record_control_number: Option<&str>,
-) -> Result<()> {
-    if tag.len() == 3 && tag.as_bytes().iter().all(u8::is_ascii) {
-        return Ok(());
-    }
-    Err(MarcError::WriterError {
-        record_index,
-        record_control_number: record_control_number.map(String::from),
-        message: format!(
-            "Field tag {tag:?} is not 3 ASCII bytes (got {} bytes); cannot fit into the ISO 2709 directory entry's tag field",
-            tag.len()
-        ),
-    })
-}
 
 /// Writer for ISO 2709 binary MARC format.
 ///
@@ -179,7 +158,7 @@ impl<W: Write> MarcWriter<W> {
         for (tag, values) in &record.control_fields {
             if tag.as_str() < "010" {
                 for value in values {
-                    validate_tag(tag, record_index, record_control_number.as_deref())?;
+                    validate_directory_tag(tag, record_index, record_control_number.as_deref())?;
                     let field_data = value.as_bytes();
                     let field_length = field_data.len() + 1; // +1 for terminator
 
@@ -199,7 +178,7 @@ impl<W: Write> MarcWriter<W> {
         // Write data fields (010+)
         for (tag, fields) in &record.fields {
             for field in fields {
-                validate_tag(tag, record_index, record_control_number.as_deref())?;
+                validate_directory_tag(tag, record_index, record_control_number.as_deref())?;
                 let mut field_data = Vec::new();
                 field_data.push(field.indicator1 as u8);
                 field_data.push(field.indicator2 as u8);

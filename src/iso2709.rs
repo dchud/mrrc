@@ -553,6 +553,38 @@ pub fn is_control_field_tag(tag: &str) -> bool {
     tag.len() == 3 && tag.starts_with('0') && tag.chars().all(|c| c.is_ascii_digit()) && tag < "010"
 }
 
+/// Validate that a field tag fits the ISO 2709 directory's fixed-width
+/// 3-byte tag field. Tags must be exactly 3 ASCII bytes; non-ASCII
+/// characters re-encode to multiple UTF-8 bytes when written and
+/// overflow the directory entry. The bibliographic, authority, and
+/// holdings writers all share this rule; the reader's directory walker
+/// enforces the parse-side counterpart by firing
+/// [`MarcError::DirectoryInvalid`] (E101) on non-ASCII tag bytes.
+///
+/// # Errors
+///
+/// Returns [`MarcError::WriterError`] (E404) when `tag.len() != 3` or
+/// any byte of `tag` is not ASCII. The caller may pass `None` for
+/// `record_index` and `record_control_number` if no per-record context
+/// is available.
+pub fn validate_directory_tag(
+    tag: &str,
+    record_index: Option<usize>,
+    record_control_number: Option<&str>,
+) -> Result<()> {
+    if tag.len() == 3 && tag.as_bytes().iter().all(u8::is_ascii) {
+        return Ok(());
+    }
+    Err(MarcError::WriterError {
+        record_index,
+        record_control_number: record_control_number.map(String::from),
+        message: format!(
+            "Field tag {tag:?} is not 3 ASCII bytes (got {} bytes); cannot fit into the ISO 2709 directory entry's tag field",
+            tag.len()
+        ),
+    })
+}
+
 /// How to handle unrecognized bytes encountered while walking subfield
 /// boundaries inside a data field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

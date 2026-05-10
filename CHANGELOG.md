@@ -83,8 +83,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `U+FFFD` and producing records whose tag re-encodes to more than
   3 bytes. `MarcWriter` and the authority/holdings writers also
   refuse records whose tags aren't 3 ASCII bytes, returning
-  `WriterError` (E404). Surfaced by the bd-0x73.5 error-classification
-  fuzz target's round-trip assertion.
+  `WriterError` (E404). Surfaced by the error-classification fuzz
+  target's round-trip assertion.
 - `TruncatedRecord` (E005) now correctly surfaces on
   `record.errors` in `lenient` and `permissive` recovery modes
   instead of being silently swallowed. The skeleton's
