@@ -77,6 +77,19 @@ impl<W: Write> HoldingsMarcWriter<W> {
 
             data.push(FIELD_TERMINATOR);
 
+            // Tags must be 3 ASCII bytes or they overflow the directory
+            // entry's fixed-width tag field; the reader enforces the
+            // same rule on parse.
+            if tag.len() != 3 || !tag.as_bytes().iter().all(u8::is_ascii) {
+                return Err(MarcError::WriterError {
+                    record_index: None,
+                    record_control_number: None,
+                    message: format!(
+                        "Field tag {tag:?} is not 3 ASCII bytes (got {} bytes); cannot fit into the ISO 2709 directory entry's tag field",
+                        tag.len()
+                    ),
+                });
+            }
             // Write directory entry (tag + length + start position)
             let length = data.len() - start_pos;
             directory.extend_from_slice(tag.as_bytes());

@@ -221,6 +221,23 @@ expected_context = ["record_index", "byte_offset", "record_byte_offset", "field_
 recovery_modes = ["strict"]
 wired = true
 
+# E101: directory entry tag contains a non-ASCII byte. Tags are 3 ASCII
+# bytes per the codec; lossy UTF-8 conversion would replace the byte
+# with U+FFFD (3 bytes), producing a tag the writer can't fit back into
+# the directory's fixed-width tag field. Round-trip-breaking, surfaced
+# by the bd-0x73.5 fuzz target.
+[[case]]
+id = "e101_non_ascii_tag"
+code = "E101"
+variant = "DirectoryInvalid"
+slug = "directory_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e101_non_ascii_tag.bin"
+description = "Directory entry 1 tag's first byte replaced with 0xCC (non-ASCII)."
+expected_context = ["record_index", "byte_offset", "record_byte_offset"]
+recovery_modes = ["strict"]
+wired = true
+
 # E105: accessor lookup for a tag the record does not contain.
 [[case]]
 id = "e105_field_not_found"
