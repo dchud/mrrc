@@ -14,6 +14,7 @@ playbook for investigating CI findings.
 |--------|-------------|--------|
 | `parse_record` | `MarcReader::read_record` over the full ISO 2709 reader | Active |
 | `roundtrip_binary` | Parse → serialize → parse-again coupling | Active |
+| `error_classification` | Strict-mode reader with per-input behavioral assertions | Active |
 | `parse_leader` | 24-byte leader parsing | Planned |
 | `decode_marc8` | MARC-8 encoding state machine | Planned |
 | `parse_marcxml` | MARCXML reader | Planned |
@@ -34,6 +35,20 @@ limit) or from the second reader are correct behavior and discarded. A
 stronger structural-equality variant (same field tags, subfield codes,
 and values across the round trip) can be layered later once the
 guarantees are documented.
+
+`error_classification` strengthens `parse_record`'s panic-only contract
+with two per-input behavioral assertions. For each `Ok(record)` the
+strict-mode reader yields, the target re-emits the record via
+`MarcWriter` and asserts that re-parsing the writer's output yields a
+record (writer rejections — e.g., records exceeding the 99999-byte
+ISO 2709 limit — are discarded as correct behavior, not parser bugs).
+For each `Err(e)`, the target asserts `e.code()` is one of the
+documented `Exxx` identifiers tracked in `tests/error_coverage.toml`.
+What this catches that `parse_record` and `roundtrip_binary` do not:
+silent acceptance of malformed bytes (the parser returns `Ok` for input
+the writer can't faithfully represent), and future `MarcError` variants
+that ship without a documented code (docs-vs-code drift surfaced before
+release).
 
 ## Installing cargo-fuzz
 
