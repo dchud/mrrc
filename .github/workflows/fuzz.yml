@@ -39,7 +39,7 @@ jobs:
       # cancelling the other.
       fail-fast: false
       matrix:
-        target: [parse_record, roundtrip_binary]
+        target: [parse_record, roundtrip_binary, error_classification]
 
     steps:
       - uses: actions/checkout@v6

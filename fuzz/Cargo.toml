@@ -34,3 +34,10 @@ path = "fuzz_targets/roundtrip_binary.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "error_classification"
+path = "fuzz_targets/error_classification.rs"
+test = false
+doc = false
+bench = false
