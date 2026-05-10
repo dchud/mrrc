@@ -21,7 +21,10 @@
 //! saved seeds are permanent regression guards that re-run on every test
 //! invocation. Only `*.pending` files are gitignored (see `.gitignore`).
 
-use mrrc::{marcjson, marcxml, Field, Leader, MarcReader, MarcWriter, Record, Subfield};
+use mrrc::{
+    marcjson, marcxml, Field, Leader, MarcError, MarcReader, MarcWriter, Record, RecoveryMode,
+    Subfield, ValidationLevel,
+};
 use proptest::prelude::*;
 use smallvec::SmallVec;
 use std::io::Cursor;
@@ -588,4 +591,520 @@ fn assert_records_equal(orig: &Record, parsed: &Record) -> Result<(), TestCaseEr
     }
 
     Ok(())
+}
+
+// ============================================================================
+// Malformation strategies — generate INVALID inputs from valid records
+// ============================================================================
+//
+// Each strategy starts from a structurally valid record (or a controlled
+// truncation) and applies a single, named mutation. The companion property
+// asserts the parser produces a specific MarcError variant with populated
+// positional context. Together with `tests/error_coverage.rs` (named-case
+// integration coverage seeded from `tests/error_coverage.toml`) and the
+// fuzz harnesses under `fuzz/fuzz_targets/`, this covers parser-error
+// wiring at all three test layers; proptest's shrinking surfaces minimal
+// counter-examples that integration tests would miss.
+
+/// Generate a valid MARC record that always has at least one data field
+/// (and therefore at least one subfield, per `arb_data_field_with`).
+/// Mutation strategies that target indicators, subfield codes, or
+/// directory entries need a non-empty data area to mutate.
+fn arb_record_with_data_field() -> BoxedStrategy<Record> {
+    (
+        arb_leader(),
+        prop::collection::vec((arb_control_tag(), arb_control_value()), 0..=2),
+        prop::collection::vec(arb_data_field_with(arb_subfield_value()), 1..=5),
+    )
+        .prop_map(|(leader, control_fields, data_fields)| {
+            let mut record = Record::new(leader);
+            let mut seen_tags = std::collections::HashSet::new();
+            for (tag, value) in control_fields {
+                if seen_tags.insert(tag.clone()) {
+                    record.add_control_field(tag, value);
+                }
+            }
+            for field in data_fields {
+                record.add_field(field);
+            }
+            record
+        })
+        .boxed()
+}
+
+/// Generate a byte that is neither an ASCII digit nor a space — i.e., a
+/// byte that fails the universal indicator-validity check.
+fn arb_non_digit_non_space() -> impl Strategy<Value = u8> {
+    (0u8..=255u8).prop_filter("not digit or space", |b| !b.is_ascii_digit() && *b != b' ')
+}
+
+/// Generate a byte that, placed in a leader's 5-byte numeric field
+/// (record-length 0..5 or base-address 12..17), causes `parse_digits` to
+/// return `None`. The parser uses `u32::from_str`, which accepts a
+/// leading `'+'` or `'-'` — so excluding digits alone is insufficient
+/// for the record-length-field and base-address mutations to reliably
+/// fire E001/E003.
+fn arb_non_numeric_byte() -> impl Strategy<Value = u8> {
+    (0u8..=255u8).prop_filter("not digit or sign", |b| {
+        !b.is_ascii_digit() && *b != b'+' && *b != b'-'
+    })
+}
+
+/// Generate a byte outside the ASCII-graphic range (0x21..=0x7E) — i.e.,
+/// a byte that fails the subfield-code-validity check at `strict_marc`.
+/// The parser uses `is_ascii_graphic` for this check; any printable
+/// character (including punctuation) is accepted, only control bytes and
+/// 0x80+ trip `E202`.
+fn arb_non_graphic_subfield_byte() -> impl Strategy<Value = u8> {
+    (0u8..=255u8).prop_filter("not ASCII graphic", |b| !b.is_ascii_graphic())
+}
+
+/// First data-field offset in `buffer` (start of the indicator-1 byte)
+/// plus the directory entry's tag. Returns `None` if the record has only
+/// control fields, which `arb_record_with_data_field()` rules out.
+fn first_data_field_offset(buffer: &[u8]) -> Option<(String, usize)> {
+    let base = parse_data_base_address(buffer);
+    parse_directory(buffer)
+        .into_iter()
+        .find(|e| e.tag.as_str() >= "010")
+        .map(|e| (e.tag, base + e.start))
+}
+
+/// First subfield-delimiter (0x1F) offset in `buffer`. The byte that
+/// follows is the subfield code targeted for mutation.
+fn first_subfield_delimiter_offset(buffer: &[u8]) -> Option<usize> {
+    buffer.iter().position(|b| *b == SUBFIELD_DELIMITER)
+}
+
+/// Truncated leader (< 24 bytes): any sub-leader byte string the reader
+/// must reject.
+fn arb_invalid_leader_truncated() -> BoxedStrategy<Vec<u8>> {
+    prop::collection::vec(any::<u8>(), 0..LEADER_LEN).boxed()
+}
+
+/// Valid record with one byte in 0..5 (record-length field) replaced
+/// with a non-numeric byte. Triggers a leader-stage error (`E001` or
+/// `E002`).
+fn arb_invalid_leader_bad_length_field() -> BoxedStrategy<Vec<u8>> {
+    (arb_record(), 0usize..5, arb_non_numeric_byte())
+        .prop_map(|(record, pos, bad_byte)| {
+            let mut buffer = emit_binary(&record);
+            buffer[pos] = bad_byte;
+            buffer
+        })
+        .boxed()
+}
+
+/// Valid record with one byte in 12..17 (base-address field) replaced
+/// with a non-numeric byte. Triggers `E003` `BaseAddressInvalid`.
+fn arb_invalid_leader_bad_base_address() -> BoxedStrategy<Vec<u8>> {
+    (arb_record(), 12usize..17, arb_non_numeric_byte())
+        .prop_map(|(record, pos, bad_byte)| {
+            let mut buffer = emit_binary(&record);
+            buffer[pos] = bad_byte;
+            buffer
+        })
+        .boxed()
+}
+
+/// Valid record with one indicator byte mutated to a value outside the
+/// universal "digit or space" set. Returns `(bytes, expected_tag)` so
+/// the property can assert the variant carries the right field tag.
+fn arb_record_with_bad_indicator() -> BoxedStrategy<(Vec<u8>, String)> {
+    (
+        arb_record_with_data_field(),
+        arb_non_digit_non_space(),
+        0u8..=1u8,
+    )
+        .prop_map(|(record, bad_byte, ind_pos)| {
+            let mut buffer = emit_binary(&record);
+            let (tag, offset) = first_data_field_offset(&buffer)
+                .expect("arb_record_with_data_field guarantees a data field");
+            buffer[offset + ind_pos as usize] = bad_byte;
+            (buffer, tag)
+        })
+        .boxed()
+}
+
+/// Valid record with the byte after the first subfield delimiter (the
+/// subfield code) mutated to a value outside the lowercase-alnum set.
+/// Triggers `E202` `BadSubfieldCode` at `strict_marc` validation.
+///
+/// Uses a single 020 (ISBN) field with both indicators set to space so
+/// the per-tag `IndicatorValidator` (which runs at `strict_marc`
+/// alongside the universal byte-validity check) doesn't fire before the
+/// parser reaches the subfield-code check. 020's per-tag rule is
+/// `Undefined`/`Undefined`, which accepts space.
+fn arb_record_with_bad_subfield_code() -> BoxedStrategy<Vec<u8>> {
+    (arb_subfield_value(), arb_non_graphic_subfield_byte())
+        .prop_map(|(value, bad_byte)| {
+            let leader = Leader {
+                record_length: 0,
+                record_status: 'n',
+                record_type: 'a',
+                bibliographic_level: 'm',
+                control_record_type: ' ',
+                character_coding: 'a',
+                indicator_count: 2,
+                subfield_code_count: 2,
+                data_base_address: 0,
+                encoding_level: ' ',
+                cataloging_form: ' ',
+                multipart_level: ' ',
+                reserved: "4500".to_string(),
+            };
+            let mut record = Record::new(leader);
+            record.add_field(Field {
+                tag: "020".to_string(),
+                indicator1: ' ',
+                indicator2: ' ',
+                subfields: SmallVec::from_vec(vec![Subfield { code: 'a', value }]),
+            });
+            let mut buffer = emit_binary(&record);
+            let delim = first_subfield_delimiter_offset(&buffer).expect("020 field has a subfield");
+            buffer[delim + 1] = bad_byte;
+            buffer
+        })
+        .boxed()
+}
+
+/// Valid record with the directory's terminating `FIELD_TERMINATOR`
+/// (the byte at base-1) replaced with an ASCII digit, producing a
+/// partial trailing entry. Triggers `E101` `DirectoryInvalid`.
+fn arb_record_with_directory_violation() -> BoxedStrategy<Vec<u8>> {
+    arb_record_with_data_field()
+        .prop_map(|record| {
+            let mut buffer = emit_binary(&record);
+            let base = parse_data_base_address(&buffer);
+            buffer[base - 1] = b'0';
+            buffer
+        })
+        .boxed()
+}
+
+/// Valid record truncated after a parametrized prefix length in
+/// [`LEADER_LEN`, total). Triggers `E005` `TruncatedRecord` (or, when
+/// the directory is partially readable, an earlier structural error).
+fn arb_record_truncated_after_offset() -> BoxedStrategy<Vec<u8>> {
+    (arb_record(), any::<u32>())
+        .prop_map(|(record, seed)| {
+            let buffer = emit_binary(&record);
+            let total = buffer.len();
+            let span = (total - LEADER_LEN).max(1);
+            let prefix_len = LEADER_LEN + (seed as usize) % span;
+            buffer[..prefix_len].to_vec()
+        })
+        .boxed()
+}
+
+/// Valid record with the final `RECORD_TERMINATOR` byte replaced with
+/// 0x00. Triggers `E006` `EndOfRecordNotFound`.
+fn arb_record_missing_record_terminator() -> BoxedStrategy<Vec<u8>> {
+    arb_record()
+        .prop_map(|record| {
+            let mut buffer = emit_binary(&record);
+            let last = buffer.len() - 1;
+            buffer[last] = 0x00;
+            buffer
+        })
+        .boxed()
+}
+
+/// One malformed but recoverable record: the leader and `record_length`
+/// are intact (so the reader can advance to the next record), but the
+/// length field of the first directory entry is corrupted to non-digit
+/// bytes. Used to build pathological streams for the recovery-cap
+/// invariant. Mirrors `build_bad_record` in `src/reader.rs` tests.
+fn arb_malformed_recoverable_record() -> BoxedStrategy<Vec<u8>> {
+    arb_record_with_data_field()
+        .prop_map(|record| {
+            let mut buffer = emit_binary(&record);
+            // Directory entry bytes 27..31 are the 4-byte length field of
+            // the first entry. Replace each with 'X' so directory parse
+            // fails per-record but leader/length stay valid for stream
+            // advancement.
+            for byte in &mut buffer[27..31] {
+                *byte = b'X';
+            }
+            buffer
+        })
+        .boxed()
+}
+
+// ============================================================================
+// Malformation properties — assert variant + positional context
+// ============================================================================
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        cases: 64,
+        ..ProptestConfig::default()
+    })]
+
+    /// A leader truncated to fewer than 24 bytes must not parse as a
+    /// record. Either the reader returns Ok(None) or Err(_); never
+    /// Ok(Some(_)) and never a panic.
+    #[test]
+    fn truncated_leader_never_yields_record(bytes in arb_invalid_leader_truncated()) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]));
+        let result = reader.read_record();
+        prop_assert!(
+            !matches!(&result, Ok(Some(_))),
+            "truncated leader should not parse as a record, got {result:?}"
+        );
+    }
+
+    /// A non-digit byte in the leader's record-length field (0..5) must
+    /// surface as a leader-stage error (E001 RecordLengthInvalid or, when
+    /// the malformed leader fails an earlier check, E002 InvalidLeader)
+    /// with positional context populated.
+    #[test]
+    fn malformed_record_length_yields_leader_error(
+        bytes in arb_invalid_leader_bad_length_field(),
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]));
+        let result = reader.read_record();
+        match result {
+            Err(MarcError::RecordLengthInvalid {
+                record_index, byte_offset, ..
+            }) => {
+                prop_assert!(record_index.is_some(), "record_index missing");
+                prop_assert!(byte_offset.is_some(), "byte_offset missing");
+            },
+            Err(MarcError::InvalidLeader {
+                record_index, byte_offset, ..
+            }) => {
+                prop_assert!(record_index.is_some(), "record_index missing");
+                prop_assert!(byte_offset.is_some(), "byte_offset missing");
+            },
+            other => prop_assert!(
+                false,
+                "expected RecordLengthInvalid or InvalidLeader, got {other:?}"
+            ),
+        }
+    }
+
+    /// A non-digit byte in the leader's base-address field (12..17) must
+    /// surface as E003 BaseAddressInvalid with positional context.
+    #[test]
+    fn malformed_base_address_yields_e003(
+        bytes in arb_invalid_leader_bad_base_address(),
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]));
+        let result = reader.read_record();
+        match result {
+            Err(MarcError::BaseAddressInvalid {
+                record_index, byte_offset, ..
+            }) => {
+                prop_assert!(record_index.is_some());
+                prop_assert!(byte_offset.is_some());
+            },
+            other => prop_assert!(false, "expected BaseAddressInvalid, got {other:?}"),
+        }
+    }
+
+    /// A non-digit-non-space indicator byte must surface as E201
+    /// InvalidIndicator at strict_marc validation, with field_tag,
+    /// indicator_position, and the standard positional fields populated.
+    #[test]
+    fn malformed_indicator_yields_e201(
+        (bytes, expected_tag) in arb_record_with_bad_indicator(),
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]))
+            .with_validation_level(ValidationLevel::StrictMarc);
+        let result = reader.read_record();
+        match result {
+            Err(MarcError::InvalidIndicator {
+                field_tag,
+                indicator_position,
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                ..
+            }) => {
+                prop_assert_eq!(field_tag.as_deref(), Some(expected_tag.as_str()));
+                prop_assert!(indicator_position.is_some());
+                prop_assert!(record_index.is_some());
+                prop_assert!(byte_offset.is_some());
+                prop_assert!(record_byte_offset.is_some());
+            },
+            other => prop_assert!(false, "expected InvalidIndicator, got {other:?}"),
+        }
+    }
+
+    /// A non-printable subfield-code byte must surface as E202
+    /// BadSubfieldCode at strict_marc validation, with field_tag and the
+    /// standard positional fields populated.
+    #[test]
+    fn malformed_subfield_code_yields_e202(
+        bytes in arb_record_with_bad_subfield_code(),
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]))
+            .with_validation_level(ValidationLevel::StrictMarc);
+        let result = reader.read_record();
+        match result {
+            Err(MarcError::BadSubfieldCode {
+                field_tag,
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                ..
+            }) => {
+                prop_assert!(field_tag.is_some());
+                prop_assert!(record_index.is_some());
+                prop_assert!(byte_offset.is_some());
+                prop_assert!(record_byte_offset.is_some());
+            },
+            other => prop_assert!(false, "expected BadSubfieldCode, got {other:?}"),
+        }
+    }
+
+    /// A directory missing its terminating FIELD_TERMINATOR must surface
+    /// as E101 DirectoryInvalid with positional context.
+    #[test]
+    fn directory_violation_yields_e101(
+        bytes in arb_record_with_directory_violation(),
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]));
+        let result = reader.read_record();
+        match result {
+            Err(MarcError::DirectoryInvalid {
+                record_index, byte_offset, ..
+            }) => {
+                prop_assert!(record_index.is_some());
+                prop_assert!(byte_offset.is_some());
+            },
+            other => prop_assert!(false, "expected DirectoryInvalid, got {other:?}"),
+        }
+    }
+
+    /// A record truncated before its leader-claimed length is reached
+    /// must surface as a parse error (typically E005 TruncatedRecord;
+    /// some prefix lengths land on a partially-readable directory and
+    /// fire DirectoryInvalid or InvalidField instead). The unifying
+    /// invariant is: the malformation is detected, never parsed as a
+    /// successful record.
+    #[test]
+    fn truncated_record_never_yields_record(
+        bytes in arb_record_truncated_after_offset(),
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]));
+        let result = reader.read_record();
+        prop_assert!(
+            !matches!(&result, Ok(Some(_))),
+            "truncated record should not parse as a record, got {result:?}"
+        );
+    }
+
+    /// A record whose final byte is not RECORD_TERMINATOR must surface
+    /// as E006 EndOfRecordNotFound with positional context.
+    #[test]
+    fn missing_record_terminator_yields_e006(
+        bytes in arb_record_missing_record_terminator(),
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]));
+        let result = reader.read_record();
+        match result {
+            Err(MarcError::EndOfRecordNotFound {
+                record_index, byte_offset, ..
+            }) => {
+                prop_assert!(record_index.is_some());
+                prop_assert!(byte_offset.is_some());
+            },
+            other => prop_assert!(false, "expected EndOfRecordNotFound, got {other:?}"),
+        }
+    }
+}
+
+// ============================================================================
+// Recovery-mode invariant properties
+// ============================================================================
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        cases: 64,
+        ..ProptestConfig::default()
+    })]
+
+    /// Lenient mode must not panic on any byte sequence. This is the
+    /// same property the libfuzzer harness covers, but proptest's
+    /// shrinking turns any failure into a minimal counter-example.
+    #[test]
+    fn lenient_mode_never_panics_on_arbitrary_bytes(
+        bytes in prop::collection::vec(any::<u8>(), 0..2048),
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]))
+            .with_recovery_mode(RecoveryMode::Lenient);
+        while let Ok(Some(_)) = reader.read_record() {}
+    }
+
+    /// Permissive mode must swallow record-internal malformations: when
+    /// the leader parses cleanly (so the reader can advance to the next
+    /// record boundary) but the field area is malformed, no error
+    /// propagates to the caller. Stream-level errors (unparseable leader
+    /// length, etc.) are out of scope — the reader cannot establish
+    /// record boundaries to skip past them, so they correctly surface.
+    #[test]
+    fn permissive_mode_swallows_field_level_malformations(
+        bytes in prop_oneof![
+            arb_record_with_directory_violation(),
+            arb_record_missing_record_terminator(),
+        ],
+    ) {
+        let mut reader = MarcReader::new(Cursor::new(&bytes[..]))
+            .with_recovery_mode(RecoveryMode::Permissive);
+        loop {
+            match reader.read_record() {
+                Ok(Some(_)) => {},
+                Ok(None) => break,
+                Err(e) => {
+                    prop_assert!(
+                        false,
+                        "permissive should swallow field-level malformations; got {e:?}"
+                    );
+                    break;
+                },
+            }
+        }
+    }
+
+    /// In Lenient mode with `with_max_errors(N)`, a stream of strictly
+    /// more than N malformed records must eventually surface
+    /// FatalReaderError. After that, the reader is exhausted.
+    #[test]
+    fn recovery_cap_eventually_trips_on_pathological_inputs(
+        n in 1usize..=4usize,
+        records in prop::collection::vec(arb_malformed_recoverable_record(), 6..=10),
+    ) {
+        let mut stream = Vec::new();
+        for r in &records {
+            stream.extend_from_slice(r);
+        }
+        let mut reader = MarcReader::new(Cursor::new(&stream[..]))
+            .with_recovery_mode(RecoveryMode::Lenient)
+            .with_max_errors(n);
+
+        let mut got_fatal = false;
+        loop {
+            match reader.read_record() {
+                Ok(Some(_)) => {},
+                Ok(None) => break,
+                Err(MarcError::FatalReaderError { cap, errors_seen, .. }) => {
+                    prop_assert_eq!(cap, n);
+                    prop_assert!(errors_seen > n);
+                    got_fatal = true;
+                    break;
+                },
+                Err(e) => prop_assert!(false, "unexpected error in Lenient mode: {e:?}"),
+            }
+        }
+        prop_assert!(
+            got_fatal,
+            "cap N={} should have tripped on {} malformed records",
+            n, records.len()
+        );
+
+        // After FatalReaderError, the reader is exhausted.
+        prop_assert!(matches!(reader.read_record(), Ok(None)));
+    }
 }
