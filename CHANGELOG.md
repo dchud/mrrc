@@ -36,10 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `record.errors`; `iter_with_errors` is bibliographic-only. The
   per-record-diagnostics machinery introduces ~4-5% overhead on the
   strict-clean parse path (measured on the 10k-record bench); this
-  is a deliberate trade-off accepted as part of the bd-0x73 epic's
-  error-handling work, and the perf gate's WARN (>2%) now surfaces
-  as a non-blocking annotation rather than a CI failure. The 5%
-  FAIL threshold still blocks PRs.
+  is a deliberate trade-off for the new diagnostic surface, and the
+  perf gate's WARN (>2%) now surfaces as a non-blocking annotation
+  rather than a CI failure. The 5% FAIL threshold still blocks PRs.
 - Strict-mode parsing now verifies that the byte at the leader's
   claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
   different byte fires `EndOfRecordNotFound` (E006). Previously the
@@ -78,6 +77,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `MarcReader` rejects non-ASCII bytes in directory entry tags
+  (firing `DirectoryInvalid` / E101) instead of lossily substituting
+  `U+FFFD` and producing records whose tag re-encodes to more than
+  3 bytes. `MarcWriter` and the authority/holdings writers also
+  refuse records whose tags aren't 3 ASCII bytes, returning
+  `WriterError` (E404). Surfaced by the error-classification fuzz
+  target's round-trip assertion.
 - `TruncatedRecord` (E005) now correctly surfaces on
   `record.errors` in `lenient` and `permissive` recovery modes
   instead of being silently swallowed. The skeleton's

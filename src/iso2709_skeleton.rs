@@ -331,7 +331,29 @@ where
         }
 
         let entry_chunk = &directory[pos..pos + 12];
-        let tag = String::from_utf8_lossy(&entry_chunk[0..3]).to_string();
+        // Tag bytes must be 3 ASCII characters per the codec. Lossy UTF-8
+        // conversion would silently replace non-ASCII bytes with U+FFFD,
+        // producing a Field whose tag re-encodes to more than 3 bytes —
+        // the writer cannot then fit that tag back into the 3-byte
+        // directory tag field, breaking round-trip.
+        let tag_bytes: &[u8; 3] = entry_chunk[0..3]
+            .try_into()
+            .expect("entry_chunk guaranteed >= 12 bytes by the slice above");
+        if !tag_bytes.iter().all(u8::is_ascii) {
+            let err =
+                ctx.err_directory_invalid(Some(tag_bytes), "3 ASCII bytes (directory entry tag)");
+            if recovery_mode == RecoveryMode::Strict {
+                return Err(err);
+            }
+            errors.push(err);
+            cap.note(ctx)?;
+            pos += 12;
+            continue;
+        }
+        // SAFETY: every byte is ASCII, hence valid UTF-8.
+        let tag = std::str::from_utf8(tag_bytes)
+            .expect("ASCII bytes are valid UTF-8")
+            .to_string();
         // parse_4digits / parse_5digits build MarcError::InvalidField (E106)
         // for any non-digit byte. In the directory-walker context the
         // offending bytes describe a structurally invalid directory entry,

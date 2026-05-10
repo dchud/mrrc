@@ -30,14 +30,13 @@ trait_now_doc_hidden = "allow"
 enum_now_doc_hidden = "allow"
 function_now_doc_hidden = "allow"
 pub_module_level_const_now_doc_hidden = "allow"
-# Per-record diagnostics work (bd-0x73.11): the bd-0x73 epic introduces
-# a new public `errors` field on Record / AuthorityRecord /
-# HoldingsRecord, and threads a `&mut Vec<MarcError>` parameter
-# through `recovery::try_recover_record`. Both are intentional public
-# API additions for the 0.8.x line. Adding `errors` also drops
-# UnwindSafe / RefUnwindSafe on RecordBuilder transitively (MarcError
-# carries non-UnwindSafe boxed-cause variants). Pre-1.0; no
-# v0.8.x BC weighting in the design.
+# Per-record diagnostics: a new public `errors` field on Record /
+# AuthorityRecord / HoldingsRecord, plus a `&mut Vec<MarcError>`
+# parameter threaded through `recovery::try_recover_record`. Both are
+# intentional public API additions for the 0.8.x line. Adding `errors`
+# also drops UnwindSafe / RefUnwindSafe on RecordBuilder transitively
+# (MarcError carries non-UnwindSafe boxed-cause variants). Pre-1.0;
+# no v0.8.x BC weighting in the design.
 auto_trait_impl_removed = "allow"
 constructible_struct_adds_field = "allow"
 function_parameter_count_changed = "allow"

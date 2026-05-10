@@ -44,6 +44,7 @@
 
 use crate::error::{MarcError, Result};
 use crate::formats::FormatWriter;
+use crate::iso2709::validate_directory_tag;
 use crate::record::Record;
 use std::io::Write;
 
@@ -157,6 +158,7 @@ impl<W: Write> MarcWriter<W> {
         for (tag, values) in &record.control_fields {
             if tag.as_str() < "010" {
                 for value in values {
+                    validate_directory_tag(tag, record_index, record_control_number.as_deref())?;
                     let field_data = value.as_bytes();
                     let field_length = field_data.len() + 1; // +1 for terminator
 
@@ -176,6 +178,7 @@ impl<W: Write> MarcWriter<W> {
         // Write data fields (010+)
         for (tag, fields) in &record.fields {
             for field in fields {
+                validate_directory_tag(tag, record_index, record_control_number.as_deref())?;
                 let mut field_data = Vec::new();
                 field_data.push(field.indicator1 as u8);
                 field_data.push(field.indicator2 as u8);
