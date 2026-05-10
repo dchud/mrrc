@@ -451,6 +451,17 @@ class MARCReader:
             RuntimeError: If the reader has been consumed.
         """
         ...
+    @property
+    def last_chunk(self) -> Optional[bytes]:
+        """Bytes of the most recent record chunk read from the source.
+
+        Populated on every successful chunk read, regardless of whether
+        the parse step then succeeds or fails. The ``mrrc.MARCReader``
+        Python wrapper exposes this as the pymarc-compatible
+        ``current_chunk`` accessor used to diagnose records swallowed
+        by ``permissive=True``.
+        """
+        ...
 
 class MARCWriter:
     """Writer for ISO 2709 binary MARC format.

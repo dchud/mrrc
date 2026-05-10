@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `MARCReader.current_exception` and `MARCReader.current_chunk` —
+  pymarc-compatible accessors on the Python wrapper. After each
+  `__next__` step, `current_chunk` holds the bytes of the record
+  just read from the source, and `current_exception` holds the
+  typed `MrrcException` caught by `permissive=True` (or `None` on
+  a clean read). `_MARCReader.last_chunk` exposes the underlying
+  chunk state on the Rust binding. See
+  `docs/guides/migration-from-pymarc.md` for the documented
+  encoding-strictness divergence.
 - `Record::get_field_or_err(tag)` (Rust) and
   `record.get_field_or_err(tag)` (Python) — strict-mode counterparts to
   `get_field` that raise `FieldNotFound` (E105) with `field_tag` and

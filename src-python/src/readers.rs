@@ -63,6 +63,14 @@ pub struct PyMARCReader {
     /// What counts as an error during parsing (orthogonal to
     /// `recovery_mode`).
     validation_level: ValidationLevel,
+    /// Bytes of the most recent record chunk read from the source,
+    /// before any parse attempt. Populated on every `__next__` /
+    /// `read_record` call that successfully reads a chunk (regardless
+    /// of whether the parse subsequently succeeds or fails). The
+    /// `mrrc.MARCReader` Python wrapper exposes this as the
+    /// pymarc-compatible `current_chunk` accessor used to diagnose
+    /// records swallowed by `permissive=True`.
+    last_chunk: Option<Vec<u8>>,
 }
 
 #[pymethods]
@@ -97,6 +105,7 @@ impl PyMARCReader {
                 reader: Some(ReaderType::Unified(unified_reader)),
                 recovery_mode: rec_mode,
                 validation_level: val_level,
+                last_chunk: None,
             }),
             Err(_) => {
                 // Fall back to legacy Python file wrapper
@@ -107,9 +116,23 @@ impl PyMARCReader {
                     reader: Some(ReaderType::Python(batched_reader)),
                     recovery_mode: rec_mode,
                     validation_level: val_level,
+                    last_chunk: None,
                 })
             },
         }
+    }
+
+    /// Bytes of the most recent record chunk read from the source.
+    ///
+    /// Populated on every successful chunk read, regardless of whether
+    /// the parse step then succeeds or fails. Cleared to `None` only
+    /// at construction; on EOF the prior value is retained so callers
+    /// can still inspect the last attempted record. Used by the
+    /// `mrrc.MARCReader` Python wrapper to expose pymarc-compatible
+    /// `current_chunk` semantics.
+    #[getter]
+    fn last_chunk(&self) -> Option<&[u8]> {
+        self.last_chunk.as_deref()
     }
 
     /// Read the next record from the file (legacy interface)
@@ -139,6 +162,11 @@ impl PyMARCReader {
                 Some(bytes) => {
                     // CRITICAL: Copy to owned SmallVec for parsing closure
                     let bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&bytes);
+                    // Stash the chunk for pymarc-compat `current_chunk`. Set
+                    // unconditionally — success and failure callers both want
+                    // it (success readers can compare; failure readers can
+                    // diagnose).
+                    self.last_chunk = Some(bytes_owned.to_vec());
 
                     // Step 2: Parse bytes (GIL released). Return the raw
                     // MarcError across the GIL boundary so the typed variant
@@ -242,6 +270,10 @@ impl PyMARCReader {
         // The slice returned by read_next_record_bytes() is valid only during step 1.
         // We create an owned copy that can be moved into the detach() closure.
         let record_bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&record_bytes);
+        // Stash the chunk for pymarc-compat `current_chunk`. Set
+        // unconditionally — both the parse-succeeds and parse-fails
+        // exit paths in step 3 want this populated.
+        slf.last_chunk = Some(record_bytes_owned.to_vec());
 
         // ===== STEP 2: Parse bytes (GIL released) =====
         // Parse the record while GIL is released to allow other threads to execute.

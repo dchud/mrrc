@@ -356,6 +356,43 @@ for record in mrrc.MARCReader('records.mrc', permissive=True):
     print(record.title)
 ```
 
+After each iteration step, two pymarc-compatible accessors carry diagnostic
+information about what was just read:
+
+- `reader.current_chunk` — the bytes of the record that was just read from
+  the source. Set on every successful chunk read, whether the parse then
+  succeeded or failed. The byte count matches the record's leader-declared
+  length.
+- `reader.current_exception` — the typed `MrrcException` swallowed by the
+  permissive read (`None` on a clean read).
+
+```python
+reader = mrrc.MARCReader('records.mrc', permissive=True)
+for record in reader:
+    if record is None:
+        log.warning(
+            "skipped malformed record (%d bytes): %s",
+            len(reader.current_chunk) if reader.current_chunk else 0,
+            reader.current_exception,
+        )
+        continue
+    print(record.title)
+```
+
+For pymarc-equivalent error handling, use `permissive=True`. Two
+documented differences from pymarc's defaults:
+
+- **Encoding strictness:** mrrc raises `EncodingError` (and swallows it via
+  `current_exception` under `permissive=True`) on invalid UTF-8 in subfield
+  values; pymarc applies lossy substitution silently. The shape of the
+  iteration is unchanged (the bad record yields as `None` either way), so
+  callers using `except Exception:` keep working.
+- **`current_chunk` on byte-read errors:** When the underlying read of the
+  next record's bytes fails before parsing begins (truncated stream, I/O
+  error), `current_chunk` may be `None` even though `current_exception` is
+  set. For parse failures of fully-read chunks (the common case),
+  `current_chunk` carries the full record bytes as pymarc does.
+
 ### to_unicode Flag
 
 pymarc's `to_unicode=True` (the default) converts MARC-8 encoded records to
