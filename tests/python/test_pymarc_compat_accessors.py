@@ -136,6 +136,98 @@ def test_strict_mode_raises_and_does_not_silence_via_accessors() -> None:
 
 
 # ---------------------------------------------------------------------
+# Sequencing across multiple records, EOF retention, mode coverage
+# ---------------------------------------------------------------------
+
+
+def test_current_chunk_tracks_each_record_in_a_multi_record_stream() -> None:
+    """For a 3-record stream, ``current_chunk`` reflects each successive
+    record's bytes at each iteration step — not just the first."""
+    bytes_ = (_REPO_ROOT / "tests" / "data" / "multi_records.mrc").read_bytes()
+    reader = mrrc.MARCReader(bytes_, permissive=True)
+
+    seen_chunks: list[bytes] = []
+    for record in reader:
+        assert record is not None  # corpus is clean
+        assert reader.current_chunk is not None
+        # Each chunk's first 5 bytes equal its leader-declared length
+        declared = int(reader.current_chunk[:5])
+        assert len(reader.current_chunk) == declared
+        seen_chunks.append(reader.current_chunk)
+
+    # The successive chunks differ (we didn't capture the same one
+    # three times).
+    assert len(seen_chunks) >= 2
+    assert seen_chunks[0] != seen_chunks[1]
+
+
+def test_accessors_retain_last_values_after_stop_iteration() -> None:
+    """After the iterator is exhausted, ``current_chunk`` and
+    ``current_exception`` retain whatever they held on the last
+    successful step. This matches pymarc's behavior and lets callers
+    inspect the final read after the loop ends."""
+    bytes_ = (_REPO_ROOT / "tests" / "data" / "simple_book.mrc").read_bytes()
+    reader = mrrc.MARCReader(bytes_, permissive=True)
+
+    record = next(reader)
+    assert record is not None
+    final_chunk = reader.current_chunk
+    assert final_chunk is not None
+
+    with pytest.raises(StopIteration):
+        next(reader)
+
+    # Accessors retained — not reset to None on StopIteration.
+    assert reader.current_chunk == final_chunk
+    assert reader.current_exception is None
+
+
+def test_current_chunk_tracks_in_default_strict_mode() -> None:
+    """``current_chunk`` is populated on every successful chunk read
+    regardless of ``permissive``. Strict-mode iteration over a clean
+    corpus still updates it per record."""
+    bytes_ = (_REPO_ROOT / "tests" / "data" / "simple_book.mrc").read_bytes()
+    # Default mode: permissive=False, recovery_mode="strict"
+    reader = mrrc.MARCReader(bytes_)
+    record = next(reader)
+    assert record is not None
+    assert reader.current_chunk is not None
+    assert len(reader.current_chunk) == int(reader.current_chunk[:5])
+    assert reader.current_exception is None
+
+
+def test_iter_with_errors_does_not_clobber_accessors() -> None:
+    """``iter_with_errors`` is an independent iteration surface that
+    bypasses ``__next__``; verify the two diagnostic surfaces don't
+    interfere when callers exercise only ``iter_with_errors``. The
+    accessors stay at their initial ``None`` since ``__next__`` was
+    never invoked. Diagnostics for ``iter_with_errors`` live in the
+    yielded tuple's second element, not the pymarc-compat accessors.
+    """
+    bad = (
+        _REPO_ROOT
+        / "tests"
+        / "data"
+        / "fuzz-regressions"
+        / "error_classification"
+        / "non-ascii-tag-roundtrip.mrc"
+    ).read_bytes()
+    reader = mrrc.MARCReader(bad, permissive=True, validation_level="strict_marc")
+
+    pairs = list(reader.iter_with_errors())
+    # The fixture's malformation knocks the parser off record boundaries
+    # in permissive mode, so the iterator may yield several
+    # ``(None, [exc])`` and ``(record, errs)`` pairs as it tries to
+    # resync. The exact count isn't the contract; the contract is:
+    # at least one (None, [exception]) pair surfaces.
+    assert any(rec is None and len(errs) >= 1 for rec, errs in pairs)
+    # Accessors untouched — iter_with_errors carries its own diagnostic
+    # surface and does not write to the pymarc-compat accessors.
+    assert reader.current_chunk is None
+    assert reader.current_exception is None
+
+
+# ---------------------------------------------------------------------
 # Cross-library parity (guarded by pymarc availability)
 # ---------------------------------------------------------------------
 
