@@ -1461,6 +1461,16 @@ class MARCReader:
             recovery_mode=recovery_mode,
             validation_level=validation_level,
         )
+        # pymarc-compat accessors populated by __next__. `current_chunk`
+        # tracks the bytes of the most recent record chunk read from the
+        # source (regardless of whether the parse succeeded);
+        # `current_exception` is the typed mrrc exception caught from
+        # the most recent parse attempt, or None on a clean read. Both
+        # mirror pymarc.MARCReader semantics so existing pymarc-shape
+        # error-diagnosis code (``if reader.current_exception: ...``)
+        # works against mrrc unchanged.
+        self.current_exception: Optional[Exception] = None
+        self.current_chunk: Optional[bytes] = None
 
     def __iter__(self):
         """Iterate over records."""
@@ -1470,16 +1480,24 @@ class MARCReader:
         """Get next record.
 
         When ``permissive=True``, returns ``None`` for records that fail
-        to parse instead of raising, matching pymarc behavior.
+        to parse instead of raising, matching pymarc behavior. After
+        each call, ``self.current_chunk`` holds the bytes just read
+        from the source, and ``self.current_exception`` holds the
+        exception caught (when a permissive-mode parse failed) or
+        ``None`` on a clean read.
         """
         try:
             record = next(self._inner)
         except StopIteration:
             raise
-        except Exception:
+        except Exception as e:
             if self._permissive:
+                self.current_chunk = self._inner.last_chunk
+                self.current_exception = e
                 return None
             raise
+        self.current_chunk = self._inner.last_chunk
+        self.current_exception = None
         return _wrap_record(record)
 
     @property
