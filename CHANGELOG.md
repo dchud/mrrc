@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `docs/guides/migration-from-pymarc.md` now documents
+  exception-class-name parity with pymarc 5.3.1: which class names
+  match (10 of them — `RecordLengthInvalid`, `RecordDirectoryInvalid`,
+  `BaseAddressInvalid` / `BaseAddressNotFound`, `EndOfRecordNotFound`,
+  `TruncatedRecord`, `RecordLeaderInvalid`, `FieldNotFound`,
+  `FatalReaderError`, `BadSubfieldCodeWarning`), which pymarc names
+  mrrc deliberately omits and why (`NoFieldsFound`, `WriteNeedsRecord`,
+  `NoActiveFile`, `BadLeaderValue`, `MissingLinkedFields`), and the
+  `FatalReaderError` inheritance-hierarchy divergence (in mrrc it
+  means "recovered-error cap exceeded" specifically, not the parent
+  of the fatal record-level errors as in pymarc). Migration recipes
+  for the divergence are spelled out.
 - `MARCReader.current_exception` and `MARCReader.current_chunk` —
   pymarc-compatible accessors on the Python wrapper. After each
   `__next__` step, `current_chunk` holds the bytes of the record

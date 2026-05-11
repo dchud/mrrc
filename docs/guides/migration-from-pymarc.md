@@ -427,6 +427,81 @@ be combined — they represent different error-handling strategies. Use
 `permissive=True` for pymarc-compatible "skip bad records" behavior, or
 `recovery_mode` for mrrc's "salvage what you can" approach.
 
+### Exception class names
+
+mrrc keeps the same class names pymarc uses, so most `except` clauses
+work after a port with no change beyond the import:
+
+```python
+# pymarc
+from pymarc import MARCReader, RecordDirectoryInvalid
+# mrrc — same names, different package
+from mrrc import MARCReader, RecordDirectoryInvalid
+```
+
+Direct name matches (importable from `mrrc` or `mrrc.exceptions`):
+
+| pymarc class | mrrc equivalent |
+|---|---|
+| `RecordLengthInvalid` | `RecordLengthInvalid` |
+| `RecordLeaderInvalid` | `RecordLeaderInvalid` |
+| `RecordDirectoryInvalid` | `RecordDirectoryInvalid` |
+| `BaseAddressInvalid` | `BaseAddressInvalid` |
+| `BaseAddressNotFound` | `BaseAddressNotFound` |
+| `EndOfRecordNotFound` | `EndOfRecordNotFound` |
+| `TruncatedRecord` | `TruncatedRecord` |
+| `FieldNotFound` | `FieldNotFound` |
+| `FatalReaderError` | `FatalReaderError` |
+| `BadSubfieldCodeWarning` | `BadSubfieldCodeWarning` |
+
+Base class:
+
+```python
+# pymarc
+from pymarc import PymarcException
+# mrrc — different base name; one line to update
+from mrrc import MrrcException
+```
+
+Names pymarc has that mrrc deliberately omits:
+
+| pymarc class | why mrrc doesn't have it | mrrc equivalent behavior |
+|---|---|---|
+| `NoFieldsFound` | An empty `Record` is a valid in-memory state in mrrc; no exception is raised. | Check `record.get_fields()` length. |
+| `WriteNeedsRecord` | `MARCWriter.write_record` is type-annotated; passing a non-Record is a static-type error. | Static type check (pyright/mypy). |
+| `NoActiveFile` | `MARCWriter` is context-managed; operating on a closed writer raises plain `RuntimeError`. | Use `with` block or check writer state. |
+| `BadLeaderValue` | `mrrc.Leader` validates fields at construction. | Bad values raise `ValueError`. |
+| `MissingLinkedFields` | 880-linkage validation isn't part of the parser. | Validate links in caller code. |
+
+#### Known inheritance-hierarchy divergence
+
+pymarc's `FatalReaderError` is the parent of `RecordLengthInvalid`,
+`TruncatedRecord`, and `EndOfRecordNotFound`, so a pymarc loop can
+`except FatalReaderError:` to catch any of the four classes. mrrc
+keeps these as siblings under `MrrcException` instead — `FatalReaderError`
+in mrrc means specifically "recovered-error cap exceeded; reader is
+done" (per `recovery_mode="lenient"`/`"permissive"` with
+`with_max_errors`). A pymarc port using `except FatalReaderError:`
+to catch a malformed-record error will not catch what it expects in
+mrrc.
+
+The two pymarc-compatible migration patterns:
+
+```python
+# Catch all four fatal-shape classes by name
+try:
+    record = next(reader)
+except (RecordLengthInvalid, TruncatedRecord, EndOfRecordNotFound,
+        FatalReaderError):
+    ...
+
+# Or catch the mrrc base class (broader — catches every typed mrrc error)
+try:
+    record = next(reader)
+except MrrcException:
+    ...
+```
+
 ## Known Differences from pymarc
 
 1. **Record constructor**: `mrrc.Record()` works (defaults to `Leader()`), or pass explicit `mrrc.Record(mrrc.Leader())`
