@@ -430,7 +430,7 @@ be combined — they represent different error-handling strategies. Use
 ### Exception class names
 
 mrrc keeps the same class names pymarc uses, so most `except` clauses
-work after a port with no change beyond the import:
+work after a port with only the import line changing:
 
 ```python
 # pymarc
@@ -439,68 +439,44 @@ from pymarc import MARCReader, RecordDirectoryInvalid
 from mrrc import MARCReader, RecordDirectoryInvalid
 ```
 
-Direct name matches (importable from `mrrc` or `mrrc.exceptions`):
+The full pymarc↔mrrc class-name mapping, the names mrrc deliberately
+omits (and why), and the per-variant attribute reference live in the
+[Error handling reference](../reference/error-handling.md). Two
+porting-specific notes worth inlining here:
 
-| pymarc class | mrrc equivalent |
-|---|---|
-| `RecordLengthInvalid` | `RecordLengthInvalid` |
-| `RecordLeaderInvalid` | `RecordLeaderInvalid` |
-| `RecordDirectoryInvalid` | `RecordDirectoryInvalid` |
-| `BaseAddressInvalid` | `BaseAddressInvalid` |
-| `BaseAddressNotFound` | `BaseAddressNotFound` |
-| `EndOfRecordNotFound` | `EndOfRecordNotFound` |
-| `TruncatedRecord` | `TruncatedRecord` |
-| `FieldNotFound` | `FieldNotFound` |
-| `FatalReaderError` | `FatalReaderError` |
-| `BadSubfieldCodeWarning` | `BadSubfieldCodeWarning` |
-
-Base class:
+**Base class rename.** `from pymarc import PymarcException` fails at
+import; replace with `from mrrc import MrrcException`, or alias on
+import:
 
 ```python
-# pymarc
-from pymarc import PymarcException
-# mrrc — different base name; one line to update
-from mrrc import MrrcException
+from mrrc import MrrcException as PymarcException
 ```
 
-Names pymarc has that mrrc deliberately omits:
-
-| pymarc class | why mrrc doesn't have it | mrrc equivalent behavior |
-|---|---|---|
-| `NoFieldsFound` | An empty `Record` is a valid in-memory state in mrrc; no exception is raised. | Check `record.get_fields()` length. |
-| `WriteNeedsRecord` | `MARCWriter.write_record` is type-annotated; passing a non-Record is a static-type error. | Static type check (pyright/mypy). |
-| `NoActiveFile` | `MARCWriter` is context-managed; operating on a closed writer raises plain `RuntimeError`. | Use `with` block or check writer state. |
-| `BadLeaderValue` | `mrrc.Leader` validates fields at construction. | Bad values raise `ValueError`. |
-| `MissingLinkedFields` | 880-linkage validation isn't part of the parser. | Validate links in caller code. |
-
-#### Known inheritance-hierarchy divergence
-
-pymarc's `FatalReaderError` is the parent of `RecordLengthInvalid`,
-`TruncatedRecord`, and `EndOfRecordNotFound`, so a pymarc loop can
-`except FatalReaderError:` to catch any of the four classes. mrrc
-keeps these as siblings under `MrrcException` instead — `FatalReaderError`
-in mrrc means specifically "recovered-error cap exceeded; reader is
-done" (per `recovery_mode="lenient"`/`"permissive"` with
-`with_max_errors`). A pymarc port using `except FatalReaderError:`
-to catch a malformed-record error will not catch what it expects in
-mrrc.
-
-The two pymarc-compatible migration patterns:
+**`FatalReaderError` catches different things.** mrrc keeps the
+fatal record-level classes (`RecordLengthInvalid`, `TruncatedRecord`,
+`EndOfRecordNotFound`) as siblings under `MrrcException`, not as
+children of `FatalReaderError` (as in pymarc). A port writing
+`except FatalReaderError:` to catch a malformed-record error won't
+catch what it expects. Two pymarc-compatible recipes:
 
 ```python
-# Catch all four fatal-shape classes by name
+# Enumerate the four classes by name (matches what pymarc's
+# `except FatalReaderError:` would have caught)
 try:
     record = next(reader)
 except (RecordLengthInvalid, TruncatedRecord, EndOfRecordNotFound,
         FatalReaderError):
     ...
 
-# Or catch the mrrc base class (broader — catches every typed mrrc error)
+# Or catch the mrrc base (broader — catches every typed mrrc error)
 try:
     record = next(reader)
 except MrrcException:
     ...
 ```
+
+See [Known hierarchy divergences from pymarc](../reference/error-handling.md#known-hierarchy-divergences-from-pymarc)
+in the reference for the rationale.
 
 ## Known Differences from pymarc
 
