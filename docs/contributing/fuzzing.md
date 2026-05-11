@@ -15,6 +15,7 @@ playbook for investigating CI findings.
 | `parse_record` | `MarcReader::read_record` over the full ISO 2709 reader | Active |
 | `roundtrip_binary` | Parse → serialize → parse-again coupling | Active |
 | `error_classification` | Strict-mode reader with per-input behavioral assertions | Active |
+| `recovery_mode_consistency` | Cross-mode behavioral consistency across strict / lenient / permissive | Active |
 | `parse_leader` | 24-byte leader parsing | Planned |
 | `decode_marc8` | MARC-8 encoding state machine | Planned |
 | `parse_marcxml` | MARCXML reader | Planned |
@@ -49,6 +50,22 @@ silent acceptance of malformed bytes (the parser returns `Ok` for input
 the writer can't faithfully represent), and future `MarcError` variants
 that ship without a documented code (docs-vs-code drift surfaced before
 release).
+
+`recovery_mode_consistency` drives the same input through all three
+`RecoveryMode` values (`Strict`, `Lenient`, `Permissive`) at
+`ValidationLevel::StrictMarc` and asserts the three modes agree on
+what a record-shape input means. Strict's verdict is the ground truth:
+when strict accepts a clean record, lenient and permissive must yield
+the same record with no per-record errors and the same field count;
+when strict rejects, neither lenient nor permissive may silently accept
+(they may recover-with-errors, yield `Ok(None)`, or fail themselves —
+just not produce a clean record). The target also asserts an invariant
+on strict mode itself: a record returned in `Strict` mode never carries
+non-empty `record.errors` (errors propagate as `Err` instead). What
+this catches that the other targets do not: per-mode divergence in the
+parser/recovery boundary — a bug where one mode silently accepts what
+another rejects would not show up as a panic in any single mode but
+surfaces here as a cross-mode disagreement.
 
 ## Installing cargo-fuzz
 

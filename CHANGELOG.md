@@ -86,6 +86,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Two out-of-bounds slice panics in the lenient/permissive recovery
+  path: salvage attempts no longer crash when a directory entry's
+  `start_position` lies past the buffer (now bailing out of the
+  salvage branch), and the control-field decode path now guards
+  against zero-length directory entries (where `end_position ==
+  start_position`) before invoking `saturating_sub(1)` on the
+  slice end. Surfaced by the recovery-mode-consistency fuzz target.
 - `MarcReader` rejects non-ASCII bytes in directory entry tags
   (firing `DirectoryInvalid` / E101) instead of lossily substituting
   `U+FFFD` and producing records whose tag re-encodes to more than

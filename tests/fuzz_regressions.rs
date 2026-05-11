@@ -8,7 +8,7 @@
 //! Adding a fixture for a NEW target requires adding a new `#[test]`
 //! function that mirrors the relevant fuzz target's contract.
 
-use mrrc::{MarcReader, MarcWriter, ValidationLevel};
+use mrrc::{MarcReader, MarcWriter, RecoveryMode, ValidationLevel};
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -63,6 +63,26 @@ fn roundtrip_binary_regressions() {
             }
             let mut second = MarcReader::new(Cursor::new(&buf[..]));
             while let Ok(Some(_)) = second.read_record() {}
+        }
+    }
+}
+
+/// `recovery_mode_consistency` asserts no panics when driving the
+/// same input through strict / lenient / permissive at `strict_marc`
+/// validation. Mirrors `fuzz/fuzz_targets/recovery_mode_consistency.rs`.
+#[test]
+fn recovery_mode_consistency_regressions() {
+    for (_path, bytes) in fixtures("recovery_mode_consistency") {
+        for mode in [
+            RecoveryMode::Strict,
+            RecoveryMode::Lenient,
+            RecoveryMode::Permissive,
+        ] {
+            let mut reader = MarcReader::new(Cursor::new(&bytes[..]))
+                .with_recovery_mode(mode)
+                .with_validation_level(ValidationLevel::StrictMarc);
+            // Discard outcomes — only panics are regressions.
+            let _ = reader.read_record();
         }
     }
 }
