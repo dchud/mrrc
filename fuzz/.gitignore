@@ -25,3 +25,8 @@ corpus/*/*
 !corpus/error_classification/simple_authority
 !corpus/error_classification/with_control_fields
 !corpus/error_classification/multi_records
+!corpus/recovery_mode_consistency/simple_book
+!corpus/recovery_mode_consistency/music_score
+!corpus/recovery_mode_consistency/simple_authority
+!corpus/recovery_mode_consistency/with_control_fields
+!corpus/recovery_mode_consistency/multi_records

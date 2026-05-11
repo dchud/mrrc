@@ -220,9 +220,12 @@ pub fn try_recover_record(
                 )));
             }
 
-            // Salvage: read what's available within the buffer.
+            // Salvage: read what's available within the buffer. Bail
+            // if `start_position` itself is past the buffer (no bytes
+            // to salvage) or points before the data area (the field
+            // header is malformed beyond what we can recover from).
             let available_end = std::cmp::min(end_position, partial_data.len());
-            if available_end > data_start {
+            if start_position >= data_start && start_position < available_end {
                 if let Ok(field) = try_parse_field(
                     &partial_data[start_position..available_end],
                     &tag,
@@ -235,8 +238,11 @@ pub fn try_recover_record(
             continue;
         }
 
-        if tag != "LDR" {
+        if tag != "LDR" && end_position > start_position {
             if tag.starts_with('0') && tag.chars().all(char::is_numeric) && tag.as_str() < "010" {
+                // `end_position - 1` strips the trailing FIELD_TERMINATOR;
+                // the outer guard ensures `end_position > start_position`
+                // so the saturating_sub doesn't invert the range.
                 let value = String::from_utf8_lossy(
                     &partial_data[start_position..end_position.saturating_sub(1)],
                 )
@@ -252,7 +258,9 @@ pub fn try_recover_record(
             }
             // Unparseable data fields in lenient/permissive mode are
             // silently skipped here (the surrounding skeleton's cap
-            // accounting catches the broader pattern).
+            // accounting catches the broader pattern). Zero-length
+            // directory entries (start == end) are also silently
+            // skipped via the outer guard.
         }
     }
 
