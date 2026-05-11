@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Exception-class-name parity with pymarc 5.3.1 documented across
+  the two error-handling docs: `docs/reference/error-handling.md`
+  carries the full catalog (mapping table, the names mrrc omits and
+  why, and a new "Known hierarchy divergences from pymarc" section
+  noting the `FatalReaderError` parentage difference). `docs/guides/
+  migration-from-pymarc.md` carries porting recipes (base-class
+  rename, `FatalReaderError` catch patterns) and links into the
+  reference for the catalog. The stale `current_exception` /
+  `current_chunk` paragraph in `error-handling.md` (which predated
+  the accessors landing) is updated.
 - `MARCReader.current_exception` and `MARCReader.current_chunk` —
   pymarc-compatible accessors on the Python wrapper. After each
   `__next__` step, `current_chunk` holds the bytes of the record

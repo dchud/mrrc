@@ -427,6 +427,57 @@ be combined — they represent different error-handling strategies. Use
 `permissive=True` for pymarc-compatible "skip bad records" behavior, or
 `recovery_mode` for mrrc's "salvage what you can" approach.
 
+### Exception class names
+
+mrrc keeps the same class names pymarc uses, so most `except` clauses
+work after a port with only the import line changing:
+
+```python
+# pymarc
+from pymarc import MARCReader, RecordDirectoryInvalid
+# mrrc — same names, different package
+from mrrc import MARCReader, RecordDirectoryInvalid
+```
+
+The full pymarc↔mrrc class-name mapping, the names mrrc deliberately
+omits (and why), and the per-variant attribute reference live in the
+[Error handling reference](../reference/error-handling.md). Two
+porting-specific notes worth inlining here:
+
+**Base class rename.** `from pymarc import PymarcException` fails at
+import; replace with `from mrrc import MrrcException`, or alias on
+import:
+
+```python
+from mrrc import MrrcException as PymarcException
+```
+
+**`FatalReaderError` catches different things.** mrrc keeps the
+fatal record-level classes (`RecordLengthInvalid`, `TruncatedRecord`,
+`EndOfRecordNotFound`) as siblings under `MrrcException`, not as
+children of `FatalReaderError` (as in pymarc). A port writing
+`except FatalReaderError:` to catch a malformed-record error won't
+catch what it expects. Two pymarc-compatible recipes:
+
+```python
+# Enumerate the four classes by name (matches what pymarc's
+# `except FatalReaderError:` would have caught)
+try:
+    record = next(reader)
+except (RecordLengthInvalid, TruncatedRecord, EndOfRecordNotFound,
+        FatalReaderError):
+    ...
+
+# Or catch the mrrc base (broader — catches every typed mrrc error)
+try:
+    record = next(reader)
+except MrrcException:
+    ...
+```
+
+See [Known hierarchy divergences from pymarc](../reference/error-handling.md#known-hierarchy-divergences-from-pymarc)
+in the reference for the rationale.
+
 ## Known Differences from pymarc
 
 1. **Record constructor**: `mrrc.Record()` works (defaults to `Leader()`), or pass explicit `mrrc.Record(mrrc.Leader())`

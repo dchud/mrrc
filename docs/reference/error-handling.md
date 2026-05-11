@@ -73,8 +73,21 @@ scope for this page; consult the
 | `FieldNotFound` | `FieldNotFound` | Same name; gains `record_control_number`, `record_index`. |
 | `FatalReaderError` | `FatalReaderError` | Same name; reserved for catastrophic states. |
 | `BadSubfieldCodeWarning` | `BadSubfieldCodeWarning` | Same name (UserWarning, not exception). |
-| `NoFieldsFound` | *not present* | mrrc has not raised this historically; file an issue if needed. |
 | `IOError` / `OSError` | `OSError` (via `PyIOError`) | I/O errors map to Python's built-in. |
+
+#### Pymarc names mrrc deliberately omits
+
+The following pymarc classes are intentionally absent in mrrc. Each
+row gives the rationale and the mrrc-equivalent behavior a port
+should rely on instead.
+
+| pymarc class | why mrrc doesn't have it | mrrc-equivalent behavior |
+|---|---|---|
+| `NoFieldsFound` | An empty `Record` is a valid in-memory state in mrrc; no exception is raised. | Check `record.get_fields()` length. |
+| `WriteNeedsRecord` | `MARCWriter.write_record` is type-annotated; passing a non-Record is a static-type error. | Static type check (`pyright` / `mypy`). |
+| `NoActiveFile` | `MARCWriter` is context-managed; operating on a closed writer raises plain `RuntimeError`. | Use a `with` block or check writer state. |
+| `BadLeaderValue` | `mrrc.Leader` validates fields at construction. | Bad values raise `ValueError`. |
+| `MissingLinkedFields` | 880-linkage validation isn't part of the parser. | Validate links in caller code. |
 
 ### Optional symbol-level aliases
 
@@ -163,12 +176,78 @@ InvalidIndicator at record 847, field 245
 
 ### `MARCReader.current_exception` / `current_chunk`
 
-pymarc exposes `MARCReader.current_exception` and `MARCReader.current_chunk`
-attributes that callers can inspect after a recovered error. mrrc does not
-currently expose these reader-side attributes; the per-error positional
-metadata (record index, byte offset, source) typically replaces the
-patterns those attributes enabled. File an issue if a workflow specifically
-needs them.
+mrrc's `MARCReader` exposes pymarc-compatible `current_exception` and
+`current_chunk` attributes. After each `__next__` step:
+
+- `reader.current_chunk` holds the raw bytes of the record just read
+  from the source (declared length per the leader). Set on every
+  successful chunk read regardless of whether the parse step then
+  succeeded or failed.
+- `reader.current_exception` holds the typed `MrrcException` swallowed
+  by `permissive=True`, or `None` on a clean read.
+
+```python
+reader = mrrc.MARCReader("harvest.mrc", permissive=True)
+for record in reader:
+    if record is None:
+        log.warning(
+            "skipped malformed record (%d bytes): %s",
+            len(reader.current_chunk) if reader.current_chunk else 0,
+            reader.current_exception,
+        )
+        continue
+    process(record)
+```
+
+Two documented divergences from pymarc:
+
+- **Encoding strictness.** mrrc raises `EncodingError` on invalid UTF-8
+  in subfield values (swallowed via `current_exception` under
+  `permissive=True`); pymarc applies lossy substitution silently. The
+  iteration shape is identical (the bad record yields as `None` either
+  way), so callers using `except Exception:` keep working.
+- **`current_chunk` on byte-read errors.** When the underlying read
+  of the next record's bytes fails before parsing begins (truncated
+  stream, I/O error), `current_chunk` may be `None` even though
+  `current_exception` is set. For parse failures of fully-read chunks
+  (the common case), `current_chunk` carries the full record bytes as
+  pymarc does.
+
+### Known hierarchy divergences from pymarc
+
+mrrc's exception class names match pymarc's, but two relationships in
+the class tree differ. Existing `except` clauses written against a
+specific class name (`except RecordDirectoryInvalid:`,
+`except EndOfRecordNotFound:`, etc.) work in mrrc unchanged. The
+divergences only matter for code that catches a *parent* class.
+
+**`FatalReaderError` parentage.** In pymarc, `FatalReaderError` is the
+parent of `RecordLengthInvalid`, `TruncatedRecord`, and
+`EndOfRecordNotFound`; a pymarc loop can `except FatalReaderError:` to
+catch any of those four. In mrrc, `FatalReaderError` is a sibling
+(reserved for the specific "recovered-error cap exceeded" case under
+`recovery_mode="lenient"`/`"permissive"` with `with_max_errors`).
+`except FatalReaderError:` in mrrc therefore catches only the
+cap-exhausted case, not the malformed-record cases. To match pymarc's
+catch surface, either enumerate the four classes —
+
+```python
+except (RecordLengthInvalid, TruncatedRecord, EndOfRecordNotFound,
+        FatalReaderError):
+    ...
+```
+
+— or catch the mrrc base, which is broader (every typed mrrc error):
+
+```python
+except MrrcException:
+    ...
+```
+
+**`PymarcException` → `MrrcException`.** The base class name differs.
+`from pymarc import PymarcException` fails at import; replace with
+`from mrrc import MrrcException` (or alias on import — see *Optional
+symbol-level aliases* below).
 
 ## Per-variant field reference
 
