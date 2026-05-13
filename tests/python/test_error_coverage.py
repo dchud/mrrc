@@ -123,8 +123,7 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
             "E007 on the Python side raises built-in OSError, not a typed "
             "mrrc.IoError (documented in docs/reference/error-codes.md#E007 "
             "as pymarc-compat). The Rust harness asserts the typed variant; "
-            "Python-side OSError is covered by an integration test rather "
-            "than this typed-class harness."
+            "this typed-class framework cannot assert built-in OSError."
         )
     elif kind == "recovery_cap":
         pytest.skip(
