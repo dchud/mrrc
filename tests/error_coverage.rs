@@ -32,10 +32,15 @@
 //!     in lenient mode and capture the
 //!     [`MarcError::FatalReaderError`](mrrc::MarcError) that fires
 //!     when the cap trips
+//!   * `writer` — construct a record whose serialized length exceeds
+//!     the ISO 2709 99999-byte limit and call
+//!     [`MarcWriter::write_record`](mrrc::MarcWriter::write_record),
+//!     capturing the resulting
+//!     [`MarcError::WriterError`](mrrc::MarcError)
 //!
-//! Other kinds (`parse_marcjson`, `writer`) skip with a per-kind
-//! reason; their cases remain in the manifest so the
-//! docs-vs-implementation gap is tracked.
+//! The remaining kind (`parse_marcjson`) skips with a per-kind reason
+//! — there is no public Rust `str → Record` API for MARCJSON, so the
+//! case is exercised on the Python side instead.
 
 use std::fs;
 use std::io::{self, Cursor, Read};
