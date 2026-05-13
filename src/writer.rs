@@ -210,6 +210,13 @@ impl<W: Write> MarcWriter<W> {
         let base_address = 24 + directory.len();
         let record_length = base_address + data_area.len() + 1; // +1 for record terminator
 
+        crate::iso2709::check_iso2709_size(
+            record_length,
+            base_address,
+            record_index,
+            record_control_number.as_deref(),
+        )?;
+
         // Update leader with correct values
         let mut leader = record.leader.clone();
         leader.record_length =

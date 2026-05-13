@@ -116,6 +116,13 @@ impl<W: Write> AuthorityMarcWriter<W> {
         let base_address = 24 + directory.len();
         let record_length = 24 + directory.len() + data.len() + 1; // +1 for record terminator
 
+        crate::iso2709::check_iso2709_size(
+            record_length,
+            base_address,
+            None,
+            record.get_control_field("001"),
+        )?;
+
         // Update leader with calculated values
         let mut leader = record.leader.clone();
         #[allow(clippy::cast_possible_truncation)]

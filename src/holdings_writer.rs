@@ -114,19 +114,16 @@ impl<W: Write> HoldingsMarcWriter<W> {
 
         // Calculate base address of data section
         let base_address = 24 + directory.len();
-        if base_address > 99999 {
-            return Err(MarcError::invalid_field_msg(
-                "Record too large (base address exceeds 5 digits)".to_string(),
-            ));
-        }
 
         // Calculate total record length
         let record_length = base_address + data.len() + 1; // +1 for record terminator
-        if record_length > 99999 {
-            return Err(MarcError::invalid_field_msg(
-                "Record too large (total length exceeds 5 digits)".to_string(),
-            ));
-        }
+
+        crate::iso2709::check_iso2709_size(
+            record_length,
+            base_address,
+            None,
+            record.get_control_field("001"),
+        )?;
 
         // Write leader
         let mut leader = record.leader.clone();

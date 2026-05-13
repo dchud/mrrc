@@ -19,11 +19,19 @@ Currently supported ``trigger_kind`` values:
       strict mode and capture the raised exception.
     * ``parse_marcxml`` — feed text to :func:`mrrc.marcxml_to_record`.
     * ``parse_marcjson`` — feed text to :func:`mrrc.marcjson_to_record`.
+    * ``writer`` — construct a record whose serialized length exceeds
+      the ISO 2709 99999-byte limit and call
+      :meth:`mrrc.MARCWriter.write_record`, capturing the
+      :class:`mrrc.WriterError`.
 
-Other kinds (``io_error``, ``recovery_cap``, ``accessor``, ``writer``)
-skip with a per-kind reason; their cases remain in the manifest so
-the docs-vs-implementation gap is tracked even when this particular
-harness can't exercise them.
+Skipped on the Python side:
+
+* ``io_error`` — E007 is documented to raise built-in ``OSError``,
+  not a typed ``mrrc.IoError`` (pymarc-compat). The Rust harness
+  asserts the typed variant.
+* ``recovery_cap`` — the Rust core supports ``max_errors`` but the
+  Python ``MARCReader`` binding does not yet expose it.
+* ``accessor`` — cases without a per-case branch.
 """
 
 from __future__ import annotations
@@ -112,14 +120,16 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
         )
     elif kind == "io_error":
         pytest.skip(
-            "trigger_kind=io_error requires injecting a file-like that raises "
-            "from read(); harness mechanism not yet implemented"
+            "E007 on the Python side raises built-in OSError, not a typed "
+            "mrrc.IoError (documented in docs/reference/error-codes.md#E007 "
+            "as pymarc-compat). The Rust harness asserts the typed variant; "
+            "this typed-class framework cannot assert built-in OSError."
         )
     elif kind == "recovery_cap":
         pytest.skip(
-            "trigger_kind=recovery_cap requires building a multi-record "
-            "malformed stream and configuring max_errors; harness mechanism "
-            "not yet implemented"
+            "trigger_kind=recovery_cap exercises max_errors / FatalReaderError; "
+            "the Rust core supports it but the Python MARCReader binding does "
+            "not yet expose max_errors as a kwarg"
         )
     elif kind == "accessor":
         bytes_ = _fixture_path(case).read_bytes()
@@ -153,9 +163,26 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
             "add one in test_error_coverage.py"
         )
     elif kind == "writer":
-        pytest.skip(
-            "trigger_kind=writer requires constructing an oversize record "
-            "from test code; harness mechanism not yet implemented"
+        record = mrrc.Record()
+        record.add_field(
+            mrrc.Field(
+                tag="999",
+                indicator1=" ",
+                indicator2=" ",
+                subfields=[mrrc.Subfield("a", "x" * 100_000)],
+            )
+        )
+        import io
+
+        buf = io.BytesIO()
+        writer = mrrc.MARCWriter(buf)
+        try:
+            writer.write_record(record)
+        except mrrc.MrrcException as e:
+            return e
+        pytest.fail(
+            f"{case['id']} ({case['code']}): expected {case['code']} error from "
+            "MARCWriter.write_record on an oversize record, got success"
         )
     else:
         pytest.fail(f"{case['id']}: unknown trigger_kind {kind!r}")

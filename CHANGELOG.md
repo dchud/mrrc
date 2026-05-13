@@ -124,6 +124,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `download-artifact` and wiped `dist/` before the gh-release step,
   leaving the release page with notes but zero assets. Steps reordered
   so checkout runs first.
+- `MarcWriter`, `AuthorityMarcWriter`, and `HoldingsMarcWriter` now
+  refuse records whose serialized length or base address exceeds the
+  ISO 2709 5-digit limit (99999 bytes), returning
+  `MarcError::WriterError` (E404) with `record_index`,
+  `record_control_number`, and `message` populated. Previously the
+  bibliographic and authority writers silently produced unparseable
+  leaders (6+ ASCII digits in 5-byte fields), and the holdings writer
+  returned `InvalidField` (E106) — the variant promised by
+  `docs/reference/error-codes.md` is now what fires.
+- `mrrc.MARCWriter.write_record` now raises the typed
+  `mrrc.WriterError` documented in
+  `docs/reference/error-codes.md#E404` instead of a plain `OSError`.
+  The Python binding was wrapping every writer `MarcError` in
+  `std::io::Error::other(...)` before crossing the FFI boundary,
+  collapsing the typed variant.
+
+### Dependencies
+
+- Bump urllib3 from 2.6.3 to 2.7.0
+- Bump mypy from 1.20.2 to 2.1.0
 
 ## [0.8.0] - 2026-04-29
 
