@@ -24,16 +24,26 @@
 //!     accessor whose lookup is documented to raise the case's variant
 //!     (currently only `e105_field_not_found` →
 //!     `Record::get_field_or_err("999")`)
+//!   * `io_error` — wrap a `Read` impl that returns `std::io::Error`
+//!     from the first read in a [`MarcReader`](mrrc::MarcReader) and
+//!     capture the resulting [`MarcError::IoError`](mrrc::MarcError)
+//!   * `recovery_cap` — drive a stream of malformed records past
+//!     [`MarcReader::with_max_errors`](mrrc::MarcReader::with_max_errors)
+//!     in lenient mode and capture the
+//!     [`MarcError::FatalReaderError`](mrrc::MarcError) that fires
+//!     when the cap trips
 //!
-//! Other kinds (`parse_marcjson`, `io_error`, `recovery_cap`,
-//! `writer`) skip with a per-kind reason; their cases
-//! remain in the manifest so the docs-vs-implementation gap is tracked.
+//! Other kinds (`parse_marcjson`, `writer`) skip with a per-kind
+//! reason; their cases remain in the manifest so the
+//! docs-vs-implementation gap is tracked.
 
 use std::fs;
-use std::io::Cursor;
+use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
 
-use mrrc::{MarcReader, RecoveryMode, ValidationLevel};
+use mrrc::{
+    Field, Leader, MarcReader, MarcWriter, Record, RecoveryMode, Subfield, ValidationLevel,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -177,6 +187,50 @@ fn first_iso2709_error(
     }
 }
 
+/// `Read` impl that returns `std::io::Error` on the first read.
+/// Used to exercise the parser's underlying-stream-failure path
+/// for E007 `IoError` without touching the filesystem.
+struct FailingReader;
+
+impl Read for FailingReader {
+    fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "synthetic read failure",
+        ))
+    }
+}
+
+/// Build a single record with a structurally invalid directory entry
+/// (non-digit field-length bytes). In lenient mode each such record
+/// increments the recovery error counter once; concatenating N+1 of
+/// these and configuring `with_max_errors(N)` trips the cap on the
+/// (N+1)th read. Mirrors `build_bad_record` in `src/reader.rs`'s
+/// unit-test module.
+fn build_bad_record() -> Vec<u8> {
+    const FIELD_TERMINATOR: u8 = 0x1E;
+    const RECORD_TERMINATOR: u8 = 0x1D;
+
+    let mut directory = Vec::new();
+    directory.extend_from_slice(b"245ABCD00000");
+    directory.push(FIELD_TERMINATOR);
+
+    let base_address = 24 + directory.len();
+    let record_length = base_address + 1;
+
+    let mut leader = Vec::new();
+    leader.extend_from_slice(format!("{record_length:05}").as_bytes());
+    leader.extend_from_slice(b"nam a22");
+    leader.extend_from_slice(format!("{base_address:05}").as_bytes());
+    leader.extend_from_slice(b" i 4500");
+
+    let mut out = Vec::new();
+    out.extend_from_slice(&leader);
+    out.extend_from_slice(&directory);
+    out.push(RECORD_TERMINATOR);
+    out
+}
+
 fn fire_trigger(case: &Case) -> TriggerOutcome {
     match case.trigger_kind.as_str() {
         "parse_iso2709" => match first_iso2709_error(
@@ -197,16 +251,56 @@ fn fire_trigger(case: &Case) -> TriggerOutcome {
         "parse_marcjson" => TriggerOutcome::UnsupportedKind(
             "no public Rust str-to-Record API for MARCJSON; case is exercised in the Python harness".to_string(),
         ),
-        "io_error" => TriggerOutcome::UnsupportedKind(
-            "trigger_kind=io_error requires injecting a custom Read source from test code".to_string(),
-        ),
-        "recovery_cap" => TriggerOutcome::UnsupportedKind(
-            "trigger_kind=recovery_cap requires building a multi-record malformed stream and configuring max_errors".to_string(),
-        ),
+        "io_error" => {
+            let mut reader = MarcReader::new(FailingReader).with_recovery_mode(RecoveryMode::Strict);
+            match reader.read_record() {
+                Ok(_) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
+        "recovery_cap" => {
+            const CAP: usize = 1;
+            let mut stream = Vec::new();
+            for _ in 0..=(CAP + 1) {
+                stream.extend_from_slice(&build_bad_record());
+            }
+            let mut reader = MarcReader::new(Cursor::new(stream))
+                .with_recovery_mode(RecoveryMode::Lenient)
+                .with_max_errors(CAP);
+            loop {
+                match reader.read_record() {
+                    Ok(Some(_)) => {},
+                    Ok(None) => return TriggerOutcome::NoError,
+                    Err(e) => return TriggerOutcome::Fired(e),
+                }
+            }
+        },
         "accessor" => exercise_accessor(case),
-        "writer" => TriggerOutcome::UnsupportedKind(
-            "trigger_kind=writer requires constructing an oversize record from test code".to_string(),
-        ),
+        "writer" => {
+            let leader = Leader::from_bytes(b"00000nam a2200000 i 4500")
+                .expect("synthetic minimal leader parses");
+            let mut record = Record::new(leader);
+            // ~100k subfield value forces the writer's serialized record
+            // length past the ISO 2709 99999-byte ceiling.
+            let big_value = "x".repeat(100_000);
+            let field = Field {
+                tag: "999".to_string(),
+                indicator1: ' ',
+                indicator2: ' ',
+                subfields: smallvec::smallvec![Subfield {
+                    code: 'a',
+                    value: big_value,
+                }],
+            };
+            record.add_field(field);
+
+            let mut buf = Vec::new();
+            let mut writer = MarcWriter::new(&mut buf);
+            match writer.write_record(&record) {
+                Ok(()) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
         other => TriggerOutcome::UnsupportedKind(format!("unknown trigger_kind {other:?}")),
     }
 }
@@ -232,10 +326,12 @@ enum WiredOutcome {
 /// exercise the case's `trigger_kind`, but the wiring may still be
 /// in place and exercised by another harness).
 fn run_wired(case: &Case) -> WiredOutcome {
-    if !case.recovery_modes.iter().any(|m| m == "strict") {
-        // Strict mode is the only mode the harness asserts today.
-        // Cases without strict in their contract are exercised when
-        // per-record diagnostic surfaces land for lenient/permissive.
+    // The harness's parse_iso2709/parse_marcxml/parse_marcjson/accessor
+    // branches all drive the parser in strict mode. Triggers with their
+    // own intrinsic mode requirements (recovery_cap drives lenient) carry
+    // that mode inside the trigger branch and bypass this gate.
+    let strict_only_trigger = !matches!(case.trigger_kind.as_str(), "recovery_cap");
+    if strict_only_trigger && !case.recovery_modes.iter().any(|m| m == "strict") {
         return WiredOutcome::SkippedByHarness(
             "case contract does not cover strict mode; non-strict assertions pending".to_string(),
         );

@@ -210,6 +210,28 @@ impl<W: Write> MarcWriter<W> {
         let base_address = 24 + directory.len();
         let record_length = base_address + data_area.len() + 1; // +1 for record terminator
 
+        // ISO 2709 caps both fields at 5 ASCII digits (00000-99999); anything
+        // larger silently widened the leader to 6+ digits and produced an
+        // unparseable record. Reject up-front with the documented variant.
+        if record_length > 99_999 {
+            return Err(MarcError::WriterError {
+                record_index,
+                record_control_number: record_control_number.clone(),
+                message: format!(
+                    "Record length exceeds ISO 2709 limit ({record_length} bytes; max 99999)"
+                ),
+            });
+        }
+        if base_address > 99_999 {
+            return Err(MarcError::WriterError {
+                record_index,
+                record_control_number: record_control_number.clone(),
+                message: format!(
+                    "Base address exceeds ISO 2709 limit ({base_address} bytes; max 99999)"
+                ),
+            });
+        }
+
         // Update leader with correct values
         let mut leader = record.leader.clone();
         leader.record_length =

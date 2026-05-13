@@ -160,19 +160,24 @@ impl PyMARCWriter {
         // This is CPU-intensive and benefits from parallel execution
         // CRITICAL: Use Python::detach() which properly releases the GIL.
         // Python::detach() takes a closure and runs it without the GIL.
-        let record_bytes: Vec<u8> = py.detach(|| {
+        //
+        // Carry the typed MarcError back across the detach boundary as
+        // Box<MarcError> so the GIL-reacquired conversion to PyErr
+        // (via marc_error_to_py_err) preserves the variant — same pattern
+        // the readers use. Wrapping in std::io::Error here would collapse
+        // E404 WriterError to OSError.
+        let serialize_result: Result<Vec<u8>, Box<mrrc::MarcError>> = py.detach(|| {
             // This closure runs WITHOUT the GIL held
             // Safe: record_copy is pure Rust, doesn't reference Python objects
             let mut buffer = Vec::new();
             let mut writer = MarcWriter::new(&mut buffer);
-
-            // Serialize the record to bytes
-            writer.write_record(&record_copy).map_err(|e| {
-                std::io::Error::other(format!("Failed to serialize MARC record: {}", e))
-            })?;
-
-            Ok::<Vec<u8>, std::io::Error>(buffer)
-        })?;
+            writer
+                .write_record(&record_copy)
+                .map(|()| buffer)
+                .map_err(Box::new)
+        });
+        let record_bytes: Vec<u8> =
+            serialize_result.map_err(|e| crate::error::marc_error_to_py_err(*e))?;
 
         // ===== PHASE 3: Write bytes to backend (GIL re-acquired) =====
         // GIL is automatically re-acquired when exiting detach() block
