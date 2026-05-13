@@ -585,6 +585,50 @@ pub fn validate_directory_tag(
     })
 }
 
+/// ISO 2709 stores both record length and base-address-of-data as
+/// 5-ASCII-digit fields in the leader (bytes 0-4 and 12-16). Values
+/// above this cannot be represented; the writer must refuse the record
+/// before serialization rather than emit a 6-digit field that produces
+/// an unparseable leader.
+pub const ISO2709_MAX_FIELD: usize = 99_999;
+
+/// Reject a record whose serialized total length or base address would
+/// overflow the leader's 5-digit fields. Shared by the bibliographic,
+/// authority, and holdings writers; the bound is fixed by the ISO 2709
+/// leader layout, not by writer convention.
+///
+/// # Errors
+///
+/// Returns [`MarcError::WriterError`] (E404) with the documented
+/// positional context (`record_index`, `record_control_number`) and a
+/// `message` naming which limit was exceeded.
+pub fn check_iso2709_size(
+    record_length: usize,
+    base_address: usize,
+    record_index: Option<usize>,
+    record_control_number: Option<&str>,
+) -> Result<()> {
+    if record_length > ISO2709_MAX_FIELD {
+        return Err(MarcError::WriterError {
+            record_index,
+            record_control_number: record_control_number.map(String::from),
+            message: format!(
+                "Record length exceeds ISO 2709 limit ({record_length} bytes; max {ISO2709_MAX_FIELD})"
+            ),
+        });
+    }
+    if base_address > ISO2709_MAX_FIELD {
+        return Err(MarcError::WriterError {
+            record_index,
+            record_control_number: record_control_number.map(String::from),
+            message: format!(
+                "Base address exceeds ISO 2709 limit ({base_address} bytes; max {ISO2709_MAX_FIELD})"
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// How to handle unrecognized bytes encountered while walking subfield
 /// boundaries inside a data field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

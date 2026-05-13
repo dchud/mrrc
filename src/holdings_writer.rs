@@ -114,31 +114,16 @@ impl<W: Write> HoldingsMarcWriter<W> {
 
         // Calculate base address of data section
         let base_address = 24 + directory.len();
-        // ISO 2709 caps base address and record length at 5 ASCII digits
-        // (00000-99999); larger values cannot be represented in the leader
-        // so the writer refuses the record up-front.
-        let record_control_number = record.get_control_field("001").map(str::to_string);
-        if base_address > 99_999 {
-            return Err(MarcError::WriterError {
-                record_index: None,
-                record_control_number: record_control_number.clone(),
-                message: format!(
-                    "Base address exceeds ISO 2709 limit ({base_address} bytes; max 99999)"
-                ),
-            });
-        }
 
         // Calculate total record length
         let record_length = base_address + data.len() + 1; // +1 for record terminator
-        if record_length > 99_999 {
-            return Err(MarcError::WriterError {
-                record_index: None,
-                record_control_number,
-                message: format!(
-                    "Record length exceeds ISO 2709 limit ({record_length} bytes; max 99999)"
-                ),
-            });
-        }
+
+        crate::iso2709::check_iso2709_size(
+            record_length,
+            base_address,
+            None,
+            record.get_control_field("001"),
+        )?;
 
         // Write leader
         let mut leader = record.leader.clone();
