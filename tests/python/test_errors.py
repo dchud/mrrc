@@ -786,3 +786,61 @@ class TestFfiTypedExceptions:
             pass  # also acceptable — I/O errors map to built-in
         # If neither, the test will fail with the actual exception type
         # in the traceback; that is the diagnostic.
+
+
+class _FailingReader:
+    """File-like whose ``read(n)`` raises ``OSError`` on every call.
+
+    Lets the test inject an I/O failure at the byte-prefetch layer
+    without touching the real filesystem.
+    """
+
+    def __init__(self, message: str = "synthetic read failure") -> None:
+        self._message = message
+
+    def read(self, n: int) -> bytes:  # pragma: no cover - reached but never returns
+        raise OSError(self._message)
+
+
+class TestFailingReadRaisesOSError:
+    """E007 ``IoError`` is documented (``docs/reference/error-codes.md#E007``)
+    as routing to Python's built-in ``OSError`` rather than a typed
+    ``mrrc.IoError`` — a deliberate pymarc-compat decision implemented
+    in the FFI conversion at ``src-python/src/error.rs::describe`` (the
+    ``IoError`` variant returns ``Err`` so the caller falls back to
+    ``PyIOError``, which is ``OSError`` in CPython).
+
+    The Rust harness asserts the typed variant fires from
+    ``MarcReader::read_record`` via a synthetic failing ``Read`` impl.
+    These tests assert the Python contract is the documented one:
+    plain ``OSError`` propagates, ``mrrc.MrrcException`` does not match,
+    and the original exception message threads through the binding.
+    """
+
+    def test_strict_mode_failing_read_raises_plain_oserror(self):
+        reader = mrrc.MARCReader(_FailingReader(), recovery_mode="strict")
+        with pytest.raises(OSError) as excinfo:
+            list(reader)
+        # The typed exception hierarchy must NOT catch this —
+        # mrrc.MrrcException extends plain Exception, not OSError. A
+        # regression that retypes the I/O path to surface a typed
+        # mrrc.IoError would silently flip this discriminator.
+        assert not isinstance(excinfo.value, mrrc.MrrcException)
+        # The wrapper at src-python/src/buffered_reader.rs::read_into
+        # threads the underlying error's str through the formatted
+        # message ("Python read() failed: <original>"). Assert the
+        # original message survives end-to-end so a future binding-level
+        # rewrite can't silently strip it.
+        assert "synthetic read failure" in str(excinfo.value)
+
+    def test_lenient_mode_failing_read_also_raises_plain_oserror(self):
+        """recovery_mode does not gate the byte-prefetch layer: a
+        failing ``read()`` short-circuits before the parser dispatches
+        any recovery logic, so lenient must surface the same OSError as
+        strict.
+        """
+        reader = mrrc.MARCReader(_FailingReader(), recovery_mode="lenient")
+        with pytest.raises(OSError) as excinfo:
+            list(reader)
+        assert not isinstance(excinfo.value, mrrc.MrrcException)
+        assert "synthetic read failure" in str(excinfo.value)
