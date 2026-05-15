@@ -7,14 +7,26 @@
 
 use crate::backend::ReaderBackend;
 use crate::parse_error::ParseError;
+use mrrc::RecoveryMode;
 use pyo3::prelude::*;
 
 /// Unified interface for reading MARC record bytes from any supported source
 ///
-/// Abstracts over Python file objects and Rust file I/O.
+/// Abstracts over Python file objects and Rust file I/O. Carries the
+/// active [`RecoveryMode`] so the Python-file path can route short
+/// body reads to either a fatal `TruncatedRecord` (strict) or a
+/// pass-through to the parser's `record.errors` dispatch
+/// (lenient/permissive).
+///
 /// Allows `PyMARCReader` to accept file paths without Python GIL overhead.
 #[derive(Debug)]
-pub enum UnifiedReader {
+pub struct UnifiedReader {
+    kind: UnifiedReaderKind,
+    recovery_mode: RecoveryMode,
+}
+
+#[derive(Debug)]
+enum UnifiedReaderKind {
     /// Rust-backed reader (File or Cursor) - no GIL needed
     Backend(ReaderBackend),
 
@@ -31,10 +43,10 @@ impl UnifiedReader {
     /// 3. bytes/bytearray → CursorBackend (no GIL needed)
     /// 4. Object with .read() → PythonFile (GIL required)
     /// 5. Unknown → TypeError
-    pub fn from_python(source: &Bound<'_, PyAny>) -> PyResult<Self> {
+    pub fn from_python(source: &Bound<'_, PyAny>, recovery_mode: RecoveryMode) -> PyResult<Self> {
         let py = source.py();
-        match ReaderBackend::from_python(source, py) {
-            Ok(backend) => Ok(UnifiedReader::Backend(backend)),
+        let kind = match ReaderBackend::from_python(source, py, recovery_mode) {
+            Ok(backend) => UnifiedReaderKind::Backend(backend),
             Err(e) => {
                 // ReaderBackend::from_python failed
                 // Check if it's a file-system error (FileNotFoundError, PermissionError, IOError)
@@ -50,8 +62,7 @@ impl UnifiedReader {
                 // Type-related error - try Python file wrapper
                 match source.getattr("read") {
                     Ok(method) if method.is_callable() => {
-                        let py_file = source.clone().unbind();
-                        Ok(UnifiedReader::Python(py_file))
+                        UnifiedReaderKind::Python(source.clone().unbind())
                     },
                     _ => {
                         // Still no .read() method found - not a supported type
@@ -60,24 +71,28 @@ impl UnifiedReader {
                             .name()
                             .map(|n| n.to_string())
                             .unwrap_or_else(|_| "unknown".to_string());
-                        Err(pyo3::exceptions::PyTypeError::new_err(format!(
+                        return Err(pyo3::exceptions::PyTypeError::new_err(format!(
                             "Unsupported input type: {}. Supported types: str (file path), pathlib.Path, \
                              bytes, bytearray, or file-like object (with .read() method). \
                              Examples: 'records.mrc', Path('records.mrc'), b'binary data', \
                              open('records.mrc', 'rb'), io.BytesIO(data), socket.socket(...)",
                             type_name
-                        )))
+                        )));
                     },
                 }
             },
-        }
+        };
+        Ok(UnifiedReader {
+            kind,
+            recovery_mode,
+        })
     }
 
     /// Return the backend type as a string for diagnostics
     pub fn backend_type(&self) -> &str {
-        match self {
-            UnifiedReader::Backend(backend) => backend.backend_type(),
-            UnifiedReader::Python(_) => "python_file",
+        match &self.kind {
+            UnifiedReaderKind::Backend(backend) => backend.backend_type(),
+            UnifiedReaderKind::Python(_) => "python_file",
         }
     }
 
@@ -98,14 +113,15 @@ impl UnifiedReader {
     /// - `Ok(None)` - EOF reached
     /// - `Err(ParseError)` - Read or parsing error
     pub fn read_next_bytes(&mut self, py: Python) -> Result<Option<Vec<u8>>, ParseError> {
-        match self {
-            UnifiedReader::Backend(backend) => {
+        let recovery_mode = self.recovery_mode;
+        match &mut self.kind {
+            UnifiedReaderKind::Backend(backend) => {
                 // Backend handles its own GIL requirements (none for RustFile/Cursor)
                 backend.read_next_bytes(py)
             },
-            UnifiedReader::Python(py_file) => {
+            UnifiedReaderKind::Python(py_file) => {
                 // Python file-like object - read via .read() method
-                Self::read_record_bytes_from_python(py, py_file)
+                Self::read_record_bytes_from_python(py, py_file, recovery_mode)
             },
         }
     }
@@ -114,6 +130,7 @@ impl UnifiedReader {
     fn read_record_bytes_from_python(
         py: Python,
         py_file: &Py<PyAny>,
+        recovery_mode: RecoveryMode,
     ) -> Result<Option<Vec<u8>>, ParseError> {
         let file_obj = py_file.bind(py);
 
@@ -177,15 +194,20 @@ impl UnifiedReader {
             .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
 
         if record_data.len() != remaining {
-            // The 5-byte length prefix was already read before this
-            // call; record_byte_offset = 5 marks where the body read
-            // attempt began within the current record.
-            return Err(ParseError::truncated_record(remaining, record_data.len())
-                .with_record_byte_offset(5));
+            // Strict: fatal E005 with record_byte_offset = 5 marking
+            // where within the record the truncation was detected
+            // (the 5-byte length prefix was already read).
+            // Lenient/Permissive: hand the partial body through to the
+            // parser's recovery cap on `record.errors`.
+            if recovery_mode == RecoveryMode::Strict {
+                return Err(ParseError::truncated_record(remaining, record_data.len())
+                    .with_record_byte_offset(5));
+            }
         }
 
-        // Assemble complete record
-        let mut complete_record = Vec::with_capacity(record_length);
+        // Assemble record bytes (full record in Strict; length prefix +
+        // whatever body was returned in Lenient/Permissive on short reads).
+        let mut complete_record = Vec::with_capacity(length_bytes.len() + record_data.len());
         complete_record.extend_from_slice(&length_bytes);
         complete_record.extend_from_slice(&record_data);
 

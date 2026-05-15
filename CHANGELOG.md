@@ -119,6 +119,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unreachable; downstream parsing of the zero region surfaced as
   a cascading E201 with no E005 trail. Now the dispatch consults
   the actual `bytes_read`. Strict mode is unchanged.
+- `mrrc.MARCReader` (Python) now honors `recovery_mode` on short
+  body reads. Previously the per-record byte-prefetch backend
+  raised `TruncatedRecord` (E005) before the recovery-aware parser
+  ran, so E005 surfaced as a raised exception even at
+  `recovery_mode="lenient"`/`"permissive"`. The backend now hands
+  the partial body through to the parser in those modes, letting
+  E005 land on `record.errors` like the Rust matrix already does.
+  Strict mode still raises.
 - Release workflow now attaches wheel assets to the GitHub Release
   page automatically. Previously, `actions/checkout` ran after
   `download-artifact` and wiped `dist/` before the gh-release step,

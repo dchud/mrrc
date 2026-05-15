@@ -176,6 +176,7 @@ def test_strict_only_e006_raises_in_strict_clean_in_lenient() -> None:
 @pytest.mark.parametrize(
     ("fixture", "code"),
     [
+        ("e005_truncated_record.bin", "E005"),
         ("e101_directory_non_digit_length.bin", "E101"),
         ("e106_field_length_past_data.bin", "E106"),
     ],
@@ -184,13 +185,6 @@ def test_recoverable_errors_captured_in_lenient(fixture: str, code: str) -> None
     """Mid-record recoverable errors land on record.errors in lenient
     mode. The parser yields a (partially recovered) record rather than
     propagating the error.
-
-    E005 (stream truncation) is exercised in the Rust harness only.
-    The Python wrapper's per-record byte-prefetch backend in
-    src-python/src/backend.rs raises on a short stream read before the
-    recovery-aware parser is invoked, so E005 surfaces as a raised
-    TruncatedRecord even at recovery_mode="lenient". Aligning that
-    layer with the parser's recovery contract is tracked separately.
     """
     bytes_ = _read_fixture(fixture)
     reader = mrrc.MARCReader(bytes_, recovery_mode="lenient")

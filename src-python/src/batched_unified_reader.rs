@@ -13,6 +13,7 @@
 
 use crate::parse_error::ParseError;
 use crate::unified_reader::UnifiedReader;
+use mrrc::RecoveryMode;
 use pyo3::prelude::*;
 use smallvec::SmallVec;
 use std::collections::VecDeque;
@@ -66,8 +67,8 @@ impl BatchedUnifiedReader {
     /// - `TypeError` if input type is not supported
     /// - `FileNotFoundError` if file path doesn't exist
     /// - `IOError` if file cannot be opened (only for file paths)
-    pub fn new(source: &Bound<'_, PyAny>) -> PyResult<Self> {
-        let unified_reader = UnifiedReader::from_python(source)?;
+    pub fn new(source: &Bound<'_, PyAny>, recovery_mode: RecoveryMode) -> PyResult<Self> {
+        let unified_reader = UnifiedReader::from_python(source, recovery_mode)?;
 
         Ok(BatchedUnifiedReader {
             unified_reader,
