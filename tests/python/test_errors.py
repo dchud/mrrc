@@ -821,24 +821,23 @@ class TestFailingReadRaisesOSError:
         reader = mrrc.MARCReader(_FailingReader(), recovery_mode="strict")
         with pytest.raises(OSError) as excinfo:
             list(reader)
-        # Per the bead's load-bearing point: the typed exception
-        # hierarchy must NOT catch this — mrrc.MrrcException extends
-        # plain Exception, not OSError. A regression that retypes the
-        # I/O path to surface mrrc.IoError would silently flip this
-        # discriminator.
+        # The typed exception hierarchy must NOT catch this —
+        # mrrc.MrrcException extends plain Exception, not OSError. A
+        # regression that retypes the I/O path to surface a typed
+        # mrrc.IoError would silently flip this discriminator.
         assert not isinstance(excinfo.value, mrrc.MrrcException)
         # The wrapper at src-python/src/buffered_reader.rs::read_into
         # threads the underlying error's str through the formatted
         # message ("Python read() failed: <original>"). Assert the
-        # original message survives end-to-end so future binding-level
-        # rewrites can't silently strip it.
+        # original message survives end-to-end so a future binding-level
+        # rewrite can't silently strip it.
         assert "synthetic read failure" in str(excinfo.value)
 
     def test_lenient_mode_failing_read_also_raises_plain_oserror(self):
         """recovery_mode does not gate the byte-prefetch layer: a
         failing ``read()`` short-circuits before the parser dispatches
         any recovery logic, so lenient must surface the same OSError as
-        strict. Confirms the bead's "bypasses recovery entirely" claim.
+        strict.
         """
         reader = mrrc.MARCReader(_FailingReader(), recovery_mode="lenient")
         with pytest.raises(OSError) as excinfo:
