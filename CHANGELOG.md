@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `max_errors` kwarg on Python `MARCReader`. Caps the total
+  recovered errors accumulated across a `lenient` / `permissive`
+  stream; once the (N+1)-th recovered error lands, the next read
+  raises `mrrc.FatalReaderError` (E099). `None` (default) disables
+  the cap; `0` also disables it (matching the Rust API's no-cap
+  sentinel). Observationally inert in strict mode. Implemented at
+  the wrapper layer because each parse uses an ephemeral
+  `MarcReader` instance — the Rust-side cap would reset every
+  record.
 - Exception-class-name parity with pymarc 5.3.1 documented across
   the two error-handling docs: `docs/reference/error-handling.md`
   carries the full catalog (mapping table, the names mrrc omits and

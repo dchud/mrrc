@@ -29,8 +29,6 @@ Skipped on the Python side:
 * ``io_error`` — E007 is documented to raise built-in ``OSError``,
   not a typed ``mrrc.IoError`` (pymarc-compat). The Rust harness
   asserts the typed variant.
-* ``recovery_cap`` — the Rust core supports ``max_errors`` but the
-  Python ``MARCReader`` binding does not yet expose it.
 * ``accessor`` — cases without a per-case branch.
 """
 
@@ -126,10 +124,26 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
             "this typed-class framework cannot assert built-in OSError."
         )
     elif kind == "recovery_cap":
-        pytest.skip(
-            "trigger_kind=recovery_cap exercises max_errors / FatalReaderError; "
-            "the Rust core supports it but the Python MARCReader binding does "
-            "not yet expose max_errors as a kwarg"
+        # recovery_cap trips on accumulated recovered errors in
+        # lenient/permissive mode; mirror the Rust harness's pattern of
+        # concatenating CAP+2 malformed records and driving with
+        # max_errors=CAP. The bad-record byte template is borrowed from
+        # the e101 fixture (each copy trips DirectoryInvalid in lenient).
+        cap = 1
+        bad = (_REPO_ROOT / "tests" / "data" / "error_fixtures"
+               / "e101_directory_non_digit_length.bin").read_bytes()
+        stream = bad * (cap + 2)
+        reader = mrrc.MARCReader(
+            stream, recovery_mode="lenient", max_errors=cap
+        )
+        try:
+            for _ in reader:
+                pass
+        except mrrc.MrrcException as e:
+            return e
+        pytest.fail(
+            f"{case['id']} ({case['code']}): expected {case['code']} from "
+            "recovery_cap stream, got clean iteration"
         )
     elif kind == "accessor":
         bytes_ = _fixture_path(case).read_bytes()
@@ -193,7 +207,13 @@ def test_documented_error_fires(case: dict[str, Any]) -> None:
     if not case["wired"]:
         pytest.skip(case.get("skip_reason", "unwired"))
 
-    if "strict" not in case["recovery_modes"]:
+    # recovery_cap has an intrinsic mode requirement (drives lenient
+    # to accumulate recovered errors against the cap), so the
+    # strict-only gate does not apply. Mirrors the Rust harness.
+    if (
+        "strict" not in case["recovery_modes"]
+        and case.get("trigger_kind") != "recovery_cap"
+    ):
         pytest.skip(
             "case contract does not cover strict mode; non-strict "
             "assertions pending"

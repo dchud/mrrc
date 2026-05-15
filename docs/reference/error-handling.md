@@ -435,6 +435,25 @@ for record in mrrc.AuthorityMARCReader(file, recovery_mode="lenient"):
         log.warning(...)
 ```
 
+### Capping recovered errors with `max_errors`
+
+A pathological stream in `lenient` / `permissive` mode can accumulate diagnostics without bound — every malformed record adds one or more `MrrcException` instances to `record.errors`. Pass `max_errors=N` to `MARCReader` to cap the total recovered count across the stream; once the (N+1)-th recovered error lands, the next iteration raises `FatalReaderError` (E099) instead of yielding another record.
+
+```python
+reader = mrrc.MARCReader(file, recovery_mode="lenient", max_errors=100)
+try:
+    for record in reader:
+        process(record)
+except mrrc.FatalReaderError as e:
+    log.error(f"stopped after {e.errors_seen} errors (cap={e.cap})")
+```
+
+- `max_errors=None` (the default) disables the wrapper-level cap.
+- `max_errors=0` also disables the cap (matches the Rust API's no-cap sentinel).
+- `max_errors=N` for any `N > 0` trips on the (N+1)-th recovered error.
+
+Observationally inert in `strict` mode: the first error raises before any recovery accumulates against the cap. `AuthorityMARCReader` and `HoldingsMARCReader` don't carry the kwarg — they inherit the Rust core's per-reader `DEFAULT_MAX_ERRORS` (10_000) directly.
+
 ## Structured serialization (`to_dict` / `to_json`)
 
 Every `MrrcException` exposes `to_dict()` and `to_json()` for emitting the

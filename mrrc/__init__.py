@@ -1438,11 +1438,19 @@ class MARCReader:
             2709 structural errors; UTF-8 decode is lossy across all readers.
             ``"strict_marc"`` adds universal byte-level MARC 21 checks
             (E201 indicator, E202 subfield code, E301 strict UTF-8).
+        max_errors: Optional cap on accumulated recovered errors in
+            lenient/permissive mode. ``None`` (default) disables the
+            wrapper-level cap. ``0`` matches the Rust API's
+            no-cap sentinel. Any positive ``N`` raises
+            :class:`mrrc.FatalReaderError` (E099) once recovered errors
+            across records exceed ``N``. Observationally inert in strict
+            mode (the first error fires before any recovery accumulates).
     """
 
     def __init__(self, file_obj, to_unicode: bool = True, permissive: bool = False,
                  recovery_mode: str = "strict",
-                 validation_level: str = "structural"):
+                 validation_level: str = "structural",
+                 max_errors: Optional[int] = None):
         """Create a new MARC reader."""
         if not to_unicode:
             import warnings
@@ -1460,6 +1468,7 @@ class MARCReader:
             file_obj,
             recovery_mode=recovery_mode,
             validation_level=validation_level,
+            max_errors=max_errors,
         )
         # pymarc-compat accessors populated by __next__. `current_chunk`
         # tracks the bytes of the most recent record chunk read from the
