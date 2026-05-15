@@ -1429,10 +1429,17 @@ class MARCReader:
             MARC-8 to UTF-8; passing ``False`` emits a warning.
         permissive: When ``True``, yields ``None`` for records that fail to
             parse instead of raising, matching pymarc's ``permissive`` behavior.
-        recovery_mode: mrrc-native error handling: ``"strict"`` (default, raise
-            on errors), ``"lenient"`` (attempt to salvage valid fields), or
-            ``"permissive"`` (very lenient, accept partial data). Cannot be
-            combined with ``permissive=True``.
+            Setting this flag implicitly defaults ``recovery_mode`` back to
+            ``"strict"`` (pymarc-shape: inner raises, outer swallows) unless
+            an explicit ``recovery_mode`` is passed.
+        recovery_mode: mrrc-native error handling. ``"permissive"`` (default
+            since 0.8.1, was ``"strict"`` in 0.8.0) accepts partial data and
+            yields records with diagnostics attached on ``record.errors``;
+            unsalvageable records yield as ``None``. ``"lenient"`` salvages
+            valid fields and also attaches diagnostics on ``record.errors``.
+            ``"strict"`` raises on the first malformation. Cannot be combined
+            with ``permissive=True`` (which implies the strict-raises + outer-
+            swallows shape).
         validation_level: What counts as an error during parsing — orthogonal
             to ``recovery_mode``. ``"structural"`` (default) fires only ISO
             2709 structural errors; UTF-8 decode is lossy across all readers.
@@ -1448,7 +1455,7 @@ class MARCReader:
     """
 
     def __init__(self, file_obj, to_unicode: bool = True, permissive: bool = False,
-                 recovery_mode: str = "strict",
+                 recovery_mode: Optional[str] = None,
                  validation_level: str = "structural",
                  max_errors: Optional[int] = None):
         """Create a new MARC reader."""
@@ -1458,6 +1465,15 @@ class MARCReader:
                 "mrrc always converts MARC-8 to UTF-8; to_unicode=False has no effect",
                 stacklevel=2,
             )
+        # ``recovery_mode`` defaults are a two-level sentinel: a caller
+        # who passes ``permissive=True`` (pymarc-shape) without naming a
+        # recovery_mode gets the inner reader in strict so the outer
+        # wrapper can swallow per pymarc semantics; everyone else gets
+        # the new 0.8.1 default of permissive. Explicit combinations
+        # that contradict (``permissive=True`` paired with a non-strict
+        # recovery_mode) still raise below.
+        if recovery_mode is None:
+            recovery_mode = "strict" if permissive else "permissive"
         if permissive and recovery_mode != "strict":
             raise ValueError(
                 "Cannot combine permissive=True with recovery_mode other than "

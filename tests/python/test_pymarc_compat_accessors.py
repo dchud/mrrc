@@ -130,7 +130,9 @@ def test_strict_mode_raises_and_does_not_silence_via_accessors() -> None:
         / "non-ascii-tag-roundtrip.mrc"
     ).read_bytes()
 
-    reader = mrrc.MARCReader(bytes_, validation_level="strict_marc")
+    reader = mrrc.MARCReader(
+        bytes_, recovery_mode="strict", validation_level="strict_marc"
+    )
     with pytest.raises(Exception):  # noqa: B017 — any MrrcException variant
         next(reader)
 

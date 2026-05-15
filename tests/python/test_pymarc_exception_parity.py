@@ -169,7 +169,9 @@ def test_specific_class_except_catches_mrrc_raised_exception() -> None:
     bad_bytes = (
         _REPO_ROOT / "tests" / "data" / "error_fixtures" / "e101_non_ascii_tag.bin"
     ).read_bytes()
-    reader = mrrc.MARCReader(bad_bytes, validation_level="strict_marc")
+    reader = mrrc.MARCReader(
+        bad_bytes, recovery_mode="strict", validation_level="strict_marc"
+    )
     try:
         next(reader)
     except mexc.RecordDirectoryInvalid:

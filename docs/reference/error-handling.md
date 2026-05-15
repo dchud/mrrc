@@ -373,6 +373,61 @@ data, or is skipped. The structured positional metadata is populated
 identically in all three modes — the modes only differ in whether the
 error is propagated, suppressed, or used to inform a salvage attempt.
 
+### Defaults: Python `permissive`, Rust `Strict`
+
+The Python user surface (`mrrc.MARCReader`, `mrrc.AuthorityMARCReader`,
+`mrrc.HoldingsMARCReader`) defaults to `recovery_mode="permissive"` —
+the same default shape as pymarc / marc4j / libmarc. A fresh
+`MARCReader(file)` iterates past per-record defects rather than aborting
+on the first one, so users coming from those libraries get the
+expected behavior without setting any kwarg.
+
+The Rust core (`mrrc::MarcReader`) keeps the stricter `RecoveryMode::Strict`
+default. Rust callers expect explicit error handling via `Result<T, E>`
+and `?` propagation; flipping the default there would convert a loud
+`Err` into a quiet `record.errors` field that the caller has to
+remember to inspect.
+
+#### A gentle case for choosing `strict` when feasible
+
+Permissive mode is the more forgiving default, but it has a real cost
+worth understanding before you ship it past a prototype:
+
+- **Unsalvageable records yield as `None`.** When the parser can't make
+  even partial sense of a record's bytes, the Python wrapper hands you
+  `None` rather than skipping silently. A loop written as
+  `for record in reader: process(record)` will pass `None` into
+  `process` unless you guard with `if record is not None:` or iterate
+  via `iter_with_errors()`. Worth being deliberate about.
+- **Per-record diagnostics live on `record.errors`.** A clean iteration
+  in permissive mode can still be hiding malformed records — the errors
+  are attached to the yielded record rather than raised. If nothing
+  checks `record.errors`, defects are observable but invisible.
+- **`record.errors` accumulates up to `max_errors`.** Without an
+  explicit `max_errors=N` kwarg, a pathological stream can fill memory
+  with diagnostic objects before anyone notices. The Rust core caps
+  at `DEFAULT_MAX_ERRORS` (10 000) per parse, but the Python wrapper-
+  level cap defaults to disabled (see [Capping recovered errors with
+  `max_errors`](#capping-recovered-errors-with-max_errors)).
+
+If you control the input and quality matters more than throughput,
+`recovery_mode="strict"` makes defects loud: a single bad record
+raises a typed exception with full positional context. Pair it with
+`permissive=True` for the pymarc-shape pattern of "yield `None` for
+bad records, stash the exception on `current_exception`" without
+losing the precise diagnostics.
+
+```python
+# Most forgiving (default): keep going, attach defects to record.errors
+reader = mrrc.MARCReader(file)
+
+# Pymarc-shape: yield None for failed parses, stash exception
+reader = mrrc.MARCReader(file, permissive=True)
+
+# Loudest: typed exception raised on first defect
+reader = mrrc.MARCReader(file, recovery_mode="strict")
+```
+
 ## Inspecting per-record errors
 
 In `lenient` and `permissive` recovery modes, errors that would have
