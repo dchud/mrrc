@@ -156,6 +156,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The Python binding was wrapping every writer `MarcError` in
   `std::io::Error::other(...)` before crossing the FFI boundary,
   collapsing the typed variant.
+- `InvalidLeader` (E002) errors now carry the structured positional
+  context (`record_index`, `byte_offset`, `record_byte_offset`,
+  `source_name`) the v0.8.0 error work promised. The leader-validation
+  path constructed the variant via a message-only builder that
+  discarded every positional field; the skeleton enriched
+  `bytes_near` after the fact but not the rest. A new
+  `MarcError::with_position(&ParseContext)` builder mirrors the
+  existing `with_bytes_near` pattern and is now applied in the
+  leader-validation `map_err` chain.
+- `TruncatedRecord` (E005) raised across the Python FFI now
+  preserves the same positional context (`record_index`,
+  `byte_offset`, `record_byte_offset`) the Rust core attaches.
+  The Python binding's `ParseError` → `MarcError` conversion was
+  hardcoding `record_byte_offset = None` and the byte-prefetch
+  backend's `read_exact` couldn't report partial-read length, so
+  Python callers saw an E005 with a wrong `actual_length` and no
+  stream-position metadata. The backend now tracks `bytes_read`
+  manually and the FFI conversion preserves the record-relative
+  offset.
 
 ### Dependencies
 

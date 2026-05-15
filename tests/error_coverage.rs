@@ -281,9 +281,25 @@ fn fire_trigger(case: &Case) -> TriggerOutcome {
             }
         },
         "accessor" => exercise_accessor(case),
-        "writer" => {
-            let leader = Leader::from_bytes(b"00000nam a2200000 i 4500")
-                .expect("synthetic minimal leader parses");
+        "writer" => exercise_writer(case),
+        other => TriggerOutcome::UnsupportedKind(format!("unknown trigger_kind {other:?}")),
+    }
+}
+
+/// Dispatch by case id within the `writer` trigger family.
+///
+/// `MarcError::WriterError` (E404) has three distinct production fire
+/// sites: the ISO 2709 99999-byte size cap, the
+/// `validate_directory_tag` check on every field tag, and the
+/// finished-writer reuse guard in `MarcWriter::write_record`. Each
+/// gets its own manifest case under the same variant slug; this
+/// dispatch picks the right driver.
+fn exercise_writer(case: &Case) -> TriggerOutcome {
+    let leader =
+        Leader::from_bytes(b"00000nam a2200000 i 4500").expect("synthetic minimal leader parses");
+
+    match case.id.as_str() {
+        "e404_record_too_large_for_iso2709" => {
             let mut record = Record::new(leader);
             // ~100k subfield value forces the writer's serialized record
             // length past the ISO 2709 99999-byte ceiling.
@@ -306,7 +322,46 @@ fn fire_trigger(case: &Case) -> TriggerOutcome {
                 Err(e) => TriggerOutcome::Fired(e),
             }
         },
-        other => TriggerOutcome::UnsupportedKind(format!("unknown trigger_kind {other:?}")),
+        "e404_writer_non_ascii_tag" => {
+            let mut record = Record::new(leader);
+            // 2-byte tag fails validate_directory_tag's "exactly 3
+            // ASCII bytes" check on serialization.
+            let field = Field {
+                tag: "12".to_string(),
+                indicator1: ' ',
+                indicator2: ' ',
+                subfields: smallvec::smallvec![Subfield {
+                    code: 'a',
+                    value: "x".to_string(),
+                }],
+            };
+            record.add_field(field);
+
+            let mut buf = Vec::new();
+            let mut writer = MarcWriter::new(&mut buf);
+            match writer.write_record(&record) {
+                Ok(()) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
+        "e404_writer_finished_writer_reuse" => {
+            let record = Record::new(leader);
+            let mut buf = Vec::new();
+            let mut writer = MarcWriter::new(&mut buf);
+            if let Err(e) = writer.finish() {
+                return TriggerOutcome::UnsupportedKind(format!(
+                    "{}: finish() unexpectedly failed before reuse trigger could fire: {e}",
+                    case.id
+                ));
+            }
+            match writer.write_record(&record) {
+                Ok(()) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
+        other => TriggerOutcome::UnsupportedKind(format!(
+            "trigger_kind=writer: case {other} has no harness branch; add one in exercise_writer"
+        )),
     }
 }
 

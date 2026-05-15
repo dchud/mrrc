@@ -15,6 +15,17 @@
 # independently; wiring is tracked per case, not per code, so the
 # coverage tally reflects the granularity of the spec.
 #
+# Per-trigger coverage convention: when a single MarcError variant has
+# multiple distinct production fire sites (different functions, files,
+# or conditions), each fire site gets its own manifest case — even
+# when the variant slug is shared. E404 `WriterError` is the canonical
+# example: three cases (size cap, non-3-ASCII tag, finished-writer
+# reuse) share the slug `record_too_large_for_iso2709` but each
+# exercises a distinct path. The harness's `exercise_writer` /
+# `exercise_accessor` dispatches case-id-branch to the right driver.
+# Adding a new fire site for an existing variant requires both a new
+# `[[case]]` here and a branch in the relevant `exercise_*` helper.
+#
 # Cases marked `wired = false` describe trigger patterns where the
 # parser does not currently produce the documented variant for the
 # given input. The `skip_reason` field states what happens today, in
@@ -389,5 +400,35 @@ slug = "record_too_large_for_iso2709"
 trigger_kind = "writer"
 description = "Construct a record whose total length or base address exceeds 99999 and attempt to serialize it."
 expected_context = ["record_index"]
+recovery_modes = ["strict"]
+wired = true
+
+# E404 also fires from validate_directory_tag when a Field's tag is not
+# 3 ASCII bytes. Distinct production trigger from the size cap above;
+# per the per-trigger coverage convention, each fire site gets its own
+# manifest case even when the variant slug is shared.
+[[case]]
+id = "e404_writer_non_ascii_tag"
+code = "E404"
+variant = "WriterError"
+slug = "record_too_large_for_iso2709"
+trigger_kind = "writer"
+description = "Construct a record with a field whose tag is not 3 ASCII bytes and attempt to serialize it."
+expected_context = ["record_index"]
+recovery_modes = ["strict"]
+wired = true
+
+# E404 also fires from MarcWriter::write_record when called after
+# finish(). Reachable from Rust but not from the Python `mrrc.MARCWriter`
+# wrapper (which short-circuits via PyRuntimeError before reaching the
+# Rust writer).
+[[case]]
+id = "e404_writer_finished_writer_reuse"
+code = "E404"
+variant = "WriterError"
+slug = "record_too_large_for_iso2709"
+trigger_kind = "writer"
+description = "Call MarcWriter::finish(), then attempt another write_record on the same writer."
+expected_context = []
 recovery_modes = ["strict"]
 wired = true

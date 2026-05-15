@@ -177,26 +177,51 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
             "add one in test_error_coverage.py"
         )
     elif kind == "writer":
-        record = mrrc.Record()
-        record.add_field(
-            mrrc.Field(
-                tag="999",
-                indicator1=" ",
-                indicator2=" ",
-                subfields=[mrrc.Subfield("a", "x" * 100_000)],
+        # E404 fires from three distinct production paths in the Rust
+        # core (size cap, non-3-ASCII tag, finished-writer reuse). The
+        # Python wrapper surfaces only the size-cap path: Python `Field`
+        # validates tag length at construction (`ValueError`), and
+        # Python `MARCWriter` raises `RuntimeError` before reaching the
+        # Rust closed-writer path. The other two cases skip here; the
+        # Rust harness covers them.
+        if case["id"] == "e404_record_too_large_for_iso2709":
+            record = mrrc.Record()
+            record.add_field(
+                mrrc.Field(
+                    tag="999",
+                    indicator1=" ",
+                    indicator2=" ",
+                    subfields=[mrrc.Subfield("a", "x" * 100_000)],
+                )
             )
-        )
-        import io
+            import io
 
-        buf = io.BytesIO()
-        writer = mrrc.MARCWriter(buf)
-        try:
-            writer.write_record(record)
-        except mrrc.MrrcException as e:
-            return e
+            buf = io.BytesIO()
+            writer = mrrc.MARCWriter(buf)
+            try:
+                writer.write_record(record)
+            except mrrc.MrrcException as e:
+                return e
+            pytest.fail(
+                f"{case['id']} ({case['code']}): expected {case['code']} error from "
+                "MARCWriter.write_record on an oversize record, got success"
+            )
+        if case["id"] == "e404_writer_non_ascii_tag":
+            pytest.skip(
+                "Python `mrrc.Field` validates `tag.len() != 3` at "
+                "construction with `ValueError`; the underlying Rust "
+                "WriterError E404 path is unreachable from the public "
+                "Python API. Asserted in the Rust harness."
+            )
+        if case["id"] == "e404_writer_finished_writer_reuse":
+            pytest.skip(
+                "Python `mrrc.MARCWriter` raises `RuntimeError` on reuse "
+                "after `close()` before reaching the Rust closed-writer "
+                "path that would surface E404. Asserted in the Rust harness."
+            )
         pytest.fail(
-            f"{case['id']} ({case['code']}): expected {case['code']} error from "
-            "MARCWriter.write_record on an oversize record, got success"
+            f"{case['id']}: trigger_kind=writer case has no harness "
+            "branch; add one in test_error_coverage.py"
         )
     else:
         pytest.fail(f"{case['id']}: unknown trigger_kind {kind!r}")
