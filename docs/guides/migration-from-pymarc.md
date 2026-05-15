@@ -478,6 +478,8 @@ except MrrcException:
 See [Known hierarchy divergences from pymarc](../reference/error-handling.md#known-hierarchy-divergences-from-pymarc)
 in the reference for the rationale.
 
+**Capping recovered errors with `max_errors`.** mrrc's `MARCReader` accepts a `max_errors=N` kwarg that caps the total number of `record.errors` entries accumulated across a `lenient` / `permissive` stream. Once the (N+1)-th recovered error lands, the next read raises `mrrc.FatalReaderError` (E099). pymarc has no equivalent. Pass `max_errors=0` (or omit the kwarg) to disable the cap. See [Capping recovered errors with `max_errors`](../reference/error-handling.md#capping-recovered-errors-with-max_errors).
+
 ## Known Differences from pymarc
 
 1. **Record constructor**: `mrrc.Record()` works (defaults to `Leader()`), or pass explicit `mrrc.Record(mrrc.Leader())`

@@ -63,6 +63,28 @@ pub struct PyMARCReader {
     /// What counts as an error during parsing (orthogonal to
     /// `recovery_mode`).
     validation_level: ValidationLevel,
+    /// Optional cap on accumulated recovered errors per stream
+    /// (lenient/permissive only). `None` (default) disables the
+    /// Python-side cap; `Some(0)` matches the Rust API's
+    /// no-cap sentinel; `Some(N)` trips `FatalReaderError` (E099)
+    /// once the (N+1)-th recovered error lands.
+    ///
+    /// The cap is implemented here rather than threaded into the
+    /// per-record `MarcReader` because each parse uses an ephemeral
+    /// reader instance; the Rust-side cap would reset every record
+    /// and never trip. We accumulate `record.errors.len()` across
+    /// successive records and raise `FatalReaderError` once the cap
+    /// is exceeded — observationally equivalent to the Rust cap for
+    /// users of the Python `MARCReader`.
+    max_errors: Option<usize>,
+    /// Running count of recovered errors across all records read so
+    /// far. Used together with `max_errors` to trip the wrapper-level
+    /// recovery cap. Reset to zero at construction.
+    accumulated_errors: usize,
+    /// 1-based count of records yielded to the caller. Used as the
+    /// `record_index` in the synthesized `FatalReaderError` when the
+    /// cap trips.
+    records_yielded: usize,
     /// Bytes of the most recent record chunk read from the source,
     /// before any parse attempt. Populated on every `__next__` /
     /// `read_record` call that successfully reads a chunk (regardless
@@ -89,12 +111,23 @@ impl PyMARCReader {
     /// * `validation_level` - What counts as an error during parsing:
     ///   'structural' (default) or 'strict_marc'. Orthogonal to
     ///   `recovery_mode`.
+    /// * `max_errors` - Optional cap on accumulated recovered errors
+    ///   per stream in lenient/permissive mode. `None` (default)
+    ///   preserves the Rust core's `DEFAULT_MAX_ERRORS` (10_000).
+    ///   `0` disables the cap entirely. Any other value trips
+    ///   `FatalReaderError` (E099) once the cap is exceeded.
     #[new]
-    #[pyo3(signature = (source, recovery_mode = "strict", validation_level = "structural"))]
+    #[pyo3(signature = (
+        source,
+        recovery_mode = "strict",
+        validation_level = "structural",
+        max_errors = None,
+    ))]
     pub fn new(
         source: &Bound<'_, PyAny>,
         recovery_mode: &str,
         validation_level: &str,
+        max_errors: Option<usize>,
     ) -> PyResult<Self> {
         let rec_mode = crate::reader_helpers::parse_recovery_mode(recovery_mode)?;
         let val_level = crate::reader_helpers::parse_validation_level(validation_level)?;
@@ -105,6 +138,9 @@ impl PyMARCReader {
                 reader: Some(ReaderType::Unified(unified_reader)),
                 recovery_mode: rec_mode,
                 validation_level: val_level,
+                max_errors,
+                accumulated_errors: 0,
+                records_yielded: 0,
                 last_chunk: None,
             }),
             Err(_) => {
@@ -116,6 +152,9 @@ impl PyMARCReader {
                     reader: Some(ReaderType::Python(batched_reader)),
                     recovery_mode: rec_mode,
                     validation_level: val_level,
+                    max_errors,
+                    accumulated_errors: 0,
+                    records_yielded: 0,
                     last_chunk: None,
                 })
             },
@@ -188,7 +227,19 @@ impl PyMARCReader {
 
                     // Step 3: Convert to PyRecord (GIL re-acquired)
                     match record {
-                        Some(r) => Ok(Some(PyRecord { inner: r })),
+                        Some(r) => {
+                            // Apply the wrapper-level recovery cap before
+                            // handing the record back: if max_errors was
+                            // configured and this record's accumulated
+                            // count exceeds it, surface FatalReaderError
+                            // instead of yielding.
+                            if let Err(e) = self.note_record_errors(&r) {
+                                self.reader = None;
+                                return Err(crate::error::marc_error_to_py_err(*e));
+                            }
+                            self.records_yielded = self.records_yielded.saturating_add(1);
+                            Ok(Some(PyRecord { inner: r }))
+                        },
                         None => Ok(None),
                     }
                 },
@@ -298,7 +349,18 @@ impl PyMARCReader {
         // GIL is automatically re-acquired when exiting detach() block.
         // NOW we can safely construct PyErr from MarcError.
         match parse_result {
-            Ok(Some(record)) => Ok(PyRecord { inner: record }),
+            Ok(Some(record)) => {
+                // Apply the wrapper-level recovery cap before yielding;
+                // if exceeded, swap in FatalReaderError and mark the
+                // reader consumed so the iterator terminates on the
+                // next call.
+                if let Err(e) = slf.note_record_errors(&record) {
+                    slf.reader = None;
+                    return Err(crate::error::marc_error_to_py_err(*e));
+                }
+                slf.records_yielded = slf.records_yielded.saturating_add(1);
+                Ok(PyRecord { inner: record })
+            },
             Ok(None) => {
                 // Parser returned None (shouldn't happen in middle of record)
                 Err(pyo3::exceptions::PyRuntimeError::new_err(
@@ -325,5 +387,40 @@ impl PyMARCReader {
         } else {
             "<MARCReader consumed>".to_string()
         }
+    }
+}
+
+impl PyMARCReader {
+    /// Account for a newly-parsed record against the wrapper-level
+    /// recovery cap. Adds the record's recovered errors to the
+    /// running count and, if the cap has been exceeded, builds the
+    /// matching `FatalReaderError` to surface as the iterator's
+    /// next exception. The caller is responsible for marking the
+    /// reader consumed after this returns `Err` so subsequent reads
+    /// terminate the iterator.
+    ///
+    /// Returns `Ok(())` when the cap is disabled (`max_errors=None`
+    /// or `Some(0)`) or still under the configured limit.
+    ///
+    /// Lives in a non-`#[pymethods]` impl block so PyO3 does not try
+    /// to expose it as a Python method (the `&mrrc::Record` argument
+    /// is not a Python-extractable type).
+    fn note_record_errors(&mut self, record: &mrrc::Record) -> Result<(), Box<mrrc::MarcError>> {
+        let Some(cap) = self.max_errors else {
+            return Ok(());
+        };
+        if cap == 0 {
+            return Ok(());
+        }
+        self.accumulated_errors = self.accumulated_errors.saturating_add(record.errors.len());
+        if self.accumulated_errors > cap {
+            return Err(Box::new(mrrc::MarcError::FatalReaderError {
+                cap,
+                errors_seen: self.accumulated_errors,
+                record_index: Some(self.records_yielded.saturating_add(1)),
+                source_name: None,
+            }));
+        }
+        Ok(())
     }
 }
