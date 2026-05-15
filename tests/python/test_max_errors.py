@@ -6,8 +6,6 @@ being inert in strict mode (strict propagates the first error before
 the cap can accumulate).
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest
