@@ -6,6 +6,7 @@
 //! - `PythonFile`: Python file-like objects (calls .read() method)
 
 use crate::parse_error::ParseError;
+use mrrc::RecoveryMode;
 use pyo3::prelude::*;
 use std::fs::File;
 use std::io::{Cursor, ErrorKind, Read};
@@ -16,8 +17,20 @@ use std::io::{Cursor, ErrorKind, Read};
 /// - str, pathlib.Path → RustFile
 /// - bytes, bytearray → CursorBackend
 /// - file object, BytesIO, socket.socket → PythonFile
+///
+/// The backend carries the active [`RecoveryMode`] so that short body
+/// reads can route to either a fatal `TruncatedRecord` (strict) or a
+/// pass-through to the parser's `record.errors` dispatch
+/// (lenient/permissive). The mode is set at construction by the
+/// owning reader and never changes for the lifetime of the backend.
 #[derive(Debug)]
-pub enum ReaderBackend {
+pub struct ReaderBackend {
+    kind: BackendKind,
+    recovery_mode: RecoveryMode,
+}
+
+#[derive(Debug)]
+enum BackendKind {
     /// Direct file I/O via std::fs::File
     /// Input: str path or pathlib.Path
     RustFile(File),
@@ -51,11 +64,23 @@ impl ReaderBackend {
     /// - `TypeError` if input type is not supported
     /// - `FileNotFoundError` if file path doesn't exist (RustFile)
     /// - `IOError` if file cannot be opened (RustFile)
-    pub fn from_python(source: &Bound<'_, PyAny>, _py: Python) -> PyResult<Self> {
+    pub fn from_python(
+        source: &Bound<'_, PyAny>,
+        _py: Python,
+        recovery_mode: RecoveryMode,
+    ) -> PyResult<Self> {
+        let kind = Self::kind_from_python(source)?;
+        Ok(ReaderBackend {
+            kind,
+            recovery_mode,
+        })
+    }
+
+    fn kind_from_python(source: &Bound<'_, PyAny>) -> PyResult<BackendKind> {
         // 1. Try str path
         if let Ok(path_str) = source.extract::<String>() {
             return match File::open(&path_str) {
-                Ok(file) => Ok(ReaderBackend::RustFile(file)),
+                Ok(file) => Ok(BackendKind::RustFile(file)),
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                     Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
                         "No such file or directory: '{}'",
@@ -82,7 +107,7 @@ impl ReaderBackend {
                 if let Ok(path_obj) = method.call0() {
                     if let Ok(path_str) = path_obj.extract::<String>() {
                         return match File::open(&path_str) {
-                            Ok(file) => Ok(ReaderBackend::RustFile(file)),
+                            Ok(file) => Ok(BackendKind::RustFile(file)),
                             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                                 Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
                                     "No such file or directory: '{}'",
@@ -107,7 +132,7 @@ impl ReaderBackend {
 
         // 3. Try bytes/bytearray
         if let Ok(bytes_data) = source.extract::<Vec<u8>>() {
-            return Ok(ReaderBackend::CursorBackend(Cursor::new(bytes_data)));
+            return Ok(BackendKind::CursorBackend(Cursor::new(bytes_data)));
         }
 
         // 4. Try file-like object with .read() method
@@ -115,7 +140,7 @@ impl ReaderBackend {
         if let Ok(method) = read_method {
             if method.is_callable() {
                 // Store as PythonFile backend
-                return Ok(ReaderBackend::PythonFile(source.clone().unbind()));
+                return Ok(BackendKind::PythonFile(source.clone().unbind()));
             }
         }
 
@@ -132,10 +157,10 @@ impl ReaderBackend {
 
     /// Return the backend type as a string for diagnostics
     pub fn backend_type(&self) -> &str {
-        match self {
-            ReaderBackend::RustFile(_) => "rust_file",
-            ReaderBackend::CursorBackend(_) => "cursor",
-            ReaderBackend::PythonFile(_) => "python_file",
+        match &self.kind {
+            BackendKind::RustFile(_) => "rust_file",
+            BackendKind::CursorBackend(_) => "cursor",
+            BackendKind::PythonFile(_) => "python_file",
         }
     }
 
@@ -152,13 +177,16 @@ impl ReaderBackend {
     /// - `Ok(None)` - EOF reached
     /// - `Err(ParseError)` - Read or parsing error
     pub fn read_next_bytes(&mut self, py: Python) -> Result<Option<Vec<u8>>, ParseError> {
-        match self {
-            ReaderBackend::RustFile(file) => Self::read_record_bytes_from_reader(file),
-            ReaderBackend::CursorBackend(cursor) => Self::read_record_bytes_from_reader(cursor),
-            ReaderBackend::PythonFile(py_obj) => {
+        let recovery_mode = self.recovery_mode;
+        match &mut self.kind {
+            BackendKind::RustFile(file) => Self::read_record_bytes_from_reader(file, recovery_mode),
+            BackendKind::CursorBackend(cursor) => {
+                Self::read_record_bytes_from_reader(cursor, recovery_mode)
+            },
+            BackendKind::PythonFile(py_obj) => {
                 // Need GIL to call Python .read() method
                 let obj = py_obj.bind(py);
-                Self::read_record_bytes_from_python(obj)
+                Self::read_record_bytes_from_python(obj, recovery_mode)
             },
         }
     }
@@ -166,6 +194,7 @@ impl ReaderBackend {
     /// Internal helper: Read record bytes from any std::io::Read implementation
     fn read_record_bytes_from_reader<R: Read>(
         reader: &mut R,
+        recovery_mode: RecoveryMode,
     ) -> Result<Option<Vec<u8>>, ParseError> {
         // Read leader (24 bytes)
         let mut leader = [0u8; 24];
@@ -227,14 +256,22 @@ impl ReaderBackend {
         }
         if bytes_read != expected_body_len {
             // Truncation: the leader (24 bytes) was read, then the
-            // body fell short. record_byte_offset = 24 marks where
-            // within the record the truncation was detected.
-            return Err(ParseError::truncated_record(expected_body_len, bytes_read)
-                .with_record_byte_offset(24));
+            // body fell short. In Strict mode this surfaces as a
+            // fatal E005 with record_byte_offset = 24 marking where
+            // within the record the truncation was detected. In
+            // Lenient/Permissive we hand the leader + partial body
+            // through to the parser, which dispatches its own E005
+            // onto `record.errors` via the recovery cap.
+            if recovery_mode == RecoveryMode::Strict {
+                return Err(ParseError::truncated_record(expected_body_len, bytes_read)
+                    .with_record_byte_offset(24));
+            }
+            record_data.truncate(bytes_read);
         }
 
-        // Assemble complete record bytes
-        let mut complete_record = Vec::with_capacity(record_length);
+        // Assemble record bytes (full record in Strict; leader +
+        // whatever body was read in Lenient/Permissive on short reads).
+        let mut complete_record = Vec::with_capacity(24 + record_data.len());
         complete_record.extend_from_slice(&leader);
         complete_record.extend_from_slice(&record_data);
 
@@ -244,6 +281,7 @@ impl ReaderBackend {
     /// Internal helper: Read record bytes from Python file-like object
     fn read_record_bytes_from_python(
         py_obj: &Bound<'_, PyAny>,
+        recovery_mode: RecoveryMode,
     ) -> Result<Option<Vec<u8>>, ParseError> {
         // Read leader (24 bytes)
         let read_method = py_obj
@@ -299,14 +337,19 @@ impl ReaderBackend {
             .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
 
         if record_data.len() != record_length - 24 {
-            return Err(
-                ParseError::truncated_record(record_length - 24, record_data.len())
-                    .with_record_byte_offset(24),
-            );
+            // Strict: fatal E005. Lenient/Permissive: hand the
+            // partial body through to the parser's recovery cap.
+            if recovery_mode == RecoveryMode::Strict {
+                return Err(
+                    ParseError::truncated_record(record_length - 24, record_data.len())
+                        .with_record_byte_offset(24),
+                );
+            }
         }
 
-        // Assemble complete record
-        let mut complete_record = Vec::with_capacity(record_length);
+        // Assemble record bytes (full record in Strict; leader +
+        // whatever body was returned in Lenient/Permissive on short reads).
+        let mut complete_record = Vec::with_capacity(24 + record_data.len());
         complete_record.extend_from_slice(&leader);
         complete_record.extend_from_slice(&record_data);
 
@@ -321,11 +364,17 @@ mod tests {
 
     #[test]
     fn test_reader_backend_creation() {
-        // Test that enum can be instantiated
+        // Test that backend can be instantiated
         let file = File::open("/dev/null").unwrap();
-        let _backend = ReaderBackend::RustFile(file);
+        let _backend = ReaderBackend {
+            kind: BackendKind::RustFile(file),
+            recovery_mode: RecoveryMode::Strict,
+        };
 
         let cursor = Cursor::new(vec![]);
-        let _backend = ReaderBackend::CursorBackend(cursor);
+        let _backend = ReaderBackend {
+            kind: BackendKind::CursorBackend(cursor),
+            recovery_mode: RecoveryMode::Strict,
+        };
     }
 }

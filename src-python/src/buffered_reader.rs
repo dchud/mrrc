@@ -9,6 +9,7 @@
 // - Efficient handling of large records via automatic heap spillover
 
 use crate::parse_error::ParseError;
+use mrrc::RecoveryMode;
 use pyo3::prelude::*;
 use smallvec::SmallVec;
 
@@ -22,25 +23,6 @@ impl PyFileWrapper {
     /// Create a new wrapper around a Python file-like object
     pub fn new(file_obj: Py<PyAny>) -> Self {
         PyFileWrapper { file_obj }
-    }
-
-    /// Read exactly n bytes from the file, or return an error
-    ///
-    /// This will fail with IoError if fewer than n bytes are available at EOF.
-    pub fn read_exact(&self, py: Python<'_>, buf: &mut [u8]) -> Result<(), ParseError> {
-        let mut pos = 0;
-        while pos < buf.len() {
-            let n = self.read_into(py, &mut buf[pos..])?;
-            if n == 0 {
-                return Err(ParseError::io_error(format!(
-                    "Unexpected EOF: expected {} bytes, got {}",
-                    buf.len(),
-                    pos
-                )));
-            }
-            pos += n;
-        }
-        Ok(())
     }
 
     /// Read up to buf.len() bytes from the file
@@ -76,21 +58,26 @@ impl PyFileWrapper {
 ///
 /// BufferedMarcReader reads complete ISO 2709 records from a Python file-like object.
 /// It uses SmallVec for efficient memory management and is designed to support
-/// GIL release during I/O operations.
+/// GIL release during I/O operations. Carries the active [`RecoveryMode`]
+/// so short body reads route to either a fatal `TruncatedRecord`
+/// (strict) or a pass-through to the parser's `record.errors` dispatch
+/// (lenient/permissive).
 #[derive(Debug)]
 pub struct BufferedMarcReader {
     file_wrapper: PyFileWrapper,
     buffer: SmallVec<[u8; 4096]>,
     eof_reached: bool,
+    recovery_mode: RecoveryMode,
 }
 
 impl BufferedMarcReader {
     /// Create a new BufferedMarcReader from a Python file-like object
-    pub fn new(file_obj: Py<PyAny>) -> Self {
+    pub fn new(file_obj: Py<PyAny>, recovery_mode: RecoveryMode) -> Self {
         BufferedMarcReader {
             file_wrapper: PyFileWrapper::new(file_obj),
             buffer: SmallVec::new(),
             eof_reached: false,
+            recovery_mode,
         }
     }
 
@@ -155,18 +142,48 @@ impl BufferedMarcReader {
         self.buffer.clear();
         self.buffer.extend_from_slice(&length_bytes);
 
-        // Read the remaining bytes (length - 5 for the already-read header)
+        // Read the remaining bytes (length - 5 for the already-read header).
+        // Use a manual loop instead of read_exact so a short read can either
+        // raise (strict) or pass partial body through to the parser
+        // (lenient/permissive) where E005 lands on `record.errors`.
         let remaining = record_length - 5;
         self.buffer.reserve(remaining);
 
         let mut temp_buf = vec![0u8; remaining];
-        self.file_wrapper.read_exact(py, &mut temp_buf)?;
+        let mut bytes_read = 0usize;
+        loop {
+            if bytes_read >= remaining {
+                break;
+            }
+            let n = self
+                .file_wrapper
+                .read_into(py, &mut temp_buf[bytes_read..])?;
+            if n == 0 {
+                break;
+            }
+            bytes_read += n;
+        }
+
+        if bytes_read < remaining {
+            if self.recovery_mode == RecoveryMode::Strict {
+                return Err(
+                    ParseError::truncated_record(remaining, bytes_read).with_record_byte_offset(5)
+                );
+            }
+            // Lenient/Permissive: feed partial body through; the parser
+            // will dispatch E005 onto `record.errors`.
+            temp_buf.truncate(bytes_read);
+        }
         self.buffer.extend_from_slice(&temp_buf);
 
         // Verify record terminator (last byte should be 0x1D). Capture a
         // window over the tail of the record so the user can see what
-        // landed where the terminator should have been.
-        if self.buffer.is_empty() || self.buffer[self.buffer.len() - 1] != 0x1D {
+        // landed where the terminator should have been. Skipped on short
+        // reads in lenient/permissive (the parser owns terminator
+        // recovery via its existing dispatch).
+        if bytes_read == remaining
+            && (self.buffer.is_empty() || self.buffer[self.buffer.len() - 1] != 0x1D)
+        {
             let tail_start = self.buffer.len().saturating_sub(32);
             let tail = &self.buffer[tail_start..];
             return Err(ParseError::record_boundary_error(

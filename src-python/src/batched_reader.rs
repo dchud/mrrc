@@ -13,6 +13,7 @@
 
 use crate::buffered_reader::BufferedMarcReader;
 use crate::parse_error::ParseError;
+use mrrc::RecoveryMode;
 use pyo3::prelude::*;
 use smallvec::SmallVec;
 use std::collections::VecDeque;
@@ -52,9 +53,13 @@ impl BatchedMarcReader {
     ///
     /// # Arguments
     /// * `file_obj` - A Python file-like object supporting .read(n)
-    pub fn new(file_obj: Py<PyAny>) -> Self {
+    /// * `recovery_mode` - Active recovery mode; forwarded to the
+    ///   underlying buffered reader so short body reads route to either
+    ///   a fatal `TruncatedRecord` (strict) or a pass-through to the
+    ///   parser's `record.errors` dispatch (lenient/permissive).
+    pub fn new(file_obj: Py<PyAny>, recovery_mode: RecoveryMode) -> Self {
         BatchedMarcReader {
-            buffered_reader: BufferedMarcReader::new(file_obj),
+            buffered_reader: BufferedMarcReader::new(file_obj, recovery_mode),
             record_queue: VecDeque::new(),
             queue_capacity_bytes: 0,
             eof_reached: false,

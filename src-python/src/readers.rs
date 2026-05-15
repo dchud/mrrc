@@ -100,7 +100,7 @@ impl PyMARCReader {
         let val_level = crate::reader_helpers::parse_validation_level(validation_level)?;
 
         // Try unified reader first (handles file paths and bytes)
-        match BatchedUnifiedReader::new(source) {
+        match BatchedUnifiedReader::new(source, rec_mode) {
             Ok(unified_reader) => Ok(PyMARCReader {
                 reader: Some(ReaderType::Unified(unified_reader)),
                 recovery_mode: rec_mode,
@@ -111,7 +111,7 @@ impl PyMARCReader {
                 // Fall back to legacy Python file wrapper
                 // This handles custom file-like objects that aren't supported by UnifiedReader
                 let file_obj = source.clone().unbind();
-                let batched_reader = BatchedMarcReader::new(file_obj);
+                let batched_reader = BatchedMarcReader::new(file_obj, rec_mode);
                 Ok(PyMARCReader {
                     reader: Some(ReaderType::Python(batched_reader)),
                     recovery_mode: rec_mode,
