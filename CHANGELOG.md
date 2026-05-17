@@ -86,6 +86,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Python `MARCReader` / `AuthorityMARCReader` / `HoldingsMARCReader`
+  now default to `recovery_mode="permissive"` (was `"strict"`).
+  Matches the pymarc / marc4j / libmarc convention so a fresh
+  `mrrc.MARCReader(file)` iterates past per-record defects rather
+  than aborting on the first malformation. The Rust core's
+  `mrrc::MarcReader` keeps `RecoveryMode::Strict` as its default —
+  Rust idiom expects explicit error handling via `Result`. Users
+  who want the old strict behavior pass `recovery_mode="strict"`
+  explicitly. The `permissive=True` pymarc-compat path is
+  unchanged: setting it without an explicit `recovery_mode` still
+  pairs with strict so the inner-raises + outer-swallows shape
+  keeps working. Trade-offs (unsalvageable records yield as
+  `None`, per-record defects on `record.errors` rather than
+  raising) are documented in
+  `docs/reference/error-handling.md#a-gentle-case-for-choosing-strict-when-feasible`.
 - Leader-validation errors now fire the field-specific variants their
   documentation describes: `RecordLengthInvalid` (E001) for non-digit
   bytes 0-4 or `record_length < 24`, `BaseAddressInvalid` (E003) for

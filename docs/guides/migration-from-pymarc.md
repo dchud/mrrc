@@ -403,9 +403,7 @@ Passing `to_unicode=False` emits a warning but has no effect.
 
 ### Recovery Mode (mrrc-specific)
 
-mrrc also offers a `recovery_mode` kwarg that goes beyond pymarc's
-permissive mode. Instead of skipping bad records entirely, recovery mode
-attempts to salvage valid fields from damaged records:
+mrrc also offers a `recovery_mode` kwarg that goes beyond pymarc's permissive mode. Instead of skipping bad records entirely, recovery mode attempts to salvage valid fields from damaged records:
 
 ```python
 # Attempt to recover partial data from malformed records
@@ -418,14 +416,13 @@ reader = mrrc.MARCReader('records.mrc', recovery_mode='permissive')
 ```
 
 Recovery modes:
-- `"strict"` (default) — raise on any malformation
-- `"lenient"` — attempt to recover, salvage valid fields
-- `"permissive"` — very lenient, accept partial data
+- `"permissive"` (default for the Python user surface) — yield records with diagnostics attached on `record.errors`; yield `None` for unsalvageable records
+- `"lenient"` — same shape as permissive with a tighter recovery cap; salvages valid fields
+- `"strict"` — raise on any malformation
 
-Note: `permissive=True` and `recovery_mode` other than `"strict"` cannot
-be combined — they represent different error-handling strategies. Use
-`permissive=True` for pymarc-compatible "skip bad records" behavior, or
-`recovery_mode` for mrrc's "salvage what you can" approach.
+Note: `permissive=True` and `recovery_mode` other than `"strict"` cannot be combined — they represent different error-handling strategies. Use `permissive=True` for pymarc-compatible "skip bad records" behavior, or `recovery_mode` for mrrc's "salvage what you can" approach. Setting `permissive=True` without an explicit `recovery_mode` implicitly pairs it with `recovery_mode="strict"` so the pymarc-shape combo (inner raises, outer wrapper swallows) works without surprise.
+
+mrrc's Python default matches the pymarc / marc4j / libmarc convention: a fresh `mrrc.MARCReader(file)` iterates past per-record defects rather than aborting on the first one. The trade-off is real: permissive mode can hand you `None` for unsalvageable records, and per-record defects live on `record.errors` rather than raising. If you control the input and quality matters more than throughput, pass `recovery_mode="strict"` explicitly to make defects loud. See [A gentle case for choosing strict when feasible](../reference/error-handling.md#a-gentle-case-for-choosing-strict-when-feasible).
 
 ### Exception class names
 

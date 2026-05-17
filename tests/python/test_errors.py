@@ -576,7 +576,7 @@ class TestFfiTypedExceptions:
         # Truncate the record bytes mid-record
         truncated = full[: len(full) - 10]
 
-        reader = mrrc.MARCReader(io.BytesIO(truncated))
+        reader = mrrc.MARCReader(io.BytesIO(truncated), recovery_mode="strict")
         with pytest.raises(mrrc.EndOfRecordNotFound) as excinfo:
             list(reader)
         err = excinfo.value
@@ -708,7 +708,7 @@ class TestFfiTypedExceptions:
             + b" i 4500"
         )
         record = leader + directory + b"\x1e" + field_245 + b"\x1d"
-        reader = mrrc.MARCReader(io.BytesIO(record))
+        reader = mrrc.MARCReader(io.BytesIO(record), recovery_mode="strict")
         with pytest.raises(mrrc.MrrcException) as excinfo:
             list(reader)
         err = excinfo.value
@@ -738,7 +738,7 @@ class TestFfiTypedExceptions:
 
         full = _build_minimal_marc_record()
         truncated = full[: len(full) - 10]
-        reader = mrrc.MARCReader(io.BytesIO(truncated))
+        reader = mrrc.MARCReader(io.BytesIO(truncated), recovery_mode="strict")
         with pytest.raises(mrrc.MrrcException) as excinfo:
             list(reader)
         d = excinfo.value.to_dict()

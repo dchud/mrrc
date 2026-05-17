@@ -108,9 +108,16 @@ class TestPermissive:
     """Test permissive kwarg behavior (pymarc compatibility)."""
 
     def test_permissive_false_raises_on_bad_record(self):
-        """Default (permissive=False) should raise on malformed records."""
+        """``permissive=False`` paired with ``recovery_mode="strict"``
+        raises on malformed records. Strict mode is opt-in since the
+        wrapper's default ``recovery_mode`` flipped to ``"permissive"``
+        in 0.8.1 for pymarc-shape compatibility, so a test that wants
+        raise-on-malformation must say so explicitly.
+        """
         data = _build_two_record_stream(inject_bad_second=True)
-        reader = mrrc.MARCReader(io.BytesIO(data), permissive=False)
+        reader = mrrc.MARCReader(
+            io.BytesIO(data), permissive=False, recovery_mode="strict"
+        )
         # First record should be fine
         record = next(reader)
         assert record is not None

@@ -415,7 +415,7 @@ class MARCReader:
         self,
         file: Any,
         *,
-        recovery_mode: str = "strict",
+        recovery_mode: str = "permissive",
         validation_level: str = "structural",
         max_errors: Optional[int] = None,
     ) -> None: ...
@@ -507,7 +507,7 @@ class AuthorityMARCReader:
         self,
         file: Any,
         *,
-        recovery_mode: str = "strict",
+        recovery_mode: str = "permissive",
         validation_level: str = "structural",
     ) -> None: ...
     def __iter__(self) -> Iterator[AuthorityRecord]: ...
@@ -519,7 +519,7 @@ class HoldingsMARCReader:
         self,
         file: Any,
         *,
-        recovery_mode: str = "strict",
+        recovery_mode: str = "permissive",
         validation_level: str = "structural",
     ) -> None: ...
     def __iter__(self) -> Iterator[HoldingsRecord]: ...

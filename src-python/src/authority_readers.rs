@@ -39,11 +39,14 @@ impl PyAuthorityMARCReader {
     ///
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, bytes, or file-like object
-    /// * `recovery_mode` - Error handling mode: 'strict' (default), 'lenient', 'permissive'
+    /// * `recovery_mode` - Error handling mode: 'permissive' (default),
+    ///   'lenient', 'strict'. The Python user surface defaults to
+    ///   permissive for pymarc-shape parity; the Rust core defaults
+    ///   to strict for explicit-error-handling parity with Rust idiom.
     /// * `validation_level` - What counts as an error during parsing:
     ///   'structural' (default) or 'strict_marc'.
     #[new]
-    #[pyo3(signature = (source, recovery_mode = "strict", validation_level = "structural"))]
+    #[pyo3(signature = (source, recovery_mode = "permissive", validation_level = "structural"))]
     pub fn new(
         source: &Bound<'_, PyAny>,
         recovery_mode: &str,

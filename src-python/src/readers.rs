@@ -107,7 +107,10 @@ impl PyMARCReader {
     ///
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, bytes/bytearray, or file-like object
-    /// * `recovery_mode` - Error handling mode: 'strict' (default), 'lenient', 'permissive'
+    /// * `recovery_mode` - Error handling mode: 'permissive' (default),
+    ///   'lenient', 'strict'. The Python user surface defaults to
+    ///   permissive for pymarc-shape parity; the Rust core defaults
+    ///   to strict for explicit-error-handling parity with Rust idiom.
     /// * `validation_level` - What counts as an error during parsing:
     ///   'structural' (default) or 'strict_marc'. Orthogonal to
     ///   `recovery_mode`.
@@ -119,7 +122,7 @@ impl PyMARCReader {
     #[new]
     #[pyo3(signature = (
         source,
-        recovery_mode = "strict",
+        recovery_mode = "permissive",
         validation_level = "structural",
         max_errors = None,
     ))]
