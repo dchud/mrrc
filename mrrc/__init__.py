@@ -1432,8 +1432,8 @@ class MARCReader:
             Setting this flag implicitly defaults ``recovery_mode`` back to
             ``"strict"`` (pymarc-shape: inner raises, outer swallows) unless
             an explicit ``recovery_mode`` is passed.
-        recovery_mode: mrrc-native error handling. ``"permissive"`` (default
-            since 0.8.1, was ``"strict"`` in 0.8.0) accepts partial data and
+        recovery_mode: mrrc-native error handling. ``"permissive"`` (the
+            default for the Python user surface) accepts partial data and
             yields records with diagnostics attached on ``record.errors``;
             unsalvageable records yield as ``None``. ``"lenient"`` salvages
             valid fields and also attaches diagnostics on ``record.errors``.
@@ -1469,9 +1469,9 @@ class MARCReader:
         # who passes ``permissive=True`` (pymarc-shape) without naming a
         # recovery_mode gets the inner reader in strict so the outer
         # wrapper can swallow per pymarc semantics; everyone else gets
-        # the new 0.8.1 default of permissive. Explicit combinations
-        # that contradict (``permissive=True`` paired with a non-strict
-        # recovery_mode) still raise below.
+        # the permissive default. Explicit combinations that contradict
+        # (``permissive=True`` paired with a non-strict recovery_mode)
+        # still raise below.
         if recovery_mode is None:
             recovery_mode = "strict" if permissive else "permissive"
         if permissive and recovery_mode != "strict":

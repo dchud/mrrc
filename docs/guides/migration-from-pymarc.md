@@ -416,13 +416,13 @@ reader = mrrc.MARCReader('records.mrc', recovery_mode='permissive')
 ```
 
 Recovery modes:
-- `"permissive"` (default since 0.8.1) — yield records with diagnostics attached on `record.errors`; yield `None` for unsalvageable records
+- `"permissive"` (default for the Python user surface) — yield records with diagnostics attached on `record.errors`; yield `None` for unsalvageable records
 - `"lenient"` — same shape as permissive with a tighter recovery cap; salvages valid fields
 - `"strict"` — raise on any malformation
 
-Note: `permissive=True` and `recovery_mode` other than `"strict"` cannot be combined — they represent different error-handling strategies. Use `permissive=True` for pymarc-compatible "skip bad records" behavior, or `recovery_mode` for mrrc's "salvage what you can" approach. Setting `permissive=True` without an explicit `recovery_mode` implicitly pairs it with `recovery_mode="strict"` so the pymarc-shape combo (inner raises, outer wrapper swallows) keeps working unchanged.
+Note: `permissive=True` and `recovery_mode` other than `"strict"` cannot be combined — they represent different error-handling strategies. Use `permissive=True` for pymarc-compatible "skip bad records" behavior, or `recovery_mode` for mrrc's "salvage what you can" approach. Setting `permissive=True` without an explicit `recovery_mode` implicitly pairs it with `recovery_mode="strict"` so the pymarc-shape combo (inner raises, outer wrapper swallows) works without surprise.
 
-The default flipped from `"strict"` to `"permissive"` in 0.8.1 so a fresh `mrrc.MARCReader(file)` iterates past per-record defects rather than aborting on the first one — matching the pymarc / marc4j / libmarc convention. The trade-off is real: permissive mode can hand you `None` for unsalvageable records, and per-record defects live on `record.errors` rather than raising. If you control the input and quality matters more than throughput, pass `recovery_mode="strict"` explicitly to make defects loud. See [A gentle case for choosing strict when feasible](../reference/error-handling.md#a-gentle-case-for-choosing-strict-when-feasible).
+mrrc's Python default matches the pymarc / marc4j / libmarc convention: a fresh `mrrc.MARCReader(file)` iterates past per-record defects rather than aborting on the first one. The trade-off is real: permissive mode can hand you `None` for unsalvageable records, and per-record defects live on `record.errors` rather than raising. If you control the input and quality matters more than throughput, pass `recovery_mode="strict"` explicitly to make defects loud. See [A gentle case for choosing strict when feasible](../reference/error-handling.md#a-gentle-case-for-choosing-strict-when-feasible).
 
 ### Exception class names
 
