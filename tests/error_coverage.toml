@@ -85,6 +85,22 @@ expected_context = ["record_index", "byte_offset"]
 recovery_modes = ["strict"]
 wired = true
 
+# E001: leader bytes 0-4 parse but the resulting length is < 24 (the
+# leader alone is 24 bytes, so any smaller value is impossible).
+# Distinct production path from the non-digit case above: parsed via
+# Leader::validate_for_reading after Leader::from_bytes succeeds.
+[[case]]
+id = "e001_record_length_below_24"
+code = "E001"
+variant = "RecordLengthInvalid"
+slug = "record_length_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e001_record_length_below_24.bin"
+description = "Leader bytes 0-4 set to '00010' (decimal 10 < 24-byte minimum)."
+expected_context = ["record_index", "byte_offset"]
+recovery_modes = ["strict"]
+wired = true
+
 # E002: leader byte 10 (indicator count, normally '2') is non-digit.
 # Audit note: docs/reference/error-codes.md describes E002 as also
 # firing on malformations like "reserved bytes 20-23 not '4500'" or
@@ -122,6 +138,159 @@ recovery_modes = ["strict"]
 validation_level = "strict_marc"
 wired = true
 
+# E002 (semantic) — leader byte 6 (type of record) outside MARC 21
+# allowed set.
+[[case]]
+id = "e002_invalid_record_type"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_invalid_record_type.bin"
+description = "Leader byte 6 (type of record) is 'q' (not in the documented set)."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (semantic) — leader byte 7 (bibliographic level) outside
+# {a, b, c, d, i, m, s}.
+[[case]]
+id = "e002_invalid_bibliographic_level"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_invalid_bibliographic_level.bin"
+description = "Leader byte 7 (bibliographic level) is 'q' (not in {a, b, c, d, i, m, s})."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (semantic) — leader byte 8 (control record type) outside
+# {' ', 'a'}.
+[[case]]
+id = "e002_invalid_control_record_type"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_invalid_control_record_type.bin"
+description = "Leader byte 8 (control record type) is 'q' (not in {' ', 'a'})."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (semantic) — leader byte 9 (character coding) outside {' ', 'a'}.
+[[case]]
+id = "e002_invalid_character_coding"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_invalid_character_coding.bin"
+description = "Leader byte 9 (character coding) is 'q' (not in {' ', 'a'})."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (semantic) — leader byte 10 (indicator count) is a byte-valid
+# digit but != 2 (MARC 21 requires exactly 2). Distinct from the
+# structural e002_indicator_count_non_digit case, which fails the
+# digit check in Leader::from_bytes.
+[[case]]
+id = "e002_indicator_count_not_two"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_indicator_count_not_two.bin"
+description = "Leader byte 10 (indicator count) is '3' (digit but MARC 21 requires 2)."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (semantic) — leader byte 11 (subfield code count) is a
+# byte-valid digit but != 2.
+[[case]]
+id = "e002_subfield_code_count_not_two"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_subfield_code_count_not_two.bin"
+description = "Leader byte 11 (subfield code count) is '3' (digit but MARC 21 requires 2)."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (semantic) — leader byte 17 (encoding level) outside the MARC 21
+# allowed set.
+[[case]]
+id = "e002_invalid_encoding_level"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_invalid_encoding_level.bin"
+description = "Leader byte 17 (encoding level) is 'q' (not in {' ', 1-5, 7, 8, u, z})."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (semantic) — leader byte 18 (cataloging form) outside
+# {' ', a, c, i, n, u}.
+[[case]]
+id = "e002_invalid_cataloging_form"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_invalid_cataloging_form.bin"
+description = "Leader byte 18 (cataloging form) is 'q' (not in {' ', a, c, i, n, u})."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (semantic) — leader byte 19 (multipart level) outside
+# {' ', a, b, c}.
+[[case]]
+id = "e002_invalid_multipart_level"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e002_invalid_multipart_level.bin"
+description = "Leader byte 19 (multipart level) is 'q' (not in {' ', a, b, c})."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "bytes_near"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E002 (defensive) — data_base_address > 99999. Unreachable from any
+# 5-digit-ASCII-parsed leader (max value 99999), but reachable via
+# programmatic Leader construction (public struct, public fields).
+# The defensive check at record_validation.rs:91-96 guards against
+# this constructed state and is exercised here by building a Leader
+# with the bad value and invoking RecordStructureValidator directly.
+[[case]]
+id = "e002_data_base_address_overflow_programmatic"
+code = "E002"
+variant = "InvalidLeader"
+slug = "leader_invalid"
+trigger_kind = "programmatic_validator"
+description = "Construct Leader with data_base_address = 100_000 and invoke RecordStructureValidator::validate_leader directly."
+expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
 # E003: leader bytes 12-16 not five ASCII digits.
 [[case]]
 id = "e003_base_address_non_digit"
@@ -131,6 +300,22 @@ slug = "base_address_invalid"
 trigger_kind = "parse_iso2709"
 trigger_fixture = "tests/data/error_fixtures/e003_base_address_non_digit.bin"
 description = "Leader byte 12 ('0' of base address '00061') replaced with 'X'."
+expected_context = ["record_index", "byte_offset"]
+recovery_modes = ["strict"]
+wired = true
+
+# E003: leader bytes 12-16 parse but the resulting base address is
+# < 24 (the leader alone is 24 bytes). Distinct production path from
+# the non-digit case above: parsed via Leader::validate_for_reading
+# after Leader::from_bytes succeeds.
+[[case]]
+id = "e003_base_address_below_24"
+code = "E003"
+variant = "BaseAddressInvalid"
+slug = "base_address_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e003_base_address_below_24.bin"
+description = "Leader bytes 12-16 set to '00020' (decimal 20 < 24-byte leader minimum)."
 expected_context = ["record_index", "byte_offset"]
 recovery_modes = ["strict"]
 wired = true
@@ -249,6 +434,22 @@ expected_context = ["record_index", "byte_offset", "record_byte_offset"]
 recovery_modes = ["strict"]
 wired = true
 
+# E101: directory entry start-position byte is non-digit. Distinct
+# production path from non_digit_length (mutates the length field's
+# bytes 3-6 of the entry) — this mutates the start-position field's
+# bytes 7-11 of the entry. Different code branch in the directory walker.
+[[case]]
+id = "e101_non_digit_start"
+code = "E101"
+variant = "DirectoryInvalid"
+slug = "directory_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e101_directory_non_digit_start.bin"
+description = "Directory entry 1 start-position byte 7 of 11 set to 'X' (first byte of the 5-byte start field)."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "field_tag"]
+recovery_modes = ["strict"]
+wired = true
+
 # E105: accessor lookup for a tag the record does not contain.
 [[case]]
 id = "e105_field_not_found"
@@ -274,6 +475,43 @@ description = "Directory entry for tag 100 claims length '9999' (was '0025'); de
 expected_context = ["record_index", "byte_offset", "record_byte_offset", "field_tag"]
 recovery_modes = ["strict"]
 wired = true
+
+# E106: byte after data-field indicators is not the subfield delimiter.
+# Bibliographic reader (SubfieldStructureMode::Strict) fires this in
+# parse_subfields; authority and holdings tolerate the same byte under
+# SubfieldStructureMode::Permissive.
+[[case]]
+id = "e106_expected_subfield_delimiter"
+code = "E106"
+variant = "InvalidField"
+slug = "invalid_field"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e106_expected_subfield_delimiter.bin"
+description = "Byte 63 (first subfield delimiter 0x1F of the 100 field) replaced with 'X'."
+expected_context = ["record_index", "byte_offset", "record_byte_offset", "field_tag"]
+recovery_modes = ["strict"]
+wired = true
+
+# E106 authority field-too-short: the documented per-reader minimum
+# guard ("authority returns Err when field_bytes.len() < 2") should
+# fire from AuthorityMarcReader when a data field is below the
+# 2-byte indicator minimum. A trial fixture mutating a directory
+# entry's length to '0001' did not trip the check, suggesting the
+# guard has gating different from what the comment claims. Filed as
+# a milestone-wide-review (#204) finding; until resolved, this
+# per-trigger entry stays unwired to preserve the audit trail.
+[[case]]
+id = "e106_authority_field_too_short"
+code = "E106"
+variant = "InvalidField"
+slug = "invalid_field"
+trigger_kind = "parse_authority"
+trigger_fixture = "tests/data/error_fixtures/e106_authority_field_too_short.bin"
+description = "Authority record's second directory entry length set to '0001' (1 byte; below 2-byte indicator minimum)."
+expected_context = ["record_index", "byte_offset"]
+recovery_modes = ["strict"]
+wired = false
+skip_reason = "Trial fixture (length='0001') did not trip the documented authority field-length guard; the guard's actual gating differs from the iso2709_skeleton.rs:121-122 comment. Investigate as part of #204 (milestone-wide review)."
 
 # === Subfield / indicator (E2xx) ====================================
 
@@ -359,9 +597,51 @@ recovery_modes = ["strict"]
 validation_level = "strict_marc"
 wired = true
 
+# E301: bibliographic CONTROL field invalid UTF-8 (distinct production
+# path from the subfield case above — fires from
+# iso2709_skeleton.rs's control-field reader at strict_marc, not from
+# parse_subfields).
+[[case]]
+id = "e301_invalid_utf8_in_control_field"
+code = "E301"
+variant = "EncodingError"
+slug = "utf8_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e301_invalid_utf8_in_control_field.bin"
+description = "Byte 49 (first byte of 008 control field in with_control_fields.mrc) replaced with 0xFF."
+expected_context = ["record_index"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E301 authority CONTROL field invalid UTF-8: blocked on a
+# cross-reader-type validation issue — RecordStructureValidator's
+# bibliographic-only leader rules (record_validation.rs) are applied
+# to authority records when validation_level=strict_marc, intercepting
+# the parse with an InvalidLeader (E002) before the control field's
+# UTF-8 check can fire. Filed as a milestone-wide-review (#204)
+# finding; until resolved, this per-trigger entry stays unwired to
+# preserve the audit trail.
+[[case]]
+id = "e301_invalid_utf8_in_authority_control_field"
+code = "E301"
+variant = "EncodingError"
+slug = "utf8_invalid"
+trigger_kind = "parse_authority"
+trigger_fixture = "tests/data/error_fixtures/e301_invalid_utf8_in_authority_control_field.bin"
+description = "Byte 73 (first byte of first control field in simple_authority.mrc) replaced with 0xFF."
+expected_context = ["record_index"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = false
+skip_reason = "RecordStructureValidator's bibliographic-only leader rules intercept authority records at strict_marc level, raising E002 InvalidLeader before the UTF-8 check fires. Cross-reader-type validation bug; investigate as part of #204."
+
 # === Serialization (E4xx) ===========================================
 
-# E401: malformed MARCXML (mismatched closing tag).
+# E401: malformed MARCXML (mismatched closing tag). Triggers
+# marcxml.rs's read_event_into wrapping at line 157/252/454/497 —
+# the closing-tag mismatch fires at the read_event_into call active
+# when the bad tag is consumed.
 [[case]]
 id = "e401_marcxml_close_tag_mismatch"
 code = "E401"
@@ -370,6 +650,52 @@ slug = "marcxml_invalid"
 trigger_kind = "parse_marcxml"
 trigger_fixture = "tests/data/error_fixtures/e401_malformed_marcxml.xml"
 description = "Subfield 'a' closing tag is </WRONG> instead of </subfield>."
+expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
+# E401: input is well-formed XML but contains no <record> element.
+# Triggers marcxml.rs:458 (Custom error after the outer event loop
+# exhausts without finding a <record> Start event).
+[[case]]
+id = "e401_no_record_element"
+code = "E401"
+variant = "XmlError"
+slug = "marcxml_invalid"
+trigger_kind = "parse_marcxml"
+trigger_fixture = "tests/data/error_fixtures/e401_no_record_element.xml"
+description = "Well-formed XML wrapper with no <record> element inside."
+expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
+# E401: invalid numeric character reference in subfield text. Triggers
+# marcxml.rs:278 (resolve_char_ref returns Err for out-of-range
+# values like &#xFFFFFFF;).
+[[case]]
+id = "e401_bad_char_reference"
+code = "E401"
+variant = "XmlError"
+slug = "marcxml_invalid"
+trigger_kind = "parse_marcxml"
+trigger_fixture = "tests/data/error_fixtures/e401_bad_char_reference.xml"
+description = "Subfield 'a' text contains &#xFFFFFFF; (overflowing character reference)."
+expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
+# E401: input truncated mid-subfield (file ends inside <subfield>
+# before any closing tag). Triggers marcxml.rs:301 (Custom error
+# "unexpected EOF inside <subfield>" from read_leaf_text's EOF
+# handler).
+[[case]]
+id = "e401_unexpected_eof_in_subfield"
+code = "E401"
+variant = "XmlError"
+slug = "marcxml_invalid"
+trigger_kind = "parse_marcxml"
+trigger_fixture = "tests/data/error_fixtures/e401_unexpected_eof_in_subfield.xml"
+description = "XML truncated mid-text inside <subfield>; no closing tag."
 expected_context = []
 recovery_modes = ["strict"]
 wired = true
@@ -430,5 +756,22 @@ slug = "record_too_large_for_iso2709"
 trigger_kind = "writer"
 description = "Call MarcWriter::finish(), then attempt another write_record on the same writer."
 expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
+# E404 (defensive) — check_iso2709_size's base_address > 99999 guard.
+# Unreachable from the writer's normal control flow (base_address <=
+# record_length, so the record_length > 99999 check fires first), but
+# reachable via direct invocation of the public helper. Exercised here
+# by calling check_iso2709_size with record_length=1 and
+# base_address=100_000, isolating the base_address branch.
+[[case]]
+id = "e404_check_iso2709_size_base_address_overflow_programmatic"
+code = "E404"
+variant = "WriterError"
+slug = "record_too_large_for_iso2709"
+trigger_kind = "programmatic_writer_check"
+description = "Call iso2709::check_iso2709_size(record_length=1, base_address=100_000) directly to exercise the base_address > 99999 defensive branch."
+expected_context = ["record_index"]
 recovery_modes = ["strict"]
 wired = true
