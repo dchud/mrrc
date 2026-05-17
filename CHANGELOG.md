@@ -86,6 +86,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- v0.8.0→v0.8.1 cumulative parser hot-path cost on
+  `parse_10k_clean_strict` is +0.50% — well inside the 2% / 5% budget the
+  error-handling epic set. The internal cumulative-budget perf-gate CI
+  workflow added during the epic has served its purpose and is retired;
+  Codspeed remains for general perf tracking and `cargo bench --bench
+  error_handling_benchmarks` still runs the scenarios locally.
 - Python `MARCReader` / `AuthorityMARCReader` / `HoldingsMARCReader`
   now default to `recovery_mode="permissive"` (was `"strict"`).
   Matches the pymarc / marc4j / libmarc convention so a fresh
