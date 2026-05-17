@@ -86,6 +86,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Leader errors fired from the MARCXML, JSON, and marcjson readers now
+  carry `record_index` — previously they propagated with stripped
+  positional context. For multi-record collections (`xml_to_records`),
+  `record_index` identifies which record in the stream had the bad
+  leader. For single-record APIs (`xml_to_record`, `json_to_record`,
+  `marcjson_to_record`), `record_index` is `1`. Affects `E001`
+  (`RecordLengthInvalid`), `E002` (`InvalidLeader`), `E003`
+  (`BaseAddressInvalid`), and `E004` (`BaseAddressNotFound`) from these
+  reader paths. The ISO 2709 path was already enriched.
 - v0.8.0→v0.8.1 cumulative parser hot-path cost on
   `parse_10k_clean_strict` is +0.50% — well inside the 2% / 5% budget the
   error-handling epic set. The internal cumulative-budget perf-gate CI

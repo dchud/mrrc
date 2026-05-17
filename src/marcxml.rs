@@ -441,7 +441,7 @@ pub fn record_to_marcxml(record: &Record) -> Result<String> {
 ///
 /// Returns an error if the XML is invalid or missing required elements.
 pub fn marcxml_to_record(xml: &str) -> Result<Record> {
-    let ctx = ParseContext::new();
+    let mut ctx = ParseContext::new();
     let cleaned = strip_marcxml_ns(xml);
     let mut reader = quick_xml::reader::Reader::from_str(&cleaned);
 
@@ -463,8 +463,9 @@ pub fn marcxml_to_record(xml: &str) -> Result<Record> {
         }
     }
 
+    ctx.begin_record();
     let xml_record = read_marcxml_record(&mut reader, &ctx)?;
-    marcxml_record_to_record(xml_record)
+    marcxml_record_to_record(xml_record).map_err(|e| e.with_position(&ctx))
 }
 
 /// Convert a MARCXML `<collection>` string to multiple MARC records.
@@ -484,7 +485,7 @@ pub fn marcxml_to_record(xml: &str) -> Result<Record> {
 ///
 /// Returns an error if the XML is invalid or cannot be parsed.
 pub fn marcxml_to_records(xml: &str) -> Result<Vec<Record>> {
-    let ctx = ParseContext::new();
+    let mut ctx = ParseContext::new();
     let cleaned = strip_marcxml_ns(xml);
     let mut reader = quick_xml::reader::Reader::from_str(&cleaned);
 
@@ -497,8 +498,10 @@ pub fn marcxml_to_records(xml: &str) -> Result<Vec<Record>> {
             .map_err(|e| ctx.err_xml(e))?
         {
             Event::Start(ref e) if e.name().into_inner() == b"record" => {
+                ctx.begin_record();
                 let xml_record = read_marcxml_record(&mut reader, &ctx)?;
-                records.push(marcxml_record_to_record(xml_record)?);
+                records
+                    .push(marcxml_record_to_record(xml_record).map_err(|e| e.with_position(&ctx))?);
             },
             Event::Eof => return Ok(records),
             _ => {},
@@ -834,5 +837,54 @@ mod tests {
         assert_eq!(subjects.len(), 2);
         assert_eq!(subjects[0].get_subfield('a'), Some("Computer programming."));
         assert_eq!(subjects[1].get_subfield('a'), Some("Computer algorithms."));
+    }
+
+    // A leader byte 10 (indicator count, normally '2') of 'X' trips
+    // `MarcError::InvalidLeader` (E002) at `Leader::from_bytes`.
+    fn xml_record_with_bad_leader(seq: u32) -> String {
+        format!(
+            r#"<record>
+                <leader>00150nam aX2200061   4500</leader>
+                <controlfield tag="001">bad-{seq:03}</controlfield>
+            </record>"#
+        )
+    }
+
+    fn xml_record_ok(seq: u32) -> String {
+        format!(
+            r#"<record>
+                <leader>00150nam a2200061   4500</leader>
+                <controlfield tag="001">ok-{seq:03}</controlfield>
+            </record>"#
+        )
+    }
+
+    #[test]
+    fn marcxml_to_record_leader_error_carries_record_index() {
+        let xml = xml_record_with_bad_leader(1);
+        let err = marcxml_to_record(&xml).unwrap_err();
+        match err {
+            MarcError::InvalidLeader { record_index, .. } => {
+                assert_eq!(record_index, Some(1));
+            },
+            other => panic!("expected InvalidLeader, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn marcxml_to_records_leader_error_identifies_failing_record() {
+        let xml = format!(
+            "<collection>{}{}{}</collection>",
+            xml_record_ok(1),
+            xml_record_ok(2),
+            xml_record_with_bad_leader(3),
+        );
+        let err = marcxml_to_records(&xml).unwrap_err();
+        match err {
+            MarcError::InvalidLeader { record_index, .. } => {
+                assert_eq!(record_index, Some(3));
+            },
+            other => panic!("expected InvalidLeader, got {other:?}"),
+        }
     }
 }

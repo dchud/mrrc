@@ -844,3 +844,44 @@ class TestFailingReadRaisesOSError:
             list(reader)
         assert not isinstance(excinfo.value, mrrc.MrrcException)
         assert "synthetic read failure" in str(excinfo.value)
+
+
+# Leader byte 10 (indicator count, normally '2') replaced with 'X' trips
+# RecordLeaderInvalid (E002). Used across the three non-binary reader
+# regression tests below.
+_BAD_LEADER = "00150nam aX2200061   4500"
+_OK_LEADER = "00150nam a2200061   4500"
+
+
+class TestNonBinaryReaderLeaderErrorPositionalContext:
+    """Leader errors fired from MARCXML / JSON / marcjson readers must
+    carry ``record_index`` so users of multi-record streams can identify
+    which record failed. Before bd-0x73.21.2 these paths used bare ``?``
+    propagation, surfacing the error with ``record_index=None``.
+    """
+
+    def test_xml_to_record_bad_leader_carries_record_index(self):
+        xml = f'<record><leader>{_BAD_LEADER}</leader><controlfield tag="001">bad</controlfield></record>'
+        with pytest.raises(mrrc.RecordLeaderInvalid) as excinfo:
+            mrrc.xml_to_record(xml)
+        assert excinfo.value.record_index == 1
+
+    def test_xml_to_records_bad_leader_identifies_failing_record(self):
+        good = f'<record><leader>{_OK_LEADER}</leader><controlfield tag="001">ok</controlfield></record>'
+        bad = f'<record><leader>{_BAD_LEADER}</leader><controlfield tag="001">bad</controlfield></record>'
+        xml = f"<collection>{good}{good}{bad}</collection>"
+        with pytest.raises(mrrc.RecordLeaderInvalid) as excinfo:
+            mrrc.xml_to_records(xml)
+        assert excinfo.value.record_index == 3
+
+    def test_json_to_record_bad_leader_carries_record_index(self):
+        bad_json = f'[{{"leader": "{_BAD_LEADER}"}}, {{"001": "001-value"}}]'
+        with pytest.raises(mrrc.RecordLeaderInvalid) as excinfo:
+            mrrc.json_to_record(bad_json)
+        assert excinfo.value.record_index == 1
+
+    def test_marcjson_to_record_bad_leader_carries_record_index(self):
+        bad_json = f'[{{"leader": "{_BAD_LEADER}"}}, {{"001": "001-value"}}]'
+        with pytest.raises(mrrc.RecordLeaderInvalid) as excinfo:
+            mrrc.marcjson_to_record(bad_json)
+        assert excinfo.value.record_index == 1

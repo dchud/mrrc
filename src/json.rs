@@ -116,7 +116,11 @@ pub fn record_to_json(record: &Record) -> Result<Value> {
 /// Returns an error if the JSON is invalid or missing required fields.
 pub fn json_to_record(json: &Value) -> Result<Record> {
     use crate::error::MarcError;
+    use crate::iso2709::ParseContext;
     use crate::leader::Leader;
+
+    let mut ctx = ParseContext::new();
+    ctx.begin_record();
 
     let array = json
         .as_array()
@@ -136,7 +140,7 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| MarcError::invalid_field_msg("Missing leader field".to_string()))?;
 
-    let leader = Leader::from_bytes(leader_str.as_bytes())?;
+    let leader = Leader::from_bytes(leader_str.as_bytes()).map_err(|e| e.with_position(&ctx))?;
     let mut record = Record::new(leader);
 
     // Process remaining fields
@@ -286,5 +290,22 @@ mod tests {
 
         let fields = restored.get_fields("650").unwrap();
         assert_eq!(fields.len(), 3);
+    }
+
+    #[test]
+    fn json_to_record_leader_error_carries_record_index() {
+        // Leader byte 10 (indicator count, normally '2') of 'X' trips
+        // `MarcError::InvalidLeader` (E002).
+        let bad = serde_json::json!([
+            { "leader": "00150nam aX2200061   4500" },
+            { "001": "001-value" }
+        ]);
+        let err = json_to_record(&bad).unwrap_err();
+        match err {
+            crate::error::MarcError::InvalidLeader { record_index, .. } => {
+                assert_eq!(record_index, Some(1));
+            },
+            other => panic!("expected InvalidLeader, got {other:?}"),
+        }
     }
 }
