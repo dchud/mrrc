@@ -8,8 +8,8 @@
 //!
 //! * `parse_10k_clean_strict` — happy path. No malformations, strict
 //!   recovery. The number every user pays. Regressions here are the
-//!   most consequential and the primary thing the cumulative perf
-//!   budget protects against.
+//!   most consequential and should be assessed before landing
+//!   hot-path changes.
 //!
 //! * `parse_10k_bad_indicators_lenient` — every record's first
 //!   indicator on field 245 is mutated to a non-digit/non-space byte.
@@ -29,9 +29,9 @@
 //! scenario is added once `with_max_errors` is configurable per
 //! benchmark and the per-record-diagnostic surface is in place.
 //!
-//! Baseline numbers for the cumulative perf budget are captured on
-//! stable hardware and stored in
-//! `benches/baselines/error_handling_v080.json`.
+//! Run with `cargo bench --bench error_handling_benchmarks` for local
+//! profiling. Codspeed exercises the same scenarios in CI for general
+//! drift awareness.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use mrrc::{MarcReader, RecoveryMode};
