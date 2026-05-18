@@ -225,6 +225,26 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
             f"{case['id']}: trigger_kind=writer case has no harness "
             "branch; add one in test_error_coverage.py"
         )
+    elif kind == "parse_holdings":
+        pytest.skip(
+            "trigger_kind=parse_holdings exercises HoldingsMarcReader; the "
+            "Python harness's typed-error assertion is the same shape as "
+            "parse_iso2709, but plumbing it through HoldingsMarcReader "
+            "requires Python bindings that don't yet route the typed "
+            "Rust error consistently. Asserted in the Rust harness."
+        )
+    elif kind == "parse_authority":
+        pytest.skip(
+            "trigger_kind=parse_authority exercises AuthorityMarcReader; "
+            "same Python-binding gap as parse_holdings. Asserted in the "
+            "Rust harness."
+        )
+    elif kind in ("programmatic_validator", "programmatic_writer_check"):
+        pytest.skip(
+            f"trigger_kind={kind} exercises a Rust API directly with "
+            "constructed state and has no Python wrapper analog. Asserted "
+            "in the Rust harness."
+        )
     else:
         pytest.fail(f"{case['id']}: unknown trigger_kind {kind!r}")
 

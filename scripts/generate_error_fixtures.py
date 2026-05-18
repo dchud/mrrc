@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+"""Generate error-coverage fixtures by mutating a known-valid base record.
+
+Each binary fixture under `tests/data/error_fixtures/` is a deliberate
+mutation of `tests/data/simple_book.mrc` (or a small constructed record)
+that exercises exactly one production error-firing path. Producing them
+from a single source-of-truth here keeps the mutation rationale
+inspectable and the bytes reproducible.
+
+Existing fixtures (hand-crafted before this script existed) are NOT
+overwritten unless `--regenerate-existing` is passed; the script only
+writes files that don't yet exist. The mutation rules for every fixture
+in `tests/error_coverage.toml` are listed below regardless, so this
+script can roundtrip the entire set on demand.
+
+Run from repo root:
+
+    uv run python scripts/generate_error_fixtures.py [--regenerate-existing]
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+BASE_RECORD_PATH = REPO_ROOT / "tests" / "data" / "simple_book.mrc"
+OUT_DIR = REPO_ROOT / "tests" / "data" / "error_fixtures"
+
+
+def mutate(base: bytes, position: int, replacement: bytes) -> bytes:
+    """Replace bytes in `base` at `position` with `replacement`."""
+    return base[:position] + replacement + base[position + len(replacement):]
+
+
+def truncate(base: bytes, length: int) -> bytes:
+    """Take only the first `length` bytes."""
+    return base[:length]
+
+
+# Each entry: (filename, description, mutated-bytes). The convention is
+# that a fixture's leading `eNNN_` segment names the error code it
+# triggers, matching the `id` of a `[[case]]` in tests/error_coverage.toml
+# (e.g., `e002_invalid_record_type.bin` is the fixture for case id
+# `e002_invalid_record_type`). The build_fixtures loop below is generic
+# over filenames — no prefix is special-cased — so a future contributor
+# adding `e3xx_`, `e4xx_`, or other prefixes can extend this list freely.
+#
+# Some fixtures live outside this script: hand-crafted text fixtures for
+# the XML/JSON readers, hand-crafted binary fixtures predating this
+# script, inline-generated binary fixtures that need a base record other
+# than simple_book.mrc, and programmatically-constructed-in-the-harness
+# cases that have no fixture file.
+def build_fixtures(base: bytes) -> list[tuple[str, str, bytes]]:
+    return [
+        # ----- E001 ---------------------------------------------------------
+        (
+            "e001_record_length_non_digit.bin",
+            "Leader byte 0 ('0' of '00150') replaced with 'X'. Trips "
+            "Leader::from_bytes structural parse via parse_digits.",
+            mutate(base, 0, b"X"),
+        ),
+        (
+            "e001_record_length_below_24.bin",
+            "Leader bytes 0-4 set to '00010' (decimal 10 < 24-byte minimum). "
+            "Leader parses cleanly; validate_for_reading then fires E001.",
+            mutate(base, 0, b"00010"),
+        ),
+        # ----- E002 (structural) --------------------------------------------
+        (
+            "e002_indicator_count_non_digit.bin",
+            "Leader byte 10 (indicator count, normally '2') replaced with 'X'. "
+            "Trips Leader::from_bytes via the indicator-count digit check.",
+            mutate(base, 10, b"X"),
+        ),
+        # ----- E002 (semantic rules at validation_level=strict_marc) --------
+        (
+            "e002_invalid_record_status.bin",
+            "Leader byte 5 (record status) is 'x' (not in {a, c, d, n, p}).",
+            mutate(base, 5, b"x"),
+        ),
+        (
+            "e002_invalid_record_type.bin",
+            "Leader byte 6 (type of record) is 'q' (not in the documented set).",
+            mutate(base, 6, b"q"),
+        ),
+        (
+            "e002_invalid_bibliographic_level.bin",
+            "Leader byte 7 (bibliographic level) is 'q' "
+            "(not in {a, b, c, d, i, m, s}).",
+            mutate(base, 7, b"q"),
+        ),
+        (
+            "e002_invalid_control_record_type.bin",
+            "Leader byte 8 (control record type) is 'q' (not in {' ', 'a'}).",
+            mutate(base, 8, b"q"),
+        ),
+        (
+            "e002_invalid_character_coding.bin",
+            "Leader byte 9 (character coding) is 'q' (not in {' ', 'a'}).",
+            mutate(base, 9, b"q"),
+        ),
+        (
+            "e002_indicator_count_not_two.bin",
+            "Leader byte 10 (indicator count) is '3' (byte-valid digit but "
+            "MARC 21 requires exactly 2). Distinct from the structural "
+            "non-digit case (e002_indicator_count_non_digit).",
+            mutate(base, 10, b"3"),
+        ),
+        (
+            "e002_subfield_code_count_not_two.bin",
+            "Leader byte 11 (subfield code count) is '3' (byte-valid digit "
+            "but MARC 21 requires exactly 2).",
+            mutate(base, 11, b"3"),
+        ),
+        (
+            "e002_invalid_encoding_level.bin",
+            "Leader byte 17 (encoding level) is 'q' "
+            "(not in {' ', 1-5, 7, 8, u, z}).",
+            mutate(base, 17, b"q"),
+        ),
+        (
+            "e002_invalid_cataloging_form.bin",
+            "Leader byte 18 (cataloging form) is 'q' "
+            "(not in {' ', a, c, i, n, u}).",
+            mutate(base, 18, b"q"),
+        ),
+        (
+            "e002_invalid_multipart_level.bin",
+            "Leader byte 19 (multipart level) is 'q' (not in {' ', a, b, c}).",
+            mutate(base, 19, b"q"),
+        ),
+        # ----- E003 ---------------------------------------------------------
+        (
+            "e003_base_address_non_digit.bin",
+            "Leader byte 12 ('0' of base address '00061') replaced with 'X'. "
+            "Trips Leader::from_bytes structural parse.",
+            mutate(base, 12, b"X"),
+        ),
+        (
+            "e003_base_address_below_24.bin",
+            "Leader bytes 12-16 set to '00020' (decimal 20 < 24-byte leader "
+            "minimum). Leader parses; validate_for_reading then fires E003.",
+            mutate(base, 12, b"00020"),
+        ),
+        # ----- E004 ---------------------------------------------------------
+        (
+            "e004_base_address_past_record.bin",
+            "Leader bytes 12-16 set to '99999' (> 150-byte record length).",
+            mutate(base, 12, b"99999"),
+        ),
+        # ----- E005 (existing — strict short-read) --------------------------
+        (
+            "e005_truncated_record.bin",
+            "Record claims 150 bytes; stream ends after 100. "
+            "Strict mode raises immediately from read_record_data.",
+            truncate(base, 100),
+        ),
+        # ----- E006 ---------------------------------------------------------
+        # Replace the trailing 0x1D RECORD_TERMINATOR (byte 149) with 0x00.
+        (
+            "e006_no_record_terminator.bin",
+            "Final byte (0x1D RECORD_TERMINATOR) replaced with 0x00.",
+            mutate(base, 149, b"\x00"),
+        ),
+        # ----- E101 ---------------------------------------------------------
+        # Directory layout in simple_book.mrc: bytes 24-59 hold three 12-byte
+        # entries (001/245/650), byte 60 is the directory's FIELD_TERMINATOR.
+        (
+            "e101_directory_no_terminator.bin",
+            "Byte 60 (FIELD_TERMINATOR 0x1E ending the directory) replaced "
+            "with '0', producing a partial trailing entry.",
+            mutate(base, 60, b"0"),
+        ),
+        (
+            "e101_directory_non_digit_length.bin",
+            "Directory entry length field 'X025' (was '0025') for the 100 "
+            "entry. Trips non-digit length check in directory walker.",
+            mutate(base, 30, b"X"),
+        ),
+        (
+            "e101_directory_non_digit_start.bin",
+            "Directory entry start-position byte 31 set to 'X' (first byte "
+            "of the 5-byte start field). Trips non-digit start check.",
+            mutate(base, 31, b"X"),
+        ),
+        (
+            "e101_non_ascii_tag.bin",
+            "Directory entry tag byte 24 set to 0xC3 (non-ASCII). "
+            "Trips the tag-byte ASCII check in the directory walker.",
+            mutate(base, 24, b"\xC3"),
+        ),
+        # ----- E106 ---------------------------------------------------------
+        (
+            "e106_field_length_past_data.bin",
+            "Directory entry for tag 100 claims length '9999' (was '0025'); "
+            "declared field bytes extend past the data area.",
+            mutate(base, 27, b"9999"),
+        ),
+        (
+            "e106_expected_subfield_delimiter.bin",
+            "Byte 63 (subfield delimiter 0x1F for the first subfield of "
+            "the 100 field) replaced with 'X'. Bibliographic reader "
+            "(SubfieldStructureMode::Strict) fires E106 when the byte "
+            "after the indicators is not a subfield delimiter.",
+            mutate(base, 63, b"X"),
+        ),
+    ]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--regenerate-existing",
+        action="store_true",
+        help="Overwrite fixtures that already exist on disk.",
+    )
+    args = parser.parse_args()
+
+    if not BASE_RECORD_PATH.exists():
+        print(f"ERROR: base record missing: {BASE_RECORD_PATH}", file=sys.stderr)
+        return 1
+
+    base = BASE_RECORD_PATH.read_bytes()
+    if len(base) != 150:
+        print(f"ERROR: base must be 150 bytes, got {len(base)}", file=sys.stderr)
+        return 1
+    if base[5:10] != b"nam a":
+        print(
+            f"ERROR: base leader signature mismatch (got {base[:10]!r}); "
+            "the mutation byte offsets in this script assume the documented "
+            "simple_book.mrc shape.",
+            file=sys.stderr,
+        )
+        return 1
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    fixtures = build_fixtures(base)
+
+    written = 0
+    skipped = 0
+    for name, description, data in fixtures:
+        path = OUT_DIR / name
+        if path.exists() and not args.regenerate_existing:
+            skipped += 1
+            continue
+        path.write_bytes(data)
+        written += 1
+        print(f"  wrote {name} ({len(data)} bytes) — {description.splitlines()[0]}")
+
+    print(f"\nDone. wrote={written}, skipped={skipped} (use --regenerate-existing to overwrite).")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

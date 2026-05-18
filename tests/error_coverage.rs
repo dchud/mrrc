@@ -18,6 +18,13 @@
 //! Currently supported `trigger_kind` values:
 //!   * `parse_iso2709` — feed bytes to [`MarcReader`](mrrc::MarcReader)
 //!     in strict mode and capture the first error
+//!   * `parse_holdings` — feed bytes to
+//!     [`HoldingsMarcReader`](mrrc::HoldingsMarcReader) in strict mode
+//!     and capture the first error (for holdings-reader-only fire sites)
+//!   * `parse_authority` — feed bytes to
+//!     [`AuthorityMarcReader`](mrrc::AuthorityMarcReader) in strict
+//!     mode and capture the first error (for authority-reader-only
+//!     fire sites)
 //!   * `parse_marcxml` — feed UTF-8 text to
 //!     [`mrrc::marcxml::marcxml_to_record`] and capture the error
 //!   * `accessor` — parse the fixture cleanly, then call a hard-coded
@@ -37,6 +44,18 @@
 //!     [`MarcWriter::write_record`](mrrc::MarcWriter::write_record),
 //!     capturing the resulting
 //!     [`MarcError::WriterError`](mrrc::MarcError)
+//!   * `programmatic_validator` — construct constrained `Leader` /
+//!     `Record` state programmatically and invoke
+//!     [`RecordStructureValidator`](mrrc::RecordStructureValidator)
+//!     directly. Used to exercise defensive checks guarding values
+//!     that the byte-parse path cannot produce (e.g.,
+//!     `data_base_address > 99999` from a 5-digit ASCII field).
+//!   * `programmatic_writer_check` — invoke
+//!     [`mrrc::iso2709::check_iso2709_size`] directly with crafted
+//!     arguments. Used to exercise defensive branches in the writer's
+//!     size-check helper that the writer's normal control flow does
+//!     not reach (e.g., `base_address > 99999` while `record_length
+//!     ≤ 99999`).
 //!
 //! The remaining kind (`parse_marcjson`) skips with a per-kind reason
 //! — there is no public Rust `str → Record` API for MARCJSON, so the
@@ -47,7 +66,8 @@ use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
 
 use mrrc::{
-    Field, Leader, MarcReader, MarcWriter, Record, RecoveryMode, Subfield, ValidationLevel,
+    AuthorityMarcReader, Field, HoldingsMarcReader, Leader, MarcReader, MarcWriter, Record,
+    RecordStructureValidator, RecoveryMode, Subfield, ValidationLevel,
 };
 use serde::Deserialize;
 
@@ -192,6 +212,43 @@ fn first_iso2709_error(
     }
 }
 
+// Note: a `first_iso2709_lenient_error` helper that would surface the
+// first error pushed to a record's `errors: Arc<Vec<MarcError>>` is
+// blocked on `MarcError: Clone` (or a harness refactor that doesn't
+// own the captured error). The E005-lenient and E106-recovery paths
+// would benefit from this helper but currently can't be asserted
+// per-trigger until `MarcError` implements `Clone`.
+
+/// Drive `HoldingsMarcReader` in strict mode and return the first
+/// `Err`. Mirrors `first_iso2709_error` for the holdings reader type.
+fn first_holdings_error(bytes: &[u8], level: ValidationLevel) -> Option<mrrc::MarcError> {
+    let mut reader = HoldingsMarcReader::new(Cursor::new(bytes))
+        .with_recovery_mode(RecoveryMode::Strict)
+        .with_validation_level(level);
+    loop {
+        match reader.read_record() {
+            Ok(Some(_)) => {},
+            Ok(None) => return None,
+            Err(e) => return Some(e),
+        }
+    }
+}
+
+/// Drive `AuthorityMarcReader` in strict mode and return the first
+/// `Err`. Mirrors `first_iso2709_error` for the authority reader type.
+fn first_authority_error(bytes: &[u8], level: ValidationLevel) -> Option<mrrc::MarcError> {
+    let mut reader = AuthorityMarcReader::new(Cursor::new(bytes))
+        .with_recovery_mode(RecoveryMode::Strict)
+        .with_validation_level(level);
+    loop {
+        match reader.read_record() {
+            Ok(Some(_)) => {},
+            Ok(None) => return None,
+            Err(e) => return Some(e),
+        }
+    }
+}
+
 /// `Read` impl that returns `std::io::Error` on the first read.
 /// Used to exercise the parser's underlying-stream-failure path
 /// for E007 `IoError` without touching the filesystem.
@@ -280,9 +337,85 @@ fn fire_trigger(case: &Case) -> TriggerOutcome {
                 }
             }
         },
+        "parse_holdings" => match first_holdings_error(
+            &fixture_bytes(case),
+            parse_validation_level(case),
+        ) {
+            Some(e) => TriggerOutcome::Fired(e),
+            None => TriggerOutcome::NoError,
+        },
+        "parse_authority" => match first_authority_error(
+            &fixture_bytes(case),
+            parse_validation_level(case),
+        ) {
+            Some(e) => TriggerOutcome::Fired(e),
+            None => TriggerOutcome::NoError,
+        },
+        "programmatic_validator" => exercise_programmatic_validator(case),
+        "programmatic_writer_check" => exercise_programmatic_writer_check(case),
         "accessor" => exercise_accessor(case),
         "writer" => exercise_writer(case),
         other => TriggerOutcome::UnsupportedKind(format!("unknown trigger_kind {other:?}")),
+    }
+}
+
+/// Dispatch by case id within the `programmatic_validator` trigger family.
+///
+/// Some defensive checks in `RecordStructureValidator` guard against
+/// values that the binary parse path cannot produce — e.g.,
+/// `data_base_address > 99999` is unreachable from a 5-digit ASCII
+/// field but a caller constructing a `Leader` programmatically (public
+/// struct, public fields) can supply that value. This dispatch
+/// exercises each such defensive check by constructing the bad state
+/// in-test and asserting the documented variant surfaces.
+fn exercise_programmatic_validator(case: &Case) -> TriggerOutcome {
+    let mut leader =
+        Leader::from_bytes(b"00150nam a2200061   4500").expect("baseline leader parses");
+
+    match case.id.as_str() {
+        "e002_data_base_address_overflow_programmatic" => {
+            leader.data_base_address = 100_000;
+            match RecordStructureValidator::validate_leader(&leader) {
+                Ok(()) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
+        other => TriggerOutcome::UnsupportedKind(format!(
+            "trigger_kind=programmatic_validator: case {other} has no harness branch; add one in exercise_programmatic_validator"
+        )),
+    }
+}
+
+/// Dispatch by case id within the `programmatic_writer_check` trigger
+/// family.
+///
+/// Some writer-side defensive checks in `iso2709::check_iso2709_size`
+/// guard against values that the writer's normal control flow cannot
+/// produce (e.g., `base_address > 99999` while `record_length <=
+/// 99999` is impossible because `base_address <= record_length`), but
+/// the helper is a public function and direct callers can hit the
+/// guard. This dispatch exercises each such defensive check by
+/// invoking the helper directly with crafted arguments.
+fn exercise_programmatic_writer_check(case: &Case) -> TriggerOutcome {
+    match case.id.as_str() {
+        "e404_check_iso2709_size_base_address_overflow_programmatic" => {
+            // `record_length` and `base_address` are independent in the
+            // helper's signature; choose values that pass the
+            // record_length guard so the test isolates the base_address
+            // defensive check.
+            match mrrc::iso2709::check_iso2709_size(
+                /* record_length */ 1,
+                /* base_address */ 100_000,
+                /* record_index */ Some(1),
+                /* record_control_number */ None,
+            ) {
+                Ok(()) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
+        other => TriggerOutcome::UnsupportedKind(format!(
+            "trigger_kind=programmatic_writer_check: case {other} has no harness branch; add one in exercise_programmatic_writer_check"
+        )),
     }
 }
 
