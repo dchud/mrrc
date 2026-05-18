@@ -497,9 +497,9 @@ wired = true
 # fire from AuthorityMarcReader when a data field is below the
 # 2-byte indicator minimum. A trial fixture mutating a directory
 # entry's length to '0001' did not trip the check, suggesting the
-# guard has gating different from what the comment claims. Filed as
-# a milestone-wide-review (#204) finding; until resolved, this
-# per-trigger entry stays unwired to preserve the audit trail.
+# guard has gating different from what the iso2709_skeleton.rs:121-122
+# docstring claims. This per-trigger entry stays unwired until the
+# guard's actual gating is reconciled with the docstring.
 [[case]]
 id = "e106_authority_field_too_short"
 code = "E106"
@@ -511,7 +511,7 @@ description = "Authority record's second directory entry length set to '0001' (1
 expected_context = ["record_index", "byte_offset"]
 recovery_modes = ["strict"]
 wired = false
-skip_reason = "Trial fixture (length='0001') did not trip the documented authority field-length guard; the guard's actual gating differs from the iso2709_skeleton.rs:121-122 comment. Investigate as part of #204 (milestone-wide review)."
+skip_reason = "Trial fixture (length='0001') did not trip the documented authority field-length guard; the guard's actual gating differs from the iso2709_skeleton.rs:121-122 comment."
 
 # === Subfield / indicator (E2xx) ====================================
 
@@ -619,9 +619,9 @@ wired = true
 # bibliographic-only leader rules (record_validation.rs) are applied
 # to authority records when validation_level=strict_marc, intercepting
 # the parse with an InvalidLeader (E002) before the control field's
-# UTF-8 check can fire. Filed as a milestone-wide-review (#204)
-# finding; until resolved, this per-trigger entry stays unwired to
-# preserve the audit trail.
+# UTF-8 check can fire. This per-trigger entry stays unwired until
+# RecordStructureValidator stops applying bibliographic-only rules to
+# non-bibliographic readers.
 [[case]]
 id = "e301_invalid_utf8_in_authority_control_field"
 code = "E301"
@@ -634,7 +634,7 @@ expected_context = ["record_index"]
 recovery_modes = ["strict"]
 validation_level = "strict_marc"
 wired = false
-skip_reason = "RecordStructureValidator's bibliographic-only leader rules intercept authority records at strict_marc level, raising E002 InvalidLeader before the UTF-8 check fires. Cross-reader-type validation bug; investigate as part of #204."
+skip_reason = "RecordStructureValidator's bibliographic-only leader rules intercept authority records at strict_marc level, raising E002 InvalidLeader before the UTF-8 check fires. Cross-reader-type validation bug."
 
 # === Serialization (E4xx) ===========================================
 

@@ -856,8 +856,9 @@ _OK_LEADER = "00150nam a2200061   4500"
 class TestNonBinaryReaderLeaderErrorPositionalContext:
     """Leader errors fired from MARCXML / JSON / marcjson readers must
     carry ``record_index`` so users of multi-record streams can identify
-    which record failed. Before bd-0x73.21.2 these paths used bare ``?``
-    propagation, surfacing the error with ``record_index=None``.
+    which record failed. Regression guard against the bare ``?``
+    propagation pattern that surfaces the error with
+    ``record_index=None``.
     """
 
     def test_xml_to_record_bad_leader_carries_record_index(self):

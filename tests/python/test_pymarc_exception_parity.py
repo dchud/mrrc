@@ -2,13 +2,12 @@
 that pymarc-shaped ``except`` clauses keep working unchanged after
 a port.
 
-bd-0x73.6's narrow scope is a *verification + documentation pass*:
-every exception class name a pymarc-default loop could plausibly
-catch by name has a mrrc class of the same name, importable from
-``mrrc.exceptions`` (and ``mrrc`` for the ones re-exported there).
-This test pins that promise. Inheritance-hierarchy divergences from
-pymarc are documented separately in
-``docs/guides/migration-from-pymarc.md``.
+This is a *verification + documentation pass*: every exception class
+name a pymarc-default loop could plausibly catch by name has a mrrc
+class of the same name, importable from ``mrrc.exceptions`` (and
+``mrrc`` for the ones re-exported there). This test pins that
+promise. Inheritance-hierarchy divergences from pymarc are documented
+separately in ``docs/guides/migration-from-pymarc.md``.
 
 The pymarc reference is pymarc 5.3.1's
 ``pymarc/exceptions.py`` (see

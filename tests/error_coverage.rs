@@ -217,8 +217,7 @@ fn first_iso2709_error(
 // blocked on `MarcError: Clone` (or a harness refactor that doesn't
 // own the captured error). The E005-lenient and E106-recovery paths
 // would benefit from this helper but currently can't be asserted
-// per-trigger — see the milestone-wide review (#204) for the
-// `MarcError: Clone` consideration.
+// per-trigger until `MarcError` implements `Clone`.
 
 /// Drive `HoldingsMarcReader` in strict mode and return the first
 /// `Err`. Mirrors `first_iso2709_error` for the holdings reader type.
