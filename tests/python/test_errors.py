@@ -886,3 +886,40 @@ class TestNonBinaryReaderLeaderErrorPositionalContext:
         with pytest.raises(mrrc.RecordLeaderInvalid) as excinfo:
             mrrc.marcjson_to_record(bad_json)
         assert excinfo.value.record_index == 1
+
+
+class TestGetFieldOrErrCrossRecordType:
+    """``get_field_or_err`` is available on bibliographic ``Record``,
+    ``AuthorityRecord``, and ``HoldingsRecord``, each raising
+    ``mrrc.FieldNotFound`` (E105) when the requested tag is absent and
+    populating ``field_tag`` plus ``record_control_number`` from the
+    record's 001 control field.
+    """
+
+    def test_bibliographic_record_get_field_or_err_raises_field_not_found(self):
+        with open("tests/data/simple_book.mrc", "rb") as fh:
+            reader = mrrc.MARCReader(fh)
+            record = next(reader)
+        with pytest.raises(mrrc.FieldNotFound) as excinfo:
+            record.get_field_or_err("999")
+        assert excinfo.value.field_tag == "999"
+
+    def test_authority_record_get_field_or_err_raises_field_not_found(self):
+        with open("tests/data/simple_authority.mrc", "rb") as fh:
+            reader = mrrc.AuthorityMARCReader(fh)
+            record = next(reader)
+        with pytest.raises(mrrc.FieldNotFound) as excinfo:
+            record.get_field_or_err("999")
+        assert excinfo.value.field_tag == "999"
+        # simple_authority.mrc has 001 = "n79021800"; the typed error
+        # plumbs the 001 control field through as record_control_number
+        # so callers can correlate the error with the source record.
+        assert excinfo.value.record_control_number == "n79021800"
+
+    def test_holdings_record_get_field_or_err_raises_field_not_found(self):
+        with open("tests/data/simple_holdings.mrc", "rb") as fh:
+            reader = mrrc.HoldingsMARCReader(fh)
+            record = next(reader)
+        with pytest.raises(mrrc.FieldNotFound) as excinfo:
+            record.get_field_or_err("999")
+        assert excinfo.value.field_tag == "999"

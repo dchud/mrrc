@@ -265,6 +265,34 @@ impl AuthorityRecord {
         self.fields.get(tag).map(Vec::as_slice)
     }
 
+    /// Get the first field with the given tag.
+    #[must_use]
+    pub fn get_field(&self, tag: &str) -> Option<&Field> {
+        self.fields.get(tag).and_then(|v| v.first())
+    }
+
+    /// Get the first field with the given tag, returning
+    /// [`crate::MarcError::FieldNotFound`] (E105) when the tag is not
+    /// present.
+    ///
+    /// `get_field` returns `Option<&Field>` for pymarc-compatible callers
+    /// that want a `None` sentinel; this `*_or_err` variant is for callers
+    /// who want the typed E105 error with `record_control_number` and
+    /// `field_tag` populated for diagnostic context.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MarcError::FieldNotFound`] when no field with `tag`
+    /// is present in the record.
+    pub fn get_field_or_err(&self, tag: &str) -> crate::error::Result<&Field> {
+        self.get_field(tag)
+            .ok_or_else(|| crate::error::MarcError::FieldNotFound {
+                record_index: None,
+                record_control_number: self.get_control_field("001").map(str::to_string),
+                field_tag: tag.to_string(),
+            })
+    }
+
     /// Get kind of record from 008/09
     #[must_use]
     pub fn kind_of_record(&self) -> Option<KindOfRecord> {
@@ -690,5 +718,83 @@ mod tests {
 
         assert_eq!(record.get_control_field("001"), Some("n79021800"));
         assert_eq!(record.get_control_field("005"), Some("19850104"));
+    }
+
+    #[test]
+    fn get_field_returns_first_field_with_tag() {
+        let leader = create_test_leader();
+        let mut record = AuthorityRecord::new(leader);
+        let field_a = Field {
+            tag: "400".to_string(),
+            indicator1: '1',
+            indicator2: ' ',
+            subfields: smallvec::smallvec![Subfield {
+                code: 'a',
+                value: "First".to_string(),
+            }],
+        };
+        let field_b = Field {
+            tag: "400".to_string(),
+            indicator1: '1',
+            indicator2: ' ',
+            subfields: smallvec::smallvec![Subfield {
+                code: 'a',
+                value: "Second".to_string(),
+            }],
+        };
+        record.add_see_from_tracing(field_a);
+        record.add_see_from_tracing(field_b);
+
+        let got = record.get_field("400").expect("400 field present");
+        assert_eq!(got.get_subfield('a'), Some("First"));
+    }
+
+    #[test]
+    fn get_field_returns_none_for_absent_tag() {
+        let leader = create_test_leader();
+        let record = AuthorityRecord::new(leader);
+        assert!(record.get_field("999").is_none());
+    }
+
+    #[test]
+    fn get_field_or_err_returns_first_field_when_present() {
+        let leader = create_test_leader();
+        let mut record = AuthorityRecord::new(leader);
+        let field = Field {
+            tag: "100".to_string(),
+            indicator1: '1',
+            indicator2: ' ',
+            subfields: smallvec::smallvec![Subfield {
+                code: 'a',
+                value: "Heading".to_string(),
+            }],
+        };
+        record.set_heading(field);
+
+        let got = record.get_field_or_err("100").expect("100 field present");
+        assert_eq!(got.get_subfield('a'), Some("Heading"));
+    }
+
+    #[test]
+    fn get_field_or_err_returns_field_not_found_with_context() {
+        let leader = create_test_leader();
+        let mut record = AuthorityRecord::new(leader);
+        record.add_control_field("001".to_string(), "n79021800".to_string());
+
+        let err = record
+            .get_field_or_err("999")
+            .expect_err("999 should be absent");
+        match err {
+            crate::error::MarcError::FieldNotFound {
+                field_tag,
+                record_control_number,
+                record_index,
+            } => {
+                assert_eq!(field_tag, "999");
+                assert_eq!(record_control_number.as_deref(), Some("n79021800"));
+                assert_eq!(record_index, None);
+            },
+            other => panic!("expected FieldNotFound, got {other:?}"),
+        }
     }
 }

@@ -158,33 +158,56 @@ enum TriggerOutcome {
     UnsupportedKind(String),
 }
 
-/// Exercise an accessor case: parse the fixture cleanly, then invoke
-/// the accessor whose lookup is documented to fire the case's variant.
-/// New `accessor` cases need their case-id branch wired here — accessor
-/// names and arguments aren't yet expressed in the manifest schema.
+/// Exercise an accessor case: parse the fixture cleanly with the
+/// appropriate reader type, then invoke the accessor whose lookup is
+/// documented to fire the case's variant. New `accessor` cases need
+/// their case-id branch wired here — accessor names, arguments, and
+/// the reader type aren't yet expressed in the manifest schema.
 fn exercise_accessor(case: &Case) -> TriggerOutcome {
     let bytes = fixture_bytes(case);
-    let mut reader = MarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Strict);
-    let record = match reader.read_record() {
-        Ok(Some(r)) => r,
-        Ok(None) => {
-            return TriggerOutcome::UnsupportedKind(format!(
-                "{}: fixture parsed to no records; accessor cannot be exercised",
-                case.id
-            ))
-        },
-        Err(e) => {
-            return TriggerOutcome::UnsupportedKind(format!(
-                "{}: fixture failed to parse cleanly ({e}); accessor cannot be exercised",
-                case.id
-            ))
-        },
-    };
 
     match case.id.as_str() {
-        "e105_field_not_found" => match record.get_field_or_err("999") {
-            Ok(_) => TriggerOutcome::NoError,
-            Err(e) => TriggerOutcome::Fired(e),
+        "e105_field_not_found" => {
+            let mut reader =
+                MarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Strict);
+            let Ok(Some(record)) = reader.read_record() else {
+                return TriggerOutcome::UnsupportedKind(format!(
+                    "{}: bibliographic fixture did not parse to a record",
+                    case.id
+                ));
+            };
+            match record.get_field_or_err("999") {
+                Ok(_) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
+        "e105_authority_field_not_found" => {
+            let mut reader = AuthorityMarcReader::new(Cursor::new(bytes))
+                .with_recovery_mode(RecoveryMode::Strict);
+            let Ok(Some(record)) = reader.read_record() else {
+                return TriggerOutcome::UnsupportedKind(format!(
+                    "{}: authority fixture did not parse to a record",
+                    case.id
+                ));
+            };
+            match record.get_field_or_err("999") {
+                Ok(_) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
+        "e105_holdings_field_not_found" => {
+            let mut reader = HoldingsMarcReader::new(Cursor::new(bytes))
+                .with_recovery_mode(RecoveryMode::Strict);
+            let Ok(Some(record)) = reader.read_record() else {
+                return TriggerOutcome::UnsupportedKind(format!(
+                    "{}: holdings fixture did not parse to a record",
+                    case.id
+                ));
+            };
+            match record.get_field_or_err("999") {
+                Ok(_) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
         },
         other => TriggerOutcome::UnsupportedKind(format!(
             "trigger_kind=accessor: case {other} has no harness branch; add one in exercise_accessor"

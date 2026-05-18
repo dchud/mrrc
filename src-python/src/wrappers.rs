@@ -1356,6 +1356,22 @@ impl PyAuthorityRecord {
         })
     }
 
+    /// Get the first field with a given tag (pymarc compatibility).
+    pub fn get_field(&self, tag: &str) -> Option<PyField> {
+        self.inner
+            .get_field(tag)
+            .map(|f| PyField { inner: f.clone() })
+    }
+
+    /// Get the first field with a given tag, raising
+    /// `mrrc.FieldNotFound` (E105) when the tag is not present.
+    pub fn get_field_or_err(&self, tag: &str) -> PyResult<PyField> {
+        self.inner
+            .get_field_or_err(tag)
+            .map(|f| PyField { inner: f.clone() })
+            .map_err(crate::error::marc_error_to_py_err)
+    }
+
     /// Get control field by tag
     pub fn get_control_field(&self, tag: &str) -> Option<String> {
         self.inner.get_control_field(tag).map(|s| s.to_string())
@@ -1525,6 +1541,22 @@ impl PyHoldingsRecord {
                 .map(|f: &Field| PyField { inner: f.clone() })
                 .collect()
         })
+    }
+
+    /// Get the first field with a given tag (pymarc compatibility).
+    pub fn get_field(&self, tag: &str) -> Option<PyField> {
+        self.inner
+            .get_field(tag)
+            .map(|f| PyField { inner: f.clone() })
+    }
+
+    /// Get the first field with a given tag, raising
+    /// `mrrc.FieldNotFound` (E105) when the tag is not present.
+    pub fn get_field_or_err(&self, tag: &str) -> PyResult<PyField> {
+        self.inner
+            .get_field_or_err(tag)
+            .map(|f| PyField { inner: f.clone() })
+            .map_err(crate::error::marc_error_to_py_err)
     }
 
     /// Get control field by tag

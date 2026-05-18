@@ -463,6 +463,34 @@ expected_context = ["field_tag"]
 recovery_modes = ["strict"]
 wired = true
 
+# E105 from AuthorityRecord — the same accessor pattern fires from the
+# authority record type via the parity API.
+[[case]]
+id = "e105_authority_field_not_found"
+code = "E105"
+variant = "FieldNotFound"
+slug = "field_not_found"
+trigger_kind = "accessor"
+trigger_fixture = "tests/data/simple_authority.mrc"
+description = "Parse simple_authority.mrc cleanly, then call record.get_field_or_err('999')."
+expected_context = ["field_tag"]
+recovery_modes = ["strict"]
+wired = true
+
+# E105 from HoldingsRecord — the same accessor pattern fires from the
+# holdings record type via the parity API.
+[[case]]
+id = "e105_holdings_field_not_found"
+code = "E105"
+variant = "FieldNotFound"
+slug = "field_not_found"
+trigger_kind = "accessor"
+trigger_fixture = "tests/data/simple_holdings.mrc"
+description = "Parse simple_holdings.mrc cleanly, then call record.get_field_or_err('999')."
+expected_context = ["field_tag"]
+recovery_modes = ["strict"]
+wired = true
+
 # E106: directory entry claims a field length larger than the data area.
 [[case]]
 id = "e106_field_length_past_data"
