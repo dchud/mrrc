@@ -8,6 +8,7 @@
 use mrrc::bibframe::{bibframe_to_marc, marc_to_bibframe, BibframeConfig, RdfFormat};
 use mrrc::leader::Leader;
 use mrrc::record::{Field, Record};
+use mrrc::FieldAccess;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a sample MARC record

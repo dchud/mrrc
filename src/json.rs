@@ -201,6 +201,7 @@ pub fn json_to_record(json: &Value) -> Result<Record> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::field_access::FieldAccess;
     use crate::leader::Leader;
 
     fn make_test_leader() -> Leader {

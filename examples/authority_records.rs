@@ -4,7 +4,7 @@
 //! and Holdings records (Types x/y/v/u), which are specialized record types for
 //! maintaining authority data and item holdings information.
 
-use mrrc::{AuthorityRecord, Field, HoldingsRecord, Leader};
+use mrrc::{AuthorityRecord, Field, FieldAccess, HoldingsRecord, Leader};
 
 fn main() {
     println!("\n=== Authority Records ===\n");

@@ -3,7 +3,7 @@
 mod common;
 
 use common::make_leader;
-use mrrc::{Field, LinkageInfo, Record};
+use mrrc::{Field, FieldAccess, LinkageInfo, Record};
 
 /// Create a record with linked 880 fields (Arabic author with romanized form)
 fn create_linked_record() -> Record {

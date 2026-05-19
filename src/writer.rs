@@ -289,6 +289,7 @@ impl<W: Write + std::fmt::Debug> FormatWriter for MarcWriter<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::field_access::FieldAccess;
     use crate::leader::Leader;
     use crate::record::Field;
     use std::io::Cursor;

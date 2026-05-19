@@ -285,39 +285,9 @@ impl HoldingsRecord {
             .push(field);
     }
 
-    /// Get fields by tag
-    #[must_use]
-    pub fn get_fields(&self, tag: &str) -> Option<&[Field]> {
-        self.fields.get(tag).map(Vec::as_slice)
-    }
-
-    /// Get the first field with the given tag.
-    #[must_use]
-    pub fn get_field(&self, tag: &str) -> Option<&Field> {
-        self.fields.get(tag).and_then(|v| v.first())
-    }
-
-    /// Get the first field with the given tag, returning
-    /// [`crate::MarcError::FieldNotFound`] (E105) when the tag is not
-    /// present.
-    ///
-    /// `get_field` returns `Option<&Field>` for pymarc-compatible callers
-    /// that want a `None` sentinel; this `*_or_err` variant is for callers
-    /// who want the typed E105 error with `record_control_number` and
-    /// `field_tag` populated for diagnostic context.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`crate::MarcError::FieldNotFound`] when no field with `tag`
-    /// is present in the record.
-    pub fn get_field_or_err(&self, tag: &str) -> crate::error::Result<&Field> {
-        self.get_field(tag)
-            .ok_or_else(|| crate::error::MarcError::FieldNotFound {
-                record_index: None,
-                record_control_number: self.get_control_field("001").map(str::to_string),
-                field_tag: tag.to_string(),
-            })
-    }
+    // Tag-keyed field accessors (`get_field`, `get_field_or_err`, and
+    // `get_fields`) are provided by the [`FieldAccess`][crate::FieldAccess]
+    // trait, with the impl below.
 
     /// Get holdings type from leader
     #[must_use]
@@ -382,6 +352,16 @@ impl HoldingsRecord {
     }
 }
 
+impl crate::FieldAccess for HoldingsRecord {
+    fn fields_map(&self) -> &indexmap::IndexMap<String, Vec<Field>> {
+        &self.fields
+    }
+
+    fn record_control_number(&self) -> Option<String> {
+        self.get_control_field("001").map(String::from)
+    }
+}
+
 impl MarcRecord for HoldingsRecord {
     fn leader(&self) -> &Leader {
         &self.leader
@@ -411,14 +391,6 @@ impl MarcRecord for HoldingsRecord {
                 .iter()
                 .map(move |value| (tag.as_str(), value.as_str()))
         }))
-    }
-
-    fn get_fields(&self, tag: &str) -> Option<&[Field]> {
-        self.fields.get(tag).map(std::vec::Vec::as_slice)
-    }
-
-    fn get_field(&self, tag: &str) -> Option<&Field> {
-        self.fields.get(tag).and_then(|v| v.first())
     }
 }
 
@@ -530,6 +502,7 @@ impl HoldingsRecordBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::field_access::FieldAccess;
     use crate::record::Subfield;
 
     fn create_test_leader() -> Leader {

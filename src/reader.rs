@@ -374,6 +374,7 @@ impl<R: Read + std::fmt::Debug> FormatReader for MarcReader<R> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::field_access::FieldAccess;
     use std::io::Cursor;
 
     use crate::iso2709::{FIELD_TERMINATOR, RECORD_TERMINATOR, SUBFIELD_DELIMITER};

@@ -6,6 +6,7 @@
 //! preserve MARC indicators.
 
 use mrrc::mods::mods_xml_to_record;
+use mrrc::FieldAccess;
 
 /// Helper: assert a data field exists with given tag and subfield value.
 fn assert_subfield(record: &mrrc::Record, tag: &str, code: char, expected: &str) {

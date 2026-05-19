@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `field_tag` and `record_control_number` (from the 001 control
   field) populated for diagnostic context. Existing `get_fields` (the
   plural slice accessor) is unchanged.
+- New `mrrc::FieldAccess` trait centralizes the three field
+  accessors (`get_field`, `get_field_or_err`, `get_fields`) shared
+  by `Record`, `AuthorityRecord`, and `HoldingsRecord` so all three
+  record types behave identically by construction. The trait is
+  re-exported at the crate root. Python callers are unaffected. Rust
+  callers calling these methods on record types need
+  `use mrrc::FieldAccess` (or `use mrrc::*`) in scope; the
+  `mrrc::MarcRecord` supertrait already pulls `FieldAccess` in for
+  code generic over record types.
 - `max_errors` kwarg on Python `MARCReader`. Caps the total
   recovered errors accumulated across a `lenient` / `permissive`
   stream; once the (N+1)-th recovered error lands, the next read
