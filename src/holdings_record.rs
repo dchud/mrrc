@@ -291,10 +291,32 @@ impl HoldingsRecord {
         self.fields.get(tag).map(Vec::as_slice)
     }
 
-    // `get_field` and `get_field_or_err` come from the
-    // [`MarcRecord`](crate::MarcRecord) trait; the latter is a default
-    // method that wraps `get_field`'s None as
-    // [`MarcError::FieldNotFound`](crate::MarcError::FieldNotFound).
+    /// Get the first field with the given tag.
+    ///
+    /// Inherent shim that delegates to the [`MarcRecord`] trait method
+    /// so callers don't need the trait in scope for this common
+    /// accessor.
+    #[must_use]
+    pub fn get_field(&self, tag: &str) -> Option<&Field> {
+        MarcRecord::get_field(self, tag)
+    }
+
+    /// Get the first field with the given tag, returning
+    /// [`crate::MarcError::FieldNotFound`] (E105) when the tag is not
+    /// present.
+    ///
+    /// Inherent shim that delegates to the [`MarcRecord`] trait's
+    /// default `get_field_or_err`; the typed error carries
+    /// `field_tag` and `record_control_number` (read from the 001
+    /// control field) for diagnostic context.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MarcError::FieldNotFound`] when no field with
+    /// `tag` is present in the record.
+    pub fn get_field_or_err(&self, tag: &str) -> crate::error::Result<&Field> {
+        MarcRecord::get_field_or_err(self, tag)
+    }
 
     /// Get holdings type from leader
     #[must_use]

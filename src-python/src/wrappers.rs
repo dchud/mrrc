@@ -1,8 +1,6 @@
 // Python wrapper classes for core MARC data structures
 
-use mrrc::{
-    AuthorityRecord, Field, HoldingsRecord, Leader, MarcRecord, Record, RecordHelpers, Subfield,
-};
+use mrrc::{AuthorityRecord, Field, HoldingsRecord, Leader, Record, RecordHelpers, Subfield};
 use pyo3::prelude::*;
 
 /// Python wrapper for a MARC Leader (24-byte record header)
