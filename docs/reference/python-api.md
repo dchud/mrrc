@@ -72,6 +72,8 @@ All record accessors are properties (not methods), matching pymarc:
 | `fields()` | `list[Field]` | Get all data fields |
 | `fields_by_tag(tag)` | `list[Field]` | Get fields matching a tag |
 | `get(tag, default=None)` | `Field \| None` | Get first field (safe, returns None) |
+| `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
+| `get_field_or_err(tag)` | `Field` | Get first field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
 | `get_fields(*tags)` | `list[Field]` | Get fields for multiple tags |
 | `isbns()` | `list[str]` | Get all ISBNs |
 | `authors()` | `list[str]` | Get all authors |
@@ -201,6 +203,64 @@ leader.character_coding = "a"      # UTF-8
 | `cataloging_form` | 18 | Descriptive cataloging form |
 | `multipart_level` | 19 | Multipart resource record level |
 | `reserved` | 20-23 | Entry map (usually "4500") |
+
+### AuthorityRecord
+
+A MARC authority record. Returned by `AuthorityMARCReader`.
+
+The full `AuthorityRecord` API surface is not yet covered in this reference (control fields, heading, see-from / see-also tracings, notes, source-data accessors, etc.). The methods documented here are the ones with parity to bibliographic `Record`.
+
+**Field accessors:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
+| `get_field_or_err(tag)` | `Field` | Get first field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
+| `get_fields(tag)` | `list[Field] \| None` | Get all fields matching a tag (note: returns `None` when no fields match, unlike `Record.get_fields` which returns `[]`) |
+
+```python
+from mrrc import AuthorityMARCReader, FieldNotFound
+
+with open("authorities.mrc", "rb") as fh:
+    reader = AuthorityMARCReader(fh)
+    record = next(reader)
+
+heading = record.get_field("100")  # Optional[Field]
+
+try:
+    required = record.get_field_or_err("100")
+except FieldNotFound as e:
+    print(f"missing {e.field_tag} on record {e.record_control_number}")
+```
+
+### HoldingsRecord
+
+A MARC holdings record. Returned by `HoldingsMARCReader`.
+
+The full `HoldingsRecord` API surface is not yet covered in this reference (control fields, locations, captions, enumerations, textual holdings, item information, etc.). The methods documented here are the ones with parity to bibliographic `Record`.
+
+**Field accessors:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
+| `get_field_or_err(tag)` | `Field` | Get first field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
+| `get_fields(tag)` | `list[Field] \| None` | Get all fields matching a tag (note: returns `None` when no fields match, unlike `Record.get_fields` which returns `[]`) |
+
+```python
+from mrrc import HoldingsMARCReader, FieldNotFound
+
+with open("holdings.mrc", "rb") as fh:
+    reader = HoldingsMARCReader(fh)
+    record = next(reader)
+
+location = record.get_field("852")  # Optional[Field]
+
+try:
+    required = record.get_field_or_err("852")
+except FieldNotFound as e:
+    print(f"missing {e.field_tag} on record {e.record_control_number}")
+```
 
 ## Reader/Writer Classes
 

@@ -204,25 +204,25 @@ impl Record {
         self.fields.get(tag).and_then(|v| v.first())
     }
 
-    /// Get first field with a given tag, returning [`crate::MarcError::FieldNotFound`]
-    /// (E105) when the tag is not present.
+    /// Get the first field with the given tag, returning
+    /// [`crate::MarcError::FieldNotFound`] (E105) when the tag is not
+    /// present.
     ///
-    /// `get_field` returns `Option<&Field>` for pymarc-compatible callers
-    /// that want a `None` sentinel; this `*_or_err` variant is for callers
-    /// who want the typed E105 error with `record_control_number` and
-    /// `field_tag` populated for diagnostic context.
+    /// Inherent shim that delegates to the [`MarcRecord`] trait's
+    /// default `get_field_or_err`; the typed error carries
+    /// `field_tag` and `record_control_number` (read from the 001
+    /// control field) for diagnostic context.
+    ///
+    /// `get_field` returns `Option<&Field>` for pymarc-compatible
+    /// callers that want a `None` sentinel; this `*_or_err` variant
+    /// is for callers who want the typed E105 error.
     ///
     /// # Errors
     ///
-    /// Returns [`crate::MarcError::FieldNotFound`] when no field with `tag`
-    /// is present in the record.
+    /// Returns [`crate::MarcError::FieldNotFound`] when no field with
+    /// `tag` is present in the record.
     pub fn get_field_or_err(&self, tag: &str) -> crate::error::Result<&Field> {
-        self.get_field(tag)
-            .ok_or_else(|| crate::error::MarcError::FieldNotFound {
-                record_index: None,
-                record_control_number: self.get_control_field("001").map(str::to_string),
-                field_tag: tag.to_string(),
-            })
+        MarcRecord::get_field_or_err(self, tag)
     }
 
     /// Iterate over all fields in tag order

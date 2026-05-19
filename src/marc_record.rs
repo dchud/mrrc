@@ -93,4 +93,32 @@ pub trait MarcRecord {
     /// Returns the first field matching the tag, or `None` if no fields exist.
     #[must_use]
     fn get_field(&self, tag: &str) -> Option<&Field>;
+
+    /// Get the first field with the given tag, returning
+    /// [`crate::MarcError::FieldNotFound`] (E105) when the tag is not
+    /// present.
+    ///
+    /// [`get_field`](Self::get_field) returns `Option<&Field>` for
+    /// pymarc-compatible callers that want a `None` sentinel; this
+    /// `*_or_err` variant is for callers who want the typed E105 error
+    /// with `record_control_number` (read from the 001 control field)
+    /// and `field_tag` populated for diagnostic context.
+    ///
+    /// Default implementation builds the error from
+    /// [`get_field`](Self::get_field) and
+    /// [`get_control_field`](Self::get_control_field); implementors
+    /// rarely need to override.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::MarcError::FieldNotFound`] when no field with
+    /// `tag` is present in the record.
+    fn get_field_or_err(&self, tag: &str) -> crate::error::Result<&Field> {
+        self.get_field(tag)
+            .ok_or_else(|| crate::error::MarcError::FieldNotFound {
+                record_index: None,
+                record_control_number: self.get_control_field("001").map(String::from),
+                field_tag: tag.to_string(),
+            })
+    }
 }
