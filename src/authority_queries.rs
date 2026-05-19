@@ -4,7 +4,6 @@
 //! enabling convenient access to authority reference fields and navigation methods.
 
 use crate::authority_record::AuthorityRecord;
-use crate::field_access::FieldAccess;
 use crate::record::Field;
 
 /// Extension trait providing authority control helper methods.

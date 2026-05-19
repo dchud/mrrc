@@ -24,7 +24,7 @@ use std::fs::File;
 use std::io::{BufReader, Write};
 
 use flate2::read::GzDecoder;
-use mrrc::{FieldAccess, MarcReader};
+use mrrc::MarcReader;
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = env::args().collect();

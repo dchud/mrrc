@@ -541,7 +541,6 @@ fn marcxml_record_to_record(xml_record: MarcxmlRecord) -> Result<Record> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::field_access::FieldAccess;
 
     fn make_test_leader() -> Leader {
         Leader {

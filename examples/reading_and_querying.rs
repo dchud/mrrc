@@ -3,7 +3,7 @@
 //! This example demonstrates reading MARC records and using the powerful field query API
 //! to find and extract specific information from records.
 
-use mrrc::{Field, FieldAccess, Leader, Record};
+use mrrc::{Field, Leader, Record};
 
 fn main() {
     // Create a sample record for demonstration

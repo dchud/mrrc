@@ -3,8 +3,8 @@
 //! This module defines the `MarcRecord` trait that provides a common interface for
 //! all MARC record types (bibliographic, authority, and holdings records).
 
-use crate::field_access::FieldAccess;
 use crate::leader::Leader;
+use crate::record::Field;
 
 /// Common trait for all MARC record types.
 ///
@@ -30,7 +30,7 @@ use crate::leader::Leader;
 /// print_record_type(&bib_record);
 /// print_record_type(&auth_record);
 /// ```
-pub trait MarcRecord: FieldAccess {
+pub trait MarcRecord {
     /// Get a reference to the record's leader (24-byte header).
     fn leader(&self) -> &Leader;
 
@@ -82,6 +82,15 @@ pub trait MarcRecord: FieldAccess {
     /// in tag order.
     fn control_fields_iter(&self) -> Box<dyn Iterator<Item = (&str, &str)> + '_>;
 
-    // Data-field accessors (`get_field`, `get_field_or_err`, `get_fields`)
-    // are inherited from the [`FieldAccess`] supertrait.
+    /// Get all fields with a given tag.
+    ///
+    /// Returns a slice of all fields matching the tag, or `None` if no fields exist.
+    #[must_use]
+    fn get_fields(&self, tag: &str) -> Option<&[Field]>;
+
+    /// Get the first field with a given tag.
+    ///
+    /// Returns the first field matching the tag, or `None` if no fields exist.
+    #[must_use]
+    fn get_field(&self, tag: &str) -> Option<&Field>;
 }

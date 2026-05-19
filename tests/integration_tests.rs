@@ -1,6 +1,6 @@
 //! Integration tests for the mrrc library
 
-use mrrc::{AuthorityMarcReader, AuthorityMarcWriter, FieldAccess, MarcReader, MarcWriter};
+use mrrc::{AuthorityMarcReader, AuthorityMarcWriter, MarcReader, MarcWriter};
 use std::fs::File;
 use std::io::Cursor;
 

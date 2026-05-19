@@ -5,7 +5,6 @@
 //! each record type's purpose.
 
 use crate::authority_record::AuthorityRecord;
-use crate::field_access::FieldAccess;
 use crate::holdings_record::HoldingsRecord;
 use crate::record::{Field, Record};
 

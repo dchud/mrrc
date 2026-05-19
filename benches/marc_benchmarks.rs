@@ -5,7 +5,7 @@
 //! MARC records using Criterion.rs for statistical analysis.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mrrc::{json, marcxml, FieldAccess, MarcReader, MarcWriter, RecordHelpers};
+use mrrc::{json, marcxml, MarcReader, MarcWriter, RecordHelpers};
 use std::io::Cursor;
 
 /// Load test fixtures from the test data directory.
