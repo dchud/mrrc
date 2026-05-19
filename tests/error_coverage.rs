@@ -66,8 +66,8 @@ use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
 
 use mrrc::{
-    AuthorityMarcReader, Field, HoldingsMarcReader, Leader, MarcReader, MarcWriter, Record,
-    RecordStructureValidator, RecoveryMode, Subfield, ValidationLevel,
+    AuthorityMarcReader, Field, HoldingsMarcReader, Leader, MarcReader, MarcRecord, MarcWriter,
+    Record, RecordStructureValidator, RecoveryMode, Subfield, ValidationLevel,
 };
 use serde::Deserialize;
 

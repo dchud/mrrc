@@ -9,14 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `get_field(tag)` and `get_field_or_err(tag)` on `AuthorityRecord`
-  and `HoldingsRecord` (Rust + Python), matching the bibliographic
-  `Record` shape. `get_field` returns the first field with the given
-  tag as `Option<&Field>` / `None`; `get_field_or_err` returns the
-  same on success or raises `mrrc.FieldNotFound` (E105) with
-  `field_tag` and `record_control_number` (from the 001 control
-  field) populated for diagnostic context. Existing `get_fields` (the
-  plural slice accessor) is unchanged.
+- `get_field_or_err(tag)` accessor available on all three record
+  types (`Record`, `AuthorityRecord`, `HoldingsRecord`). Returns the
+  first field with the given tag on success, or raises
+  `mrrc.FieldNotFound` (E105) with `field_tag` and
+  `record_control_number` (from the 001 control field) populated for
+  diagnostic context. On the Rust side, this lands as a default
+  method on the `MarcRecord` trait; all three record types pick it up
+  automatically. On the Python side, the bibliographic `Record`
+  wrapper already exposed `get_field_or_err`; `AuthorityRecord` and
+  `HoldingsRecord` Python wrappers now expose it and `get_field` as
+  well (previously only `get_fields` was exposed at the Python
+  layer).
 - `max_errors` kwarg on Python `MARCReader`. Caps the total
   recovered errors accumulated across a `lenient` / `permissive`
   stream; once the (N+1)-th recovered error lands, the next read
