@@ -71,6 +71,23 @@ pub trait Iso2709Builder: Sized {
         Ok(())
     }
 
+    /// MARC 21 semantic leader validation invoked by the skeleton at
+    /// `validation_level=strict_marc`. The default targets the bibliographic
+    /// allowed-value sets via [`crate::RecordStructureValidator::validate_leader`].
+    /// Authority and holdings override this to dispatch to the
+    /// [`crate::RecordStructureValidator::validate_leader_authority`] and
+    /// [`crate::RecordStructureValidator::validate_leader_holdings`] variants
+    /// — their allowed sets differ at positions 5, 6, 17, 18, and treat
+    /// positions 7, 8, 19 as undefined.
+    ///
+    /// # Errors
+    ///
+    /// Returns `MarcError::InvalidLeader` when the leader violates this
+    /// reader type's MARC 21 allowed-value sets.
+    fn validate_leader_strict_marc(leader: &Leader) -> Result<()> {
+        crate::RecordStructureValidator::validate_leader(leader)
+    }
+
     /// Construct a fresh builder around the leader-validated record.
     fn new_for(leader: Leader) -> Self;
 
@@ -218,13 +235,17 @@ where
     })?;
 
     // At StrictMarc, run MARC 21 semantic leader validation: record_status,
-    // record_type, bibliographic_level, encoding_level, and friends. Surfaces
+    // record_type, bibliographic_level, encoding_level, and friends. The
+    // allowed-value sets differ per reader type, so dispatch through the
+    // builder's `validate_leader_strict_marc` — bibliographic uses the
+    // default (`RecordStructureValidator::validate_leader`); authority and
+    // holdings override to use their format's allowed-value sets. Surfaces
     // as InvalidLeader (E002) with the same positional enrichment as
     // structural leader errors. In lenient/permissive the violation is
     // recorded against `errors` + `cap` and parsing continues with the
     // (semantically dubious but structurally parseable) leader.
     if validation_level == ValidationLevel::StrictMarc {
-        if let Err(e) = crate::RecordStructureValidator::validate_leader(&leader) {
+        if let Err(e) = B::validate_leader_strict_marc(&leader) {
             let enriched = e
                 .with_position(ctx)
                 .with_bytes_near(&leader_bytes, leader_offset);

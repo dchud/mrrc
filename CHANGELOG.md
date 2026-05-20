@@ -219,6 +219,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stream-position metadata. The backend now tracks `bytes_read`
   manually and the FFI conversion preserves the record-relative
   offset.
+- `AuthorityMarcReader` and `HoldingsMarcReader` at
+  `validation_level="strict_marc"` no longer trip `InvalidLeader`
+  (E002) on leader bytes that are valid for their own record type.
+  Previously every reader ran the MARC 21 Bibliographic Format
+  allowed-value sets, so authority records with
+  `bibliographic_level='|'` (undefined for non-bibliographic
+  records) raised E002 before parsing reached the data area. The
+  skeleton now dispatches through a per-type trait method;
+  `RecordStructureValidator::validate_leader_authority` and
+  `validate_leader_holdings` carry the MARC 21 Authority and
+  Holdings Format leader rules respectively. Positions 7, 8, 19 are
+  undefined for both and accept any byte; positions 5, 6, 17, 18
+  follow each format's allowed sets. Bibliographic dispatch is
+  unchanged.
 
 ### Dependencies
 

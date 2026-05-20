@@ -642,14 +642,12 @@ recovery_modes = ["strict"]
 validation_level = "strict_marc"
 wired = true
 
-# E301 authority CONTROL field invalid UTF-8: blocked on a
-# cross-reader-type validation issue — RecordStructureValidator's
-# bibliographic-only leader rules (record_validation.rs) are applied
-# to authority records when validation_level=strict_marc, intercepting
-# the parse with an InvalidLeader (E002) before the control field's
-# UTF-8 check can fire. This per-trigger entry stays unwired until
-# RecordStructureValidator stops applying bibliographic-only rules to
-# non-bibliographic readers.
+# E301 authority CONTROL field invalid UTF-8 at strict_marc. The
+# fixture's leader is the simple_authority.mrc leader with position 18
+# (punctuation policy) set to ' ' so it conforms to the MARC 21 Authority
+# Format allowed-value sets; per-record-type leader validation (bd-0x73.21.7)
+# lets the parse proceed past the leader and fire E301 on the corrupted
+# control-field byte (0xFF at offset 73).
 [[case]]
 id = "e301_invalid_utf8_in_authority_control_field"
 code = "E301"
@@ -657,12 +655,11 @@ variant = "EncodingError"
 slug = "utf8_invalid"
 trigger_kind = "parse_authority"
 trigger_fixture = "tests/data/error_fixtures/e301_invalid_utf8_in_authority_control_field.bin"
-description = "Byte 73 (first byte of first control field in simple_authority.mrc) replaced with 0xFF."
+description = "Byte 73 (first byte of first control field in simple_authority.mrc) replaced with 0xFF; leader position 18 set to ' ' so the MARC 21 Authority Format allowed-value sets accept the leader at strict_marc."
 expected_context = ["record_index"]
 recovery_modes = ["strict"]
 validation_level = "strict_marc"
-wired = false
-skip_reason = "RecordStructureValidator's bibliographic-only leader rules intercept authority records at strict_marc level, raising E002 InvalidLeader before the UTF-8 check fires. Cross-reader-type validation bug."
+wired = true
 
 # === Serialization (E4xx) ===========================================
 

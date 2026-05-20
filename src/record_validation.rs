@@ -12,11 +12,52 @@ use crate::record::Record;
 pub struct RecordStructureValidator;
 
 impl RecordStructureValidator {
-    /// Validate a leader's format and contents
+    /// Validate the leader positions that are shared across all MARC 21
+    /// record types (positions 10, 11, 12-16). Used by the per-record-type
+    /// leader validators below.
+    fn validate_leader_shared(leader: &Leader) -> Result<()> {
+        // Indicator count should be 2 (position 10)
+        if leader.indicator_count != 2 {
+            return Err(MarcError::leader_msg(format!(
+                "Invalid indicator count in leader: {} (expected 2)",
+                leader.indicator_count
+            )));
+        }
+
+        // Subfield code count should be 2 (position 11)
+        if leader.subfield_code_count != 2 {
+            return Err(MarcError::leader_msg(format!(
+                "Invalid subfield code count in leader: {} (expected 2)",
+                leader.subfield_code_count
+            )));
+        }
+
+        // Base address of data should be valid (0-99999)
+        if leader.data_base_address > 99999 {
+            return Err(MarcError::leader_msg(format!(
+                "Invalid data base address in leader: {}",
+                leader.data_base_address
+            )));
+        }
+
+        Ok(())
+    }
+
+    /// Validate a leader against the MARC 21 **Bibliographic** Format rules.
+    ///
+    /// This is the leader-validation entry point invoked by the bibliographic
+    /// reader at `validation_level=strict_marc`. Authority and holdings
+    /// readers dispatch to [`validate_leader_authority`] and
+    /// [`validate_leader_holdings`] respectively, which carry different
+    /// allowed-value sets per the corresponding MARC 21 format specs.
     ///
     /// # Errors
     ///
-    /// Returns `Err` if the leader is invalid according to MARC21 standards.
+    /// Returns `Err` if the leader is invalid per the MARC 21 Bibliographic
+    /// Format leader allowed-value sets.
+    ///
+    /// [`validate_leader_authority`]: Self::validate_leader_authority
+    /// [`validate_leader_holdings`]: Self::validate_leader_holdings
     pub fn validate_leader(leader: &Leader) -> Result<()> {
         // Leader is always 24 bytes - this is enforced by the Leader type
 
@@ -71,29 +112,7 @@ impl RecordStructureValidator {
             },
         }
 
-        // Indicator count should be 2 (position 10)
-        if leader.indicator_count != 2 {
-            return Err(MarcError::leader_msg(format!(
-                "Invalid indicator count in leader: {} (expected 2)",
-                leader.indicator_count
-            )));
-        }
-
-        // Subfield code count should be 2 (position 11)
-        if leader.subfield_code_count != 2 {
-            return Err(MarcError::leader_msg(format!(
-                "Invalid subfield code count in leader: {} (expected 2)",
-                leader.subfield_code_count
-            )));
-        }
-
-        // Base address of data should be valid (0-99999)
-        if leader.data_base_address > 99999 {
-            return Err(MarcError::leader_msg(format!(
-                "Invalid data base address in leader: {}",
-                leader.data_base_address
-            )));
-        }
+        Self::validate_leader_shared(leader)?;
 
         // Encoding level should be valid (position 17)
         match leader.encoding_level {
@@ -121,6 +140,164 @@ impl RecordStructureValidator {
             c => {
                 return Err(MarcError::leader_msg(format!(
                     "Invalid multipart level in leader: '{c}'"
+                )));
+            },
+        }
+
+        Ok(())
+    }
+
+    /// Validate a leader against the MARC 21 **Authority** Format rules.
+    ///
+    /// Positions 7 (`bibliographic_level`), 8 (`control_record_type`), and 19
+    /// (`multipart_level`) are *undefined* in the MARC 21 Authority Format —
+    /// any byte is accepted there. The remaining positions follow the
+    /// authority allowed-value sets:
+    ///
+    /// - 5 `record_status`: `a, c, d, n, o, s, x`
+    /// - 6 `record_type`: `z`
+    /// - 9 `character_coding`: ` `, `a`
+    /// - 10/11/12-16: shared (indicator count = 2, subfield code count = 2,
+    ///   base address ≤ 99999)
+    /// - 17 `encoding_level`: `n`, `o`
+    /// - 18 `cataloging_form` (interpreted as *punctuation policy* in the
+    ///   authority spec): ` `, `c`, `i`, `u`
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the leader violates any of the MARC 21 Authority
+    /// Format leader allowed-value sets above.
+    pub fn validate_leader_authority(leader: &Leader) -> Result<()> {
+        // Position 5: record status
+        match leader.record_status {
+            'a' | 'c' | 'd' | 'n' | 'o' | 's' | 'x' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid record status in authority leader: '{c}'"
+                )));
+            },
+        }
+
+        // Position 6: type of record — must be 'z' for authority
+        if leader.record_type != 'z' {
+            return Err(MarcError::leader_msg(format!(
+                "Invalid type of record in authority leader: '{}' (expected 'z')",
+                leader.record_type
+            )));
+        }
+
+        // Positions 7, 8, 19: undefined for authority — accept any byte.
+
+        // Position 9: character coding
+        match leader.character_coding {
+            ' ' | 'a' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid character coding in authority leader: '{c}'"
+                )));
+            },
+        }
+
+        Self::validate_leader_shared(leader)?;
+
+        // Position 17: encoding level (authority allowed set is narrower
+        // than bibliographic).
+        match leader.encoding_level {
+            'n' | 'o' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid encoding level in authority leader: '{c}'"
+                )));
+            },
+        }
+
+        // Position 18: punctuation policy (occupies the byte the bibliographic
+        // spec calls "cataloging form").
+        match leader.cataloging_form {
+            ' ' | 'c' | 'i' | 'u' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid punctuation policy in authority leader: '{c}'"
+                )));
+            },
+        }
+
+        Ok(())
+    }
+
+    /// Validate a leader against the MARC 21 **Holdings** Format rules.
+    ///
+    /// Positions 7 (`bibliographic_level`), 8 (`control_record_type`), and 19
+    /// (`multipart_level`) are *undefined* in the MARC 21 Holdings Format —
+    /// any byte is accepted there. The remaining positions follow the
+    /// holdings allowed-value sets:
+    ///
+    /// - 5 `record_status`: `c, d, n`
+    /// - 6 `record_type`: `u, v, x, y`
+    /// - 9 `character_coding`: ` `, `a`
+    /// - 10/11/12-16: shared (indicator count = 2, subfield code count = 2,
+    ///   base address ≤ 99999)
+    /// - 17 `encoding_level`: `1, 2, 3, 4, 5, m, u, z`
+    /// - 18 `cataloging_form` (interpreted as *item information in record*
+    ///   in the holdings spec): ` `, `i`, `n`
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the leader violates any of the MARC 21 Holdings
+    /// Format leader allowed-value sets above.
+    pub fn validate_leader_holdings(leader: &Leader) -> Result<()> {
+        // Position 5: record status
+        match leader.record_status {
+            'c' | 'd' | 'n' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid record status in holdings leader: '{c}'"
+                )));
+            },
+        }
+
+        // Position 6: type of record — must be 'u', 'v', 'x', or 'y' for holdings.
+        match leader.record_type {
+            'u' | 'v' | 'x' | 'y' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid type of record in holdings leader: '{c}' (expected one of u/v/x/y)"
+                )));
+            },
+        }
+
+        // Positions 7, 8, 19: undefined for holdings — accept any byte.
+
+        // Position 9: character coding
+        match leader.character_coding {
+            ' ' | 'a' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid character coding in holdings leader: '{c}'"
+                )));
+            },
+        }
+
+        Self::validate_leader_shared(leader)?;
+
+        // Position 17: encoding level (holdings allowed set differs entirely
+        // from bibliographic/authority).
+        match leader.encoding_level {
+            '1' | '2' | '3' | '4' | '5' | 'm' | 'u' | 'z' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid encoding level in holdings leader: '{c}'"
+                )));
+            },
+        }
+
+        // Position 18: item information in record (occupies the byte the
+        // bibliographic spec calls "cataloging form").
+        match leader.cataloging_form {
+            ' ' | 'i' | 'n' => {},
+            c => {
+                return Err(MarcError::leader_msg(format!(
+                    "Invalid item-information code in holdings leader: '{c}'"
                 )));
             },
         }
@@ -397,6 +574,166 @@ mod tests {
             )
             .build();
         assert!(RecordStructureValidator::validate_directory_structure(&record).is_ok());
+    }
+
+    // ----- Per-record-type leader validators ----------------------------
+
+    fn create_authority_leader() -> Leader {
+        Leader {
+            record_length: 1000,
+            record_status: 'n',
+            record_type: 'z',
+            bibliographic_level: '|', // undefined for authority — any byte
+            control_record_type: ' ',
+            character_coding: ' ',
+            indicator_count: 2,
+            subfield_code_count: 2,
+            data_base_address: 500,
+            encoding_level: 'n',
+            cataloging_form: ' ', // punctuation policy
+            multipart_level: ' ',
+            reserved: "4500".to_string(),
+        }
+    }
+
+    fn create_holdings_leader() -> Leader {
+        Leader {
+            record_length: 1000,
+            record_status: 'n',
+            record_type: 'x',
+            bibliographic_level: '|', // undefined for holdings — any byte
+            control_record_type: ' ',
+            character_coding: ' ',
+            indicator_count: 2,
+            subfield_code_count: 2,
+            data_base_address: 500,
+            encoding_level: '1',
+            cataloging_form: ' ', // item information in record
+            multipart_level: ' ',
+            reserved: "4500".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_validate_leader_authority_accepts_undefined_position_7() {
+        // Position 7 (`bibliographic_level`) is undefined for authority; the
+        // fill character '|' and any other byte must pass without firing E002.
+        let mut leader = create_authority_leader();
+        leader.bibliographic_level = '|';
+        assert!(RecordStructureValidator::validate_leader_authority(&leader).is_ok());
+        leader.bibliographic_level = 'q';
+        assert!(RecordStructureValidator::validate_leader_authority(&leader).is_ok());
+    }
+
+    #[test]
+    fn test_validate_leader_authority_rejects_non_z_record_type() {
+        let mut leader = create_authority_leader();
+        leader.record_type = 'a'; // bibliographic
+        assert!(RecordStructureValidator::validate_leader_authority(&leader).is_err());
+    }
+
+    #[test]
+    fn test_validate_leader_authority_record_status_set() {
+        // Authority status set is wider than bibliographic.
+        for status in ['a', 'c', 'd', 'n', 'o', 's', 'x'] {
+            let mut leader = create_authority_leader();
+            leader.record_status = status;
+            assert!(
+                RecordStructureValidator::validate_leader_authority(&leader).is_ok(),
+                "authority status '{status}' should be accepted"
+            );
+        }
+        let mut leader = create_authority_leader();
+        leader.record_status = 'q';
+        assert!(RecordStructureValidator::validate_leader_authority(&leader).is_err());
+    }
+
+    #[test]
+    fn test_validate_leader_authority_encoding_level() {
+        for level in ['n', 'o'] {
+            let mut leader = create_authority_leader();
+            leader.encoding_level = level;
+            assert!(RecordStructureValidator::validate_leader_authority(&leader).is_ok());
+        }
+        let mut leader = create_authority_leader();
+        leader.encoding_level = '1'; // bibliographic-only
+        assert!(RecordStructureValidator::validate_leader_authority(&leader).is_err());
+    }
+
+    #[test]
+    fn test_validate_leader_authority_punctuation_policy() {
+        for policy in [' ', 'c', 'i', 'u'] {
+            let mut leader = create_authority_leader();
+            leader.cataloging_form = policy;
+            assert!(RecordStructureValidator::validate_leader_authority(&leader).is_ok());
+        }
+        let mut leader = create_authority_leader();
+        leader.cataloging_form = 'a'; // bibliographic "AACR 2", not valid for authority
+        assert!(RecordStructureValidator::validate_leader_authority(&leader).is_err());
+    }
+
+    #[test]
+    fn test_validate_leader_holdings_accepts_undefined_position_7() {
+        let mut leader = create_holdings_leader();
+        leader.bibliographic_level = '|';
+        assert!(RecordStructureValidator::validate_leader_holdings(&leader).is_ok());
+    }
+
+    #[test]
+    fn test_validate_leader_holdings_record_type_set() {
+        for rt in ['u', 'v', 'x', 'y'] {
+            let mut leader = create_holdings_leader();
+            leader.record_type = rt;
+            assert!(
+                RecordStructureValidator::validate_leader_holdings(&leader).is_ok(),
+                "holdings record_type '{rt}' should be accepted"
+            );
+        }
+        let mut leader = create_holdings_leader();
+        leader.record_type = 'a';
+        assert!(RecordStructureValidator::validate_leader_holdings(&leader).is_err());
+        leader.record_type = 'z';
+        assert!(RecordStructureValidator::validate_leader_holdings(&leader).is_err());
+    }
+
+    #[test]
+    fn test_validate_leader_holdings_encoding_level() {
+        for level in ['1', '2', '3', '4', '5', 'm', 'u', 'z'] {
+            let mut leader = create_holdings_leader();
+            leader.encoding_level = level;
+            assert!(
+                RecordStructureValidator::validate_leader_holdings(&leader).is_ok(),
+                "holdings encoding_level '{level}' should be accepted"
+            );
+        }
+        let mut leader = create_holdings_leader();
+        leader.encoding_level = 'n'; // authority-only
+        assert!(RecordStructureValidator::validate_leader_holdings(&leader).is_err());
+    }
+
+    #[test]
+    fn test_validate_leader_holdings_item_information() {
+        for code in [' ', 'i', 'n'] {
+            let mut leader = create_holdings_leader();
+            leader.cataloging_form = code;
+            assert!(RecordStructureValidator::validate_leader_holdings(&leader).is_ok());
+        }
+        let mut leader = create_holdings_leader();
+        leader.cataloging_form = 'a';
+        assert!(RecordStructureValidator::validate_leader_holdings(&leader).is_err());
+    }
+
+    #[test]
+    fn test_per_type_validators_share_count_and_base_address_checks() {
+        // Shared validation: indicator_count == 2, subfield_code_count == 2,
+        // data_base_address ≤ 99999.
+        let mut a = create_authority_leader();
+        a.indicator_count = 3;
+        assert!(RecordStructureValidator::validate_leader_authority(&a).is_err());
+
+        let mut h = create_holdings_leader();
+        h.data_base_address = 100_000;
+        assert!(RecordStructureValidator::validate_leader_holdings(&h).is_err());
     }
 
     #[test]

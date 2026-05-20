@@ -202,6 +202,15 @@ impl Iso2709Builder for HoldingsBuilder {
         }
     }
 
+    /// At `validation_level=strict_marc`, validate the leader against the
+    /// MARC 21 **Holdings Format** allowed-value sets — positions 7, 8, 19
+    /// are undefined for holdings records, positions 5, 6, 17, 18 carry
+    /// holdings-specific allowed sets that differ from the bibliographic
+    /// trait default.
+    fn validate_leader_strict_marc(leader: &Leader) -> Result<()> {
+        crate::RecordStructureValidator::validate_leader_holdings(leader)
+    }
+
     fn new_for(leader: Leader) -> Self {
         HoldingsBuilder {
             record: HoldingsRecord::new(leader),
