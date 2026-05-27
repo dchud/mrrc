@@ -1,5 +1,5 @@
 //! Integration test for per-record-type MARC 21 leader validation at
-//! `validation_level=strict_marc` (bd-0x73.21.7).
+//! `validation_level=strict_marc`.
 //!
 //! Verifies that:
 //!
@@ -45,7 +45,7 @@ fn authority_strict_marc_accepts_valid_authority_leader() {
 
     let record = reader
         .read_record()
-        .expect("authority strict_marc must accept its own valid leader (bd-0x73.21.7)");
+        .expect("authority strict_marc must accept its own valid leader");
     assert!(record.is_some(), "expected one authority record");
 }
 
@@ -129,7 +129,7 @@ fn holdings_strict_marc_accepts_valid_holdings_leader() {
 
     let record = reader
         .read_record()
-        .expect("holdings strict_marc must accept its own valid leader (bd-0x73.21.7)");
+        .expect("holdings strict_marc must accept its own valid leader");
     assert!(record.is_some(), "expected one holdings record");
 }
 

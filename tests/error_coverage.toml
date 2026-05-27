@@ -645,9 +645,9 @@ wired = true
 # E301 authority CONTROL field invalid UTF-8 at strict_marc. The
 # fixture's leader is the simple_authority.mrc leader with position 18
 # (punctuation policy) set to ' ' so it conforms to the MARC 21 Authority
-# Format allowed-value sets; per-record-type leader validation (bd-0x73.21.7)
-# lets the parse proceed past the leader and fire E301 on the corrupted
-# control-field byte (0xFF at offset 73).
+# Format allowed-value sets; the per-record-type leader validators in
+# `RecordStructureValidator` let the parse proceed past the leader and
+# fire E301 on the corrupted control-field byte (0xFF at offset 73).
 [[case]]
 id = "e301_invalid_utf8_in_authority_control_field"
 code = "E301"
