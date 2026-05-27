@@ -207,6 +207,15 @@ impl Iso2709Builder for AuthorityBuilder {
         }
     }
 
+    /// At `validation_level=strict_marc`, validate the leader against the
+    /// MARC 21 **Authority Format** allowed-value sets — positions 7, 8, 19
+    /// are undefined for authority records, positions 5, 6, 17, 18 carry
+    /// authority-specific allowed sets that differ from the bibliographic
+    /// trait default.
+    fn validate_leader_strict_marc(leader: &Leader) -> Result<()> {
+        crate::RecordStructureValidator::validate_leader_authority(leader)
+    }
+
     fn new_for(leader: Leader) -> Self {
         AuthorityBuilder {
             record: AuthorityRecord::new(leader),

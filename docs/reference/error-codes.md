@@ -100,6 +100,32 @@ base-address fields. Two failure shapes share this code:
    set, `indicator_count` not equal to 2, `encoding_level` outside the
    allowed set, etc.
 
+   The MARC 21 allowed-value sets at the per-position level **differ by
+   reader type**. The bibliographic, authority, and holdings readers each
+   apply their own format's spec at `strict_marc`:
+
+   - **Bibliographic** (`MarcReader`): the union of positions defined in
+     the MARC 21 Bibliographic Format leader — positions 5–11 and 17–19.
+   - **Authority** (`AuthorityMarcReader`): the MARC 21 Authority Format
+     allowed sets. Positions 7 (`bibliographic_level`), 8
+     (`control_record_type`), and 19 (`multipart_level`) are
+     **undefined** for authority records and accept any byte (including
+     the MARC 21 fill character `|`). Position 5 accepts the wider set
+     `{a, c, d, n, o, s, x}`, position 6 must be `z`, position 17 must
+     be `n` or `o`, and position 18 carries the *punctuation policy*
+     allowed set `{space, c, i, u}` instead of the bibliographic
+     "cataloging form" set.
+   - **Holdings** (`HoldingsMarcReader`): the MARC 21 Holdings Format
+     allowed sets. Positions 7, 8, and 19 are undefined as for
+     authority. Position 5 accepts `{c, d, n}`, position 6 accepts
+     `{u, v, x, y}`, position 17 (encoding level) accepts
+     `{1, 2, 3, 4, 5, m, u, z}`, and position 18 (item information in
+     record) accepts `{space, i, n}`.
+
+   A leader that is valid per one record type's format may be invalid
+   per another's (e.g., `encoding_level='1'` is valid for bibliographic
+   but invalid for authority).
+
 **Context:** Parse-side.
 **Applies to:** Bibliographic, Authority, Holdings readers.
 **Populates:** `record_index`, `byte_offset`, `record_byte_offset` (= 0).
