@@ -138,6 +138,13 @@ pub trait Iso2709Builder: Sized {
     /// Authority returns `Err` when `field_bytes.len() < 2` (can't read
     /// indicators); holdings returns `Err` when `< 3`.
     ///
+    /// The skeleton invokes this guard only for **data fields**. Control
+    /// fields (001-009) decode on a separate path
+    /// ([`Iso2709Builder::decode_control_field_value`]) and never reach
+    /// it — a control field carries no indicators, so the "too short for
+    /// indicators" minimum does not apply. A too-short control field is
+    /// not an error here; it decodes to a (possibly empty) value.
+    ///
     /// # Errors
     ///
     /// Returns `MarcError::InvalidField` when the byte count is below

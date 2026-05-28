@@ -536,13 +536,13 @@ recovery_modes = ["strict"]
 wired = true
 
 # E106 authority field-too-short: the documented per-reader minimum
-# guard ("authority returns Err when field_bytes.len() < 2") should
-# fire from AuthorityMarcReader when a data field is below the
-# 2-byte indicator minimum. A trial fixture mutating a directory
-# entry's length to '0001' did not trip the check, suggesting the
-# guard has gating different from what the iso2709_skeleton.rs:121-122
-# docstring claims. This per-trigger entry stays unwired until the
-# guard's actual gating is reconciled with the docstring.
+# guard ("authority returns Err when field_bytes.len() < 2") fires
+# from AuthorityMarcReader when a *data* field is below the 2-byte
+# indicator minimum. The guard runs only on data fields — control
+# fields (001-009) decode on a separate path and are exempt — so the
+# fixture mutates the 100 heading field's directory length to '0001'.
+# An earlier trial that mutated the 005 control field could never trip
+# it, which is what the data-field-only gating predicts.
 [[case]]
 id = "e106_authority_field_too_short"
 code = "E106"
@@ -550,11 +550,10 @@ variant = "InvalidField"
 slug = "invalid_field"
 trigger_kind = "parse_authority"
 trigger_fixture = "tests/data/error_fixtures/e106_authority_field_too_short.bin"
-description = "Authority record's second directory entry length set to '0001' (1 byte; below 2-byte indicator minimum)."
+description = "Authority record's 100 data-field directory length set to '0001' (1 byte; below the 2-byte indicator minimum)."
 expected_context = ["record_index", "byte_offset"]
 recovery_modes = ["strict"]
-wired = false
-skip_reason = "Trial fixture (length='0001') did not trip the documented authority field-length guard; the guard's actual gating differs from the iso2709_skeleton.rs:121-122 comment."
+wired = true
 
 # === Subfield / indicator (E2xx) ====================================
 
