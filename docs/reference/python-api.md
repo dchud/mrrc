@@ -206,63 +206,118 @@ leader.character_coding = "a"      # UTF-8
 
 ### AuthorityRecord
 
-A MARC authority record. Returned by `AuthorityMARCReader`.
-
-The full `AuthorityRecord` API surface is not yet covered in this reference (control fields, heading, see-from / see-also tracings, notes, source-data accessors, etc.). The methods documented here are the ones with parity to bibliographic `Record`.
-
-**Field accessors:**
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
-| `get_field_or_err(tag)` | `Field` | Get first field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
-| `get_fields(tag)` | `list[Field] \| None` | Get all fields matching a tag (note: returns `None` when no fields match, unlike `Record.get_fields` which returns `[]`) |
+A MARC authority record. Returned by [`AuthorityMARCReader`](#authoritymarcreader).
 
 ```python
 from mrrc import AuthorityMARCReader, FieldNotFound
 
-with open("authorities.mrc", "rb") as fh:
-    reader = AuthorityMARCReader(fh)
-    record = next(reader)
+reader = AuthorityMARCReader("authorities.mrc")
+record = next(reader)
 
-heading = record.get_field("100")  # Optional[Field]
+print(record.heading_text())      # main heading string, or None
+for tracing in record.see_from_tracings():
+    print("see from:", tracing)
+```
 
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `leader` | `Leader` | The 24-byte record leader |
+| `errors` | `list` | Non-fatal errors accumulated while parsing this record (empty in `recovery_mode="strict"`); see [`Record.errors`](#record) |
+
+**Heading and tracing accessors:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `heading()` | `Field \| None` | The main heading field (1XX), or `None` if absent |
+| `heading_text()` | `str \| None` | Subfield `a` of the main heading, or `None` |
+| `see_from_tracings()` | `list[Field]` | See-from tracings (4XX fields) |
+| `see_also_tracings()` | `list[Field]` | See-also-from tracings (5XX fields) |
+| `notes()` | `list[Field]` | Note fields: 6XX fields other than the subject tracings 650/651/655 |
+| `linking_entries()` | `list[Field]` | Heading linking entries (7XX fields) |
+
+**General field accessors:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `record_type()` | `str` | Leader byte 06 (type of record) as a single character |
+| `get_field(tag)` | `Field \| None` | First field with given tag (returns `None` if absent) |
+| `get_field_or_err(tag)` | `Field` | First field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
+| `get_fields(tag)` | `list[Field] \| None` | All fields matching a tag (note: returns `None` when none match, unlike `Record.get_fields` which returns `[]`) |
+| `get_control_field(tag)` | `str \| None` | Value of a control field (00X) by tag, or `None` |
+| `to_json()` | `str` | JSON summary of the record |
+
+```python
 try:
-    required = record.get_field_or_err("100")
+    main = record.get_field_or_err("100")
 except FieldNotFound as e:
     print(f"missing {e.field_tag} on record {e.record_control_number}")
 ```
 
 ### HoldingsRecord
 
-A MARC holdings record. Returned by `HoldingsMARCReader`.
+A MARC holdings record. Returned by [`HoldingsMARCReader`](#holdingsmarcreader).
 
-The full `HoldingsRecord` API surface is not yet covered in this reference (control fields, locations, captions, enumerations, textual holdings, item information, etc.). The methods documented here are the ones with parity to bibliographic `Record`.
+```python
+from mrrc import HoldingsMARCReader
 
-**Field accessors:**
+reader = HoldingsMARCReader("holdings.mrc")
+record = next(reader)
+
+for location in record.locations():       # 852 fields
+    print(location)
+for caption in record.captions_basic():   # 853 fields
+    print(caption)
+```
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `leader` | `Leader` | The 24-byte record leader |
+| `errors` | `list` | Non-fatal errors accumulated while parsing this record (empty in `recovery_mode="strict"`); see [`Record.errors`](#record) |
+
+**Holdings-specific accessors:**
+
+| Method | Returns | MARC tag | Description |
+|--------|---------|----------|-------------|
+| `locations()` | `list[Field]` | 852 | Location fields |
+| `captions_basic()` | `list[Field]` | 853 | Basic caption and pattern fields |
+| `captions_supplements()` | `list[Field]` | 854 | Supplementary-material caption and pattern fields |
+| `captions_indexes()` | `list[Field]` | 855 | Index caption and pattern fields |
+| `enumeration_basic()` | `list[Field]` | 863 | Basic enumeration and chronology fields |
+| `enumeration_supplements()` | `list[Field]` | 864 | Supplementary-material enumeration and chronology fields |
+| `enumeration_indexes()` | `list[Field]` | 865 | Index enumeration and chronology fields |
+| `textual_holdings_basic()` | `list[Field]` | 866 | Basic textual holdings fields |
+| `textual_holdings_supplements()` | `list[Field]` | 867 | Supplementary-material textual holdings fields |
+| `textual_holdings_indexes()` | `list[Field]` | 868 | Index textual holdings fields |
+
+**General field accessors:**
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
-| `get_field_or_err(tag)` | `Field` | Get first field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
-| `get_fields(tag)` | `list[Field] \| None` | Get all fields matching a tag (note: returns `None` when no fields match, unlike `Record.get_fields` which returns `[]`) |
-
-```python
-from mrrc import HoldingsMARCReader, FieldNotFound
-
-with open("holdings.mrc", "rb") as fh:
-    reader = HoldingsMARCReader(fh)
-    record = next(reader)
-
-location = record.get_field("852")  # Optional[Field]
-
-try:
-    required = record.get_field_or_err("852")
-except FieldNotFound as e:
-    print(f"missing {e.field_tag} on record {e.record_control_number}")
-```
+| `record_type()` | `str` | Leader byte 06 (type of record) as a single character |
+| `get_field(tag)` | `Field \| None` | First field with given tag (returns `None` if absent) |
+| `get_field_or_err(tag)` | `Field` | First field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
+| `get_fields(tag)` | `list[Field] \| None` | All fields matching a tag (note: returns `None` when none match, unlike `Record.get_fields` which returns `[]`) |
+| `get_control_field(tag)` | `str \| None` | Value of a control field (00X) by tag, or `None` |
+| `to_json()` | `str` | JSON summary of the record |
 
 ## Reader/Writer Classes
+
+mrrc provides a dedicated reader per MARC record type. All three share the
+ISO 2709 binary format and the iteration protocol; they differ in the record
+type they yield and their constructor keywords.
+
+| Reader | Yields | Use for |
+|--------|--------|---------|
+| [`MARCReader`](#marcreader) | `Record` | Bibliographic records |
+| [`AuthorityMARCReader`](#authoritymarcreader) | `AuthorityRecord` | Authority records |
+| [`HoldingsMARCReader`](#holdingsmarcreader) | `HoldingsRecord` | Holdings records |
+
+There are no dedicated authority/holdings *writers*; [`MARCWriter`](#marcwriter)
+serializes any record's fields to ISO 2709.
 
 ### MARCReader
 
@@ -356,6 +411,52 @@ with MARCWriter("output.mrc") as writer:
 |--------|-------------|
 | `write(record)` | Write a single record |
 | `close()` | Close the writer (automatic with context manager) |
+
+### AuthorityMARCReader
+
+Reads MARC **authority** records, yielding [`AuthorityRecord`](#authorityrecord). Same ISO 2709 binary format and iteration protocol as [`MARCReader`](#marcreader), with a smaller keyword set.
+
+```python
+AuthorityMARCReader(file, *, recovery_mode="permissive", validation_level="structural")
+```
+
+```python
+from mrrc import AuthorityMARCReader
+
+# From a path, bytes, or file object — like MARCReader
+for record in AuthorityMARCReader("authorities.mrc"):
+    print(record.heading_text())
+```
+
+**Keyword Arguments:**
+
+| Kwarg | Type | Default | Description |
+|-------|------|---------|-------------|
+| `recovery_mode` | `str` | `"permissive"` | How malformed records are handled: `"strict"`, `"lenient"`, or `"permissive"` (see [MARCReader recovery modes](#marcreader)). Note the default differs from `MARCReader` (`"strict"`). |
+| `validation_level` | `str` | `"structural"` | What counts as an error during parsing. |
+
+### HoldingsMARCReader
+
+Reads MARC **holdings** records, yielding [`HoldingsRecord`](#holdingsrecord). Same shape as `AuthorityMARCReader`.
+
+```python
+HoldingsMARCReader(file, *, recovery_mode="permissive", validation_level="structural")
+```
+
+```python
+from mrrc import HoldingsMARCReader
+
+for record in HoldingsMARCReader("holdings.mrc"):
+    for location in record.locations():
+        print(location)
+```
+
+**Keyword Arguments:**
+
+| Kwarg | Type | Default | Description |
+|-------|------|---------|-------------|
+| `recovery_mode` | `str` | `"permissive"` | How malformed records are handled: `"strict"`, `"lenient"`, or `"permissive"` (see [MARCReader recovery modes](#marcreader)). Note the default differs from `MARCReader` (`"strict"`). |
+| `validation_level` | `str` | `"structural"` | What counts as an error during parsing. |
 
 ## Format Conversion
 
