@@ -495,8 +495,20 @@ where
             continue;
         }
 
+        // Point stream_byte_offset at the field's absolute start and record
+        // the field's tag before the per-reader guard runs, so any error the
+        // guard raises carries a precise byte_offset (the field's data-area
+        // position, not the directory entry) and the correct field_tag. The
+        // same state also feeds parse_data_field below for hex-dump caret
+        // alignment.
+        ctx.current_field_tag = tag.as_bytes().try_into().ok();
+        ctx.stream_byte_offset = record_data_offset + data_start + start_position;
+
         // Per-reader minimum-bytes guard (authority's `< 2`, holdings' `< 3`).
         if let Err(e) = B::validate_data_field_bytes(field_data, &tag, ctx) {
+            // Clear field context so it doesn't leak into the next iteration
+            // on the lenient skip-continue path (mirrors the reset below).
+            ctx.current_field_tag = None;
             if recovery_mode == RecoveryMode::Strict {
                 return Err(e);
             }
@@ -505,11 +517,7 @@ where
             continue;
         }
 
-        // Data field. Point stream_byte_offset at the field's absolute start
-        // so any error raised inside parse_data_field carries a precise
-        // byte_offset for hex-dump caret alignment.
-        ctx.current_field_tag = tag.as_bytes().try_into().ok();
-        ctx.stream_byte_offset = record_data_offset + data_start + start_position;
+        // Data field.
         let parsed = parse_data_field(field_data, &tag, B::parse_config(validation_level), ctx);
         ctx.current_field_tag = None;
         match parsed {

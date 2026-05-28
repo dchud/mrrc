@@ -567,7 +567,7 @@ slug = "invalid_field"
 trigger_kind = "parse_authority"
 trigger_fixture = "tests/data/error_fixtures/e106_authority_field_too_short.bin"
 description = "Authority record's 100 data-field directory length set to '0001' (1 byte; below the 2-byte indicator minimum)."
-expected_context = ["record_index", "byte_offset"]
+expected_context = ["record_index", "byte_offset", "field_tag"]
 recovery_modes = ["strict"]
 wired = true
 
