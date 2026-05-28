@@ -33,7 +33,14 @@
 //!     `Record::get_field_or_err("999")`)
 //!   * `io_error` — wrap a `Read` impl that returns `std::io::Error`
 //!     from the first read in a [`MarcReader`](mrrc::MarcReader) and
-//!     capture the resulting [`MarcError::IoError`](mrrc::MarcError)
+//!     capture the resulting [`MarcError::IoError`](mrrc::MarcError).
+//!     This is the raw-io / leader-boundary path: the failure precedes
+//!     any record positioning, so the error carries no positional context
+//!   * `io_error_parse_path` — read one complete record, then fail the
+//!     underlying source while reading the next record's data area, so
+//!     the [`MarcError::IoError`](mrrc::MarcError) is enriched with the
+//!     in-progress record's `record_index`, `byte_offset`, and
+//!     `source_name`
 //!   * `recovery_cap` — drive a stream of malformed records past
 //!     [`MarcReader::with_max_errors`](mrrc::MarcReader::with_max_errors)
 //!     in lenient mode and capture the
@@ -316,6 +323,65 @@ fn build_bad_record() -> Vec<u8> {
     out
 }
 
+/// Build a minimal structurally valid ISO 2709 record carrying a single
+/// `001` control field. Used by the `io_error_parse_path` trigger to get
+/// the parser past the leader read so the synthetic failure lands in
+/// `read_record_data`'s context-carrying path rather than the leader
+/// boundary.
+fn build_valid_record(control_001: &str) -> Vec<u8> {
+    const FIELD_TERMINATOR: u8 = 0x1E;
+    const RECORD_TERMINATOR: u8 = 0x1D;
+
+    let mut field_data = Vec::new();
+    field_data.extend_from_slice(control_001.as_bytes());
+    field_data.push(FIELD_TERMINATOR);
+
+    let mut directory = Vec::new();
+    directory.extend_from_slice(b"001");
+    directory.extend_from_slice(format!("{:04}", field_data.len()).as_bytes());
+    directory.extend_from_slice(b"00000");
+    directory.push(FIELD_TERMINATOR);
+
+    let base_address = 24 + directory.len();
+    let record_length = base_address + field_data.len() + 1;
+
+    let mut leader = Vec::new();
+    leader.extend_from_slice(format!("{record_length:05}").as_bytes());
+    leader.extend_from_slice(b"nam a22");
+    leader.extend_from_slice(format!("{base_address:05}").as_bytes());
+    leader.extend_from_slice(b" i 4500");
+
+    let mut out = Vec::new();
+    out.extend_from_slice(&leader);
+    out.extend_from_slice(&directory);
+    out.extend_from_slice(&field_data);
+    out.push(RECORD_TERMINATOR);
+    out
+}
+
+/// `Read` impl that serves a prepared buffer, then returns an `io::Error`
+/// (rather than a clean `Ok(0)` EOF) once exhausted — driving the parser
+/// into the underlying-read-failure path of `read_record_data`.
+struct FailAfterBuffer {
+    data: Vec<u8>,
+    pos: usize,
+}
+
+impl Read for FailAfterBuffer {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if self.pos >= self.data.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "synthetic mid-record read failure",
+            ));
+        }
+        let n = std::cmp::min(buf.len(), self.data.len() - self.pos);
+        buf[..n].copy_from_slice(&self.data[self.pos..self.pos + n]);
+        self.pos += n;
+        Ok(n)
+    }
+}
+
 fn fire_trigger(case: &Case) -> TriggerOutcome {
     match case.trigger_kind.as_str() {
         "parse_iso2709" => match first_iso2709_error(
@@ -340,6 +406,30 @@ fn fire_trigger(case: &Case) -> TriggerOutcome {
             let mut reader = MarcReader::new(FailingReader).with_recovery_mode(RecoveryMode::Strict);
             match reader.read_record() {
                 Ok(_) => TriggerOutcome::NoError,
+                Err(e) => TriggerOutcome::Fired(e),
+            }
+        },
+        "io_error_parse_path" => {
+            // Complete record 1, then only the 24-byte leader of record 2.
+            // The reader errors when the parser reads record 2's data area,
+            // so the IoError is enriched with record 2's positional context
+            // (vs. the raw-io leader-boundary From fallback that `io_error`
+            // exercises).
+            let rec1 = build_valid_record("rec1");
+            let rec2 = build_valid_record("rec2");
+            let mut stream = rec1;
+            stream.extend_from_slice(&rec2[..24]);
+            let mut reader = MarcReader::new(FailAfterBuffer {
+                data: stream,
+                pos: 0,
+            })
+            .with_recovery_mode(RecoveryMode::Strict)
+            .with_source("synthetic-stream.mrc");
+            match reader.read_record() {
+                Ok(_) => match reader.read_record() {
+                    Ok(_) => TriggerOutcome::NoError,
+                    Err(e) => TriggerOutcome::Fired(e),
+                },
                 Err(e) => TriggerOutcome::Fired(e),
             }
         },
@@ -525,6 +615,7 @@ fn json_probe_key(field: &str) -> &str {
     match field {
         "bytes_near" => "bytes_near_hex",
         "found" => "found_hex",
+        "source_name" => "source",
         other => other,
     }
 }

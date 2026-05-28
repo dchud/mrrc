@@ -109,6 +109,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`RecordLengthInvalid`), `E002` (`InvalidLeader`), `E003`
   (`BaseAddressInvalid`), and `E004` (`BaseAddressNotFound`) from these
   reader paths. The ISO 2709 path was already enriched.
+- `MarcError::IoError` (E007) raised mid-record — when the underlying
+  source fails while reading a record's data area — now carries
+  `record_index`, `byte_offset`, and `source_name`, instead of the
+  context-free `From<io::Error>` fallback that left them `None`. I/O
+  failures at a record boundary (before a record is in progress) stay
+  context-free by design; Python's `OSError` surface is unchanged.
 - v0.8.0→v0.8.1 cumulative parser hot-path cost on
   `parse_10k_clean_strict` is +0.50% — well inside the 2% / 5% budget the
   error-handling epic set. The internal cumulative-budget perf-gate CI

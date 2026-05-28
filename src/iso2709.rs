@@ -417,6 +417,15 @@ impl ParseContext {
 ///
 /// Returns [`MarcError::IoError`] if reading from the underlying source fails for
 /// any reason other than a clean EOF before the first byte.
+///
+/// The error path uses the context-free `From<std::io::Error>` conversion
+/// rather than [`ParseContext::err_io`]. This is deliberate: the leader is
+/// read at a record boundary, *before* the caller runs
+/// [`ParseContext::begin_record`] for the record about to be parsed (the
+/// read may yet return a clean EOF, meaning there is no such record). At
+/// that point the context's `record_index` still names the *previous*
+/// record, so enriching here would misattribute a boundary-read failure.
+/// Once data-area reads begin, [`read_record_data`] does carry context.
 pub fn read_leader_bytes<R: Read>(reader: &mut R) -> Result<Option<[u8; LEADER_LEN]>> {
     let mut buf = [0u8; LEADER_LEN];
     match reader.read_exact(&mut buf) {
@@ -454,7 +463,7 @@ pub fn read_record_data<R: Read>(
             Ok(0) => break,
             Ok(n) => bytes_read += n,
             Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {},
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(ctx.err_io(e)),
         }
     }
     if bytes_read < expected_len && recovery_mode == RecoveryMode::Strict {

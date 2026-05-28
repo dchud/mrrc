@@ -1445,7 +1445,14 @@ pub fn render_hex_dump(window: &BytesNear, byte_offset: Option<usize>) -> String
 pub type Result<T> = std::result::Result<T, MarcError>;
 
 // Backwards-compatible conversion so existing `?` propagation of `io::Error`
-// continues to work without surrounding context.
+// continues to work without surrounding context. The resulting `IoError`
+// carries no positional fields (`record_index`, `byte_offset`,
+// `source_name` are all `None`). Parse-path call sites that have a live
+// `ParseContext` in scope should prefer `ctx.err_io(...)`
+// (`src/iso2709.rs`), which enriches the error with the record being read.
+// This impl is the right choice only for raw-io contexts that genuinely
+// lack record positioning (e.g. the leader read at a record boundary,
+// before `ParseContext::begin_record` has run) and for non-parse io.
 impl From<std::io::Error> for MarcError {
     fn from(cause: std::io::Error) -> Self {
         MarcError::IoError {
