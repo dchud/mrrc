@@ -491,6 +491,51 @@ mod tests {
     }
 
     #[test]
+    fn test_authority_field_too_short_error_carries_field_offset_and_tag() {
+        // A 100 data field with a 1-byte data area trips the per-reader
+        // minimum-bytes guard (authority's `< 2`). The raised InvalidField must
+        // carry the offending field's tag and a byte_offset pointing at the
+        // field's data-area start — not the directory entry the parser was last
+        // walking. Regression for the guard inheriting stale ctx positional
+        // state (tag 100, len 0001, start 0).
+        let mut directory = Vec::new();
+        directory.extend_from_slice(b"100000100000");
+        directory.push(FIELD_TERMINATOR);
+        let bytes = build_authority_record_with(&directory, b"x");
+
+        // The data area begins at the leader's base address; with start_position
+        // 0 the field's absolute offset equals base_address. The buggy path
+        // reported the directory entry's offset (24) and a null field_tag.
+        let base_address = 24 + directory.len();
+
+        let mut reader =
+            AuthorityMarcReader::new(Cursor::new(bytes)).with_recovery_mode(RecoveryMode::Strict);
+        let err = reader
+            .read_record()
+            .expect_err("field below the 2-byte minimum must error in strict mode");
+
+        match err {
+            MarcError::InvalidField {
+                field_tag,
+                byte_offset,
+                ..
+            } => {
+                assert_eq!(
+                    field_tag.as_deref(),
+                    Some("100"),
+                    "field_tag should identify the offending field"
+                );
+                assert_eq!(
+                    byte_offset,
+                    Some(base_address),
+                    "byte_offset should point at the field's data-area start, not the directory entry"
+                );
+            },
+            other => panic!("expected InvalidField, got: {other:?}"),
+        }
+    }
+
+    #[test]
     fn test_authority_max_errors_cap_trips_on_field_length_failures() {
         // Each record has one bad-field-length entry → one note_recovery_error
         // per record. Cap of 3 means the 4th read trips.
