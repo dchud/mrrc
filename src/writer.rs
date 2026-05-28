@@ -217,7 +217,16 @@ impl<W: Write> MarcWriter<W> {
             record_control_number.as_deref(),
         )?;
 
-        // Update leader with correct values
+        // Update leader with correct values.
+        //
+        // These two `u32::try_from` checks are redundant runtime guards. The
+        // `check_iso2709_size` call above already caps both `record_length` and
+        // `base_address` at `ISO2709_MAX_FIELD` (99_999), far below `u32::MAX`,
+        // so neither conversion can fail today and the error arms are
+        // unreachable from the public API. They are kept deliberately: if a
+        // future refactor ever reaches this leader-population step without first
+        // routing through `check_iso2709_size`, these guards still prevent a
+        // silent `usize`→`u32` truncation on 64-bit hosts.
         let mut leader = record.leader.clone();
         leader.record_length =
             u32::try_from(record_length).map_err(|_| MarcError::WriterError {
