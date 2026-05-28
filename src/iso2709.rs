@@ -185,58 +185,6 @@ impl ParseContext {
         BytesNear::capture(buffer, base, self.stream_byte_offset)
     }
 
-    /// Construct an [`MarcError::RecordLengthInvalid`] inheriting the current
-    /// stream/record positional state.
-    #[must_use]
-    pub fn err_record_length_invalid(
-        &self,
-        found: Option<&[u8]>,
-        expected: impl Into<String>,
-    ) -> MarcError {
-        let found_bytes = found.map(crate::error::truncate_bytes);
-        MarcError::RecordLengthInvalid {
-            record_index: self.record_index_opt(),
-            byte_offset: Some(self.stream_byte_offset),
-            source_name: self.source_name.clone(),
-            found: found_bytes,
-            expected: Some(expected.into()),
-            bytes_near: self.capture_bytes_near(),
-        }
-    }
-
-    /// Construct an [`MarcError::BaseAddressInvalid`] inheriting the current
-    /// stream/record positional state.
-    #[must_use]
-    pub fn err_base_address_invalid(
-        &self,
-        found: Option<&[u8]>,
-        expected: impl Into<String>,
-    ) -> MarcError {
-        let found_bytes = found.map(crate::error::truncate_bytes);
-        MarcError::BaseAddressInvalid {
-            record_index: self.record_index_opt(),
-            byte_offset: Some(self.stream_byte_offset),
-            source_name: self.source_name.clone(),
-            record_control_number: self.record_control_number.clone(),
-            found: found_bytes,
-            expected: Some(expected.into()),
-            bytes_near: self.capture_bytes_near(),
-        }
-    }
-
-    /// Construct an [`MarcError::BaseAddressNotFound`] inheriting the
-    /// current stream/record positional state.
-    #[must_use]
-    pub fn err_base_address_not_found(&self) -> MarcError {
-        MarcError::BaseAddressNotFound {
-            record_index: self.record_index_opt(),
-            byte_offset: Some(self.stream_byte_offset),
-            source_name: self.source_name.clone(),
-            record_control_number: self.record_control_number.clone(),
-            bytes_near: self.capture_bytes_near(),
-        }
-    }
-
     /// Construct an [`MarcError::DirectoryInvalid`] inheriting the current
     /// stream/record positional state.
     #[must_use]
