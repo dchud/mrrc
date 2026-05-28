@@ -41,6 +41,12 @@
 //!     the [`MarcError::IoError`](mrrc::MarcError) is enriched with the
 //!     in-progress record's `record_index`, `byte_offset`, and
 //!     `source_name`
+//!   * `parse_iso2709_lenient` — feed bytes to
+//!     [`MarcReader`](mrrc::MarcReader) in lenient mode (no recovery
+//!     cap) and return the first error in a yielded record's `errors`
+//!     [`Arc<Vec<MarcError>>`](mrrc::MarcError) whose `code()` matches
+//!     the case. Used for fire sites that surface via `record.errors`
+//!     in lenient/permissive rather than as raised `Err`.
 //!   * `recovery_cap` — drive a stream of malformed records past
 //!     [`MarcReader::with_max_errors`](mrrc::MarcReader::with_max_errors)
 //!     in lenient mode and capture the
@@ -242,13 +248,6 @@ fn first_iso2709_error(
     }
 }
 
-// Note: a `first_iso2709_lenient_error` helper that would surface the
-// first error pushed to a record's `errors: Arc<Vec<MarcError>>` is
-// blocked on `MarcError: Clone` (or a harness refactor that doesn't
-// own the captured error). The E005-lenient and E106-recovery paths
-// would benefit from this helper but currently can't be asserted
-// per-trigger until `MarcError` implements `Clone`.
-
 /// Drive `HoldingsMarcReader` in strict mode and return the first
 /// `Err`. Mirrors `first_iso2709_error` for the holdings reader type.
 fn first_holdings_error(bytes: &[u8], level: ValidationLevel) -> Option<mrrc::MarcError> {
@@ -382,6 +381,7 @@ impl Read for FailAfterBuffer {
     }
 }
 
+#[allow(clippy::too_many_lines)] // one branch per trigger_kind; grows linearly with coverage
 fn fire_trigger(case: &Case) -> TriggerOutcome {
     match case.trigger_kind.as_str() {
         "parse_iso2709" => match first_iso2709_error(
@@ -391,6 +391,36 @@ fn fire_trigger(case: &Case) -> TriggerOutcome {
         ) {
             Some(e) => TriggerOutcome::Fired(e),
             None => TriggerOutcome::NoError,
+        },
+        "parse_iso2709_lenient" => {
+            // Drive MarcReader in lenient with no recovery cap and return
+            // the first error in a yielded record's `errors` Arc whose
+            // `code()` matches `case.code`. Lenient mode accumulates
+            // multiple errors per record (a truncated record with a
+            // malformed directory entry pushes both E005 and E106), so
+            // matching on the case's code lets one trigger drive multiple
+            // cases over the same fixture without depending on push order.
+            let bytes = fixture_bytes(case);
+            let mut reader = MarcReader::new(Cursor::new(&bytes[..]))
+                .with_recovery_mode(RecoveryMode::Lenient)
+                .with_max_errors(0)
+                .with_validation_level(parse_validation_level(case));
+            loop {
+                match reader.read_record() {
+                    Ok(Some(record)) => {
+                        if let Some(err) =
+                            record.errors.iter().find(|e| e.code() == case.code)
+                        {
+                            return TriggerOutcome::Fired(err.clone());
+                        }
+                    },
+                    Ok(None) => return TriggerOutcome::NoError,
+                    // A lenient stream shouldn't raise — but if it does
+                    // (e.g. fatal cap, unrecoverable structural failure),
+                    // surface the error so the harness can compare codes.
+                    Err(e) => return TriggerOutcome::Fired(e),
+                }
+            }
         },
         "parse_marcxml" => {
             let text = fixture_text(case);
@@ -637,7 +667,10 @@ fn run_wired(case: &Case) -> WiredOutcome {
     // branches all drive the parser in strict mode. Triggers with their
     // own intrinsic mode requirements (recovery_cap drives lenient) carry
     // that mode inside the trigger branch and bypass this gate.
-    let strict_only_trigger = !matches!(case.trigger_kind.as_str(), "recovery_cap");
+    let strict_only_trigger = !matches!(
+        case.trigger_kind.as_str(),
+        "recovery_cap" | "parse_iso2709_lenient"
+    );
     if strict_only_trigger && !case.recovery_modes.iter().any(|m| m == "strict") {
         return WiredOutcome::SkippedByHarness(
             "case contract does not cover strict mode; non-strict assertions pending".to_string(),

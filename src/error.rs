@@ -385,6 +385,300 @@ pub enum MarcError {
     },
 }
 
+/// Manual [`Clone`] implementation. Three variants wrap foreign error
+/// types that do not implement `Clone`:
+///
+/// - [`MarcError::IoError`] wraps [`std::io::Error`] (not `Clone` in
+///   std — `io::Error` may hold arbitrary inner errors).
+/// - [`MarcError::XmlError`] wraps `Box<dyn std::error::Error + Send +
+///   Sync>` (type-erased, so not `Clone` in general).
+/// - [`MarcError::JsonError`] wraps [`serde_json::Error`] (not `Clone`
+///   for the same reason as `io::Error`).
+///
+/// For these three, `clone` reconstructs a fresh error of the same
+/// surface type carrying the original's rendered [`std::fmt::Display`]
+/// string (plus, for `io::Error`, its
+/// [`ErrorKind`](std::io::ErrorKind)). Any non-string payload the
+/// original wrapped — a downcast-able inner cause, a structured
+/// `serde_json` line/column, etc. — is lost. This is the same trade-off
+/// `std::io::Error`'s own `From<&io::Error>` ecosystem patterns make,
+/// and it is acceptable here because mrrc surfaces these errors as
+/// diagnostic objects; consumers read the rendered message, not the
+/// inner cause chain.
+///
+/// All other variants clone field-by-field; their contents are owned
+/// data ([`String`], [`Vec<u8>`], [`BytesNear`], `Option` of these,
+/// plain `Copy` types) that derive `Clone` naturally.
+impl Clone for MarcError {
+    #[allow(clippy::too_many_lines)] // 17 variants, each pattern-bound explicitly
+    fn clone(&self) -> Self {
+        match self {
+            MarcError::InvalidLeader {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                message,
+                bytes_near,
+            } => MarcError::InvalidLeader {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.clone(),
+                message: message.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::RecordLengthInvalid {
+                record_index,
+                byte_offset,
+                source_name,
+                found,
+                expected,
+                bytes_near,
+            } => MarcError::RecordLengthInvalid {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.clone(),
+                found: found.clone(),
+                expected: expected.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::BaseAddressInvalid {
+                record_index,
+                byte_offset,
+                source_name,
+                record_control_number,
+                found,
+                expected,
+                bytes_near,
+            } => MarcError::BaseAddressInvalid {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                found: found.clone(),
+                expected: expected.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::BaseAddressNotFound {
+                record_index,
+                byte_offset,
+                source_name,
+                record_control_number,
+                bytes_near,
+            } => MarcError::BaseAddressNotFound {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::DirectoryInvalid {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                found,
+                expected,
+                bytes_near,
+            } => MarcError::DirectoryInvalid {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                field_tag: field_tag.clone(),
+                found: found.clone(),
+                expected: expected.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::TruncatedRecord {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                expected_length,
+                actual_length,
+                bytes_near,
+            } => MarcError::TruncatedRecord {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                expected_length: *expected_length,
+                actual_length: *actual_length,
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::EndOfRecordNotFound {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                bytes_near,
+            } => MarcError::EndOfRecordNotFound {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::InvalidIndicator {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                indicator_position,
+                found,
+                expected,
+                bytes_near,
+            } => MarcError::InvalidIndicator {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                field_tag: field_tag.clone(),
+                indicator_position: *indicator_position,
+                found: found.clone(),
+                expected: expected.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::BadSubfieldCode {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                subfield_code,
+                bytes_near,
+            } => MarcError::BadSubfieldCode {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                field_tag: field_tag.clone(),
+                subfield_code: *subfield_code,
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::InvalidField {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                message,
+                bytes_near,
+            } => MarcError::InvalidField {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                field_tag: field_tag.clone(),
+                message: message.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::EncodingError {
+                record_index,
+                byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                message,
+                bytes_near,
+            } => MarcError::EncodingError {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                field_tag: field_tag.clone(),
+                message: message.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::FieldNotFound {
+                record_index,
+                record_control_number,
+                field_tag,
+            } => MarcError::FieldNotFound {
+                record_index: *record_index,
+                record_control_number: record_control_number.clone(),
+                field_tag: field_tag.clone(),
+            },
+            MarcError::IoError {
+                cause,
+                record_index,
+                byte_offset,
+                source_name,
+            } => MarcError::IoError {
+                cause: std::io::Error::new(cause.kind(), cause.to_string()),
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.clone(),
+            },
+            MarcError::XmlError {
+                cause,
+                record_index,
+                byte_offset,
+                source_name,
+            } => MarcError::XmlError {
+                // `String: Error` via std's `From<String> for Box<dyn Error
+                // + Send + Sync>`. Preserves the rendered message; the
+                // original type identity (`quick_xml::Error` etc.) is lost.
+                cause: cause.to_string().into(),
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.clone(),
+            },
+            MarcError::JsonError {
+                cause,
+                record_index,
+                byte_offset,
+                source_name,
+            } => MarcError::JsonError {
+                // `serde_json::Error` exposes no public string constructor;
+                // route through `serde::de::Error::custom` (a trait it
+                // implements) to rebuild a fresh `serde_json::Error`
+                // carrying the rendered message.
+                cause: <serde_json::Error as serde::de::Error>::custom(cause.to_string()),
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.clone(),
+            },
+            MarcError::WriterError {
+                record_index,
+                record_control_number,
+                message,
+            } => MarcError::WriterError {
+                record_index: *record_index,
+                record_control_number: record_control_number.clone(),
+                message: message.clone(),
+            },
+            MarcError::FatalReaderError {
+                cap,
+                errors_seen,
+                record_index,
+                source_name,
+            } => MarcError::FatalReaderError {
+                cap: *cap,
+                errors_seen: *errors_seen,
+                record_index: *record_index,
+                source_name: source_name.clone(),
+            },
+        }
+    }
+}
+
 impl MarcError {
     /// Render the error as a multi-line diagnostic with all populated
     /// positional metadata visible. Callers who want the actionable one-liner
@@ -1887,5 +2181,252 @@ mod tests {
         assert!(d.contains("^^ offending byte"), "got:\n{d}");
         // ASCII panel shows printable chars
         assert!(d.contains("|2023nyu"), "got:\n{d}");
+    }
+
+    #[test]
+    fn clone_io_error_preserves_kind_and_message_and_positional_fields() {
+        let original = MarcError::IoError {
+            cause: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied"),
+            record_index: Some(3),
+            byte_offset: Some(42),
+            source_name: Some("file.mrc".into()),
+        };
+        let cloned = original.clone();
+        match (&original, &cloned) {
+            (
+                MarcError::IoError {
+                    cause: c1,
+                    record_index: r1,
+                    byte_offset: b1,
+                    source_name: s1,
+                },
+                MarcError::IoError {
+                    cause: c2,
+                    record_index: r2,
+                    byte_offset: b2,
+                    source_name: s2,
+                },
+            ) => {
+                assert_eq!(c1.kind(), c2.kind());
+                assert_eq!(c1.to_string(), c2.to_string());
+                assert_eq!(r1, r2);
+                assert_eq!(b1, b2);
+                assert_eq!(s1, s2);
+            },
+            _ => unreachable!("clone changed variant"),
+        }
+    }
+
+    #[test]
+    fn clone_xml_error_preserves_rendered_cause_message() {
+        let original = MarcError::XmlError {
+            cause: Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "unexpected EOF in element <record>",
+            )),
+            record_index: Some(7),
+            byte_offset: Some(1024),
+            source_name: Some("collection.xml".into()),
+        };
+        let cloned = original.clone();
+        match (&original, &cloned) {
+            (
+                MarcError::XmlError {
+                    cause: c1,
+                    record_index: r1,
+                    byte_offset: b1,
+                    source_name: s1,
+                },
+                MarcError::XmlError {
+                    cause: c2,
+                    record_index: r2,
+                    byte_offset: b2,
+                    source_name: s2,
+                },
+            ) => {
+                assert_eq!(c1.to_string(), c2.to_string());
+                assert_eq!(r1, r2);
+                assert_eq!(b1, b2);
+                assert_eq!(s1, s2);
+            },
+            _ => unreachable!("clone changed variant"),
+        }
+    }
+
+    #[test]
+    fn clone_json_error_preserves_rendered_cause_message() {
+        // Construct via the public parser to get a real serde_json::Error.
+        let parse_err = serde_json::from_str::<serde_json::Value>("{bad json").unwrap_err();
+        let expected_msg = parse_err.to_string();
+        let original = MarcError::JsonError {
+            cause: parse_err,
+            record_index: Some(2),
+            byte_offset: Some(8),
+            source_name: Some("rec.json".into()),
+        };
+        let cloned = original.clone();
+        match (&original, &cloned) {
+            (
+                MarcError::JsonError {
+                    cause: c1,
+                    record_index: r1,
+                    byte_offset: b1,
+                    source_name: s1,
+                },
+                MarcError::JsonError {
+                    cause: c2,
+                    record_index: r2,
+                    byte_offset: b2,
+                    source_name: s2,
+                },
+            ) => {
+                assert_eq!(c1.to_string(), expected_msg);
+                assert_eq!(c2.to_string(), expected_msg);
+                assert_eq!(r1, r2);
+                assert_eq!(b1, b2);
+                assert_eq!(s1, s2);
+            },
+            _ => unreachable!("clone changed variant"),
+        }
+    }
+
+    /// Field-by-field round-trip via `Debug` for the 14 variants that
+    /// don't wrap a foreign non-Clone error type. `Debug` is derived
+    /// here so equal `Debug` output implies equal field contents.
+    #[test]
+    #[allow(clippy::too_many_lines)] // 14 variants, each constructed explicitly
+    fn clone_round_trips_pure_data_variants_by_debug_equality() {
+        let bytes_near = Some(BytesNear {
+            bytes: vec![0xDE, 0xAD, 0xBE, 0xEF],
+            start_offset: 0x100,
+        });
+        let variants: Vec<MarcError> = vec![
+            MarcError::InvalidLeader {
+                record_index: Some(1),
+                byte_offset: Some(2),
+                record_byte_offset: Some(0),
+                source_name: Some("a".into()),
+                message: "bad leader".into(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::RecordLengthInvalid {
+                record_index: Some(1),
+                byte_offset: Some(2),
+                source_name: Some("a".into()),
+                found: Some(b"00X42".to_vec()),
+                expected: Some("5 ASCII digits".into()),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::BaseAddressInvalid {
+                record_index: Some(1),
+                byte_offset: Some(12),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                found: Some(b"0X000".to_vec()),
+                expected: Some("5 ASCII digits".into()),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::BaseAddressNotFound {
+                record_index: Some(1),
+                byte_offset: Some(12),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::DirectoryInvalid {
+                record_index: Some(1),
+                byte_offset: Some(48),
+                record_byte_offset: Some(24),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                field_tag: Some("245".into()),
+                found: Some(b"XYZ".to_vec()),
+                expected: Some("3 ASCII digits".into()),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::TruncatedRecord {
+                record_index: Some(1),
+                byte_offset: Some(80),
+                record_byte_offset: Some(56),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                expected_length: Some(100),
+                actual_length: Some(80),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::EndOfRecordNotFound {
+                record_index: Some(1),
+                byte_offset: Some(99),
+                record_byte_offset: Some(75),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::InvalidIndicator {
+                record_index: Some(1),
+                byte_offset: Some(60),
+                record_byte_offset: Some(36),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                field_tag: Some("245".into()),
+                indicator_position: Some(0),
+                found: Some(b":".to_vec()),
+                expected: Some("digit or space".into()),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::BadSubfieldCode {
+                record_index: Some(1),
+                byte_offset: Some(65),
+                record_byte_offset: Some(41),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                field_tag: Some("245".into()),
+                subfield_code: b'@',
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::InvalidField {
+                record_index: Some(1),
+                byte_offset: Some(70),
+                record_byte_offset: Some(46),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                field_tag: Some("245".into()),
+                message: "field too short".into(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::EncodingError {
+                record_index: Some(1),
+                byte_offset: Some(50),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                field_tag: Some("245".into()),
+                message: "invalid utf-8".into(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::FieldNotFound {
+                record_index: Some(1),
+                record_control_number: Some("rec0001".into()),
+                field_tag: "999".into(),
+            },
+            MarcError::WriterError {
+                record_index: Some(5),
+                record_control_number: Some("rec0005".into()),
+                message: "exceeds 99999 bytes".into(),
+            },
+            MarcError::FatalReaderError {
+                cap: 10,
+                errors_seen: 11,
+                record_index: Some(12),
+                source_name: Some("a".into()),
+            },
+        ];
+        for original in &variants {
+            let cloned = original.clone();
+            assert_eq!(
+                format!("{original:?}"),
+                format!("{cloned:?}"),
+                "Debug drift after clone"
+            );
+        }
     }
 }
