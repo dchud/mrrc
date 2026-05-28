@@ -116,14 +116,14 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
             f"{case['id']} ({case['code']}): expected {case['code']} error from "
             f"marcjson_to_record, got clean parse"
         )
-    elif kind == "io_error":
+    elif kind in ("io_error", "io_error_parse_path"):
         pytest.skip(
             "E007 on the Python side raises built-in OSError, not a typed "
             "mrrc.IoError (documented in docs/reference/error-codes.md#E007 "
-            "as pymarc-compat). The Rust harness asserts the typed variant; "
-            "this typed-class framework cannot assert built-in OSError. The "
-            "Python contract is asserted instead by "
-            "tests/python/test_errors.py::TestFailingReadRaisesOSError."
+            "as pymarc-compat). The Rust harness asserts the typed variant "
+            "and its positional context; this typed-class framework cannot "
+            "assert built-in OSError. The Python contract is asserted "
+            "instead by tests/python/test_errors.py::TestFailingReadRaisesOSError."
         )
     elif kind == "recovery_cap":
         # recovery_cap trips on accumulated recovered errors in

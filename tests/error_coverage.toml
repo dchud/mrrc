@@ -359,18 +359,33 @@ expected_context = ["record_index", "byte_offset", "record_byte_offset"]
 recovery_modes = ["strict"]
 wired = true
 
-# E007: underlying I/O error from the reader source. Wired in the
-# parser (read_record_data and friends construct MarcError::IoError
-# when the underlying Read fails); the harness exercises it once a
-# trigger_kind=io_error mechanism lands.
+# E007: underlying I/O error from the reader source. Two distinct paths
+# construct MarcError::IoError, each covered by a case below:
+#   - raw-io / leader boundary: the read fails before the parser has
+#     begun a record (read_leader_bytes), so no positional context is
+#     available and the context-free From<io::Error> fallback is used.
+#   - parse path: the read fails mid-record in read_record_data, which
+#     enriches the error via ParseContext::err_io with the in-progress
+#     record's record_index, byte_offset, and source_name.
 [[case]]
 id = "e007_io_failure"
 code = "E007"
 variant = "IoError"
 slug = "io_error"
 trigger_kind = "io_error"
-description = "Reader source returns std::io::Error from read()."
+description = "Reader source errors on the first read (leader boundary); no positional context available."
 expected_context = []
+recovery_modes = ["strict"]
+wired = true
+
+[[case]]
+id = "e007_io_failure_parse_path"
+code = "E007"
+variant = "IoError"
+slug = "io_error"
+trigger_kind = "io_error_parse_path"
+description = "Reader source errors mid-record while reading the data area; IoError carries the in-progress record's context."
+expected_context = ["record_index", "byte_offset", "source_name"]
 recovery_modes = ["strict"]
 wired = true
 
