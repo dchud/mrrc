@@ -116,6 +116,16 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
             f"{case['id']} ({case['code']}): expected {case['code']} error from "
             f"marcjson_to_record, got clean parse"
         )
+    elif kind == "parse_iso2709_lenient":
+        pytest.skip(
+            "parse_iso2709_lenient surfaces errors via record.errors in "
+            "lenient mode rather than as raised exceptions. The Python "
+            "side exposes record.errors as well (covered by "
+            "tests/python/test_iter_with_errors.py), but the typed-"
+            "exception harness here is shaped around raised exceptions "
+            "only. The Rust harness asserts the typed variant and its "
+            "positional context for these cases."
+        )
     elif kind in ("io_error", "io_error_parse_path"):
         pytest.skip(
             "E007 on the Python side raises built-in OSError, not a typed "

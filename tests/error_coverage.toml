@@ -346,6 +346,22 @@ expected_context = ["record_index", "byte_offset", "record_byte_offset"]
 recovery_modes = ["strict"]
 wired = true
 
+# E005 lenient skeleton path: same truncation that the strict case fires
+# at also fires in lenient mode, but as a non-raised error pushed onto
+# the yielded record's `errors: Arc<Vec<MarcError>>`. Distinct fire
+# behavior from the strict path, so a separate case.
+[[case]]
+id = "e005_truncated_record_lenient"
+code = "E005"
+variant = "TruncatedRecord"
+slug = "truncated_record"
+trigger_kind = "parse_iso2709_lenient"
+trigger_fixture = "tests/data/error_fixtures/e005_truncated_record.bin"
+description = "Same truncated fixture as the strict case; lenient mode pushes E005 onto record.errors instead of raising."
+expected_context = ["record_index", "byte_offset", "record_byte_offset"]
+recovery_modes = ["lenient"]
+wired = true
+
 # E006: byte at the leader's claimed end position is not 0x1D.
 [[case]]
 id = "e006_no_record_terminator"
@@ -553,6 +569,26 @@ trigger_fixture = "tests/data/error_fixtures/e106_authority_field_too_short.bin"
 description = "Authority record's 100 data-field directory length set to '0001' (1 byte; below the 2-byte indicator minimum)."
 expected_context = ["record_index", "byte_offset"]
 recovery_modes = ["strict"]
+wired = true
+
+# E106 recovery path: when a truncated record drops into try_recover_record
+# in lenient mode, the recovery directory walker calls parse_4digits /
+# parse_5digits directly. A non-digit length/start byte there fires E106
+# InvalidField (via MarcError::invalid_field_msg) — distinct from the
+# main parser path's E101 DirectoryInvalid for the same kind of malformed
+# directory byte. The fixture combines truncation (so the recovery path
+# runs) with a malformed length field (so parse_4digits errors). Both
+# E005 and E106 land on record.errors; the harness picks the E106 one.
+[[case]]
+id = "e106_recovery_invalid_field"
+code = "E106"
+variant = "InvalidField"
+slug = "invalid_field"
+trigger_kind = "parse_iso2709_lenient"
+trigger_fixture = "tests/data/error_fixtures/e106_recovery_invalid_field.bin"
+description = "Leader claims 999-byte record; only the directory (with a non-digit length field 'ABCD') is provided. Truncation routes through try_recover_record, which calls parse_4digits and pushes InvalidField."
+expected_context = []
+recovery_modes = ["lenient"]
 wired = true
 
 # === Subfield / indicator (E2xx) ====================================

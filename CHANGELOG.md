@@ -97,6 +97,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   respectively, both recoverable in `lenient` / `permissive`.
   `IsbnValidator` and `EncodingValidator` remain user-callable
   opt-in helpers; see `docs/reference/validators.md`.
+- `MarcError` now implements `Clone`. Custom impl: three variants
+  wrap foreign non-Clone types (`IoError` → `std::io::Error`,
+  `XmlError` → `Box<dyn Error + Send + Sync>`, `JsonError` →
+  `serde_json::Error`); for those, clone preserves the rendered
+  `Display` message (and, for `IoError`, the `ErrorKind`) but loses
+  any non-string inner cause. Unblocks inspecting recovered errors
+  from `record.errors: Arc<Vec<MarcError>>` after lenient parsing.
 
 ### Changed
 
