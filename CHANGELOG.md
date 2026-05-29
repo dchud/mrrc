@@ -17,161 +17,150 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `get_field(tag)` and `get_field_or_err(tag)` accessors on all three
-  record types (`Record`, `AuthorityRecord`, `HoldingsRecord`), in both
-  Rust and Python. `get_field` returns the first matching field as
-  `Option<&Field>` / `None`; `get_field_or_err` raises
-  `mrrc.FieldNotFound` (E105) with `field_tag` and `record_control_number`
-  populated. Existing `get_fields` is unchanged.
-- `max_errors` kwarg on Python `MARCReader`. Caps the total recovered
-  errors across a `lenient` / `permissive` stream; the read after the
-  (N+1)-th raises `mrrc.FatalReaderError` (E099). `None` (default) and `0`
-  both disable the cap. Inert in strict mode.
-- Documented pymarc 5.3.1 exception-class-name parity in the
-  error-handling reference and the migration guide: the mapping table,
-  the names mrrc deliberately omits, the known hierarchy divergences, and
-  porting recipes.
+- `get_field(tag)` and `get_field_or_err(tag)` accessors on all three record
+  types (`Record`, `AuthorityRecord`, `HoldingsRecord`), in both Rust and
+  Python. `get_field` returns the first matching field as `Option<&Field>` /
+  `None`; `get_field_or_err` raises `mrrc.FieldNotFound` (E105) with
+  `field_tag` and `record_control_number` populated. Existing `get_fields` is
+  unchanged.
+- `max_errors` kwarg on Python `MARCReader`. Caps the total recovered errors
+  across a `lenient` / `permissive` stream; the read after the (N+1)-th raises
+  `mrrc.FatalReaderError` (E099). `None` (default) and `0` both disable the
+  cap. Inert in strict mode.
+- Documented pymarc 5.3.1 exception-class-name parity in the error-handling
+  reference and the migration guide: the mapping table, the names mrrc
+  deliberately omits, the known hierarchy divergences, and porting recipes.
 - `MARCReader.current_exception` and `MARCReader.current_chunk` —
-  pymarc-compatible accessors. After each `__next__`, `current_chunk`
-  holds the bytes just read and `current_exception` holds the exception
-  swallowed under `permissive=True` (or `None` on a clean read). See the
-  migration guide for the encoding-strictness divergence.
+  pymarc-compatible accessors. After each `__next__`, `current_chunk` holds
+  the bytes just read and `current_exception` holds the exception swallowed
+  under `permissive=True` (or `None` on a clean read). See the migration guide
+  for the encoding-strictness divergence.
 - New `validation_level` reader kwarg (`"structural"` default,
-  `"strict_marc"`), orthogonal to `recovery_mode` and applied uniformly
-  across all three readers. At `strict_marc`, indicator bytes (E201),
-  subfield-code bytes (E202), and UTF-8 decoding (E301) enforce MARC 21
-  byte-level rules; at `structural` those bytes are accepted as-is and
-  invalid UTF-8 falls back to `U+FFFD`.
-- Per-record diagnostics. `record.errors` (Rust + Python) carries the
-  typed exceptions for non-fatal defects recovered in `lenient` /
-  `permissive` modes (always empty in `strict`).
-  `MARCReader.iter_with_errors()` yields `(record, errors)` tuples, and
-  under `permissive=True` yields `(None, [exception])` so unsalvageable
-  records stay observable. `record.errors` is on all three readers;
-  `iter_with_errors` is bibliographic-only.
-- Strict-mode parsing now verifies that the byte at the leader's
-  claimed end-of-record position is `RECORD_TERMINATOR` (0x1D); a
-  different byte fires `EndOfRecordNotFound` (E006). Previously the
-  byte was unchecked and a malformed record with the wrong terminator
-  parsed silently. Lenient and permissive modes are unchanged — the
-  recovery cap continues to absorb the disagreement via existing
-  directory/field paths.
-- `validation_level="strict_marc"` also runs MARC 21 semantic checks:
-  per-tag indicator rules (e.g. 245 first indicator must be `0` or `1`)
-  and leader-byte semantics, firing E201 and E002 respectively (both
-  recoverable in `lenient` / `permissive`). `IsbnValidator` /
-  `EncodingValidator` remain opt-in helpers; see the validators reference.
-- `MarcError` now implements `Clone` (Rust), enabling inspection of
-  recovered errors on `record.errors` after lenient parsing. Clone is
-  lossy for the three variants wrapping foreign causes (`IoError`,
-  `XmlError`, `JsonError`): it preserves the rendered message but drops
-  the non-string inner cause.
-- `SubfieldPatternQuery` now exposes its regex via a `pattern` getter
-  (Rust `SubfieldPatternQuery::pattern()`), and its `repr()` includes
-  the pattern — `<SubfieldPatternQuery tag=084 subfield=a
-  pattern="^abc">` — so the most useful field for debugging a query is
-  recoverable from the REPL or logs. The `tag` and `subfield_code`
-  getters are now also declared in the type stubs. Thanks to @acdha
-  (#226).
+  `"strict_marc"`), orthogonal to `recovery_mode` and applied uniformly across
+  all three readers. At `strict_marc`, indicator bytes (E201), subfield-code
+  bytes (E202), and UTF-8 decoding (E301) enforce MARC 21 byte-level rules; at
+  `structural` those bytes are accepted as-is and invalid UTF-8 falls back to
+  `U+FFFD`.
+- Per-record diagnostics. `record.errors` (Rust + Python) carries the typed
+  exceptions for non-fatal defects recovered in `lenient` / `permissive` modes
+  (always empty in `strict`). `MARCReader.iter_with_errors()` yields `(record,
+  errors)` tuples, and under `permissive=True` yields `(None, [exception])` so
+  unsalvageable records stay observable. `record.errors` is on all three
+  readers; `iter_with_errors` is bibliographic-only.
+- Strict-mode parsing now verifies that the byte at the leader's claimed
+  end-of-record position is `RECORD_TERMINATOR` (0x1D); a different byte fires
+  `EndOfRecordNotFound` (E006). Previously the byte was unchecked and a
+  malformed record with the wrong terminator parsed silently. Lenient and
+  permissive modes are unchanged — the recovery cap continues to absorb the
+  disagreement via existing directory/field paths.
+- `validation_level="strict_marc"` also runs MARC 21 semantic checks: per-tag
+  indicator rules (e.g. 245 first indicator must be `0` or `1`) and
+  leader-byte semantics, firing E201 and E002 respectively (both recoverable
+  in `lenient` / `permissive`). `IsbnValidator` / `EncodingValidator` remain
+  opt-in helpers; see the validators reference.
+- `MarcError` now implements `Clone` (Rust), enabling inspection of recovered
+  errors on `record.errors` after lenient parsing. Clone is lossy for the
+  three variants wrapping foreign causes (`IoError`, `XmlError`, `JsonError`):
+  it preserves the rendered message but drops the non-string inner cause.
+- `SubfieldPatternQuery` now exposes its regex via a `pattern` getter (Rust
+  `SubfieldPatternQuery::pattern()`), and its `repr()` includes the pattern —
+  `<SubfieldPatternQuery tag=084 subfield=a pattern="^abc">` — so the most
+  useful field for debugging a query is recoverable from the REPL or logs. The
+  `tag` and `subfield_code` getters are now also declared in the type stubs.
+  Thanks to @acdha (#226).
 
 ### Changed
 
 - Leader errors from the MARCXML, JSON, and marcjson readers now carry
-  `record_index` (previously stripped) — identifying the failing record
-  in a multi-record collection, or `1` for single-record APIs. Affects
-  E001–E004 from these paths; the ISO 2709 path was already enriched.
-- `MarcError::IoError` (E007) raised mid-record — when the underlying
-  source fails while reading a record's data area — now carries
-  `record_index`, `byte_offset`, and `source_name`, instead of the
-  context-free `From<io::Error>` fallback that left them `None`. I/O
-  failures at a record boundary (before a record is in progress) stay
-  context-free by design; Python's `OSError` surface is unchanged.
-- Retired the internal cumulative-budget perf-gate CI workflow added
-  during the error-handling epic — it served its purpose and the
-  cumulative v0.8.0→v0.8.1 hot-path cost stayed negligible. Codspeed
-  continues general perf tracking, and the benchmarks still run locally.
+  `record_index` (previously stripped) — identifying the failing record in a
+  multi-record collection, or `1` for single-record APIs. Affects E001–E004
+  from these paths; the ISO 2709 path was already enriched.
+- `MarcError::IoError` (E007) raised mid-record — when the underlying source
+  fails while reading a record's data area — now carries `record_index`,
+  `byte_offset`, and `source_name`, instead of the context-free
+  `From<io::Error>` fallback that left them `None`. I/O failures at a record
+  boundary (before a record is in progress) stay context-free by design;
+  Python's `OSError` surface is unchanged.
+- Retired the internal cumulative-budget perf-gate CI workflow added during
+  the error-handling epic — it served its purpose and the cumulative
+  v0.8.0→v0.8.1 hot-path cost stayed negligible. Codspeed continues general
+  perf tracking, and the benchmarks still run locally.
 - Python `MARCReader` / `AuthorityMARCReader` / `HoldingsMARCReader` now
   default to `recovery_mode="permissive"` (was `"strict"`), matching the
-  pymarc / marc4j convention — a fresh reader iterates past per-record
-  defects instead of aborting on the first. The Rust core's
-  `mrrc::MarcReader` keeps `Strict`. Pass `recovery_mode="strict"`
-  explicitly for the old behavior; the `permissive=True` pymarc-compat
-  path is unchanged. See the error-handling guide for the trade-offs.
+  pymarc / marc4j convention — a fresh reader iterates past per-record defects
+  instead of aborting on the first. The Rust core's `mrrc::MarcReader` keeps
+  `Strict`. Pass `recovery_mode="strict"` explicitly for the old behavior; the
+  `permissive=True` pymarc-compat path is unchanged. See the error-handling
+  guide for the trade-offs.
 - Leader-validation errors now fire the field-specific variants their
-  documentation describes: `RecordLengthInvalid` (E001) for non-digit
-  bytes 0-4 or `record_length < 24`, `BaseAddressInvalid` (E003) for
-  non-digit bytes 12-16 or `data_base_address < 24`, and
-  `BaseAddressNotFound` (E004) for `data_base_address > record_length`.
-  Previously all of these collapsed to `InvalidLeader` (E002) or, for
-  E004, fell through to a misleading `InvalidField` from directory
-  parsing.
-- A non-digit byte in a directory entry's length or start-position field
-  now fires `DirectoryInvalid` (E101) with `field_tag` and a precise
-  `byte_offset`, instead of the misleading `InvalidField` (E106) it
-  previously forwarded.
-- The performance-tuning, migration-from-pymarc, and
-  working-with-large-files guides now point to the Query DSL guide where
-  field filtering is discussed, so readers discover the
-  indicator/range/pattern/subfield matching path. Thanks to @acdha
-  (#234).
-- The Rust examples throughout the docs (quickstart, tutorials, reference)
-  now match the real API and compile: `field.get_subfield('a')` (char),
-  the public `tag` / `indicator1` / `indicator2` fields, the
-  `FieldQuery::new()` builder with `record.fields_matching(&query)`,
-  `Leader::from_bytes(...)`, the `record_to_json` / `record_to_marcxml` /
-  `record_to_marcjson` conversion functions, and `use mrrc::RecordHelpers;`
-  for `record.title()`. Many previously referenced methods that don't
-  exist. Reported by @acdha (#233).
+  documentation describes: `RecordLengthInvalid` (E001) for non-digit bytes
+  0-4 or `record_length < 24`, `BaseAddressInvalid` (E003) for non-digit bytes
+  12-16 or `data_base_address < 24`, and `BaseAddressNotFound` (E004) for
+  `data_base_address > record_length`. Previously all of these collapsed to
+  `InvalidLeader` (E002) or, for E004, fell through to a misleading
+  `InvalidField` from directory parsing.
+- A non-digit byte in a directory entry's length or start-position field now
+  fires `DirectoryInvalid` (E101) with `field_tag` and a precise
+  `byte_offset`, instead of the misleading `InvalidField` (E106) it previously
+  forwarded.
+- The performance-tuning, migration-from-pymarc, and working-with-large-files
+  guides now point to the Query DSL guide where field filtering is discussed,
+  so readers discover the indicator/range/pattern/subfield matching path.
+  Thanks to @acdha (#234).
+- The Rust examples throughout the docs (quickstart, tutorials, reference) now
+  match the real API and compile: `field.get_subfield('a')` (char), the public
+  `tag` / `indicator1` / `indicator2` fields, the `FieldQuery::new()` builder
+  with `record.fields_matching(&query)`, `Leader::from_bytes(...)`, the
+  `record_to_json` / `record_to_marcxml` / `record_to_marcjson` conversion
+  functions, and `use mrrc::RecordHelpers;` for `record.title()`. Many
+  previously referenced methods that don't exist. Reported by @acdha (#233).
 
 ### Fixed
 
-- Two out-of-bounds slice panics in the lenient/permissive recovery
-  path: salvage attempts no longer crash when a directory entry's
-  `start_position` lies past the buffer (now bailing out of the
-  salvage branch), and the control-field decode path now guards
-  against zero-length directory entries (where `end_position ==
-  start_position`) before invoking `saturating_sub(1)` on the
-  slice end. Surfaced by the recovery-mode-consistency fuzz target.
-- `MarcReader` rejects non-ASCII bytes in directory entry tags
-  (firing `DirectoryInvalid` / E101) instead of lossily substituting
-  `U+FFFD` and producing records whose tag re-encodes to more than
-  3 bytes. `MarcWriter` and the authority/holdings writers also
-  refuse records whose tags aren't 3 ASCII bytes, returning
-  `WriterError` (E404). Surfaced by the error-classification fuzz
-  target's round-trip assertion.
-- `TruncatedRecord` (E005) now surfaces on `record.errors` in `lenient`
-  and `permissive` modes instead of being silently swallowed (it had been
+- Two out-of-bounds slice panics in the lenient/permissive recovery path:
+  salvage attempts no longer crash when a directory entry's `start_position`
+  lies past the buffer (now bailing out of the salvage branch), and the
+  control-field decode path now guards against zero-length directory entries
+  (where `end_position == start_position`) before invoking `saturating_sub(1)`
+  on the slice end. Surfaced by the recovery-mode-consistency fuzz target.
+- `MarcReader` rejects non-ASCII bytes in directory entry tags (firing
+  `DirectoryInvalid` / E101) instead of lossily substituting `U+FFFD` and
+  producing records whose tag re-encodes to more than 3 bytes. `MarcWriter`
+  and the authority/holdings writers also refuse records whose tags aren't 3
+  ASCII bytes, returning `WriterError` (E404). Surfaced by the
+  error-classification fuzz target's round-trip assertion.
+- `TruncatedRecord` (E005) now surfaces on `record.errors` in `lenient` and
+  `permissive` modes instead of being silently swallowed (it had been
   cascading into a misleading E201). Strict mode is unchanged.
-- Python `mrrc.MARCReader` now honors `recovery_mode` on short body
-  reads: a truncated body no longer raises `TruncatedRecord` (E005)
-  before the recovery-aware parser runs, so in `lenient` / `permissive`
-  it lands on `record.errors` instead. Strict mode still raises.
-- Release workflow now attaches wheel assets to the GitHub Release
-  page automatically. Previously, `actions/checkout` ran after
-  `download-artifact` and wiped `dist/` before the gh-release step,
-  leaving the release page with notes but zero assets. Steps reordered
-  so checkout runs first.
-- `MarcWriter` and the authority/holdings writers now refuse records
-  whose serialized length or base address exceeds the ISO 2709 5-digit
-  limit (99999 bytes), returning `WriterError` (E404) with positional
-  context — instead of silently emitting an unparseable leader (or, for
-  holdings, the wrong `InvalidField` variant).
+- Python `mrrc.MARCReader` now honors `recovery_mode` on short body reads: a
+  truncated body no longer raises `TruncatedRecord` (E005) before the
+  recovery-aware parser runs, so in `lenient` / `permissive` it lands on
+  `record.errors` instead. Strict mode still raises.
+- Release workflow now attaches wheel assets to the GitHub Release page
+  automatically. Previously, `actions/checkout` ran after `download-artifact`
+  and wiped `dist/` before the gh-release step, leaving the release page with
+  notes but zero assets. Steps reordered so checkout runs first.
+- `MarcWriter` and the authority/holdings writers now refuse records whose
+  serialized length or base address exceeds the ISO 2709 5-digit limit (99999
+  bytes), returning `WriterError` (E404) with positional context — instead of
+  silently emitting an unparseable leader (or, for holdings, the wrong
+  `InvalidField` variant).
 - `mrrc.MARCWriter.write_record` now raises the typed `mrrc.WriterError`
-  (E404) instead of a plain `OSError`; the binding had been collapsing
-  every writer `MarcError` into `io::Error` across the FFI boundary.
+  (E404) instead of a plain `OSError`; the binding had been collapsing every
+  writer `MarcError` into `io::Error` across the FFI boundary.
 - `InvalidLeader` (E002) errors now carry the full positional context
-  (`record_index`, `byte_offset`, `record_byte_offset`, `source_name`)
-  the v0.8.0 error work promised; the leader-validation path had been
-  building the variant message-only and discarding every positional field.
-- `TruncatedRecord` (E005) raised across the Python FFI now preserves the
-  same positional context (`record_index`, `byte_offset`,
-  `record_byte_offset`) the Rust core attaches; Python callers previously
-  saw a wrong `actual_length` and missing stream-position metadata.
+  (`record_index`, `byte_offset`, `record_byte_offset`, `source_name`) the
+  v0.8.0 error work promised; the leader-validation path had been building the
+  variant message-only and discarding every positional field.
+- `TruncatedRecord` (E005) raised across the Python FFI now preserves the same
+  positional context (`record_index`, `byte_offset`, `record_byte_offset`) the
+  Rust core attaches; Python callers previously saw a wrong `actual_length`
+  and missing stream-position metadata.
 - `AuthorityMarcReader` and `HoldingsMarcReader` at
-  `validation_level="strict_marc"` no longer trip `InvalidLeader` (E002)
-  on leader bytes valid for their own record type. Each reader now applies
-  its own MARC 21 format's leader rules (Authority / Holdings) rather than
-  the Bibliographic allowed-value sets; bibliographic dispatch is unchanged.
+  `validation_level="strict_marc"` no longer trip `InvalidLeader` (E002) on
+  leader bytes valid for their own record type. Each reader now applies its
+  own MARC 21 format's leader rules (Authority / Holdings) rather than the
+  Bibliographic allowed-value sets; bibliographic dispatch is unchanged.
 
 ### Dependencies
 
