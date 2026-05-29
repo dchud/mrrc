@@ -397,16 +397,28 @@ impl PySubfieldPatternQuery {
         self.inner.negate
     }
 
+    /// The regex pattern string this query matches against.
+    #[getter]
+    pub fn pattern(&self) -> String {
+        self.inner.pattern().to_string()
+    }
+
     fn __repr__(&self) -> String {
+        // The pattern is debug-quoted so a value containing spaces or special
+        // characters stays legible in the repr.
         if self.inner.negate {
             format!(
-                "<SubfieldPatternQuery tag={} subfield={} negate=true>",
-                self.inner.tag, self.inner.subfield_code
+                "<SubfieldPatternQuery tag={} subfield={} pattern={:?} negate=true>",
+                self.inner.tag,
+                self.inner.subfield_code,
+                self.inner.pattern()
             )
         } else {
             format!(
-                "<SubfieldPatternQuery tag={} subfield={}>",
-                self.inner.tag, self.inner.subfield_code
+                "<SubfieldPatternQuery tag={} subfield={} pattern={:?}>",
+                self.inner.tag,
+                self.inner.subfield_code,
+                self.inner.pattern()
             )
         }
     }

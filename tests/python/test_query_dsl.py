@@ -283,6 +283,18 @@ class TestSubfieldPatternQuery:
         query = SubfieldPatternQuery("020", "a", r"^978-")
         assert query.tag == "020"
         assert query.subfield_code == "a"
+        assert query.pattern == r"^978-"
+        assert query.negate is False
+
+    def test_pattern_in_repr(self):
+        """The repr includes the regex pattern (the most useful debugging field)."""
+        query = SubfieldPatternQuery("084", "a", r"^abc")
+        assert "^abc" in repr(query)
+        assert "pattern=" in repr(query)
+
+        negated = SubfieldPatternQuery("084", "a", r"^abc", negate=True)
+        assert "^abc" in repr(negated)
+        assert "negate=true" in repr(negated)
 
     def test_negated_pattern_excludes_match(self):
         """Negated query excludes fields where subfield matches the pattern."""

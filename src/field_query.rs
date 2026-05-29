@@ -325,6 +325,15 @@ impl SubfieldPatternQuery {
         })
     }
 
+    /// The regex pattern string this query matches against.
+    ///
+    /// Returns the original pattern as supplied to [`new`](Self::new) /
+    /// [`negated`](Self::negated) (via [`regex::Regex::as_str`]).
+    #[must_use]
+    pub fn pattern(&self) -> &str {
+        self.pattern.as_str()
+    }
+
     /// Check if a field matches this pattern query.
     #[must_use]
     pub fn matches(&self, field: &Field) -> bool {
@@ -574,6 +583,14 @@ mod tests {
 
         let query = SubfieldPatternQuery::new("020", 'a', r"^979-.*").unwrap();
         assert!(!query.matches(&field));
+    }
+
+    #[test]
+    fn test_subfield_pattern_query_pattern_accessor() {
+        let query = SubfieldPatternQuery::new("020", 'a', r"^978-.*").unwrap();
+        assert_eq!(query.pattern(), r"^978-.*");
+        let negated = SubfieldPatternQuery::negated("020", 'a', r"^978-.*").unwrap();
+        assert_eq!(negated.pattern(), r"^978-.*");
     }
 
     #[test]

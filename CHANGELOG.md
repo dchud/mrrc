@@ -104,6 +104,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Display` message (and, for `IoError`, the `ErrorKind`) but loses
   any non-string inner cause. Unblocks inspecting recovered errors
   from `record.errors: Arc<Vec<MarcError>>` after lenient parsing.
+- `SubfieldPatternQuery` now exposes its regex via a `pattern` getter
+  (Rust `SubfieldPatternQuery::pattern()`), and its `repr()` includes
+  the pattern — `<SubfieldPatternQuery tag=084 subfield=a
+  pattern="^abc">` — so the most useful field for debugging a query is
+  recoverable from the REPL or logs. The `tag` and `subfield_code`
+  getters are now also declared in the type stubs. Thanks to @acdha
+  (#226).
 
 ### Changed
 
