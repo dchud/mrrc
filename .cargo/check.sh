@@ -73,6 +73,14 @@ if [ "$QUICK" = false ]; then
     uv run python -m pytest tests/python/ -m "not benchmark" -q
 
     echo ""
+    echo "=== Error-code source-of-truth reconciliation ==="
+    # Asserts every MarcError code is documented in error-codes.md, has a
+    # wired case in error_coverage.toml, and is constructed in production
+    # code — catching drift the error_coverage harness above can't (a new
+    # code with no manifest case). See scripts/verify_error_docs.py.
+    uv run python scripts/verify_error_docs.py
+
+    echo ""
     echo "=== Python type check (mypy on mrrc/) ==="
     uv run mypy mrrc/
 
