@@ -290,6 +290,35 @@ canonical set or the `### Added — <topic>` form.
 - [ ] `scripts/lint-changelog.sh` exits 0
 - [ ] No drift warnings left unaddressed
 
+### 1.5 Review CHANGELOG Entries for Concision
+
+The lint in 1.4 checks structure and line length but not brevity. Before
+tagging, read the `[Unreleased]` section by eye against the **Entry
+length** convention in [Update Changelog](#update-changelog): each bullet
+is one short paragraph (~25–40 words, ≤4–6 wrapped lines) that leads with
+the user-visible *what* and why a user would care.
+
+Condense any entry that drifted during the cycle. The usual offenders,
+which belong in the commit message body or PR description rather than the
+CHANGELOG:
+
+- Per-file enumerations ("touched X, Y, Z").
+- Error-count tables, before/after metrics, audit deltas.
+- "Verified by …" / test-coverage notes.
+- Internal process labels (bead IDs, milestone names, planning phases) —
+  linked PR/issue numbers are fine as permanent provenance.
+
+```bash
+# Read the [Unreleased] section to review entry-by-entry
+sed -n '/## \[Unreleased\]/,/## \[/p' CHANGELOG.md
+```
+
+**Checklist**:
+
+- [ ] Each `[Unreleased]` bullet is a concise, user-facing one-paragraph entry
+- [ ] No per-file lists, metrics tables, audit deltas, or "verified by" notes
+- [ ] No process labels (bead IDs, milestones, phases) in entries
+
 ---
 
 ## Version Number Selection
