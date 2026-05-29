@@ -64,13 +64,10 @@ fn drain(
     }
 }
 
-/// Run the matrix against one fixture, asserting `error_code` fires in
-/// every cell of the 2×3 grid. Used for errors that are unconditional —
-/// i.e., not gated on `validation_level` and not recoverable in
-/// `lenient`/`permissive`. Leader/structural errors that prevent the
-/// parser from establishing a record boundary (E001, E002 structural,
-/// E003, E004) are fatal in this sense: the recovery cap has nothing
-/// to absorb because there's no valid boundary to skip past.
+/// Run the matrix against one fixture for an error that fires only at
+/// `RecoveryMode::Strict`. `lenient`/`permissive` must NOT surface it —
+/// the recovery cap absorbs it — so those cells assert clean iteration.
+/// Independent of `validation_level`: both levels behave identically.
 fn run_strict_only_matrix(fixture_name: &str, error_code: &'static str) {
     let bytes = fixture_bytes(fixture_name);
     for validation in [ValidationLevel::Structural, ValidationLevel::StrictMarc] {
@@ -97,6 +94,13 @@ fn run_strict_only_matrix(fixture_name: &str, error_code: &'static str) {
     }
 }
 
+/// Run the matrix against one fixture, asserting `error_code` fires in
+/// every cell of the 2×3 grid. Used for errors that are unconditional —
+/// i.e., not gated on `validation_level` and not recoverable in
+/// `lenient`/`permissive`. Leader/structural errors that prevent the
+/// parser from establishing a record boundary (E001, E002 structural,
+/// E003, E004) are fatal in this sense: the recovery cap has nothing
+/// to absorb because there's no valid boundary to skip past.
 fn run_fatal_matrix(fixture_name: &str, error_code: &'static str) {
     let bytes = fixture_bytes(fixture_name);
     for validation in [ValidationLevel::Structural, ValidationLevel::StrictMarc] {

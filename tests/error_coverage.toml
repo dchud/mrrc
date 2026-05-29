@@ -48,10 +48,12 @@
 #                      "recovery_cap"   — drive lenient mode past max_errors
 #                      "accessor"       — call a Record accessor on a parsed record
 #                      "writer"         — construct a record and attempt to write it
-#                    The current harness implements parse_iso2709,
-#                    parse_marcxml, and parse_marcjson; other kinds skip
-#                    with a manifest-driven reason until the matching
-#                    harness mechanism lands.
+#                    The authoritative list of trigger_kinds the Rust
+#                    harness exercises is the module docstring in
+#                    tests/error_coverage.rs. A kind that harness can't
+#                    drive (e.g. parse_marcjson — no Rust str-to-Record
+#                    entry point; covered in the Python harness instead)
+#                    skips with a manifest-driven reason.
 #   trigger_fixture  path to fixture bytes (parse_iso2709) or text
 #                    (parse_marcxml / parse_marcjson) that should fire
 #                    `code`. Required for parse_* kinds; optional for
@@ -461,6 +463,9 @@ slug = "directory_invalid"
 trigger_kind = "parse_iso2709"
 trigger_fixture = "tests/data/error_fixtures/e101_non_ascii_tag.bin"
 description = "Directory entry 1 tag's first byte replaced with 0xCC (non-ASCII)."
+# field_tag omitted: the tag bytes are themselves the malformation, so the
+# parser does not set current_field_tag on this path (unlike the E106
+# data-field guard, where the tag is known).
 expected_context = ["record_index", "byte_offset", "record_byte_offset"]
 recovery_modes = ["strict"]
 wired = true

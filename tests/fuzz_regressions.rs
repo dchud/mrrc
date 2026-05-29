@@ -20,7 +20,7 @@ fn fixtures_dir(target: &str) -> PathBuf {
 }
 
 /// Walks every fixture under the given target directory and yields its
-/// bytes. Returns the empty iterator if the directory does not exist
+/// bytes. Returns an empty Vec if the directory does not exist
 /// (no regressions filed yet for this target).
 fn fixtures(target: &str) -> Vec<(PathBuf, Vec<u8>)> {
     let dir = fixtures_dir(target);
