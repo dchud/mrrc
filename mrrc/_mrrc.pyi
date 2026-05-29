@@ -190,7 +190,7 @@ class Record:
     def __str__(self) -> str: ...
     def __eq__(self, other: object) -> bool: ...
     @property
-    def errors(self) -> list[Any]:
+    def errors(self) -> list[Exception]:
         """Non-fatal errors accumulated while parsing this record.
 
         Always empty in ``recovery_mode="strict"``. Populated in
@@ -308,7 +308,7 @@ class AuthorityRecord:
     @property
     def leader(self) -> Leader: ...
     @property
-    def errors(self) -> list[Any]:
+    def errors(self) -> list[Exception]:
         """Non-fatal errors accumulated while parsing this record.
         See :attr:`Record.errors`.
         """
@@ -352,7 +352,7 @@ class HoldingsRecord:
     @property
     def leader(self) -> Leader: ...
     @property
-    def errors(self) -> list[Any]:
+    def errors(self) -> list[Exception]:
         """Non-fatal errors accumulated while parsing this record.
         See :attr:`Record.errors`.
         """

@@ -22,12 +22,10 @@
 //!   the cap.note bookkeeping. Fixture is pre-mutated in setup so
 //!   the per-iteration work is just parsing.
 //!
-//! Recovery-mode cost (lenient / permissive over a stream with
-//! detected errors) is excluded from this file because the
-//! recovered-error cap aborts iteration before producing a stable
-//! signal under the malformation density needed to exercise it; that
-//! scenario is added once `with_max_errors` is configurable per
-//! benchmark and the per-record-diagnostic surface is in place.
+//! The `parse_10k_bad_indicators_lenient` scenario disables the
+//! recovered-error cap (`with_max_errors(0)`) so iteration runs to
+//! completion over the fully-malformed stream and produces a stable
+//! signal for lenient recovery cost.
 //!
 //! Run with `cargo bench --bench error_handling_benchmarks` for local
 //! profiling. Codspeed exercises the same scenarios in CI for general

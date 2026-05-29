@@ -116,9 +116,12 @@ impl PyMARCReader {
     ///   `recovery_mode`.
     /// * `max_errors` - Optional cap on accumulated recovered errors
     ///   per stream in lenient/permissive mode. `None` (default)
-    ///   preserves the Rust core's `DEFAULT_MAX_ERRORS` (10_000).
-    ///   `0` disables the cap entirely. Any other value trips
-    ///   `FatalReaderError` (E099) once the cap is exceeded.
+    ///   disables the wrapper-level cap; `0` also disables it (no-cap
+    ///   sentinel). `Some(N)` trips `FatalReaderError` (E099) once more
+    ///   than N recovered errors accumulate across the stream. (Each
+    ///   record is parsed by an ephemeral reader, so the Rust core's
+    ///   per-record `DEFAULT_MAX_ERRORS` never accumulates across the
+    ///   stream — this wrapper cap is the only cross-stream limit.)
     #[new]
     #[pyo3(signature = (
         source,
