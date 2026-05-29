@@ -67,6 +67,26 @@ pytest tests/python/ -m benchmark
 pytest tests/python/test_benchmark_comparison.py -v
 ```
 
+### Cross-library parity (pymarc)
+
+`tests/python/test_pymarc_parity.py` compares mrrc's permissive
+iteration shape (record-vs-`None` per record) against pymarc over a
+mixed-quality corpus. pymarc is an optional comparison target, not a
+project dependency, so the test is guarded by `pytest.importorskip`
+and **skips silently** unless pymarc is installed. To actually run it,
+install pymarc for the invocation:
+
+```bash
+uv run --with 'pymarc==5.3.1' python -m pytest tests/python/test_pymarc_parity.py -q
+```
+
+Worth running when changing reader iteration, recovery-mode defaults,
+or anything affecting how malformed records are surfaced.
+
+`tests/python/test_pymarc_compat_accessors.py` carries a similar
+pymarc-guarded parity check for the `current_exception` /
+`current_chunk` accessors.
+
 ## Test Fixtures
 
 Test data is located in `tests/data/`:
