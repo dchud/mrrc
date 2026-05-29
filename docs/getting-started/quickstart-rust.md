@@ -12,7 +12,7 @@ mrrc = "0.8"
 ## Read Records
 
 ```rust
-use mrrc::MarcReader;
+use mrrc::{MarcReader, RecordHelpers};
 use std::fs::File;
 
 fn main() -> mrrc::Result<()> {
@@ -32,18 +32,18 @@ fn main() -> mrrc::Result<()> {
 ## Access Fields
 
 ```rust
-use mrrc::Record;
+use mrrc::{Record, RecordHelpers};
 
 // Get a specific field by tag
-if let Some(field) = record.field("245") {
-    if let Some(title) = field.subfield("a") {
+if let Some(field) = record.get_field("245") {
+    if let Some(title) = field.get_subfield('a') {
         println!("Title: {}", title);
     }
 }
 
 // Get all fields with a tag
 for field in record.fields_by_tag("650") {
-    if let Some(subject) = field.subfield("a") {
+    if let Some(subject) = field.get_subfield('a') {
         println!("Subject: {}", subject);
     }
 }
@@ -60,13 +60,12 @@ println!("ISBNs: {:?}", record.isbns());
 use mrrc::{Record, Field, Leader};
 
 // Create a new record with builder pattern
-let record = Record::builder()
-    .leader(Leader::default())
-    .control_field("001", "123456789")
+let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap())
+    .control_field_str("001", "123456789")
     .field(
-        Field::builder("245", '1', '0')
-            .subfield('a', "My Book Title")
-            .subfield('c', "by Author Name")
+        Field::builder("245".to_string(), '1', '0')
+            .subfield_str('a', "My Book Title")
+            .subfield_str('c', "by Author Name")
             .build()
     )
     .build();
@@ -91,16 +90,14 @@ fn main() -> mrrc::Result<()> {
 ## Convert Formats
 
 ```rust
-use mrrc::formats::{to_json, to_xml, to_marcjson};
-
 // To JSON
-let json_str = to_json(&record)?;
+let json = mrrc::json::record_to_json(&record)?;
 
-// To XML
-let xml_str = to_xml(&record)?;
+// To MARCXML
+let xml_str = mrrc::marcxml::record_to_marcxml(&record)?;
 
 // To MARCJSON (LOC standard)
-let marcjson_str = to_marcjson(&record)?;
+let marcjson = mrrc::marcjson::record_to_marcjson(&record)?;
 ```
 
 ## Error Handling

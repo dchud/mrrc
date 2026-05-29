@@ -35,7 +35,7 @@ UTF-8 is the recommended encoding for new records. It supports all Unicode chara
 === "Rust"
 
     ```rust
-    use mrrc::MarcReader;
+    use mrrc::{MarcReader, RecordHelpers};
 
     let mut reader = MarcReader::new(file);
     while let Some(record) = reader.read_record()? {

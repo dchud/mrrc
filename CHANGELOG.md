@@ -171,6 +171,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   field filtering is discussed, so readers discover the
   indicator/range/pattern/subfield matching path. Thanks to @acdha
   (#234).
+- The Rust examples throughout the docs (quickstart, tutorials, reference)
+  now match the real API and compile: `field.get_subfield('a')` (char),
+  the public `tag` / `indicator1` / `indicator2` fields, the
+  `FieldQuery::new()` builder with `record.fields_matching(&query)`,
+  `Leader::from_bytes(...)`, the `record_to_json` / `record_to_marcxml` /
+  `record_to_marcjson` conversion functions, and `use mrrc::RecordHelpers;`
+  for `record.title()`. Many previously referenced methods that don't
+  exist. Reported by @acdha (#233).
 
 ### Fixed
 

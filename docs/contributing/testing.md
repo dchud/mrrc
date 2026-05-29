@@ -127,11 +127,13 @@ tests/
 ### Rust Test Example
 
 ```rust
+use mrrc::RecordHelpers;
+
 #[test]
 fn test_parse_simple_record() {
     let data = include_bytes!("../tests/data/simple_book.mrc");
     let record = Record::from_marc21(data).unwrap();
-    assert_eq!(record.title(), Some("Test Title".to_string()));
+    assert_eq!(record.title(), Some("Test Title"));
 }
 ```
 

@@ -9,15 +9,14 @@ Rust API reference for MRRC. See [docs.rs/mrrc](https://docs.rs/mrrc) for full a
 A MARC bibliographic record.
 
 ```rust
-use mrrc::{Record, Field, Leader};
+use mrrc::{Record, Field, Leader, RecordHelpers};
 
 // Create with builder
-let record = Record::builder()
-    .leader(Leader::default())
-    .control_field("001", "123456789")
+let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap())
+    .control_field_str("001", "123456789")
     .field(
-        Field::builder("245", '1', '0')
-            .subfield('a', "Title")
+        Field::builder("245".to_string(), '1', '0')
+            .subfield_str('a', "Title")
             .build()
     )
     .build();
@@ -28,7 +27,7 @@ if let Some(title) = record.title() {
 }
 
 for field in record.fields_by_tag("650") {
-    if let Some(subject) = field.subfield("a") {
+    if let Some(subject) = field.get_subfield('a') {
         println!("Subject: {}", subject);
     }
 }
@@ -54,10 +53,9 @@ Builder pattern for creating records.
 ```rust
 use mrrc::Record;
 
-let record = Record::builder()
-    .leader(leader)
-    .control_field("001", "12345")
-    .control_field("008", "040520s2023    xxu")
+let record = Record::builder(leader)
+    .control_field_str("001", "12345")
+    .control_field_str("008", "040520s2023    xxu")
     .field(title_field)
     .field(author_field)
     .build();
@@ -71,10 +69,10 @@ A MARC data field with tag, indicators, and subfields.
 use mrrc::Field;
 
 // Create with builder
-let field = Field::builder("245", '1', '0')
-    .subfield('a', "Main title :")
-    .subfield('b', "subtitle /")
-    .subfield('c', "by Author.")
+let field = Field::builder("245".to_string(), '1', '0')
+    .subfield_str('a', "Main title :")
+    .subfield_str('b', "subtitle /")
+    .subfield_str('c', "by Author.")
     .build();
 
 // Create directly
@@ -82,9 +80,9 @@ let mut field = Field::new("650".to_string(), ' ', '0');
 field.add_subfield('a', "Subject heading".to_string());
 
 // Access data
-println!("Tag: {}", field.tag());
-println!("Ind1: {}", field.indicator1());
-if let Some(value) = field.subfield("a") {
+println!("Tag: {}", field.tag);
+println!("Ind1: {}", field.indicator1);
+if let Some(value) = field.get_subfield('a') {
     println!("$a: {}", value);
 }
 ```
@@ -107,9 +105,9 @@ A subfield within a field.
 ```rust
 use mrrc::Subfield;
 
-let sf = Subfield::new('a', "value".to_string());
-println!("Code: {}", sf.code());
-println!("Value: {}", sf.value());
+let sf = Subfield { code: 'a', value: "value".to_string() };
+println!("Code: {}", sf.code);
+println!("Value: {}", sf.value);
 ```
 
 ### Leader
@@ -119,7 +117,7 @@ The 24-byte MARC record header.
 ```rust
 use mrrc::Leader;
 
-let mut leader = Leader::default();
+let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap();
 leader.record_type = 'a';           // Language material
 leader.bibliographic_level = 'm';   // Monograph
 leader.character_coding = 'a';      // UTF-8
@@ -214,20 +212,25 @@ let record = HoldingsRecordBuilder::new()
 Query records using a fluent API.
 
 ```rust
-use mrrc::FieldQuery;
+use mrrc::{FieldQuery, SubfieldValueQuery};
 
 // Find fields by tag
-let query = FieldQuery::tag("245");
-let fields = query.find_all(&record);
+let query = FieldQuery::new().tag("245");
+for field in record.fields_matching(&query) {
+    println!("{}", field.tag);
+}
 
 // Find by tag range
-let query = FieldQuery::tag_range("600", "699");
-let subject_fields = query.find_all(&record);
+let query = FieldQuery::new().tag_range("600", "699");
+let subject_fields = record.fields_matching_range(&query);
 
-// Find by subfield pattern
-let query = FieldQuery::tag("100")
-    .with_subfield("a", "Smith");
-let matches = query.find_all(&record);
+// Find by subfield value
+let query = SubfieldValueQuery::new("100", 'a', "Smith");
+let matches = record.fields_matching_value(&query);
+
+// Find by subfield presence only
+let query = FieldQuery::new().tag("100").has_subfield('a');
+let with_name = record.fields_matching(&query);
 ```
 
 ## Format Conversion
@@ -235,11 +238,10 @@ let matches = query.find_all(&record);
 ### Core Formats (Always Available)
 
 ```rust
-use mrrc::formats::{to_json, to_marcjson};
 use mrrc::marcxml::{record_to_marcxml, marcxml_to_record, marcxml_to_records};
 
-let json = to_json(&record)?;
-let marcjson = to_marcjson(&record)?;
+let json = mrrc::json::record_to_json(&record)?;
+let marcjson = mrrc::marcjson::record_to_marcjson(&record)?;
 
 // MARCXML conversion (bidirectional)
 let xml = record_to_marcxml(&record)?;
@@ -321,6 +323,7 @@ Use Rayon for parallel processing:
 
 ```rust
 use mrrc::rayon_parser_pool::parse_batch_parallel;
+use mrrc::RecordHelpers;
 use rayon::prelude::*;
 
 // Parse multiple record byte slices in parallel

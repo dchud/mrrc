@@ -5,7 +5,7 @@ Learn to read MARC records from files and work with their contents.
 ## Basic Reading
 
 ```rust
-use mrrc::MarcReader;
+use mrrc::{MarcReader, RecordHelpers};
 use std::fs::File;
 
 fn main() -> mrrc::Result<()> {
@@ -24,7 +24,7 @@ fn main() -> mrrc::Result<()> {
 ## Reading from Memory
 
 ```rust
-use mrrc::MarcReader;
+use mrrc::{MarcReader, RecordHelpers};
 use std::io::Cursor;
 
 fn main() -> mrrc::Result<()> {
@@ -46,22 +46,22 @@ use mrrc::Record;
 
 fn process_record(record: &Record) {
     // Get first field by tag
-    if let Some(field) = record.field("245") {
-        if let Some(title) = field.subfield("a") {
+    if let Some(field) = record.get_field("245") {
+        if let Some(title) = field.get_subfield('a') {
             println!("Title: {}", title);
         }
     }
 
     // Get all fields with a tag
     for field in record.fields_by_tag("650") {
-        if let Some(subject) = field.subfield("a") {
+        if let Some(subject) = field.get_subfield('a') {
             println!("Subject: {}", subject);
         }
     }
 
     // Iterate over all fields
     for field in record.fields() {
-        println!("Field {}: {} subfields", field.tag(), field.subfields().len());
+        println!("Field {}: {} subfields", field.tag, field.subfields.len());
     }
 }
 ```
@@ -72,11 +72,11 @@ Control fields (001-009) contain unstructured data:
 
 ```rust
 fn read_control_fields(record: &Record) {
-    if let Some(control_num) = record.control_field("001") {
+    if let Some(control_num) = record.get_control_field("001") {
         println!("Control number: {}", control_num);
     }
 
-    if let Some(fixed) = record.control_field("008") {
+    if let Some(fixed) = record.get_control_field("008") {
         // Parse fixed-length data elements
         let pub_year = &fixed[7..11];
         let language = &fixed[35..38];
@@ -88,6 +88,8 @@ fn read_control_fields(record: &Record) {
 ## Convenience Methods
 
 ```rust
+use mrrc::RecordHelpers;
+
 fn extract_metadata(record: &Record) {
     if let Some(title) = record.title() {
         println!("Title: {}", title);
@@ -116,20 +118,20 @@ use mrrc::Field;
 
 fn process_field(field: &Field) {
     // Get first subfield value
-    if let Some(value) = field.subfield("a") {
+    if let Some(value) = field.get_subfield('a') {
         println!("$a: {}", value);
     }
 
     // Get all values for a subfield code
-    let values: Vec<&str> = field.subfields()
+    let values: Vec<&str> = field.subfields
         .iter()
-        .filter(|sf| sf.code() == 'a')
-        .map(|sf| sf.value())
+        .filter(|sf| sf.code == 'a')
+        .map(|sf| sf.value.as_str())
         .collect();
 
     // Iterate over all subfields
     for subfield in field.subfields() {
-        println!("${}: {}", subfield.code(), subfield.value());
+        println!("${}: {}", subfield.code, subfield.value);
     }
 }
 ```
@@ -138,13 +140,13 @@ fn process_field(field: &Field) {
 
 ```rust
 fn check_indicators(field: &Field) {
-    let ind1 = field.indicator1();
-    let ind2 = field.indicator2();
+    let ind1 = field.indicator1;
+    let ind2 = field.indicator2;
 
     // For 245: ind2 = nonfiling characters
-    if field.tag() == "245" {
+    if field.tag == "245" {
         let skip = ind2.to_digit(10).unwrap_or(0) as usize;
-        if let Some(title) = field.subfield("a") {
+        if let Some(title) = field.get_subfield('a') {
             let filing_title = &title[skip..];
             println!("Filing title: {}", filing_title);
         }
@@ -182,7 +184,7 @@ fn main() {
 ## Complete Example
 
 ```rust
-use mrrc::MarcReader;
+use mrrc::{MarcReader, RecordHelpers};
 use std::fs::File;
 
 fn main() -> mrrc::Result<()> {
@@ -193,7 +195,7 @@ fn main() -> mrrc::Result<()> {
     let mut serials = 0;
 
     while let Some(record) = reader.read_record()? {
-        let leader = record.leader();
+        let leader = record.leader;
 
         match leader.bibliographic_level {
             'm' => books += 1,

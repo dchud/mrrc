@@ -30,7 +30,7 @@ In benchmarks (see [methodology](benchmarks/results.md)):
 === "Rust"
 
     ```rust
-    use mrrc::MarcReader;
+    use mrrc::{MarcReader, RecordHelpers};
     use std::fs::File;
 
     let file = File::open("records.mrc")?;

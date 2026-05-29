@@ -9,14 +9,13 @@ Use the builder pattern for clean record construction:
 ```rust
 use mrrc::{Record, Field, Leader};
 
-let record = Record::builder()
-    .leader(Leader::default())
-    .control_field("001", "12345")
-    .control_field("008", "200101s2020    xxu||||||||||||||||eng||")
+let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap())
+    .control_field_str("001", "12345")
+    .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
     .field(
-        Field::builder("245", '1', '0')
-            .subfield('a', "The Great Gatsby /")
-            .subfield('c', "F. Scott Fitzgerald.")
+        Field::builder("245".to_string(), '1', '0')
+            .subfield_str('a', "The Great Gatsby /")
+            .subfield_str('c', "F. Scott Fitzgerald.")
             .build()
     )
     .build();
@@ -28,10 +27,10 @@ let record = Record::builder()
 use mrrc::Field;
 
 // Using builder
-let title = Field::builder("245", '1', '0')
-    .subfield('a', "Main title :")
-    .subfield('b', "subtitle /")
-    .subfield('c', "by Author.")
+let title = Field::builder("245".to_string(), '1', '0')
+    .subfield_str('a', "Main title :")
+    .subfield_str('b', "subtitle /")
+    .subfield_str('c', "by Author.")
     .build();
 
 // Direct construction
@@ -45,14 +44,13 @@ author.add_subfield('d', "1896-1940.".to_string());
 ```rust
 use mrrc::Leader;
 
-let mut leader = Leader::default();
+let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap();
 leader.record_status = 'n';           // New record
 leader.record_type = 'a';             // Language material
 leader.bibliographic_level = 'm';     // Monograph
 leader.character_coding = 'a';        // UTF-8
 
-let record = Record::builder()
-    .leader(leader)
+let record = Record::builder(leader)
     // ... fields
     .build();
 ```
@@ -76,7 +74,7 @@ fn main() -> mrrc::Result<()> {
 ## Write Multiple Records
 
 ```rust
-use mrrc::{MarcReader, MarcWriter};
+use mrrc::{MarcReader, MarcWriter, RecordHelpers};
 use std::fs::File;
 
 fn main() -> mrrc::Result<()> {
@@ -108,47 +106,46 @@ fn create_book_record(
     isbn: &str,
     subjects: &[&str],
 ) -> Record {
-    let mut leader = Leader::default();
+    let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap();
     leader.record_status = 'n';
     leader.record_type = 'a';
     leader.bibliographic_level = 'm';
     leader.character_coding = 'a';
 
-    let mut builder = Record::builder()
-        .leader(leader)
-        .control_field("001", &format!("mrrc-{}", isbn))
-        .control_field("008", "200101s2020    xxu||||||||||||||||eng||");
+    let mut builder = Record::builder(leader)
+        .control_field_str("001", &format!("mrrc-{}", isbn))
+        .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||");
 
     // ISBN
     builder = builder.field(
-        Field::builder("020", ' ', ' ')
-            .subfield('a', isbn)
+        Field::builder("020".to_string(), ' ', ' ')
+            .subfield_str('a', isbn)
             .build()
     );
 
     // Author
     if !author.is_empty() {
         builder = builder.field(
-            Field::builder("100", '1', ' ')
-                .subfield('a', author)
+            Field::builder("100".to_string(), '1', ' ')
+                .subfield_str('a', author)
                 .build()
         );
     }
 
     // Title
     let ind1 = if author.is_empty() { '0' } else { '1' };
-    let mut title_field = Field::builder("245", ind1, '0')
-        .subfield('a', title);
+    let mut title_field = Field::builder("245".to_string(), ind1, '0')
+        .subfield_str('a', title);
     if !author.is_empty() {
-        title_field = title_field.subfield('c', &format!("by {}", author));
+        title_field = title_field.subfield_str('c', &format!("by {}", author));
     }
     builder = builder.field(title_field.build());
 
     // Subjects
     for subject in subjects {
         builder = builder.field(
-            Field::builder("650", ' ', '0')
-                .subfield('a', subject)
+            Field::builder("650".to_string(), ' ', '0')
+                .subfield_str('a', subject)
                 .build()
         );
     }
