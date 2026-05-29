@@ -48,10 +48,12 @@
 #                      "recovery_cap"   — drive lenient mode past max_errors
 #                      "accessor"       — call a Record accessor on a parsed record
 #                      "writer"         — construct a record and attempt to write it
-#                    The authoritative list of implemented trigger_kinds
-#                    is the module docstring in tests/error_coverage.rs;
-#                    kinds not yet implemented there skip with a
-#                    manifest-driven reason until their harness lands.
+#                    The authoritative list of trigger_kinds the Rust
+#                    harness exercises is the module docstring in
+#                    tests/error_coverage.rs. A kind that harness can't
+#                    drive (e.g. parse_marcjson — no Rust str-to-Record
+#                    entry point; covered in the Python harness instead)
+#                    skips with a manifest-driven reason.
 #   trigger_fixture  path to fixture bytes (parse_iso2709) or text
 #                    (parse_marcxml / parse_marcjson) that should fire
 #                    `code`. Required for parse_* kinds; optional for
