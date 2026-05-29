@@ -7,12 +7,11 @@ Learn to convert MARC records between different formats.
 All formats are available without feature flags:
 
 ```rust
-use mrrc::formats::{to_json, to_marcjson, from_json};
 use mrrc::marcxml::{record_to_marcxml, marcxml_to_record, marcxml_to_records};
 
 // Convert to JSON
-let json = to_json(&record)?;
-let restored = from_json(&json)?;
+let json = mrrc::json::record_to_json(&record)?;
+let restored = mrrc::json::json_to_record(&json)?;
 
 // Convert to MARCXML
 let xml = record_to_marcxml(&record)?;
@@ -22,7 +21,7 @@ let restored = marcxml_to_record(&xml)?;
 let records = marcxml_to_records(&collection_xml)?;
 
 // Convert to MARCJSON (LOC standard)
-let marcjson = to_marcjson(&record)?;
+let marcjson = mrrc::marcjson::record_to_marcjson(&record)?;
 
 // MODS conversion (bidirectional)
 let mods_xml = mrrc::mods::record_to_mods_xml(&record)?;
@@ -53,7 +52,6 @@ let jsonld = graph.serialize(RdfFormat::JsonLd)?;
 
 ```rust
 use mrrc::{MarcReader, MarcWriter};
-use mrrc::formats::to_json;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -65,7 +63,7 @@ fn convert_to_json(input: &str, output: &str) -> mrrc::Result<()> {
     let mut reader = MarcReader::new(input_file);
 
     while let Some(record) = reader.read_record()? {
-        let json = to_json(&record)?;
+        let json = mrrc::json::record_to_json(&record)?;
         writeln!(writer, "{}", json)?;
     }
 
@@ -89,7 +87,6 @@ fn convert_to_json(input: &str, output: &str) -> mrrc::Result<()> {
 
 ```rust
 use mrrc::{MarcReader, Record};
-use mrrc::formats::to_json;
 use mrrc::marcxml::record_to_marcxml;
 use std::fs::File;
 use std::io::Write;
@@ -105,7 +102,7 @@ fn convert_file(input: &str) -> mrrc::Result<()> {
 
     while let Some(record) = reader.read_record()? {
         // JSON
-        let json = to_json(&record)?;
+        let json = mrrc::json::record_to_json(&record)?;
         writeln!(json_out, "{}", json)?;
 
         // MARCXML

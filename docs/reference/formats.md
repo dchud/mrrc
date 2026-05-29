@@ -46,7 +46,7 @@ with MARCWriter("output.mrc") as writer:
 
 **Rust**:
 ```rust
-use mrrc::{MarcReader, MarcWriter};
+use mrrc::{MarcReader, MarcWriter, RecordHelpers};
 use std::fs::File;
 
 // Reading

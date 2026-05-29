@@ -25,7 +25,7 @@ rayon = "1.8"
 ### Process Records in Parallel
 
 ```rust
-use mrrc::MarcReader;
+use mrrc::{MarcReader, RecordHelpers};
 use rayon::prelude::*;
 use std::fs::File;
 
@@ -141,7 +141,7 @@ fn main() -> mrrc::Result<()> {
     let language_counts: HashMap<String, usize> = records
         .par_iter()
         .filter_map(|r| {
-            r.control_field("008")
+            r.get_control_field("008")
                 .and_then(|f| f.get(35..38).map(|s| s.to_string()))
         })
         .fold(

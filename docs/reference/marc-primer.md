@@ -54,9 +54,9 @@ print(leader.type_of_record)  # 'a' for language material
 
 **Rust:**
 ```rust
-let leader = record.leader();
-println!("{}", leader.record_status());
-println!("{}", leader.type_of_record());
+let leader = &record.leader;
+println!("{}", leader.record_status);
+println!("{}", leader.record_type);
 ```
 
 ### Directory
@@ -88,10 +88,8 @@ print(control_number.data)  # "ocm12345678"
 
 **Rust:**
 ```rust
-if let Some(field) = record.field("001") {
-    if let Some(data) = field.data() {
-        println!("{}", data);
-    }
+if let Some(data) = record.get_control_field("001") {
+    println!("{}", data);
 }
 ```
 
@@ -141,10 +139,10 @@ if title_field:
 
 **Rust:**
 ```rust
-if let Some(field) = record.field("245") {
-    println!("{:?}", field.subfield("a"));
-    println!("{:?}", field.subfield("b"));
-    println!("Indicators: {} {}", field.indicator1(), field.indicator2());
+if let Some(field) = record.get_field("245") {
+    println!("{:?}", field.get_subfield('a'));
+    println!("{:?}", field.get_subfield('b'));
+    println!("Indicators: {} {}", field.indicator1, field.indicator2);
 }
 ```
 
@@ -224,6 +222,8 @@ print(record.isbn)
 
 **Rust:**
 ```rust
+use mrrc::RecordHelpers;
+
 println!("{:?}", record.title());
 println!("{:?}", record.author());
 for isbn in record.isbns() {

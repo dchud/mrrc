@@ -15,7 +15,7 @@ fn main() -> mrrc::Result<()> {
     while let Some(record) = reader.read_record()? {
         // Get all fields with a tag
         for field in record.fields_by_tag("650") {
-            if let Some(subject) = field.subfield("a") {
+            if let Some(subject) = field.get_subfield('a') {
                 println!("{}", subject);
             }
         }
@@ -30,11 +30,10 @@ fn main() -> mrrc::Result<()> {
 use mrrc::FieldQuery;
 
 // Find fields by tag
-let query = FieldQuery::tag("245");
-let fields = query.find_all(&record);
+let query = FieldQuery::new().tag("245");
 
-for field in fields {
-    println!("{:?}", field.subfield("a"));
+for field in record.fields_matching(&query) {
+    println!("{:?}", field.get_subfield('a'));
 }
 ```
 
@@ -46,11 +45,10 @@ Find fields within a tag range:
 use mrrc::FieldQuery;
 
 // Find all subject fields (600-699)
-let query = FieldQuery::tag_range("600", "699");
-let subjects = query.find_all(&record);
+let query = FieldQuery::new().tag_range("600", "699");
 
-for field in subjects {
-    println!("{}: {:?}", field.tag(), field.subfield("a"));
+for field in record.fields_matching_range(&query) {
+    println!("{}: {:?}", field.tag, field.get_subfield('a'));
 }
 ```
 
@@ -60,12 +58,11 @@ for field in subjects {
 // Manual filtering by indicators
 let lcsh_subjects: Vec<_> = record
     .fields_by_tag("650")
-    .into_iter()
-    .filter(|f| f.indicator2() == '0')  // LCSH
+    .filter(|f| f.indicator2 == '0')  // LCSH
     .collect();
 
 for field in lcsh_subjects {
-    if let Some(subject) = field.subfield("a") {
+    if let Some(subject) = field.get_subfield('a') {
         println!("LCSH: {}", subject);
     }
 }
@@ -76,14 +73,13 @@ for field in lcsh_subjects {
 Match subfield values with patterns:
 
 ```rust
-use mrrc::SubfieldPatternQuery;
 use regex::Regex;
 
 // Find ISBN-13s (start with 978 or 979)
 let pattern = Regex::new(r"^97[89]").unwrap();
 
 for field in record.fields_by_tag("020") {
-    if let Some(isbn) = field.subfield("a") {
+    if let Some(isbn) = field.get_subfield('a') {
         if pattern.is_match(isbn) {
             println!("ISBN-13: {}", isbn);
         }
@@ -98,7 +94,7 @@ Match exact or partial values:
 ```rust
 // Exact match
 for field in record.fields_by_tag("650") {
-    if let Some(subject) = field.subfield("a") {
+    if let Some(subject) = field.get_subfield('a') {
         if subject == "History" {
             println!("Found exact match");
         }
@@ -107,7 +103,7 @@ for field in record.fields_by_tag("650") {
 
 // Partial match (contains)
 for field in record.fields_by_tag("650") {
-    if let Some(subject) = field.subfield("a") {
+    if let Some(subject) = field.get_subfield('a') {
         if subject.to_lowercase().contains("history") {
             println!("Found: {}", subject);
         }
@@ -118,18 +114,20 @@ for field in record.fields_by_tag("650") {
 ## Combining Queries
 
 ```rust
+use mrrc::Record;
+
 fn find_lcsh_subjects_with_subdivision(record: &Record) -> Vec<String> {
     let mut results = Vec::new();
 
     for field in record.fields_by_tag("650") {
         // Must be LCSH (indicator2 = 0)
-        if field.indicator2() != '0' {
+        if field.indicator2 != '0' {
             continue;
         }
 
         // Must have both $a and $x
-        let main_subject = field.subfield("a");
-        let subdivision = field.subfield("x");
+        let main_subject = field.get_subfield('a');
+        let subdivision = field.get_subfield('x');
 
         if let (Some(main), Some(sub)) = (main_subject, subdivision) {
             results.push(format!("{} -- {}", main, sub));
@@ -143,7 +141,7 @@ fn find_lcsh_subjects_with_subdivision(record: &Record) -> Vec<String> {
 ## Complete Example
 
 ```rust
-use mrrc::{MarcReader, Record};
+use mrrc::{MarcReader, Record, RecordHelpers};
 use std::fs::File;
 
 fn find_records_about(path: &str, topic: &str) -> mrrc::Result<Vec<String>> {
@@ -156,11 +154,11 @@ fn find_records_about(path: &str, topic: &str) -> mrrc::Result<Vec<String>> {
     while let Some(record) = reader.read_record()? {
         // Check LCSH subjects
         for field in record.fields_by_tag("650") {
-            if field.indicator2() != '0' {
+            if field.indicator2 != '0' {
                 continue;
             }
 
-            if let Some(subject) = field.subfield("a") {
+            if let Some(subject) = field.get_subfield('a') {
                 if subject.to_lowercase().contains(&topic_lower) {
                     if let Some(title) = record.title() {
                         results.push(format!("{}: {}", title, subject));
