@@ -87,6 +87,12 @@ with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
 
 For 1 million records with 4 threads: ~4 GB peak (same as single-threaded).
 
+**Filter in Rust with the Query DSL.** When you only need a subset of a
+record's fields, the [Query DSL](query-dsl.md) lets you express the match
+(by indicator, tag range, subfield presence, or regex) so the filtering
+runs in Rust and only the matching fields cross into Python — instead of
+materializing every field as a Python object and filtering in a loop.
+
 ## Troubleshooting
 
 ### No Speedup with Multiple Threads

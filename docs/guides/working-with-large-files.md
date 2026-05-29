@@ -63,6 +63,11 @@ def filter_books(path):
 books = list(filter_books("file.mrc"))
 ```
 
+When the per-record work is field selection — pulling just the fields that
+match some criteria — express it with the [Query DSL](query-dsl.md) so the
+filtering stays in Rust during the streaming pass instead of walking every
+field in Python.
+
 ### Rust
 
 ```rust

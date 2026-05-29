@@ -200,6 +200,11 @@ record.as_json()                       # pymarc MARC-in-JSON string
 record.as_dict()                       # pymarc-compatible dict
 ```
 
+For field selection beyond `get_fields(*tags)` — matching on indicators, tag
+ranges, subfield presence, or a regex over subfield values — see the
+[Query DSL guide](query-dsl.md). It's an mrrc extension with no pymarc
+equivalent.
+
 ### Control Fields (Unified with Field)
 ```python
 # Control fields are now Field instances (matching pymarc)

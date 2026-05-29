@@ -159,6 +159,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   invalid directory entry, not a malformed data field. The
   `InvalidField` shape is preserved for the data-field call sites
   that share these helpers.
+- The performance-tuning, migration-from-pymarc, and
+  working-with-large-files guides now point to the Query DSL guide where
+  field filtering is discussed, so readers discover the
+  indicator/range/pattern/subfield matching path. Thanks to @acdha
+  (#234).
 
 ### Fixed
 
