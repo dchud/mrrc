@@ -31,7 +31,7 @@ if field:
     print(field["a"])  # Title proper
 
 # Get all fields with a tag
-for field in record.fields_by_tag("650"):
+for field in record.get_fields("650"):
     print(field["a"])  # Subject heading
 
 # Use convenience properties (not methods — no parentheses)

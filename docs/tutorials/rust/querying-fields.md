@@ -70,46 +70,47 @@ for field in lcsh_subjects {
 
 ## Subfield Pattern Query
 
-Match subfield values with patterns:
+`SubfieldPatternQuery` matches a subfield against a regular expression, so you
+don't have to wire up `regex` yourself. Construction returns a `Result` (the
+error is a `regex::Error`) because the pattern is compiled up front:
 
 ```rust
-use regex::Regex;
+use mrrc::SubfieldPatternQuery;
 
-// Find ISBN-13s (start with 978 or 979)
-let pattern = Regex::new(r"^97[89]").unwrap();
+// Find ISBN-13s: the $a of an 020 field starting with 978 or 979
+let query = SubfieldPatternQuery::new("020", 'a', r"^97[89]")
+    .expect("valid regex");
 
-for field in record.fields_by_tag("020") {
+for field in record.fields_matching_pattern(&query) {
     if let Some(isbn) = field.get_subfield('a') {
-        if pattern.is_match(isbn) {
-            println!("ISBN-13: {}", isbn);
-        }
+        println!("ISBN-13: {}", isbn);
     }
 }
 ```
 
 ## Subfield Value Query
 
-Match exact or partial values:
+`SubfieldValueQuery` matches a subfield's value directly. Use `new` for an exact
+match and `partial` for a substring (both case-sensitive):
 
 ```rust
-// Exact match
-for field in record.fields_by_tag("650") {
-    if let Some(subject) = field.get_subfield('a') {
-        if subject == "History" {
-            println!("Found exact match");
-        }
-    }
+use mrrc::SubfieldValueQuery;
+
+// Exact match: 650 $a equal to "History"
+let exact = SubfieldValueQuery::new("650", 'a', "History");
+for field in record.fields_matching_value(&exact) {
+    println!("Exact: {:?}", field.get_subfield('a'));
 }
 
-// Partial match (contains)
-for field in record.fields_by_tag("650") {
-    if let Some(subject) = field.get_subfield('a') {
-        if subject.to_lowercase().contains("history") {
-            println!("Found: {}", subject);
-        }
-    }
+// Partial match: 650 $a containing "History"
+let partial = SubfieldValueQuery::partial("650", 'a', "History");
+for field in record.fields_matching_value(&partial) {
+    println!("Partial: {:?}", field.get_subfield('a'));
 }
 ```
+
+To test a single field instead of scanning the whole record, call
+`query.matches(&field)`, which returns a `bool`.
 
 ## Combining Queries
 

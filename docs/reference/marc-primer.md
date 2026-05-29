@@ -47,9 +47,9 @@ The leader is exactly 24 characters containing record metadata:
 
 **Python:**
 ```python
-leader = record.leader
+leader = record.leader()
 print(leader.record_status)  # 'n', 'c', or 'd'
-print(leader.type_of_record)  # 'a' for language material
+print(leader.record_type)  # 'a' for language material
 ```
 
 **Rust:**

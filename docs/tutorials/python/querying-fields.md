@@ -9,7 +9,7 @@ import mrrc
 
 for record in mrrc.MARCReader("records.mrc"):
     # Get all fields with a tag
-    for field in record.fields_by_tag("650"):
+    for field in record.get_fields("650"):
         print(field["a"])
 ```
 

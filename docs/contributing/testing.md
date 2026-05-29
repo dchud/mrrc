@@ -127,12 +127,14 @@ tests/
 ### Rust Test Example
 
 ```rust
-use mrrc::RecordHelpers;
+use mrrc::{MarcReader, RecordHelpers};
+use std::io::Cursor;
 
 #[test]
 fn test_parse_simple_record() {
     let data = include_bytes!("../tests/data/simple_book.mrc");
-    let record = Record::from_marc21(data).unwrap();
+    let mut reader = MarcReader::new(Cursor::new(&data[..]));
+    let record = reader.read_record().unwrap().unwrap();
     assert_eq!(record.title(), Some("Test Title"));
 }
 ```

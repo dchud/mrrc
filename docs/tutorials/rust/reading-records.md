@@ -123,11 +123,7 @@ fn process_field(field: &Field) {
     }
 
     // Get all values for a subfield code
-    let values: Vec<&str> = field.subfields
-        .iter()
-        .filter(|sf| sf.code == 'a')
-        .map(|sf| sf.value.as_str())
-        .collect();
+    let values: Vec<&str> = field.subfields_by_code('a').collect();
 
     // Iterate over all subfields
     for subfield in field.subfields() {
@@ -174,8 +170,8 @@ fn process_file(path: &str) -> Result<usize> {
 fn main() {
     match process_file("records.mrc") {
         Ok(count) => println!("Processed {} records", count),
-        Err(MarcError::IoError(e)) => eprintln!("I/O error: {}", e),
-        Err(MarcError::InvalidRecord(msg)) => eprintln!("Invalid record: {}", msg),
+        Err(MarcError::IoError { cause, .. }) => eprintln!("I/O error: {}", cause),
+        Err(MarcError::InvalidLeader { message, .. }) => eprintln!("Invalid leader: {}", message),
         Err(e) => eprintln!("Error: {}", e),
     }
 }

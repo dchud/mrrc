@@ -70,13 +70,11 @@ All record accessors are properties (not methods), matching pymarc:
 | `remove_field(*fields)` | `None` | Remove specific field objects |
 | `remove_fields(*tags)` | `None` | Remove all fields matching tags |
 | `fields()` | `list[Field]` | Get all data fields |
-| `fields_by_tag(tag)` | `list[Field]` | Get fields matching a tag |
+| `fields_by_tag(tag)` | `list[Field]` | Get fields matching a tag. Prefer `get_fields` for pymarc-style access — `fields_by_tag` returns lower-level field objects that do not support `field["a"]` subscripting |
 | `get(tag, default=None)` | `Field \| None` | Get first field (safe, returns None) |
 | `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
 | `get_field_or_err(tag)` | `Field` | Get first field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
 | `get_fields(*tags)` | `list[Field]` | Get fields for multiple tags |
-| `isbns()` | `list[str]` | Get all ISBNs |
-| `authors()` | `list[str]` | Get all authors |
 | `as_marc()` | `bytes` | Serialize to ISO 2709 binary |
 | `as_marc21()` | `bytes` | Alias for `as_marc()` |
 | `as_json(**kwargs)` | `str` | Serialize to pymarc-compatible MARC-in-JSON |
