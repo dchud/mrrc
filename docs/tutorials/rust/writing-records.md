@@ -9,7 +9,7 @@ Use the builder pattern for clean record construction:
 ```rust
 use mrrc::{Record, Field, Leader};
 
-let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap())
+let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500")?)
     .control_field_str("001", "12345")
     .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
     .field(
@@ -44,7 +44,7 @@ author.add_subfield('d', "1896-1940.".to_string());
 ```rust
 use mrrc::Leader;
 
-let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap();
+let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500")?;
 leader.record_status = 'n';           // New record
 leader.record_type = 'a';             // Language material
 leader.bibliographic_level = 'm';     // Monograph
@@ -105,8 +105,8 @@ fn create_book_record(
     author: &str,
     isbn: &str,
     subjects: &[&str],
-) -> Record {
-    let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap();
+) -> mrrc::Result<Record> {
+    let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500")?;
     leader.record_status = 'n';
     leader.record_type = 'a';
     leader.bibliographic_level = 'm';
@@ -150,7 +150,7 @@ fn create_book_record(
         );
     }
 
-    builder.build()
+    Ok(builder.build())
 }
 
 fn main() -> mrrc::Result<()> {
@@ -159,7 +159,7 @@ fn main() -> mrrc::Result<()> {
         "Smith, John",
         "9780123456789",
         &["MARC format", "Library science"],
-    );
+    )?;
 
     let file = File::create("new_record.mrc")?;
     let mut writer = MarcWriter::new(file);

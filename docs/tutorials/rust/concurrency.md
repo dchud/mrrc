@@ -178,10 +178,13 @@ use rayon::ThreadPoolBuilder;
 
 fn main() -> mrrc::Result<()> {
     // Configure thread pool
+    // build_global() errors only if a global pool already exists, and
+    // rayon's ThreadPoolBuildError is not a MarcError, so `?` does not
+    // apply here — panic with a message instead.
     ThreadPoolBuilder::new()
         .num_threads(4)
         .build_global()
-        .unwrap();
+        .expect("global rayon thread pool already initialized");
 
     // Rayon operations now use 4 threads
     // ...
