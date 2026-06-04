@@ -341,7 +341,7 @@ pub fn py_marc_to_bibframe(record: &PyRecord, config: &PyBibframeConfig) -> PyRd
 #[pyo3(name = "bibframe_to_marc")]
 pub fn py_bibframe_to_marc(graph: &PyRdfGraph) -> PyResult<PyRecord> {
     let record = bibframe_to_marc(&graph.inner).map_err(marc_error_to_py_err)?;
-    Ok(PyRecord { inner: record })
+    Ok(PyRecord::from(record))
 }
 
 /// Parse an RDF format string into the enum variant.
@@ -447,7 +447,7 @@ mod tests {
         let mut record = Record::new(make_test_leader());
         record.add_control_field("001".to_string(), "test123".to_string());
 
-        let py_record = PyRecord { inner: record };
+        let py_record = PyRecord::from(record);
         let config = PyBibframeConfig::new();
 
         let graph = py_marc_to_bibframe(&py_record, &config);

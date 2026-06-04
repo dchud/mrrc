@@ -104,6 +104,9 @@ with mrrc.MARCWriter("output.mrc") as writer:
 
 ## Modifying Existing Records
 
+Fields obtained from a record are live handles: edits write through to
+the record, matching pymarc.
+
 ```python
 for record in mrrc.MARCReader("input.mrc"):
     # Add a local note
@@ -111,16 +114,33 @@ for record in mrrc.MARCReader("input.mrc"):
     note.add_subfield("a", "Processed by MRRC")
     record.add_field(note)
 
-    # Change a field by replacing it: fields read back from a record are
-    # snapshots, so edit a copy and swap it in rather than mutating in place.
-    for field in list(record.get_fields("245")):
-        record.remove_field(field)
-        record.add_field(
-            mrrc.Field(
-                "245", "1", field.indicator2,
-                subfields=[mrrc.Subfield(sf.code, sf.value) for sf in field.subfields()],
-            )
-        )
+    # Edit fields in place
+    record["245"].indicator1 = "1"
+    record["245"]["a"] = "Revised title /"
+    for field in record.get_fields("650"):
+        field.delete_subfield("9")
+
+    # Control fields too
+    record["005"].data = "20260603120000.0"
+```
+
+### Field handles: two differences from pymarc
+
+**Handles are not identical objects.** Each lookup returns a new handle
+to the same underlying field. Edits through any handle are visible
+through every other, but `record["245"] is record["245"]` is `False` —
+don't use `is` or `id()` to compare fields.
+
+**Removal invalidates handles.** pymarc field objects survive record
+changes; mrrc handles refuse to operate once any field has been removed
+from their record, raising `mrrc.StaleFieldError` instead of guessing
+which field you meant. Re-fetch and retry:
+
+```python
+subjects = record.get_fields("650")
+record.remove_field("440")
+subjects[0]["a"]                  # raises mrrc.StaleFieldError
+record.get_fields("650")[0]["a"]  # re-fetched: works
 ```
 
 ## Complete Example

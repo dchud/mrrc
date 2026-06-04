@@ -123,7 +123,7 @@ impl PyProducerConsumerPipeline {
             .try_next()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-        Ok(record.map(|r| PyRecord { inner: r }))
+        Ok(record.map(PyRecord::from))
     }
 
     /// Get the next record, blocking if necessary.
@@ -161,7 +161,7 @@ impl PyProducerConsumerPipeline {
             .next()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-        Ok(record.map(|r| PyRecord { inner: r }))
+        Ok(record.map(PyRecord::from))
     }
 
     /// Iterate over all records in the pipeline.
@@ -196,7 +196,7 @@ impl PyProducerConsumerPipeline {
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Pipeline closed"))?;
 
         match pipeline.next() {
-            Ok(Some(record)) => Ok(PyRecord { inner: record }),
+            Ok(Some(record)) => Ok(PyRecord::from(record)),
             Ok(None) => Err(PyErr::new::<PyStopIteration, _>("EOF")),
             Err(e) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                 e.to_string(),

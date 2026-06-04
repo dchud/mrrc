@@ -630,6 +630,20 @@ impl PyField {
 #[pyclass(name = "Record")]
 pub struct PyRecord {
     pub inner: Record,
+    /// Bumped by every field removal. Python-side field handles capture
+    /// this at creation and refuse to operate once it changes, so a
+    /// handle can never silently read or write a field other than the
+    /// one it was obtained for.
+    pub generation: u64,
+}
+
+impl From<Record> for PyRecord {
+    fn from(inner: Record) -> Self {
+        PyRecord {
+            inner,
+            generation: 0,
+        }
+    }
 }
 
 #[pymethods]
@@ -637,9 +651,7 @@ impl PyRecord {
     /// Create a new Record with a given Leader
     #[new]
     pub fn new(leader: &PyLeader) -> Self {
-        PyRecord {
-            inner: Record::new(leader.inner.clone()),
-        }
+        PyRecord::from(Record::new(leader.inner.clone()))
     }
 
     /// Get the leader
@@ -761,13 +773,85 @@ impl PyRecord {
 
     /// Remove all fields with a given tag
     ///
-    /// Returns the removed fields.
+    /// Returns the removed fields. Bumps `generation` when anything was
+    /// removed, invalidating outstanding Python field handles.
     pub fn remove_field(&mut self, tag: &str) -> Vec<PyField> {
-        self.inner
+        let removed: Vec<PyField> = self
+            .inner
             .remove_fields_by_tag(tag)
             .into_iter()
             .map(|f| PyField { inner: f })
-            .collect()
+            .collect();
+        if !removed.is_empty() {
+            self.generation = self.generation.wrapping_add(1);
+        }
+        removed
+    }
+
+    /// Modification counter used by Python-side field handles to detect
+    /// staleness. Bumped by every field removal.
+    #[getter]
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    /// Get a fresh copy of the field at (tag, occurrence), where
+    /// occurrence is the zero-based index among fields with that tag.
+    pub fn field_at(&self, tag: &str, occurrence: usize) -> Option<PyField> {
+        self.inner
+            .fields
+            .get(tag)
+            .and_then(|fields| fields.get(occurrence))
+            .map(|f| PyField { inner: f.clone() })
+    }
+
+    /// Replace the field at (tag, occurrence). Returns `false` if no
+    /// field exists at that position. Does not bump `generation`:
+    /// in-place replacement shifts no occurrence indices.
+    pub fn replace_field_at(&mut self, tag: &str, occurrence: usize, field: &PyField) -> bool {
+        match self
+            .inner
+            .fields
+            .get_mut(tag)
+            .and_then(|fields| fields.get_mut(occurrence))
+        {
+            Some(slot) => {
+                *slot = field.inner.clone();
+                true
+            },
+            None => false,
+        }
+    }
+
+    /// Get the control field value at (tag, occurrence).
+    pub fn control_field_value_at(&self, tag: &str, occurrence: usize) -> Option<String> {
+        self.inner
+            .control_fields
+            .get(tag)
+            .and_then(|values| values.get(occurrence))
+            .cloned()
+    }
+
+    /// Replace the control field value at (tag, occurrence). Returns
+    /// `false` if no value exists at that position.
+    pub fn set_control_field_value_at(
+        &mut self,
+        tag: &str,
+        occurrence: usize,
+        value: &str,
+    ) -> bool {
+        match self
+            .inner
+            .control_fields
+            .get_mut(tag)
+            .and_then(|values| values.get_mut(occurrence))
+        {
+            Some(slot) => {
+                *slot = value.to_string();
+                true
+            },
+            None => false,
+        }
     }
 
     /// Get title from 245 field (first subfield $a)

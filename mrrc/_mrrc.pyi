@@ -246,10 +246,42 @@ class Record:
         (E105) when the tag is not present."""
         ...
     def get_fields(self, tag: str) -> List[Field]: ...
+    def fields_by_tag(self, tag: str) -> List[Field]:
+        """Get all data fields with the given tag."""
+        ...
     def fields(self) -> List[Field]:
         """Get all fields in the record."""
         ...
-    def remove_field(self, tag: str) -> None: ...
+    def remove_field(self, tag: str) -> List[Field]:
+        """Remove all fields with a given tag, returning them.
+
+        Bumps ``generation`` when anything was removed, invalidating
+        outstanding field handles.
+        """
+        ...
+    @property
+    def generation(self) -> int:
+        """Modification counter bumped by every field removal.
+
+        Field handles capture this at creation and raise
+        ``mrrc.StaleFieldError`` once it changes.
+        """
+        ...
+    def field_at(self, tag: str, occurrence: int) -> Optional[Field]:
+        """Get a copy of the field at (tag, occurrence), where occurrence
+        is the zero-based index among fields with that tag."""
+        ...
+    def replace_field_at(self, tag: str, occurrence: int, field: Field) -> bool:
+        """Replace the field at (tag, occurrence). Returns False if no
+        field exists at that position."""
+        ...
+    def control_field_value_at(self, tag: str, occurrence: int) -> Optional[str]:
+        """Get the control field value at (tag, occurrence)."""
+        ...
+    def set_control_field_value_at(self, tag: str, occurrence: int, value: str) -> bool:
+        """Replace the control field value at (tag, occurrence). Returns
+        False if no value exists at that position."""
+        ...
     def fields_by_indicator(
         self, tag: str, *, indicator1: Optional[str] = None, indicator2: Optional[str] = None
     ) -> List[Field]: ...
