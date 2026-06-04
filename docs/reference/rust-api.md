@@ -12,7 +12,7 @@ A MARC bibliographic record.
 use mrrc::{Record, Field, Leader, RecordHelpers};
 
 // Create with builder
-let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap())
+let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500")?)
     .control_field_str("001", "123456789")
     .field(
         Field::builder("245".to_string(), '1', '0')
@@ -117,7 +117,7 @@ The 24-byte MARC record header.
 ```rust
 use mrrc::Leader;
 
-let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap();
+let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500")?;
 leader.record_type = 'a';           // Language material
 leader.bibliographic_level = 'm';   // Monograph
 leader.character_coding = 'a';      // UTF-8
@@ -188,7 +188,7 @@ MARC authority records for controlled vocabularies.
 ```rust
 use mrrc::{AuthorityRecord, Field, Leader};
 
-let record = AuthorityRecord::builder(Leader::from_bytes(b"00000nz  a2200000n  4500").unwrap())
+let record = AuthorityRecord::builder(Leader::from_bytes(b"00000nz  a2200000n  4500")?)
     .control_field("001".to_string(), "n12345678".to_string())
     .heading(
         Field::builder("100".to_string(), '1', ' ')
@@ -205,7 +205,7 @@ MARC holdings records for library holdings data.
 ```rust
 use mrrc::{HoldingsRecord, Field, Leader};
 
-let record = HoldingsRecord::builder(Leader::from_bytes(b"00000nx  a2200000   4500").unwrap())
+let record = HoldingsRecord::builder(Leader::from_bytes(b"00000nx  a2200000   4500")?)
     .control_field("001".to_string(), "h12345".to_string())
     .location(
         Field::builder("852".to_string(), ' ', ' ')
