@@ -111,10 +111,16 @@ for record in mrrc.MARCReader("input.mrc"):
     note.add_subfield("a", "Processed by MRRC")
     record.add_field(note)
 
-    # Modify an existing field
-    for field in record.fields_by_tag("245"):
-        # Change indicator
-        field.indicator1 = "1"
+    # Change a field by replacing it: fields read back from a record are
+    # snapshots, so edit a copy and swap it in rather than mutating in place.
+    for field in list(record.get_fields("245")):
+        record.remove_field(field)
+        record.add_field(
+            mrrc.Field(
+                "245", "1", field.indicator2,
+                subfields=[mrrc.Subfield(sf.code, sf.value) for sf in field.subfields()],
+            )
+        )
 ```
 
 ## Complete Example

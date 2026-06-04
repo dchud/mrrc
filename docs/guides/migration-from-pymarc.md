@@ -104,7 +104,7 @@ with open('output.mrc', 'wb') as f:
 | Operation | pymarc | mrrc | Same? |
 |-----------|--------|------|-------|
 | Get title | `record.title` | `record.title` | **Same** |
-| Get field | `record['650']` | `record['650']` or `record.fields_by_tag('650')` | **Same** |
+| Get field | `record['650']` | `record['650']` (first) or `record.get_fields('650')` (all) | **Same** |
 | Check if field exists | `'245' in record` | `'245' in record` | **Same** |
 | Get all fields | `for field in record:` | `for field in record:` | **Same** |
 | Control field data | `record['001'].data` | `record['001'].data` or `record.control_field('001')` | **Same** |
@@ -119,7 +119,7 @@ with open('output.mrc', 'wb') as f:
 ```python
 # Dictionary-style access works exactly like pymarc
 field = record['245']                      # Get first 245 field (raises KeyError if missing)
-all_fields = record.fields_by_tag('245')   # Get all 245 fields
+all_fields = record.get_fields('245')      # Get all 245 fields
 
 # Safe access with .get() (returns None if missing)
 field = record.get('245')                  # Get first field, None if missing
@@ -219,10 +219,11 @@ cf = ControlField('001', '12345')
 print(cf.data)                  # '12345'
 ```
 
-### Leader Access - Property-Based and Position-Based
+### Leader Access - Attribute-Based and Position-Based
 ```python
-# Property-based access (recommended for clarity)
-leader = record.leader
+# Attribute-based access. Note: mrrc exposes the leader as a method call,
+# record.leader(), where pymarc uses a record.leader attribute.
+leader = record.leader()
 leader.record_status = 'c'          # Set record status
 leader.record_type = 'a'            # Set record type
 leader.bibliographic_level = 'd'    # Set bibliographic level

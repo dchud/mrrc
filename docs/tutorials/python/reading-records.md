@@ -43,14 +43,14 @@ author = record["100"]["a"]      # First 100 field, subfield 'a'
 
 # Check if field exists
 if "650" in record:
-    subjects = record.fields_by_tag("650")
+    subjects = record.get_fields("650")
 ```
 
 ### Get Multiple Fields
 
 ```python
 # Get all fields with a tag
-for field in record.fields_by_tag("650"):
+for field in record.get_fields("650"):
     print(field["a"])
 ```
 
@@ -76,7 +76,6 @@ MRRC provides property shortcuts for common data (no parentheses needed):
 record.title           # 245 $a
 record.author          # 100/110/111 $a
 record.isbn            # 020 $a (first)
-record.isbns()           # 020 $a (all)
 record.issn            # 022 $a
 record.publisher       # 260 $b
 record.pubyear         # Publication year
@@ -105,8 +104,8 @@ for subfield in field.subfields():
 field = record["245"]
 
 # Access indicators
-ind1 = field.indicator1  # or field.ind1
-ind2 = field.indicator2  # or field.ind2
+ind1 = field.indicator1
+ind2 = field.indicator2
 
 # Indicators affect meaning:
 # 245 indicator2 = number of nonfiling characters
@@ -181,7 +180,7 @@ def analyze_collection(path):
             languages[lang] += 1
 
         # Material type from leader
-        leader = record.leader
+        leader = record.leader()
         if leader.record_type == 'a':
             if leader.bibliographic_level == 'm':
                 material_types["Book"] += 1

@@ -14,7 +14,7 @@ MRRC supports both MARC-8 (legacy) and UTF-8 character encodings, with automatic
 - Detects encoding from leader position 09
 - Converts MARC-8 to UTF-8 when reading
 - Stores all strings internally as UTF-8
-- Can write to either encoding
+- Writes UTF-8 (MARC-8 output is not currently supported)
 
 ## UTF-8 (Modern Standard)
 
@@ -113,39 +113,21 @@ Check a record's declared encoding via the leader:
 === "Rust"
 
     ```rust
-    use mrrc::{MarcReader, encoding::MarcEncoding};
+    use mrrc::encoding::MarcEncoding;
 
-    let encoding = MarcEncoding::from_leader_char(leader.position_9())?;
+    // Leader position 9 (`character_coding`) declares the scheme
+    let encoding = MarcEncoding::from_leader_char(record.leader.character_coding)?;
     match encoding {
         MarcEncoding::Utf8 => println!("UTF-8"),
         MarcEncoding::Marc8 => println!("MARC-8"),
     }
     ```
 
-## Writing with Specific Encoding
+## Writing
 
-By default, MRRC writes UTF-8. To write MARC-8:
-
-=== "Python"
-
-    ```python
-    from mrrc import MARCWriter, Encoding
-
-    with MARCWriter("output.mrc", encoding=Encoding.MARC8) as writer:
-        writer.write(record)
-    ```
-
-=== "Rust"
-
-    ```rust
-    use mrrc::{MarcWriter, encoding::MarcEncoding};
-
-    let mut writer = MarcWriter::with_encoding(
-        File::create("output.mrc")?,
-        MarcEncoding::Marc8
-    );
-    writer.write_record(&record)?;
-    ```
+MRRC writes UTF-8. Records read from MARC-8 sources are converted to UTF-8 on
+the way in, so written output is always UTF-8 regardless of the source encoding.
+Writing MARC-8 output is not currently supported.
 
 ## Mixed Encoding Handling
 
@@ -204,7 +186,7 @@ MARC-8 uses EACC (East Asian Character Code) for Chinese, Japanese, and Korean:
 
 1. **Use UTF-8 for new records** - Simpler, universal character support
 
-2. **Preserve original encoding when round-tripping** - Read MARC-8, write MARC-8 if you need exact byte preservation
+2. **Expect UTF-8 on round-trip** - Reading then re-writing a MARC-8 record normalizes it to UTF-8; MRRC does not reproduce the original MARC-8 bytes
 
 3. **Validate encoding before batch processing** - Check a sample of records for consistency
 

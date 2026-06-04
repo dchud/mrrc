@@ -60,7 +60,7 @@ println!("ISBNs: {:?}", record.isbns());
 use mrrc::{Record, Field, Leader};
 
 // Create a new record with builder pattern
-let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap())
+let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500")?)
     .control_field_str("001", "123456789")
     .field(
         Field::builder("245".to_string(), '1', '0')

@@ -56,17 +56,19 @@ For maximum parallelism, use batch parsing:
 
 ```rust
 use mrrc::rayon_parser_pool::parse_batch_parallel;
+use mrrc::boundary_scanner::RecordBoundaryScanner;
 use rayon::prelude::*;
 
 fn main() -> mrrc::Result<()> {
-    // Read raw record bytes
+    // Read the whole file into one buffer
     let data = std::fs::read("records.mrc")?;
 
-    // Split into individual record bytes (simplified)
-    let record_bytes: Vec<&[u8]> = split_records(&data);
+    // Locate each record as an (offset, length) pair
+    let mut scanner = RecordBoundaryScanner::new();
+    let boundaries = scanner.scan(&data)?;
 
-    // Parse in parallel
-    let records = parse_batch_parallel(&record_bytes)?;
+    // Parse every record in parallel against the shared buffer
+    let records = parse_batch_parallel(&boundaries, &data)?;
 
     // Process results in parallel
     let isbn_count: usize = records
@@ -176,10 +178,13 @@ use rayon::ThreadPoolBuilder;
 
 fn main() -> mrrc::Result<()> {
     // Configure thread pool
+    // build_global() errors only if a global pool already exists, and
+    // rayon's ThreadPoolBuildError is not a MarcError, so `?` does not
+    // apply here — panic with a message instead.
     ThreadPoolBuilder::new()
         .num_threads(4)
         .build_global()
-        .unwrap();
+        .expect("global rayon thread pool already initialized");
 
     // Rayon operations now use 4 threads
     // ...

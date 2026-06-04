@@ -12,7 +12,7 @@ A MARC bibliographic record.
 use mrrc::{Record, Field, Leader, RecordHelpers};
 
 // Create with builder
-let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap())
+let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500")?)
     .control_field_str("001", "123456789")
     .field(
         Field::builder("245".to_string(), '1', '0')
@@ -33,18 +33,18 @@ for field in record.fields_by_tag("650") {
 }
 ```
 
-**Key Methods:**
+**Key members** (fields are accessed without parentheses; the `title`/`author`/`isbns` helpers require `use mrrc::RecordHelpers`):
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `leader()` | `&Leader` | Get the record's leader |
-| `control_field(tag)` | `Option<&str>` | Get control field value |
-| `field(tag)` | `Option<&Field>` | Get first field with tag |
-| `fields_by_tag(tag)` | `Vec<&Field>` | Get all fields with tag |
-| `fields()` | `&[Field]` | Get all data fields |
-| `title()` | `Option<String>` | Get title from 245$a |
-| `author()` | `Option<String>` | Get author from 100/110/111 |
-| `isbns()` | `Vec<String>` | Get all ISBNs |
+| Member | Type / Returns | Description |
+|--------|----------------|-------------|
+| `leader` *(field)* | `Leader` | The record's leader |
+| `get_control_field(tag)` | `Option<&str>` | Get a control field value |
+| `get_field(tag)` | `Option<&Field>` | Get first field with tag |
+| `fields_by_tag(tag)` | `impl Iterator<Item = &Field>` | Iterate fields with tag |
+| `fields()` | `impl Iterator<Item = &Field>` | Iterate all data fields |
+| `title()` | `Option<&str>` | Title from 245$a (`RecordHelpers`) |
+| `author()` | `Option<&str>` | Author from 100/110/111 (`RecordHelpers`) |
+| `isbns()` | `Vec<&str>` | All ISBNs (`RecordHelpers`) |
 
 ### RecordBuilder
 
@@ -87,16 +87,16 @@ if let Some(value) = field.get_subfield('a') {
 }
 ```
 
-**Key Methods:**
+**Key members** (`tag`, `indicator1`, and `indicator2` are public fields, accessed without parentheses):
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `tag()` | `&str` | 3-character field tag |
-| `indicator1()` | `char` | First indicator |
-| `indicator2()` | `char` | Second indicator |
-| `subfield(code)` | `Option<&str>` | Get first subfield value |
-| `subfields()` | `&[Subfield]` | Get all subfields |
-| `add_subfield(code, value)` | `()` | Add a subfield |
+| Member | Type / Returns | Description |
+|--------|----------------|-------------|
+| `tag` *(field)* | `String` | 3-character field tag |
+| `indicator1` *(field)* | `char` | First indicator |
+| `indicator2` *(field)* | `char` | Second indicator |
+| `get_subfield(code)` | `Option<&str>` | Get first subfield value |
+| `subfields()` | `impl Iterator<Item = &Subfield>` | Iterate subfields |
+| `add_subfield(code, value)` | `()` | Add a subfield (`code: char`, `value: String`) |
 
 ### Subfield
 
@@ -117,7 +117,7 @@ The 24-byte MARC record header.
 ```rust
 use mrrc::Leader;
 
-let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500").unwrap();
+let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500")?;
 leader.record_type = 'a';           // Language material
 leader.bibliographic_level = 'm';   // Monograph
 leader.character_coding = 'a';      // UTF-8
@@ -186,12 +186,16 @@ writer.write_record(&record)?;
 MARC authority records for controlled vocabularies.
 
 ```rust
-use mrrc::{AuthorityRecord, AuthorityRecordBuilder};
+use mrrc::{AuthorityRecord, Field, Leader};
 
-let record = AuthorityRecordBuilder::new()
-    .control_number("n12345678")
-    .heading_type(HeadingType::PersonalName)
-    .build()?;
+let record = AuthorityRecord::builder(Leader::from_bytes(b"00000nz  a2200000n  4500")?)
+    .control_field("001".to_string(), "n12345678".to_string())
+    .heading(
+        Field::builder("100".to_string(), '1', ' ')
+            .subfield_str('a', "Smith, John")
+            .build(),
+    )
+    .build();
 ```
 
 ### HoldingsRecord
@@ -199,12 +203,16 @@ let record = AuthorityRecordBuilder::new()
 MARC holdings records for library holdings data.
 
 ```rust
-use mrrc::{HoldingsRecord, HoldingsRecordBuilder};
+use mrrc::{HoldingsRecord, Field, Leader};
 
-let record = HoldingsRecordBuilder::new()
-    .control_number("h12345")
-    .holdings_type(HoldingsType::SinglePart)
-    .build()?;
+let record = HoldingsRecord::builder(Leader::from_bytes(b"00000nx  a2200000   4500")?)
+    .control_field("001".to_string(), "h12345".to_string())
+    .location(
+        Field::builder("852".to_string(), ' ', ' ')
+            .subfield_str('a', "Main Library")
+            .build(),
+    )
+    .build();
 ```
 
 ## Query DSL

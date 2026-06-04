@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corrected documentation to match the current API. The Rust API-reference
+  "Key Methods" tables now use real method names, distinguish public fields
+  from methods, and show accurate return types; the `AuthorityRecord` /
+  `HoldingsRecord` examples use the real `::builder(leader)` API. Several Rust
+  and Python tutorial/reference examples were fixed (query DSL types,
+  `subfields_by_code`, error matching, batch parsing, `get_fields` for
+  pymarc-style access, `record.leader()`). Removed documentation for MARC-8
+  *output*, which is not supported — MRRC writes UTF-8. Reported by @acdha.
+
 ## [0.8.1] - 2026-05-29
 
 ### Added
