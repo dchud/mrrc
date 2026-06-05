@@ -14,8 +14,9 @@ Learn to process MARC records in parallel using Python.
 
 MRRC releases Python's GIL during record parsing, enabling true parallel
 processing: speedup scales with available cores (sub-linearly, due to thread
-management and memory bandwidth). Ideal for processing multiple files or
-large datasets.
+management and memory bandwidth). Parallelism is opt-in — the default reader
+stays single-threaded; the GIL release is what makes the patterns below
+effective. Ideal for processing multiple files or large datasets.
 
 ## Reading a Single File
 
@@ -73,7 +74,8 @@ When you have a single large file, use `ProducerConsumerPipeline` to parallelize
 ```python
 from mrrc import ProducerConsumerPipeline
 
-# Create pipeline (auto-scales to CPU cores)
+# Explicit opt-in: the pipeline's internal parsing scales to available
+# CPU cores (rayon's default thread pool)
 pipeline = ProducerConsumerPipeline.from_file("large_file.mrc")
 
 # Process records (arrives in order)
