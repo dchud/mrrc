@@ -788,6 +788,59 @@ impl PyRecord {
         removed
     }
 
+    /// Remove the single data field at (tag, occurrence), where
+    /// occurrence is the zero-based index among fields with that tag.
+    ///
+    /// Returns the removed field, or `None` if no field exists at that
+    /// position. Bumps `generation` on removal: subsequent occurrence
+    /// indices shift, invalidating outstanding Python field handles.
+    pub fn remove_field_at(&mut self, tag: &str, occurrence: usize) -> Option<PyField> {
+        let fields = self.inner.fields.get_mut(tag)?;
+        if occurrence >= fields.len() {
+            return None;
+        }
+        let removed = fields.remove(occurrence);
+        if fields.is_empty() {
+            self.inner.fields.shift_remove(tag);
+        }
+        self.generation = self.generation.wrapping_add(1);
+        Some(PyField { inner: removed })
+    }
+
+    /// Remove all values for a control field tag
+    ///
+    /// Returns the removed values. Bumps `generation` when anything was
+    /// removed, invalidating outstanding Python field handles.
+    pub fn remove_control_field(&mut self, tag: &str) -> Vec<String> {
+        let removed = self
+            .inner
+            .control_fields
+            .shift_remove(tag)
+            .unwrap_or_default();
+        if !removed.is_empty() {
+            self.generation = self.generation.wrapping_add(1);
+        }
+        removed
+    }
+
+    /// Remove the control field value at (tag, occurrence), where
+    /// occurrence is the zero-based index among values with that tag.
+    ///
+    /// Returns the removed value, or `None` if no value exists at that
+    /// position. Bumps `generation` on removal.
+    pub fn remove_control_field_at(&mut self, tag: &str, occurrence: usize) -> Option<String> {
+        let values = self.inner.control_fields.get_mut(tag)?;
+        if occurrence >= values.len() {
+            return None;
+        }
+        let removed = values.remove(occurrence);
+        if values.is_empty() {
+            self.inner.control_fields.shift_remove(tag);
+        }
+        self.generation = self.generation.wrapping_add(1);
+        Some(removed)
+    }
+
     /// Modification counter used by Python-side field handles to detect
     /// staleness. Bumped by every field removal.
     #[getter]

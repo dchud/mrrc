@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `Record.remove_field(field)` now removes exactly the given field instead of
+  every field sharing its tag, matching pymarc; detached fields match by value
+  and raise `ValueError` when absent. `remove_field`/`remove_fields` with a
+  control tag now remove the control field (previously a silent no-op).
+  `fields()` now enumerates repeated control tags (006/007) identically to
+  `get_fields()`. (#248)
+
 - Python in-place field edits now persist to the record, matching pymarc.
   Fields obtained from a record (`record[tag]`, `get_field`, `get_fields`,
   `fields`, `fields_by_tag`) are live handles: indicator and subfield edits,

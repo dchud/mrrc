@@ -259,6 +259,28 @@ class Record:
         outstanding field handles.
         """
         ...
+    def remove_field_at(self, tag: str, occurrence: int) -> Optional[Field]:
+        """Remove the single data field at (tag, occurrence), where
+        occurrence is the zero-based index among fields with that tag.
+
+        Returns the removed field, or None if no field exists at that
+        position. Bumps ``generation`` on removal.
+        """
+        ...
+    def remove_control_field(self, tag: str) -> List[str]:
+        """Remove all values for a control field tag, returning them.
+
+        Bumps ``generation`` when anything was removed, invalidating
+        outstanding field handles.
+        """
+        ...
+    def remove_control_field_at(self, tag: str, occurrence: int) -> Optional[str]:
+        """Remove the control field value at (tag, occurrence).
+
+        Returns the removed value, or None if no value exists at that
+        position. Bumps ``generation`` on removal.
+        """
+        ...
     @property
     def generation(self) -> int:
         """Modification counter bumped by every field removal.
