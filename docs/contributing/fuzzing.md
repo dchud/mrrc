@@ -16,15 +16,19 @@ playbook for investigating CI findings.
 | `roundtrip_binary` | Parse → serialize → parse-again coupling | Active |
 | `error_classification` | Strict-mode reader with per-input behavioral assertions | Active |
 | `recovery_mode_consistency` | Cross-mode behavioral consistency across strict / lenient / permissive | Active |
-| `parse_leader` | 24-byte leader parsing | Planned |
 | `decode_marc8` | MARC-8 encoding state machine | Planned |
 | `parse_marcxml` | MARCXML reader | Planned |
+| `parse_mods` | MODS XML reader | Planned |
 | `parse_json` / `parse_marcjson` | JSON readers | Planned |
 
 `parse_record` is the first target and the highest-value one — any bytes
 passing through mrrc eventually hit its code paths. The other targets
 narrow the mutator's focus to smaller state spaces (faster convergence)
 or cross different axes of behavior (writer path, JSON/XML parsers).
+
+Leader parsing has no dedicated target: `parse_record` already drives
+leader parsing over every input's first 24 bytes, so a separate target
+would re-cover the same state space.
 
 `roundtrip_binary` couples the reader and writer: every record the reader
 extracts is serialized via `MarcWriter` and re-parsed. mrrc does not
@@ -259,7 +263,7 @@ harness pattern in [Regression test harness](#regression-test-harness)
 below. Within a given target, the harness auto-discovers every fixture
 under `tests/data/fuzz-regressions/<target>/` — no test-code edits
 needed for subsequent fixtures **in that target**. Adding a finding for
-a new target (the first `parse_leader` regression, for example)
+a new target (the first `decode_marc8` regression, for example)
 requires a new `#[test]` function pointing at that target's fixture
 directory; see the harness comment.
 

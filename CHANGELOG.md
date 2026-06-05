@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump syrupy from 5.1.0 to 5.2.0
 - Bump astral-sh/setup-uv from 7 to 8.1.0
 - Bump CodSpeedHQ/action from 4 to 4.15.1
+- Bump actions/checkout from 6 to 6.0.2
 
 ## [0.8.1] - 2026-05-29
 
