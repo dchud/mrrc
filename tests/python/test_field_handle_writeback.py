@@ -38,7 +38,7 @@ def _build_record() -> mrrc.Record:
 
 
 # ---------------------------------------------------------------------
-# Mutation persistence: the bead's core repro cases
+# Mutation persistence
 # ---------------------------------------------------------------------
 
 
@@ -130,7 +130,7 @@ def test_stale_handle_write_raises_after_removal() -> None:
     """Writing through a handle after a removal raises StaleFieldError."""
     record = _build_record()
     second_subject = record.get_fields("650")[1]
-    record.remove_field("650")  # removes the first 650, shifting indices
+    record.remove_field("650")  # removes all 650 fields
     with pytest.raises(mrrc.StaleFieldError):
         second_subject.add_subfield("x", "History.")
 
