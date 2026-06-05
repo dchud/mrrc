@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- CI Windows jobs are pinned to `windows-2025` (previously `windows-latest`)
+  ahead of GitHub's 2026-06-15 redirect of that label to a new image.
+
 ### Fixed
 
 - `Record.remove_field(field)` now removes exactly the given field instead of
