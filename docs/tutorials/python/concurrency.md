@@ -4,19 +4,19 @@ Learn to process MARC records in parallel using Python.
 
 ## Quick Reference
 
-| What You're Doing | Approach | Typical Speedup |
-|-------------------|----------|-----------------|
-| [Reading a single file](#reading-a-single-file) | File path + sequential | 1x (but GIL-friendly) |
-| [Processing multiple files](#processing-multiple-files) | ThreadPoolExecutor | 2-3x |
-| [Processing one large file](#processing-a-large-file) | ProducerConsumerPipeline | 3-4x |
+| What You're Doing | Approach | Parallelism |
+|-------------------|----------|-------------|
+| [Reading a single file](#reading-a-single-file) | File path + sequential | None (but GIL-friendly) |
+| [Processing multiple files](#processing-multiple-files) | ThreadPoolExecutor | One file per thread |
+| [Processing one large file](#processing-a-large-file) | ProducerConsumerPipeline | Parsing batches across cores |
 
 ## Why Concurrency?
 
-MRRC releases Python's GIL during record parsing, enabling true parallel processing:
-
-- 2 threads: ~2x speedup
-- 4 threads: ~3x speedup
-- Ideal for processing multiple files or large datasets
+MRRC releases Python's GIL during record parsing, enabling true parallel
+processing: speedup scales with available cores (sub-linearly, due to thread
+management and memory bandwidth). Parallelism is opt-in — the default reader
+stays single-threaded; the GIL release is what makes the patterns below
+effective. Ideal for processing multiple files or large datasets.
 
 ## Reading a Single File
 
@@ -74,7 +74,8 @@ When you have a single large file, use `ProducerConsumerPipeline` to parallelize
 ```python
 from mrrc import ProducerConsumerPipeline
 
-# Create pipeline (auto-scales to CPU cores)
+# Explicit opt-in: the pipeline's internal parsing scales to available
+# CPU cores (rayon's default thread pool)
 pipeline = ProducerConsumerPipeline.from_file("large_file.mrc")
 
 # Process records (arrives in order)
@@ -82,7 +83,7 @@ for record in pipeline:
     print(record.title)
 ```
 
-The pipeline achieves ~3.7x speedup on 4 cores by splitting work:
+The pipeline parallelizes parsing across cores by splitting work:
 
 1. **Producer thread**: Reads record bytes from disk
 2. **Parser threads**: Parse bytes into records in parallel (GIL released)
@@ -144,16 +145,16 @@ if __name__ == "__main__":
     main()
 ```
 
-## Performance Comparison
+## Choosing an Approach
 
-Typical speedups on a 4-core system:
+| Approach | Best For |
+|----------|----------|
+| Sequential (file path) | Simple scripts, small files |
+| ThreadPoolExecutor | Multiple files |
+| ProducerConsumerPipeline | One large file |
 
-| Approach | Speedup | Best For |
-|----------|---------|----------|
-| Sequential (file path) | 1x | Simple scripts, small files |
-| ThreadPoolExecutor (2 threads) | 2.0x | A few files |
-| ThreadPoolExecutor (4 threads) | 3.2x | Many files |
-| ProducerConsumerPipeline | 3.7x | One large file |
+Threaded approaches scale with core count, sub-linearly. Measure on your own
+files — see the [performance guide](../../guides/performance-tuning.md).
 
 ## Next Steps
 

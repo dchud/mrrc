@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Documentation no longer presents specific throughput figures or pymarc
+  multipliers as current measurements; early benchmark results are summarized
+  with the caveat that they need re-measurement, and the benchmark docs now
+  describe the measurement infrastructure and the procedure for producing
+  citable numbers.
+
 - The Python CodSpeed CI job now runs in simulation mode (previously walltime),
   making PR performance-regression detection deterministic on hosted runners.
   Parallel-throughput benchmarks (Python and Rust) are excluded from CodSpeed,

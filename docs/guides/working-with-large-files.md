@@ -115,13 +115,11 @@ pipeline = ProducerConsumerPipeline.from_file(
 
 ### Performance Characteristics
 
-| File Size | Iterator | Pipeline | Speedup |
-|-----------|----------|----------|---------|
-| 10 MB | 255k rec/s | 700k rec/s | 2.7x |
-| 100 MB | 250k rec/s | 950k rec/s | 3.8x |
-| 1 GB | 240k rec/s | 1M rec/s | 4.2x |
-
-Pipeline benefits increase with file size due to reduced I/O wait time.
+Pipeline benefits increase with file size: the producer thread overlaps file
+I/O with parsing, and parsing batches run in parallel across cores, so larger
+files amortize the pipeline's startup cost over more records. Measure the
+difference on your own files with the timing pattern in the
+[performance guide](performance-tuning.md).
 
 ### Memory Considerations
 
@@ -210,10 +208,10 @@ def process_file(path):
 
 files = ["file1.mrc", "file2.mrc", "file3.mrc", "file4.mrc"]
 
-# Sequential: ~1x
+# Sequential baseline
 total = sum(process_file(f) for f in files)
 
-# Parallel: ~3-4x on 4-core system
+# Parallel: speedup scales with cores (GIL released during parsing)
 with ThreadPoolExecutor(max_workers=4) as executor:
     results = list(executor.map(process_file, files))
     total = sum(results)
