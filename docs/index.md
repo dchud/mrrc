@@ -11,10 +11,12 @@ A Rust library for MARC bibliographic records, with Python bindings.
 
 ## Performance
 
-In benchmarks (see [methodology](benchmarks/results.md)):
-
-- Python: ~4x throughput compared to pymarc
-- Rust: ~1M records/sec
+Record parsing runs in Rust, and the Python bindings release the GIL during
+parsing so multi-threaded workloads parse in parallel. Early benchmarking
+suggested at least a 4x single-threaded speedup over pymarc with the Python
+wrapper; these benchmarks need to be updated and reconsidered. See
+[benchmarks](benchmarks/results.md) for the measurement infrastructure and
+how to benchmark mrrc on your own hardware and data.
 
 ## Quick Example
 

@@ -2,31 +2,22 @@
 
 Performance analysis and optimization guidance for MRRC. For parallel processing patterns, see the [Python Concurrency Tutorial](../tutorials/python/concurrency.md). For thread safety details, see [Threading in Python](threading-python.md).
 
-**Benchmark environment:** 2025 MacBook Air with Apple M4 chip. See [Detailed Benchmark Results](../benchmarks/results.md) for comprehensive data.
-
 ## Executive Summary
 
-- **Single-thread**: ~300,000 records/second (~33 ms for 10k records), **~4x faster than pymarc**
-- **Multi-thread**: ~3.74x speedup on 4 cores with ProducerConsumerPipeline
+- **Single-thread**: record parsing runs in Rust; early benchmarking suggested
+  at least a 4x speedup over pymarc (these benchmarks need to be updated and
+  reconsidered — see [Benchmark Results](../benchmarks/results.md))
+- **Multi-thread**: GIL release during parsing lets speedup scale with core
+  count
 - **GIL released** automatically during parsing (no code changes needed)
 
-## Performance Baselines
+## Threading Patterns
 
-### Single-Thread
-
-| Metric | Value |
-|--------|-------|
-| Read 10k records | ~33 ms |
-| Records/second | ~300,000 rec/s |
-| vs pymarc | **~4x faster** |
-
-### Multi-Thread (4 cores)
-
-| Pattern | Speedup | Best For |
-|---------|---------|----------|
-| ProducerConsumerPipeline | 3.74x | Single large file |
-| ThreadPoolExecutor | 3-4x | Multiple files |
-| Multiprocessing | 4-5x | CPU-heavy work |
+| Pattern | Best For |
+|---------|----------|
+| ProducerConsumerPipeline | Single large file |
+| ThreadPoolExecutor | Multiple files |
+| Multiprocessing | CPU-heavy per-record work |
 
 See the [Python Concurrency Tutorial](../tutorials/python/concurrency.md) for pattern implementation details.
 
@@ -132,7 +123,9 @@ par_time = time.time() - start
 speedup = seq_time / par_time
 print(f"Sequential: {seq_time:.2f}s")
 print(f"Parallel: {par_time:.2f}s")
-print(f"Speedup: {speedup:.2f}x (expected: ~3.7x)")
+print(f"Speedup: {speedup:.2f}x")
+# For CPU-bound parsing, expect speedup approaching the core count,
+# sub-linear due to thread management and memory bandwidth.
 ```
 
 ### Slow Single-Thread Performance
@@ -163,11 +156,12 @@ print(f"Throughput: {count / elapsed:.0f} rec/s")
 
 ## Comparison: pymrrc vs pymarc
 
-| Scenario | pymrrc | pymarc |
-|----------|--------|--------|
-| Single-thread | ~4x faster | baseline |
-| 2-thread speedup | 2.0x | 1.0x (GIL blocks) |
-| 4-thread speedup | 3.74x | 1.0x (GIL blocks) |
+pymrrc parses each record in Rust and releases the GIL while doing so, so it
+is faster single-threaded and its threading speedup scales with cores; pymarc
+parses in Python under the GIL, so threads provide no parsing parallelism.
+Early benchmarking suggested at least a 4x single-threaded speedup; these
+benchmarks need to be updated and reconsidered. Use the timing pattern above
+to measure on your own workload.
 
 ## References
 

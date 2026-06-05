@@ -106,14 +106,14 @@ Result: Threading provides no speedup (1.0x)
 ```
 Thread 1: Read (GIL) → Parse (GIL RELEASED) → Convert
 Thread 2:                Read (GIL) → Parse (GIL RELEASED) → Convert
-Result: Threads parse in parallel (3.74x on 4 cores)
+Result: Threads parse in parallel
 ```
 
 The key insight: parsing is CPU-intensive but doesn't need Python objects, so releasing the GIL enables true parallelism.
 
-**Single-threaded benefit:** Even without multiple threads, Rust parsing is simply faster (~4x vs pymarc).
+**Single-threaded benefit:** Even without multiple threads, Rust parsing is simply faster than interpreted Python parsing.
 
-**Multi-threaded benefit:** With explicit `ThreadPoolExecutor`, the GIL release enables concurrent parsing across threads (additional 3.74x speedup on 4 cores).
+**Multi-threaded benefit:** With explicit `ThreadPoolExecutor`, the GIL release enables concurrent parsing across threads, with speedup scaling with core count.
 
 ### ReaderBackend Enum
 
@@ -232,8 +232,8 @@ for record in reader:
 ```
 
 **Performance:**
-- ✅ Single-threaded: **~4x faster than pymarc**
-- ❌ Multi-threaded: **0.85x slowdown** (GIL contention)
+- ✅ Single-threaded: parsing runs at Rust speed
+- ❌ Multi-threaded: sharing one reader provides no parallelism (and adds contention)
 - **Use when:** Sequential processing or single-file reads
 
 #### ProducerConsumerPipeline (High-Performance Single-File Multi-Threading)
@@ -248,10 +248,9 @@ for record in pipeline:
     process(record)
 ```
 
-**Verified Performance:**
-- 2 threads: 2.0x speedup
-- 4 threads: 3.74x speedup
-- Scales with CPU core count
+**Performance:**
+- Scales with CPU core count (sub-linearly: thread management and memory
+  bandwidth take their share)
 
 **How it works:**
 - Background producer thread reads file in 512 KB chunks
@@ -263,13 +262,11 @@ for record in pipeline:
 
 ## Performance Characteristics
 
-### Throughput (Records/Second)
+### Throughput
 
-| Mode | Throughput | Notes |
-|------|-----------|-------|
-| Sequential (1 thread) | 549,500 rec/s | Baseline |
-| Parallel (2 threads) | ~1.1M rec/s | ~2.0x speedup |
-| Parallel (4 threads) | ~2.0M rec/s | ~3.74x speedup |
+Throughput depends on hardware and workload; see
+[Benchmark Results](../benchmarks/results.md) for how to measure it. Parallel
+modes scale with core count because parsing happens outside the GIL.
 
 ### Memory Usage
 

@@ -62,9 +62,6 @@ cargo bench
 
 # Python benchmarks
 pytest tests/python/ -m benchmark
-
-# Quick benchmark comparison
-pytest tests/python/test_benchmark_comparison.py -v
 ```
 
 ### Cross-library parity (pymarc)
