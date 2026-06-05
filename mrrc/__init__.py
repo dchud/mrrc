@@ -125,6 +125,16 @@ def _wrap_control_field(parent: 'Record', tag: str, occurrence: int, value: str)
     return wrapper
 
 
+def _field_value_key(rust_field) -> tuple:
+    """Comparable value identity of a data field: tag, indicators, subfields."""
+    return (
+        rust_field.tag,
+        rust_field.indicator1,
+        rust_field.indicator2,
+        tuple((sf.code, sf.value) for sf in rust_field.subfields()),
+    )
+
+
 # Control field tags for enumeration (when we need to iterate all possible control fields)
 _CONTROL_TAGS = ('001', '002', '003', '004', '005', '006', '007', '008', '009')
 
@@ -994,17 +1004,59 @@ class Record:
     def remove_field(self, *fields: Union['Field', str]) -> None:
         """Remove one or more fields from the record (pymarc compatibility).
 
-        Each argument can be a Field object or a tag string.
-        Returns None.
+        A Field argument removes exactly that field: a live handle
+        obtained from this record removes its precise occurrence; a
+        detached field removes the first value-equal field, raising
+        ValueError when nothing matches (as pymarc does). A tag string
+        removes all fields with that tag, control tags included.
         """
         for field in fields:
-            tag = field.tag if isinstance(field, Field) else field
-            self._inner.remove_field(tag)
+            if isinstance(field, Field):
+                self._remove_one(field)
+            else:
+                self._remove_tag(field)
 
     def remove_fields(self, *tags: str) -> None:
         """Remove all fields with the given tags (pymarc compatibility)."""
         for tag in tags:
+            self._remove_tag(tag)
+
+    def _remove_tag(self, tag: str) -> None:
+        """Remove all fields with the given tag, control tags included."""
+        if _is_control_tag(tag):
+            self._inner.remove_control_field(tag)
+        else:
             self._inner.remove_field(tag)
+
+    def _remove_one(self, field: 'Field') -> None:
+        """Remove exactly one field.
+
+        Live handles bound to this record remove their occurrence
+        (raising StaleFieldError if the handle was invalidated).
+        Detached or foreign fields remove the first value-equal field,
+        raising ValueError when no field matches.
+        """
+        if field._parent is not None:
+            field._refresh()
+        tag = field._inner.tag
+        if field._parent is self:
+            if field.is_control_field():
+                self._inner.remove_control_field_at(tag, field._occurrence)
+            else:
+                self._inner.remove_field_at(tag, field._occurrence)
+            return
+        if field.is_control_field():
+            for i, value in enumerate(self._inner.control_field_values(tag)):
+                if value == field._data:
+                    self._inner.remove_control_field_at(tag, i)
+                    return
+        else:
+            wanted = _field_value_key(field._inner)
+            for i, candidate in enumerate(self._inner.get_fields(tag)):
+                if _field_value_key(candidate) == wanted:
+                    self._inner.remove_field_at(tag, i)
+                    return
+        raise ValueError(f"field not in record: {field!r}")
 
     def _rebuild_fields(self, field_list) -> None:
         """Replace all data fields with the given list (internal helper)."""
@@ -1055,20 +1107,12 @@ class Record:
         return self._inner.control_field(tag)
     
     def fields(self) -> List['Field']:
-        """Get all fields (control + data)."""
-        result = []
-        # Include control fields
-        for tag in _CONTROL_TAGS:
-            value = self._inner.control_field(tag)
-            if value is not None:
-                result.append(_wrap_control_field(self, tag, 0, value))
-        # Include data fields
-        occurrences: dict[str, int] = {}
-        for field in self._inner.fields():
-            i = occurrences.get(field.tag, 0)
-            occurrences[field.tag] = i + 1
-            result.append(_wrap_field(field, self, i))
-        return result
+        """Get all fields (control + data), as live handles.
+
+        Enumerates identically to no-arg :meth:`get_fields`: repeated
+        control tags (e.g. multiple 007s) yield one field per value.
+        """
+        return self.get_fields()
 
     def fields_by_tag(self, tag: str) -> List['Field']:
         """Get all data fields with the given tag, as live handles."""

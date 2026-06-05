@@ -67,9 +67,9 @@ All record accessors are properties (not methods), matching pymarc:
 | `add_field(*fields)` | `None` | Add one or more data fields |
 | `add_ordered_field(*fields)` | `None` | Add fields in tag-sorted order |
 | `add_grouped_field(*fields)` | `None` | Add fields after same tag group |
-| `remove_field(*fields)` | `None` | Remove specific field objects |
-| `remove_fields(*tags)` | `None` | Remove all fields matching tags |
-| `fields()` | `list[Field]` | Get all data fields |
+| `remove_field(*fields)` | `None` | Remove exactly the given fields (`Field` handle or value match; raises `ValueError` if absent); a tag string removes all fields with that tag |
+| `remove_fields(*tags)` | `None` | Remove all fields matching tags (control tags included) |
+| `fields()` | `list[Field]` | Get all fields (control + data), as live handles; enumerates identically to no-arg `get_fields()` |
 | `fields_by_tag(tag)` | `list[Field]` | Get fields matching a tag, as live handles (single-tag, data fields only; `get_fields` also covers control fields) |
 | `get(tag, default=None)` | `Field \| None` | Get first field (safe, returns None) |
 | `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
