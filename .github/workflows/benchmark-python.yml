@@ -88,7 +88,16 @@ jobs:
         with:
           # NOTE: Only enabled if CODSPEED_TOKEN is set as a repo secret
           token: ${{ secrets.CODSPEED_TOKEN }}
-          # Required for v4: use walltime mode for standard CI runners
-          mode: walltime
+          # Simulation mode measures instruction counts under Valgrind:
+          # deterministic on standard runners, unlike walltime, which cannot
+          # distinguish real regressions from runner-speed variance.
+          mode: simulation
+          # Parallel-throughput benchmarks are excluded: Valgrind serializes
+          # threads, so multi-threaded speedup cannot be measured under
+          # simulation. Measure parallel throughput with real walltime runs
+          # on controlled hardware instead.
           # Note: Don't use --benchmark-only here; CodSpeed handles benchmarks differently
-          run: pytest tests/python/ -m "benchmark and not slow" -v
+          run: >-
+            pytest tests/python/ -m "benchmark and not slow" -v
+            --ignore=tests/python/test_benchmark_parallel.py
+            --ignore=tests/python/test_benchmark_pipeline_parallel.py
