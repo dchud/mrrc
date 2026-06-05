@@ -38,7 +38,13 @@ jobs:
           bins: cargo-codspeed
 
       - name: Build benchmarks
-        run: cargo codspeed build
+        # Allowlist the single-threaded criterion benches. parallel_benchmarks
+        # is excluded: Valgrind serializes threads under simulation mode, so
+        # rayon speedup cannot be measured there (its sequential baselines
+        # duplicate marc_benchmarks' read_* coverage). Run it locally with
+        # criterion for real walltime numbers. The remaining bench targets are
+        # print-only profiling harnesses that produce no CodSpeed signal.
+        run: cargo codspeed build --bench marc_benchmarks --bench error_handling_benchmarks
 
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v4.15.1
