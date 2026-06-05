@@ -244,7 +244,7 @@ impl PyMARCReader {
                                 return Err(crate::error::marc_error_to_py_err(*e));
                             }
                             self.records_yielded = self.records_yielded.saturating_add(1);
-                            Ok(Some(PyRecord { inner: r }))
+                            Ok(Some(PyRecord::from(r)))
                         },
                         None => Ok(None),
                     }
@@ -365,7 +365,7 @@ impl PyMARCReader {
                     return Err(crate::error::marc_error_to_py_err(*e));
                 }
                 slf.records_yielded = slf.records_yielded.saturating_add(1);
-                Ok(PyRecord { inner: record })
+                Ok(PyRecord::from(record))
             },
             Ok(None) => {
                 // Parser returned None (shouldn't happen in middle of record)

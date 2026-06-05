@@ -70,7 +70,7 @@ All record accessors are properties (not methods), matching pymarc:
 | `remove_field(*fields)` | `None` | Remove specific field objects |
 | `remove_fields(*tags)` | `None` | Remove all fields matching tags |
 | `fields()` | `list[Field]` | Get all data fields |
-| `fields_by_tag(tag)` | `list[Field]` | Get fields matching a tag. Prefer `get_fields` for pymarc-style access — `fields_by_tag` returns lower-level field objects that do not support `field["a"]` subscripting |
+| `fields_by_tag(tag)` | `list[Field]` | Get fields matching a tag, as live handles (single-tag, data fields only; `get_fields` also covers control fields) |
 | `get(tag, default=None)` | `Field \| None` | Get first field (safe, returns None) |
 | `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
 | `get_field_or_err(tag)` | `Field` | Get first field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
@@ -89,6 +89,26 @@ field = record['245']      # Returns Field or raises KeyError
 # Use record.get() for safe access (returns None if missing)
 field = record.get('245')  # Returns Field or None
 ```
+
+**Field handles:** fields obtained from a record (`record[tag]`,
+`get_field`, `get_field_or_err`, `get_fields`, `fields`,
+`fields_by_tag`) are live handles — every read and write goes through
+to the record, so in-place edits persist, matching pymarc:
+
+```python
+record["245"].indicator1 = "1"        # persists
+record["245"]["a"] = "New title /"    # persists
+record["005"].data = "20260603120000.0"  # control fields too
+```
+
+Two caveats. Handles to the same field are distinct objects
+(`record["245"] is record["245"]` is `False`) that share underlying
+state — don't compare fields with `is` or `id()`. And removing fields
+invalidates all outstanding handles for that record: any later use
+raises [`StaleFieldError`](#exceptions); re-fetch the field and retry.
+Query results (`fields_matching`, `fields_by_indicator`,
+`fields_in_range`, and related) are snapshots, not handles — edits to
+them do not write back.
 
 ### Field
 
@@ -578,6 +598,8 @@ The exception hierarchy:
 
 - `MrrcException` — base exception for all mrrc errors
   - `MarcError` — MARC-specific errors (parsing, validation)
+  - `StaleFieldError` — a live field handle was invalidated by field
+    removal; re-fetch the field from the record and retry
 
 ## See Also
 

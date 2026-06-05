@@ -27,7 +27,8 @@ Exception
 │   ├── EncodingError           (mrrc)
 │   ├── XmlError                (mrrc)
 │   ├── JsonError               (mrrc)
-│   └── WriterError             (mrrc)
+│   ├── WriterError             (mrrc)
+│   └── StaleFieldError         (mrrc)
 └── OSError
     └── PyIOError                      (Python built-in, raised on I/O failure)
 
@@ -46,6 +47,7 @@ pymarc-style `except` clauses keep catching the same conditions.
 | Distinguish indicator errors from subfield errors | `InvalidIndicator` and `BadSubfieldCode` separately. |
 | Catch every mrrc error, no matter the variant | `MrrcException`. |
 | Catch only I/O errors | `OSError` (or its `IOError` alias). |
+| Handle a field handle invalidated by removals | `StaleFieldError` — re-fetch the field from the record and retry. Raised by live field handles (see [Field handles](python-api.md#record)) after any `remove_field`/`remove_fields` call; it is a usage error, not a data error, so it carries no E-code. |
 
 ## Pymarc exception compatibility
 

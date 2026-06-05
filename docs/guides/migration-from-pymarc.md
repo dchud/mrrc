@@ -489,6 +489,8 @@ in the reference for the rationale.
 2. **UTF-8 encoding**: Set `leader.character_coding = 'a'` for UTF-8 (mrrc uses UTF-8 by default internally)
 3. **No field removal during iteration**: Use list comprehension or separate pass if modifying records during iteration
 4. **Type safety**: All data is validated at Rust layer (this is a feature, prevents data corruption)
+5. **Field handles, not shared objects**: fields obtained from a record are live handles — in-place edits persist exactly as in pymarc, but each lookup returns a distinct handle object (`record['245'] is record['245']` is `False`), so don't compare fields with `is` or `id()`
+6. **Removal invalidates field handles**: after any `remove_field`/`remove_fields` call, outstanding handles raise `mrrc.StaleFieldError` on use instead of silently targeting the wrong field — re-fetch the field and retry (pymarc object references survive removals)
 
 ## Getting Help
 

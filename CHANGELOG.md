@@ -9,9 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `mrrc.StaleFieldError` (subclass of `MrrcException`), raised when a field
+  handle is used after fields were removed from its record.
+
 ### Changed
 
 ### Fixed
+
+- Python in-place field edits now persist to the record, matching pymarc.
+  Fields obtained from a record (`record[tag]`, `get_field`, `get_fields`,
+  `fields`, `fields_by_tag`) are live handles: indicator and subfield edits,
+  and control-field `.data` assignment, write through to the record. (#241)
 
 - Corrected documentation to match the current API. The Rust API-reference
   "Key Methods" tables now use real method names, distinguish public fields

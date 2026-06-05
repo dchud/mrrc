@@ -78,7 +78,7 @@ pub fn json_to_record(json_str: &str) -> PyResult<PyRecord> {
     let json_value: Value =
         serde_json::from_str(json_str).map_err(|e| marc_error_to_py_err(ctx.err_json(e)))?;
     json::json_to_record(&json_value)
-        .map(|inner| PyRecord { inner })
+        .map(PyRecord::from)
         .map_err(marc_error_to_py_err)
 }
 
@@ -119,7 +119,7 @@ pub fn record_to_xml(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> 
 #[pyfunction]
 pub fn xml_to_record(xml_str: &str) -> PyResult<PyRecord> {
     marcxml::marcxml_to_record(xml_str)
-        .map(|inner| PyRecord { inner })
+        .map(PyRecord::from)
         .map_err(marc_error_to_py_err)
 }
 
@@ -139,12 +139,7 @@ pub fn xml_to_record(xml_str: &str) -> PyResult<PyRecord> {
 #[pyfunction]
 pub fn xml_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
     marcxml::marcxml_to_records(xml_str)
-        .map(|records| {
-            records
-                .into_iter()
-                .map(|inner| PyRecord { inner })
-                .collect()
-        })
+        .map(|records| records.into_iter().map(PyRecord::from).collect())
         .map_err(marc_error_to_py_err)
 }
 
@@ -190,7 +185,7 @@ pub fn marcjson_to_record(marcjson_str: &str) -> PyResult<PyRecord> {
     let json_value: Value =
         serde_json::from_str(marcjson_str).map_err(|e| marc_error_to_py_err(ctx.err_json(e)))?;
     marcjson::marcjson_to_record(&json_value)
-        .map(|inner| PyRecord { inner })
+        .map(PyRecord::from)
         .map_err(marc_error_to_py_err)
 }
 
@@ -278,7 +273,7 @@ pub fn record_to_mods(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String>
 #[pyfunction]
 pub fn mods_to_record(xml_str: &str) -> PyResult<PyRecord> {
     mods::mods_xml_to_record(xml_str)
-        .map(|inner| PyRecord { inner })
+        .map(PyRecord::from)
         .map_err(marc_error_to_py_err)
 }
 
@@ -298,12 +293,7 @@ pub fn mods_to_record(xml_str: &str) -> PyResult<PyRecord> {
 #[pyfunction]
 pub fn mods_collection_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
     mods::mods_xml_to_records(xml_str)
-        .map(|records| {
-            records
-                .into_iter()
-                .map(|inner| PyRecord { inner })
-                .collect()
-        })
+        .map(|records| records.into_iter().map(PyRecord::from).collect())
         .map_err(marc_error_to_py_err)
 }
 

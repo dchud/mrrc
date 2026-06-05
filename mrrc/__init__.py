@@ -88,11 +88,40 @@ def _is_control_tag(tag: str) -> bool:
     return tag < '010' and tag.isdigit()
 
 
-def _wrap_field(rust_field) -> 'Field':
-    """Wrap a Rust _Field in a Python Field wrapper."""
+class StaleFieldError(MrrcException):
+    """A field handle was invalidated by record modification.
+
+    Fields obtained from a record are live handles: reads and writes go
+    through to the record. Removing fields from the record invalidates
+    all outstanding handles; re-fetch the field from the record (e.g.,
+    ``record[tag]`` or ``record.get_fields(tag)``) and retry.
+    """
+
+
+def _wrap_field(rust_field, parent: 'Optional[Record]' = None, occurrence: int = 0) -> 'Field':
+    """Wrap a Rust _Field in a Python Field wrapper.
+
+    With ``parent``, the wrapper is a live handle: ``occurrence`` is the
+    zero-based index among same-tag fields, and reads/writes go through
+    to the parent record.
+    """
     wrapper = Field.__new__(Field)
     wrapper._data = None
     wrapper._inner = rust_field
+    wrapper._parent = parent
+    wrapper._occurrence = occurrence
+    wrapper._generation = parent._inner.generation if parent is not None else 0
+    return wrapper
+
+
+def _wrap_control_field(parent: 'Record', tag: str, occurrence: int, value: str) -> 'Field':
+    """Create a live control-field handle bound to ``parent``."""
+    wrapper = Field.__new__(Field)
+    wrapper._data = value
+    wrapper._inner = _Field(tag, ' ', ' ')
+    wrapper._parent = parent
+    wrapper._occurrence = occurrence
+    wrapper._generation = parent._inner.generation
     return wrapper
 
 
@@ -177,14 +206,71 @@ class Field:
             data: For control fields, the data string value.
         """
         self._data = data
+        self._parent: Optional['Record'] = None
+        self._occurrence = 0
+        self._generation = 0
         if data is not None:
             # Control field: create a minimal _inner for tag access only
             self._inner = _Field(tag, ' ', ' ')
         else:
             self._inner = _Field(tag, indicator1, indicator2, subfields=subfields, indicators=indicators)
-    
+
+    def _refresh(self) -> None:
+        """Re-sync a live handle from its record; no-op when detached.
+
+        Raises StaleFieldError if the record's generation changed (a
+        field was removed) or the handle's position no longer resolves.
+        """
+        parent = self._parent
+        if parent is None:
+            return
+        if parent._inner.generation != self._generation:
+            raise StaleFieldError(
+                f"field handle for tag {self._inner.tag!r} was invalidated by "
+                "record modification - re-fetch the field from the record"
+            )
+        if self._data is not None:
+            value = parent._inner.control_field_value_at(self._inner.tag, self._occurrence)
+            if value is None:
+                raise StaleFieldError(
+                    f"control field handle for tag {self._inner.tag!r} no longer "
+                    "resolves - re-fetch the field from the record"
+                )
+            object.__setattr__(self, '_data', value)
+        else:
+            fresh = parent._inner.field_at(self._inner.tag, self._occurrence)
+            if fresh is None:
+                raise StaleFieldError(
+                    f"field handle for tag {self._inner.tag!r} no longer "
+                    "resolves - re-fetch the field from the record"
+                )
+            object.__setattr__(self, '_inner', fresh)
+
+    def _writeback(self) -> None:
+        """Push a live handle's state back to its record; no-op when detached."""
+        parent = self._parent
+        if parent is None:
+            return
+        if self._data is not None:
+            ok = parent._inner.set_control_field_value_at(
+                self._inner.tag, self._occurrence, self._data
+            )
+        else:
+            ok = parent._inner.replace_field_at(
+                self._inner.tag, self._occurrence, self._inner
+            )
+        if not ok:
+            raise StaleFieldError(
+                f"field handle for tag {self._inner.tag!r} no longer "
+                "resolves - re-fetch the field from the record"
+            )
+
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Field."""
+        if name in ('_inner', '_data', '_parent', '_occurrence', '_generation'):
+            raise AttributeError(name)
+        if self._parent is not None:
+            self._refresh()
         return getattr(self._inner, name)
     
     def __getitem__(self, code: str) -> Optional[str]:
@@ -196,34 +282,34 @@ class Field:
             field['a']  # Get first 'a' subfield value
             field['z']  # Returns None if 'z' subfield doesn't exist
         """
+        self._refresh()
         try:
             values = self._inner.subfields_by_code(code)
             return values[0] if values else None
         except Exception:
             return None
-    
+
     def __setitem__(self, code: str, value: str) -> None:
         """Set subfield value (replace first occurrence)."""
+        self._refresh()
         subfields = self._inner.subfields()
         code_char = code[0] if code else ''
-        
+
         # Check if code already exists
         found_count = sum(1 for sf in subfields if sf.code == code_char)
-        
+
         if found_count == 0:
             raise KeyError(code)
         elif found_count > 1:
             raise KeyError(f"Multiple subfields with code '{code}' exist")
         else:
-            # Find and replace
-            for sf in subfields:
-                if sf.code == code_char:
-                    self.delete_subfield(code)
-                    self._inner.add_subfield(code, value)
-                    return
-    
+            self._inner.delete_subfield(code)
+            self._inner.add_subfield(code, value)
+            self._writeback()
+
     def get(self, code: str, default: Optional[str] = None) -> Optional[str]:
         """Get first subfield value by code or return default."""
+        self._refresh()
         try:
             values = self._inner.subfields_by_code(code)
             return values[0] if values else default
@@ -232,6 +318,7 @@ class Field:
 
     def __contains__(self, code: str) -> bool:
         """Check if subfield code exists in field."""
+        self._refresh()
         try:
             values = self._inner.subfields_by_code(code)
             return len(values) > 0
@@ -244,16 +331,27 @@ class Field:
 
         Returns the data string for control fields, None for data fields.
         """
+        self._refresh()
         return self._data
+
+    @data.setter
+    def data(self, value: str) -> None:
+        """Set control field data; live handles write through to the record."""
+        if self._data is None:
+            raise AttributeError("data is only settable on control fields")
+        self._refresh()
+        object.__setattr__(self, '_data', value)
+        self._writeback()
 
     def value(self) -> str:
         """Return the field's value (pymarc compatibility).
         For control fields, returns the data content.
         For data fields, returns space-joined subfield values.
         """
+        self._refresh()
         if self.is_control_field():
             return self._data or ''
-        return ' '.join(sf.value for sf in self.subfields())
+        return ' '.join(sf.value for sf in self._inner.subfields())
 
     def format_field(self) -> str:
         """Return human-readable text without indicators or subfield codes (pymarc compatibility)."""
@@ -271,18 +369,26 @@ class Field:
         Data fields: =TAG  IND1IND2$aCONTENT$bCONTENT
         Control fields: =TAG  CONTENT
         """
+        self._refresh()
         if self.is_control_field():
-            return f'={self.tag}  {self.data}'
-        ind1 = self.indicator1.replace(' ', '\\')
-        ind2 = self.indicator2.replace(' ', '\\')
-        subfield_str = ''.join(f'${sf.code}{sf.value}' for sf in self.subfields())
-        return f'={self.tag}  {ind1}{ind2}{subfield_str}'
+            return f'={self._inner.tag}  {self._data}'
+        ind1 = self._inner.indicator1.replace(' ', '\\')
+        ind2 = self._inner.indicator2.replace(' ', '\\')
+        subfield_str = ''.join(f'${sf.code}{sf.value}' for sf in self._inner.subfields())
+        return f'={self._inner.tag}  {ind1}{ind2}{subfield_str}'
 
     def __repr__(self) -> str:
-        """Informative repr."""
+        """Informative repr. Never raises: stale handles say so."""
+        try:
+            self._refresh()
+        except StaleFieldError:
+            return f"<Field {self._inner.tag} (stale handle)>"
         if self.is_control_field():
-            return f"<Field {self.tag}={self.data!r}>"
-        return f"<Field {self.tag} {self.indicator1}{self.indicator2} {len(self.subfields())} subfields>"
+            return f"<Field {self._inner.tag}={self._data!r}>"
+        return (
+            f"<Field {self._inner.tag} {self._inner.indicator1}"
+            f"{self._inner.indicator2} {len(self._inner.subfields())} subfields>"
+        )
 
     def get_subfields(self, *codes: str) -> List[str]:
         """Get all subfield values for given codes (pymarc compatibility).
@@ -290,6 +396,7 @@ class Field:
         Example:
             field.get_subfields('a', 'b')  # Get all 'a' and 'b' subfield values
         """
+        self._refresh()
         result = []
         for code in codes:
             try:
@@ -305,10 +412,14 @@ class Field:
         first subfield with the given code and returns its value, or ``None``
         if no subfield with that code exists.
         """
-        return self._inner.delete_subfield(code)
+        self._refresh()
+        removed = self._inner.delete_subfield(code)
+        self._writeback()
+        return removed
 
     def subfields_as_dict(self) -> dict:
         """Return subfields as dictionary mapping code to list of values."""
+        self._refresh()
         result: dict[str, list[str]] = {}
         try:
             for sf in self._inner.subfields():
@@ -322,6 +433,7 @@ class Field:
     
     def add_subfield(self, code: str, value: str, pos: Optional[int] = None) -> None:
         """Add a subfield, optionally at a specific position (pymarc compatibility)."""
+        self._refresh()
         if pos is None:
             self._inner.add_subfield(code, value)
         else:
@@ -330,43 +442,52 @@ class Field:
             tag = self._inner.tag
             ind1 = self._inner.indicator1
             ind2 = self._inner.indicator2
-            self._inner = _Field(tag, ind1, ind2)
+            object.__setattr__(self, '_inner', _Field(tag, ind1, ind2))
             current.insert(pos, new_sf)
             for sf in current:
                 self._inner.add_subfield(sf.code, sf.value)
-    
+        self._writeback()
+
     def subfields(self) -> List[Any]:
         """Get all subfields."""
+        self._refresh()
         return self._inner.subfields()
-    
+
     def subfields_by_code(self, code: str) -> List[str]:
         """Get subfield values by code."""
+        self._refresh()
         return self._inner.subfields_by_code(code)
-    
+
     @property
     def tag(self) -> str:
         """Field tag."""
         return self._inner.tag
-    
+
     @property
     def indicator1(self) -> str:
         """First indicator."""
+        self._refresh()
         return self._inner.indicator1
-    
+
     @indicator1.setter
     def indicator1(self, value: str) -> None:
-        """Set first indicator."""
+        """Set first indicator; live handles write through to the record."""
+        self._refresh()
         self._inner.indicator1 = value
-    
+        self._writeback()
+
     @property
     def indicator2(self) -> str:
         """Second indicator."""
+        self._refresh()
         return self._inner.indicator2
-    
+
     @indicator2.setter
     def indicator2(self, value: str) -> None:
-        """Set second indicator."""
+        """Set second indicator; live handles write through to the record."""
+        self._refresh()
         self._inner.indicator2 = value
+        self._writeback()
     
     @property
     def indicators(self) -> 'Indicators':
@@ -797,13 +918,13 @@ class Record:
          if _is_control_tag(tag):
              value = self._inner.control_field(tag)
              if value is not None:
-                 return Field(tag, data=value)
+                 return _wrap_control_field(self, tag, 0, value)
              raise KeyError(tag)
 
-         # For data fields, return Field wrapper
+         # For data fields, return a live handle
          field = self._inner.get_field(tag)
          if field:
-             return _wrap_field(field)
+             return _wrap_field(field, self, 0)
          raise KeyError(tag)
     
     def get_fields(self, *tags: str) -> List['Field']:
@@ -817,19 +938,22 @@ class Record:
         if not tags:
             # Return all control fields, then all data fields
             for tag in _CONTROL_TAGS:
-                for value in self._inner.control_field_values(tag):
-                    result.append(Field(tag, data=value))
+                for i, value in enumerate(self._inner.control_field_values(tag)):
+                    result.append(_wrap_control_field(self, tag, i, value))
+            occurrences: dict[str, int] = {}
             for field in self._inner.fields():
-                result.append(_wrap_field(field))
+                i = occurrences.get(field.tag, 0)
+                occurrences[field.tag] = i + 1
+                result.append(_wrap_field(field, self, i))
         else:
             # Return fields for specified tags
             for tag in tags:
                 if _is_control_tag(tag):
-                    for value in self._inner.control_field_values(tag):
-                        result.append(Field(tag, data=value))
+                    for i, value in enumerate(self._inner.control_field_values(tag)):
+                        result.append(_wrap_control_field(self, tag, i, value))
                 else:
-                    for field in self._inner.get_fields(tag):
-                        result.append(_wrap_field(field))
+                    for i, field in enumerate(self._inner.get_fields(tag)):
+                        result.append(_wrap_field(field, self, i))
 
         return result
     
@@ -852,7 +976,7 @@ class Record:
         """Get first field with given tag."""
         field = self._inner.get_field(tag)
         if field:
-            return _wrap_field(field)
+            return _wrap_field(field, self, 0)
         return None
 
     def get_field_or_err(self, tag: str) -> 'Field':
@@ -865,7 +989,7 @@ class Record:
         ``field_tag``); use :meth:`get_field` when ``None`` is the
         expected sentinel.
         """
-        return _wrap_field(self._inner.get_field_or_err(tag))
+        return _wrap_field(self._inner.get_field_or_err(tag), self, 0)
 
     def remove_field(self, *fields: Union['Field', str]) -> None:
         """Remove one or more fields from the record (pymarc compatibility).
@@ -937,11 +1061,21 @@ class Record:
         for tag in _CONTROL_TAGS:
             value = self._inner.control_field(tag)
             if value is not None:
-                result.append(Field(tag, data=value))
+                result.append(_wrap_control_field(self, tag, 0, value))
         # Include data fields
+        occurrences: dict[str, int] = {}
         for field in self._inner.fields():
-            result.append(_wrap_field(field))
+            i = occurrences.get(field.tag, 0)
+            occurrences[field.tag] = i + 1
+            result.append(_wrap_field(field, self, i))
         return result
+
+    def fields_by_tag(self, tag: str) -> List['Field']:
+        """Get all data fields with the given tag, as live handles."""
+        return [
+            _wrap_field(field, self, i)
+            for i, field in enumerate(self._inner.fields_by_tag(tag))
+        ]
     
     @property
     def title(self) -> Optional[str]:
@@ -1998,6 +2132,7 @@ __all__ = [
     "FieldNotFound",
     "FatalReaderError",
     "BadSubfieldCodeWarning",
+    "StaleFieldError",
     # Core classes
     "AuthorityMARCReader",
     "AuthorityRecord",

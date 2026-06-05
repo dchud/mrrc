@@ -55,10 +55,7 @@ pub fn parse_batch_parallel(
     })?;
 
     // Convert Rust records to PyRecord wrappers (GIL already held)
-    Ok(records
-        .into_iter()
-        .map(|record| PyRecord { inner: record })
-        .collect())
+    Ok(records.into_iter().map(PyRecord::from).collect())
 }
 
 /// Parse a limited batch of MARC records in parallel.
@@ -104,8 +101,5 @@ pub fn parse_batch_parallel_limited(
         })?;
 
     // Convert to PyRecord (GIL already held)
-    Ok(records
-        .into_iter()
-        .map(|record| PyRecord { inner: record })
-        .collect())
+    Ok(records.into_iter().map(PyRecord::from).collect())
 }
