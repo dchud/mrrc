@@ -42,7 +42,7 @@ jobs:
         target: [parse_record, roundtrip_binary, error_classification, recovery_mode_consistency]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Install nightly Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
