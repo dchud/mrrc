@@ -46,16 +46,18 @@ parsing. No special handling required.
 ```python
 from mrrc import MARCReader
 
-# Parsing runs in Rust; no per-record Python interpretation
-with open("records.mrc", "rb") as f:
-    reader = MARCReader(f)
-    while record := reader.read_record():
-        title = record.title
-        # ... process record ...
+# Parsing runs in Rust; no per-record Python interpretation.
+# Pass a path (not a file object) so I/O also runs in Rust, GIL-free.
+reader = MARCReader("records.mrc")
+while record := reader.read_record():
+    title = record.title
+    # ... process record ...
 ```
 
 The Python wrapper adds overhead relative to pure Rust (each record crosses
 the Rust/Python boundary), but record parsing itself runs at Rust speed.
+File objects also work, but the GIL is held for their `.read()` calls —
+prefer paths.
 
 ### Multi-Threaded
 
@@ -64,10 +66,11 @@ from concurrent.futures import ThreadPoolExecutor
 from mrrc import MARCReader
 
 def process_file(path):
-    with open(path, "rb") as f:
-        reader = MARCReader(f)  # Each thread gets its own reader
-        while record := reader.read_record():
-            # ... process record ...
+    # Each thread gets its own reader; path input keeps I/O in Rust,
+    # so threads never contend on the GIL for reads.
+    reader = MARCReader(path)
+    while record := reader.read_record():
+        ...  # process record
 
 # Process 4 files in parallel
 with ThreadPoolExecutor(max_workers=4) as executor:
@@ -143,12 +146,12 @@ thread.
 
 ```python
 # Wrong - do not share readers across threads
-reader = MARCReader(open("file.mrc", "rb"))
+reader = MARCReader("file.mrc")
 ThreadPoolExecutor().map(lambda _: reader.read_record(), range(4))
 
 # Correct - each thread gets its own reader
 def read_all(path):
-    reader = MARCReader(open(path, "rb"))
+    reader = MARCReader(path)
     while record := reader.read_record():
         # ... process ...
 

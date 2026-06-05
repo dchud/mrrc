@@ -143,16 +143,16 @@ if __name__ == "__main__":
     main()
 ```
 
-## Performance Comparison
+## Choosing an Approach
 
-Typical speedups on a 4-core system:
+| Approach | Best For |
+|----------|----------|
+| Sequential (file path) | Simple scripts, small files |
+| ThreadPoolExecutor | Multiple files |
+| ProducerConsumerPipeline | One large file |
 
-| Approach | Speedup | Best For |
-|----------|---------|----------|
-| Sequential (file path) | 1x | Simple scripts, small files |
-| ThreadPoolExecutor (2 threads) | 2.0x | A few files |
-| ThreadPoolExecutor (4 threads) | 3.2x | Many files |
-| ProducerConsumerPipeline | 3.7x | One large file |
+Threaded approaches scale with core count, sub-linearly. Measure on your own
+files — see the [performance guide](../../guides/performance-tuning.md).
 
 ## Next Steps
 
