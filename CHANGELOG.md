@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Python CodSpeed CI job now runs in simulation mode (previously walltime),
+  making PR performance-regression detection deterministic on hosted runners.
+  Parallel-throughput benchmarks are excluded from CodSpeed, since Valgrind
+  serializes threads; they remain runnable locally via pytest.
+
 - CI Windows jobs are pinned to `windows-2025` (previously `windows-latest`)
   ahead of GitHub's 2026-06-15 redirect of that label to a new image.
 
