@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pymarc-style access, `record.leader()`). Removed documentation for MARC-8
   *output*, which is not supported — MRRC writes UTF-8. Reported by @acdha.
 
+### Dependencies
+
+- Bump ruff from 0.15.12 to 0.15.14
+- Bump syrupy from 5.1.0 to 5.2.0
+- Bump astral-sh/setup-uv from 7 to 8.1.0
+- Bump CodSpeedHQ/action from 4 to 4.15.1
+
 ## [0.8.1] - 2026-05-29
 
 ### Added
