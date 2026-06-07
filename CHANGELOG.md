@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- CI PR workflows add cancel-in-progress concurrency groups and per-job
+  timeouts, skip the heavy wheel and benchmark jobs on Dependabot pull requests
+  (lint, tests, and semver still run), and share one `rust-cache` configuration
+  across the Rust compile jobs.
+
 - Documentation now states explicitly that CSV and Dublin Core are write-only
   (export) formats: both are lossy projections of a MARC record, so MRRC emits
   them but does not parse them back into MARC.
