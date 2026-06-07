@@ -22,12 +22,13 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-2025]
+  # Cross-OS compilation of the mrrc core crate is covered by the maturin
+  # matrix in python-build.yml (mrrc-python depends on mrrc). The only
+  # coverage unique to this workflow is compiling the examples/ tree, which
+  # runs once on ubuntu.
+  examples:
+    name: Build examples
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
 
@@ -42,9 +43,6 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build library
-        run: cargo build --verbose --package mrrc
 
       - name: Build examples
         run: cargo build --examples --verbose

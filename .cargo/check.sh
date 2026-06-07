@@ -8,6 +8,7 @@ set -e
 # Options
 MEMORY_CHECKS=false
 QUICK=false
+RELEASE=false
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -18,6 +19,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --quick)
             QUICK=true
+            shift
+            ;;
+        --release)
+            RELEASE=true
             shift
             ;;
         *)
@@ -65,8 +70,15 @@ if [ "$QUICK" = false ]; then
     cargo audit
 
     echo ""
-    echo "=== Maturin Python extension build ==="
-    uv run maturin develop
+    if [ "$RELEASE" = true ]; then
+        echo "=== Maturin Python extension build (--release) ==="
+        # Release-mode codegen (inlining, optimizations) matches the wheels
+        # CI builds; use this to reproduce perf-sensitive regressions locally.
+        uv run maturin develop --release
+    else
+        echo "=== Maturin Python extension build ==="
+        uv run maturin develop
+    fi
 
     echo ""
     echo "=== Python tests (core functionality, excludes benchmarks) ==="

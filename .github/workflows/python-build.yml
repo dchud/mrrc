@@ -22,7 +22,116 @@ env:
   PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
 
 jobs:
-  build-wheels:
+  # Slim matrix on pull requests: oldest + newest Python on Linux, plus a
+  # single sanity build on each alternate OS. 4 build + 4 test = 8 jobs.
+  build-wheels-pr:
+    if: github.event_name == 'pull_request'
+    name: Build wheels (PR) on ${{ matrix.os }} py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: ubuntu-latest
+            python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.12"
+          - os: windows-2025
+            python-version: "3.12"
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          manylinux: off
+          args: --release --out dist -i python${{ matrix.python-version }}
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist
+
+  test-wheels-pr:
+    if: github.event_name == 'pull_request'
+    name: Test wheels (PR) on ${{ matrix.os }} py${{ matrix.python-version }}
+    needs: build-wheels-pr
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: ubuntu-latest
+            python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.12"
+          - os: windows-2025
+            python-version: "3.12"
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist
+
+      - name: Install wheel and test dependencies
+        shell: bash
+        run: |
+          # Install the wheel together with the [test] extra from
+          # pyproject.toml so test deps stay in sync with the package.
+          WHEEL=$(ls dist/*.whl | head -1)
+          uv pip install --system "${WHEEL}[test]"
+
+      - name: Run pytest (core tests, excludes benchmarks)
+        run: |
+          pytest tests/python/ -m "not benchmark" -v
+        # Retry on macOS due to intermittent runner flakiness
+        # See: mrrc-vxmp - tests pass but job occasionally fails
+        if: runner.os != 'macOS'
+
+      - name: Run pytest with retry (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          max_attempts=3
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts"
+            if pytest tests/python/ -m "not benchmark" -v; then
+              echo "Tests passed on attempt $attempt"
+              exit 0
+            fi
+            echo "Attempt $attempt failed, retrying..."
+            attempt=$((attempt + 1))
+            sleep 5
+          done
+          echo "All $max_attempts attempts failed"
+          exit 1
+        shell: bash
+
+  # Full matrix on push to main: os {ubuntu, macos, windows} x
+  # python {3.10..3.14}. 15 build + 15 test = 30 jobs.
+  build-wheels-main:
+    if: github.event_name == 'push'
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -52,9 +161,10 @@ jobs:
           name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
           path: dist
 
-  test-wheels:
+  test-wheels-main:
+    if: github.event_name == 'push'
     name: Test wheels on ${{ matrix.os }}
-    needs: build-wheels
+    needs: build-wheels-main
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI Windows jobs are pinned to `windows-2025` (previously `windows-latest`)
   ahead of GitHub's 2026-06-15 redirect of that label to a new image.
 
+- Pull requests now build and test a slim wheel matrix (8 jobs) instead of the
+  full 30; the full `os × python` matrix still runs on push to main and on
+  release tags. The standalone Rust `build.yml` is reduced to a single
+  examples-compile job, since cross-OS core compilation is already covered by
+  the maturin wheel matrix. `.cargo/check.sh` gains a `--release` flag to build
+  the Python extension in release mode for perf-sensitive debugging.
+
 ### Fixed
 
 - `Record.remove_field(field)` now removes exactly the given field instead of
