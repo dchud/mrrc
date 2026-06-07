@@ -41,6 +41,10 @@ What's your primary goal?
 | **MODS** | Medium | Large | Good | Detailed metadata crosswalks |
 | **BIBFRAME** | Medium | Large | Growing | Linked data, RDF applications |
 
+> **CSV** and **Dublin Core** are write-only (export) formats: MRRC emits them
+> but does not parse them back into MARC, because both are lossy projections of a
+> record. See their profiles below for the rationale and how to read such data.
+
 ## Detailed Format Profiles
 
 ### ISO 2709 (MARC Binary)
@@ -126,6 +130,10 @@ See the [BIBFRAME Conversion Guide](bibframe-conversion.md) for details.
 - Need to preserve full MARC structure
 - Round-trip conversion is required
 
+**Write-only:** MRRC exports CSV but does not read it. There is no canonical
+CSV → MARC mapping, so to build MARC from a CSV file, write a reader matched to
+your column layout.
+
 ```python
 csv_str = mrrc.records_to_csv(records)
 ```
@@ -136,6 +144,10 @@ csv_str = mrrc.records_to_csv(records)
 - Simple metadata exchange across systems
 - OAI-PMH harvesting
 - Need 15-element standard metadata
+
+**Write-only:** MRRC exports Dublin Core but does not read it. The 15-element
+crosswalk is lossy, so to import harvested Dublin Core into MARC, write a
+best-effort reader for your source records.
 
 ```python
 dc_xml = record.to_dublin_core()

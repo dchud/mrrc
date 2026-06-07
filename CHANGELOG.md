@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Documentation now states explicitly that CSV and Dublin Core are write-only
+  (export) formats: both are lossy projections of a MARC record, so MRRC emits
+  them but does not parse them back into MARC.
+
 - Documentation no longer presents specific throughput figures or pymarc
   multipliers as current measurements; early benchmark results are summarized
   with the caveat that they need re-measurement, and the benchmark docs now

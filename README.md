@@ -84,6 +84,10 @@ while let Some(record) = reader.read_record()? {
 | MODS | Yes | Yes |
 | BIBFRAME | Yes | Yes |
 
+CSV and Dublin Core are write-only: both are lossy exports of a MARC record, so
+mrrc emits them but does not read them back. Bring your own reader if you need to
+import such data into MARC.
+
 [Full format reference](https://dchud.github.io/mrrc/reference/formats/)
 
 ## Platforms
