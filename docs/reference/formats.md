@@ -17,6 +17,11 @@ MRRC supports multiple serialization formats for MARC records. This page provide
 
 All formats are available in both Python and Rust without feature flags.
 
+CSV and Dublin Core are **write-only** (export). Both are lossy projections of
+a MARC record, so MRRC emits them but does not parse them back into MARC. If you
+need to turn CSV or Dublin Core into MARC, write a reader matched to your source
+data — see the per-format sections below for guidance.
+
 ## Format Details
 
 ### ISO 2709 (MARC Binary)
@@ -98,6 +103,11 @@ records = mrrc.xml_to_records(collection_xml_str)
 
 Tabular export for spreadsheet applications.
 
+**Direction**: write-only. CSV is a flat projection — one row per record, columns
+chosen by you — with no canonical mapping back to structured MARC, so MRRC emits
+CSV but does not read it. To build MARC from CSV, write a reader matched to your
+column layout.
+
 **Python**:
 ```python
 csv_str = mrrc.record_to_csv(record)
@@ -107,6 +117,11 @@ csv_str = mrrc.records_to_csv(records)
 ### Dublin Core
 
 Simplified 15-element metadata schema.
+
+**Direction**: write-only. The crosswalk to Dublin Core's 15 elements is lossy —
+MARC carries far more — so MRRC emits Dublin Core but does not read it back into
+MARC. To import harvested Dublin Core (for example from OAI-PMH), write a
+best-effort reader for your source records.
 
 **Python**:
 ```python
