@@ -30,3 +30,8 @@ corpus/*/*
 !corpus/recovery_mode_consistency/simple_authority
 !corpus/recovery_mode_consistency/with_control_fields
 !corpus/recovery_mode_consistency/multi_records
+!corpus/parse_json/simple_book
+!corpus/parse_marcjson/simple_book
+!corpus/parse_marcxml/simple_record
+!corpus/parse_mods/simple_monograph
+!corpus/decode_marc8/eacc_multibyte

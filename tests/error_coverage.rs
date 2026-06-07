@@ -813,3 +813,68 @@ fn coverage_assertions() {
         failures.join("\n  - ")
     );
 }
+
+/// Path to the `error_classification` fuzz target source. The fuzz crate
+/// is a standalone workspace on a separate (nightly) toolchain, so it
+/// cannot read this manifest at build time. This test bridges the gap
+/// from the root crate, which can read both.
+fn error_classification_target_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("fuzz/fuzz_targets/error_classification.rs")
+}
+
+/// Extract the string literals in the fuzz target's `DOCUMENTED_CODES`
+/// slice. Parses the `const DOCUMENTED_CODES: &[&str] = &[ ... ];`
+/// declaration and pulls every `"Exxx"` literal between the brackets.
+fn fuzz_documented_codes() -> std::collections::BTreeSet<String> {
+    let source = fs::read_to_string(error_classification_target_path())
+        .expect("read error_classification.rs");
+    let decl = source
+        .find("DOCUMENTED_CODES")
+        .expect("DOCUMENTED_CODES declaration in error_classification.rs");
+    // The type annotation (`&[&str]`) carries its own brackets, so anchor on
+    // the `=` and take the first `[` after it — the start of the slice literal.
+    let eq = source[decl..]
+        .find('=')
+        .map(|i| decl + i)
+        .expect("`=` after DOCUMENTED_CODES");
+    let open = source[eq..]
+        .find('[')
+        .map(|i| eq + i)
+        .expect("opening bracket of DOCUMENTED_CODES slice literal");
+    let close = source[open..]
+        .find(']')
+        .map(|i| open + i)
+        .expect("closing bracket of DOCUMENTED_CODES slice");
+    source[open + 1..close]
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.trim_matches('"').to_string())
+        .collect()
+}
+
+/// Guard against drift between the error-coverage manifest and the
+/// `error_classification` fuzz target's hand-maintained `DOCUMENTED_CODES`
+/// list. The target asserts every `Err` it surfaces carries a documented
+/// code; if a new code lands in the manifest but not the fuzz list (or
+/// vice versa), that assertion silently weakens. This test fails when the
+/// two sets diverge, pointing the contributor at the fuzz file to update.
+#[test]
+fn fuzz_documented_codes_match_manifest() {
+    let manifest = load_manifest();
+    let manifest_codes: std::collections::BTreeSet<String> =
+        manifest.case.iter().map(|c| c.code.clone()).collect();
+    let fuzz_codes = fuzz_documented_codes();
+
+    let missing_from_fuzz: Vec<&String> = manifest_codes.difference(&fuzz_codes).collect();
+    let extra_in_fuzz: Vec<&String> = fuzz_codes.difference(&manifest_codes).collect();
+
+    assert!(
+        missing_from_fuzz.is_empty() && extra_in_fuzz.is_empty(),
+        "error_classification DOCUMENTED_CODES has drifted from \
+         tests/error_coverage.toml.\n  In manifest but missing from fuzz \
+         list (add to fuzz/fuzz_targets/error_classification.rs): {missing_from_fuzz:?}\n  \
+         In fuzz list but not in manifest (remove from the fuzz file or add a \
+         manifest case): {extra_in_fuzz:?}"
+    );
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "leader": "00150nam a2200061   4500"
+  },
+  {
+    "100": {
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "a": "Fitzgerald, F. Scott"
+        }
+      ]
+    }
+  },
+  {
+    "245": {
+      "ind1": "1",
+      "ind2": "0",
+      "subfields": [
+        {
+          "a": "The Great Gatsby"
+        },
+        {
+          "c": "F. Scott Fitzgerald"
+        }
+      ]
+    }
+  },
+  {
+    "650": {
+      "ind1": " ",
+      "ind2": "0",
+      "subfields": [
+        {
+          "a": "American fiction"
+        }
+      ]
+    }
+  }
+]
