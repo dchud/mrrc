@@ -20,10 +20,17 @@ on:
       - '.gitignore'
       - '.beads/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   codspeed:
     name: Codspeed Performance Regression Detection
     runs-on: ubuntu-22.04  # CodSpeed only supports Ubuntu 20.04/22.04
+    timeout-minutes: 30
+    # Dependency bumps don't need the CodSpeed perf gate; skip for dependabot.
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v6.0.2
 

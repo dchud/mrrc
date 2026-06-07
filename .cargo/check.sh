@@ -32,6 +32,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Match python-build.yml: allow building the extension against Python versions
+# newer than pyo3's explicit support (inert on already-supported versions).
+export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
+
 
 echo "=== Rustfmt check ==="
 cargo fmt --all -- --check

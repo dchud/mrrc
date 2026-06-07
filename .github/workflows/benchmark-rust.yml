@@ -25,10 +25,17 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   benchmarks:
     name: Run benchmarks
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Dependency bumps don't need the CodSpeed perf gate; skip for dependabot.
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v6.0.2
 
