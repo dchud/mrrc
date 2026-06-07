@@ -62,6 +62,14 @@ cargo test --doc --package mrrc -q
 
 if [ "$QUICK" = false ]; then
     echo ""
+    echo "=== Compile examples ==="
+    cargo build --examples --quiet
+
+    echo ""
+    echo "=== Compile benchmarks (no run) ==="
+    cargo bench --no-run --quiet
+
+    echo ""
     echo "=== Documentation check ==="
     RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items
 

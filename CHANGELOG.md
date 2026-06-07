@@ -39,10 +39,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Pull requests now build and test a slim wheel matrix (8 jobs) instead of the
   full 30; the full `os × python` matrix still runs on push to main and on
-  release tags. The standalone Rust `build.yml` is reduced to a single
-  examples-compile job, since cross-OS core compilation is already covered by
-  the maturin wheel matrix. `.cargo/check.sh` gains a `--release` flag to build
-  the Python extension in release mode for perf-sensitive debugging.
+  release tags. The standalone Rust `build.yml` workflow is removed; its
+  examples-compile step moved into the test workflow, and cross-OS core
+  compilation remains covered by the maturin wheel matrix. `.cargo/check.sh`
+  gains a `--release` flag to build the Python extension in release mode for
+  perf-sensitive debugging.
+
+- Continuous integration trims redundant work: the Python pull-request
+  benchmark matrix (`pytest-benchmark` across five Python versions) is dropped
+  in favor of the CodSpeed regression gate, CHANGELOG linting now runs in CI,
+  and commits that touch only `.beads/**` no longer trigger the test, benchmark,
+  and wheel workflows.
+
+- `.cargo/check.sh` now compiles `examples/` and benchmarks (`cargo bench
+  --no-run`) in its full pre-push run, catching breakage that previously
+  surfaced only in CI.
 
 ### Fixed
 

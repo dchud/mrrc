@@ -1,0 +1,26 @@
+name: CHANGELOG
+
+# Runs only when the changelog or its lint script changes. A dedicated trigger
+# (rather than a job in lint.yml) is required because lint.yml ignores `**.md`,
+# so a CHANGELOG-only change would otherwise never be linted.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'CHANGELOG.md'
+      - 'scripts/lint-changelog.sh'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'CHANGELOG.md'
+      - 'scripts/lint-changelog.sh'
+
+jobs:
+  changelog:
+    name: CHANGELOG lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Lint CHANGELOG [Unreleased] block
+        run: bash scripts/lint-changelog.sh
