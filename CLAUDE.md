@@ -27,6 +27,10 @@ Python bindings via PyO3/maturin.
 # Quick mode (skips docs, audit, maturin rebuild)
 .cargo/check.sh --quick
 
+# Release-mode maturin build (reproduces wheel codegen for perf debugging;
+# slower cold build). Default builds the extension in dev mode.
+.cargo/check.sh --release
+
 # Individual commands
 cargo test --lib --tests --package mrrc -q    # Rust tests
 cargo test --doc --package mrrc -q            # Doc tests
