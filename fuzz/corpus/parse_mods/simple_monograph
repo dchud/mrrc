@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods xmlns="http://www.loc.gov/mods/v3" version="3.8">
+  <titleInfo>
+    <title>Rust Systems Programming</title>
+    <subTitle>A Practical Guide</subTitle>
+  </titleInfo>
+  <name type="personal">
+    <namePart>Smith, Jane</namePart>
+    <namePart type="date">1975-</namePart>
+    <role>
+      <roleTerm type="text">creator</roleTerm>
+    </role>
+  </name>
+  <typeOfResource>text</typeOfResource>
+  <originInfo>
+    <place>
+      <placeTerm type="text">San Francisco</placeTerm>
+    </place>
+    <publisher>O'Reilly Media</publisher>
+    <dateIssued>2020</dateIssued>
+  </originInfo>
+  <physicalDescription>
+    <extent>xv, 450 pages</extent>
+    <dimensions>24 cm</dimensions>
+  </physicalDescription>
+  <abstract>An introduction to systems programming using the Rust language.</abstract>
+  <subject>
+    <topic>Rust (Computer program language)</topic>
+  </subject>
+  <subject>
+    <topic>Systems programming (Computer science)</topic>
+  </subject>
+  <identifier type="isbn">9781491927285</identifier>
+  <language>
+    <languageTerm type="code" authority="iso639-2b">eng</languageTerm>
+  </language>
+</mods>

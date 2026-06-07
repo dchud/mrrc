@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mrrc.StaleFieldError` (subclass of `MrrcException`), raised when a field
   handle is used after fields were removed from its record.
 
+- Coverage-guided fuzz targets for the JSON (`parse_json`, `parse_marcjson`),
+  MARCXML (`parse_marcxml`), MODS (`parse_mods`), and MARC-8 (`decode_marc8`)
+  read paths, run nightly alongside the existing binary-MARC targets.
+
 ### Changed
 
 - Documentation no longer presents specific throughput figures or pymarc

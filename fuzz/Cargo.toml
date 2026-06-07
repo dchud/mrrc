@@ -10,6 +10,11 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+# The JSON readers take a parsed `serde_json::Value`, so the parse_json and
+# parse_marcjson targets parse the raw fuzz bytes into a Value before
+# handing off to mrrc. serde_json is not re-exported from the crate root,
+# so the fuzz workspace declares it directly.
+serde_json = "1.0"
 
 [dependencies.mrrc]
 path = ".."
@@ -45,6 +50,41 @@ bench = false
 [[bin]]
 name = "recovery_mode_consistency"
 path = "fuzz_targets/recovery_mode_consistency.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_json"
+path = "fuzz_targets/parse_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_marcjson"
+path = "fuzz_targets/parse_marcjson.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_marcxml"
+path = "fuzz_targets/parse_marcxml.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_mods"
+path = "fuzz_targets/parse_mods.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "decode_marc8"
+path = "fuzz_targets/decode_marc8.rs"
 test = false
 doc = false
 bench = false

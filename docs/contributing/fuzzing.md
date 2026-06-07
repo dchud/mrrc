@@ -16,10 +16,10 @@ playbook for investigating CI findings.
 | `roundtrip_binary` | Parse → serialize → parse-again coupling | Active |
 | `error_classification` | Strict-mode reader with per-input behavioral assertions | Active |
 | `recovery_mode_consistency` | Cross-mode behavioral consistency across strict / lenient / permissive | Active |
-| `decode_marc8` | MARC-8 encoding state machine | Planned |
-| `parse_marcxml` | MARCXML reader | Planned |
-| `parse_mods` | MODS XML reader | Planned |
-| `parse_json` / `parse_marcjson` | JSON readers | Planned |
+| `decode_marc8` | MARC-8 encoding state machine | Active |
+| `parse_marcxml` | MARCXML reader | Active |
+| `parse_mods` | MODS XML reader | Active |
+| `parse_json` / `parse_marcjson` | JSON readers | Active |
 
 `parse_record` is the first target and the highest-value one — any bytes
 passing through mrrc eventually hit its code paths. The other targets
