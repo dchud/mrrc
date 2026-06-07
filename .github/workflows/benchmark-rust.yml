@@ -10,6 +10,7 @@ on:
       - 'mkdocs.yml'
       - 'LICENSE'
       - '.gitignore'
+      - '.beads/**'
   pull_request:
     paths-ignore:
       - '**.md'
@@ -17,6 +18,7 @@ on:
       - 'mkdocs.yml'
       - 'LICENSE'
       - '.gitignore'
+      - '.beads/**'
   workflow_dispatch:
 
 permissions:

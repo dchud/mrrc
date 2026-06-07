@@ -9,6 +9,7 @@ on:
       - 'mkdocs.yml'
       - 'LICENSE'
       - '.gitignore'
+      - '.beads/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -17,6 +18,7 @@ on:
       - 'mkdocs.yml'
       - 'LICENSE'
       - '.gitignore'
+      - '.beads/**'
 
 env:
   CARGO_TERM_COLOR: always
@@ -46,3 +48,6 @@ jobs:
 
       - name: Run doc tests
         run: cargo test --doc --package mrrc --verbose
+
+      - name: Build examples
+        run: cargo build --examples --verbose
