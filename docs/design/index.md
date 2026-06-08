@@ -14,9 +14,6 @@ Internal design proposals, technical specifications, and performance analysis.
 
 ## Performance Profiling
 
-- [Profiling Guide](profiling/README.md) - Performance profiling methodology and results
-- [Profiling Plan](profiling/PROFILING_PLAN.md) - Profiling investigation strategy
-- [Profiling Summary](profiling/PROFILING_SUMMARY.md) - Executive summary of findings
-- [Single-threaded Analysis (2026)](profiling/SINGLE_THREADED_BOTTLENECK_ANALYSIS_2026.md) - Single-thread bottleneck investigation
-- [Concurrent Profiling Results](profiling/RUST_CONCURRENT_PROFILING_RESULTS.md) - Rust concurrent performance analysis
-- [Scope Revision Summary](profiling/SCOPE_REVISION_SUMMARY.md) - Profiling scope adjustments and rationale
+- [Profiling Guide](../contributing/profiling.md) - How to run local CPU/flamegraph profiling
+
+Earlier point-in-time profiling investigations and results (2026-01/02) are archived under `docs/history/profiling/`.
