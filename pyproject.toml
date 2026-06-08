@@ -44,6 +44,7 @@ test = [
 # place above; pip and uv both resolve self-referential extras correctly.
 dev = [
     "mrrc[test]",
+    "maturin>=1.0,<2.0",
     "mypy>=1.0",
     "pyright>=1.1",
     "ruff>=0.1",
