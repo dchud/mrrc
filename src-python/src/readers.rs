@@ -125,6 +125,7 @@ impl PyMARCReader {
     #[new]
     #[pyo3(signature = (
         source,
+        *,
         recovery_mode = "permissive",
         validation_level = "structural",
         max_errors = None,

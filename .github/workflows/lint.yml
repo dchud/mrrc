@@ -105,6 +105,36 @@ jobs:
       - name: Run ruff
         run: uvx ruff check mrrc/ tests/python/
 
+  stubtest:
+    name: Stubtest (.pyi vs compiled extension)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Sync dev dependencies
+        run: uv sync --extra dev
+
+      - name: Build extension
+        run: uv run maturin develop
+
+      - name: Run stubtest
+        run: uv run python -m mypy.stubtest mrrc._mrrc
+
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
