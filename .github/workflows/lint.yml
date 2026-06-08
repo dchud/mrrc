@@ -9,6 +9,7 @@ on:
       - 'mkdocs.yml'
       - 'LICENSE'
       - '.gitignore'
+      - '.beads/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -17,6 +18,7 @@ on:
       - 'mkdocs.yml'
       - 'LICENSE'
       - '.gitignore'
+      - '.beads/**'
 
 env:
   RUST_BACKTRACE: 1
