@@ -113,6 +113,12 @@ if [ "$QUICK" = false ]; then
     uv run pyright mrrc/
 
     echo ""
+    echo "=== Stub verification (stubtest: _mrrc.pyi vs compiled extension) ==="
+    # Diffs every name/signature in mrrc/_mrrc.pyi against the compiled
+    # _mrrc extension, failing on any drift. Requires the maturin build above.
+    uv run python -m mypy.stubtest mrrc._mrrc
+
+    echo ""
     echo "=== Documentation site build (mkdocs) ==="
     # Needs the `docs` extra: run `uv sync --all-extras` if mkdocs is missing.
     # Not run with --strict: pre-existing cross-link warnings under

@@ -435,7 +435,7 @@ with MARCWriter("output.mrc") as writer:
 Reads MARC **authority** records, yielding [`AuthorityRecord`](#authorityrecord). Same ISO 2709 binary format and iteration protocol as [`MARCReader`](#marcreader), with a smaller keyword set.
 
 ```python
-AuthorityMARCReader(file, *, recovery_mode="permissive", validation_level="structural")
+AuthorityMARCReader(source, *, recovery_mode="permissive", validation_level="structural")
 ```
 
 ```python
@@ -458,7 +458,7 @@ for record in AuthorityMARCReader("authorities.mrc"):
 Reads MARC **holdings** records, yielding [`HoldingsRecord`](#holdingsrecord). Same shape as `AuthorityMARCReader`.
 
 ```python
-HoldingsMARCReader(file, *, recovery_mode="permissive", validation_level="structural")
+HoldingsMARCReader(source, *, recovery_mode="permissive", validation_level="structural")
 ```
 
 ```python

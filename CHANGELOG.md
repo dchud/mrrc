@@ -16,7 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   MARCXML (`parse_marcxml`), MODS (`parse_mods`), and MARC-8 (`decode_marc8`)
   read paths, run nightly alongside the existing binary-MARC targets.
 
+- CI and `.cargo/check.sh` now run `stubtest` to verify `mrrc/_mrrc.pyi`
+  matches the compiled extension, preventing type-stub drift.
+
 ### Changed
+
+- Reader option arguments (`recovery_mode`, `validation_level`, `max_errors`)
+  are now keyword-only on `MARCReader`, `AuthorityMARCReader`, and
+  `HoldingsMARCReader`, matching the documented signatures; pass them by name.
+  The record source remains the first positional argument.
+
+- The `mrrc/_mrrc.pyi` type stubs now match the compiled extension exactly:
+  missing members were added and entries absent at runtime were removed, so
+  stub-driven type checking reflects the real API.
 
 - CI PR workflows add cancel-in-progress concurrency groups and per-job
   timeouts, skip the heavy wheel and benchmark jobs on Dependabot pull requests
