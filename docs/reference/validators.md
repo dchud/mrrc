@@ -53,7 +53,7 @@ v.validate_indicators("245", '0', '1')?;    // by tag + chars
 ```
 
 ```python
-# The Python wrapper does not currently re-export IndicatorValidator;
+# The Python wrapper does not re-export IndicatorValidator;
 # trigger per-tag checks via validation_level="strict_marc".
 reader = mrrc.MARCReader(file, validation_level="strict_marc")
 ```

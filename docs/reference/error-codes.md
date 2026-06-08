@@ -157,7 +157,7 @@ digits or claims a value below 25.
 **Common causes.** Records written by older systems that miscalculate the
 directory length; corrupted bytes 12–16 from in-flight data damage.
 
-**How to recover.** Not currently recoverable; the directory boundary
+**How to recover.** Not recoverable; the directory boundary
 can't be inferred without the base address.
 
 **Python class:** `mrrc.BaseAddressInvalid`.
