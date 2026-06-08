@@ -302,12 +302,12 @@ input format:
   the input stream; `record_byte_offset` is relative to the start of the
   current record. This is the primary case.
 - **MARCXML**. The underlying `quick_xml` parser does not expose a byte
-  position from its deserializer error type, so `byte_offset` is currently
-  `None`. Position information is available via the wrapped cause: walk
+  position from its deserializer error type, so `byte_offset` is `None`.
+  Position information is available via the wrapped cause: walk
   `err.__cause__` for the original `quick_xml` error.
 - **MARCJSON**. The wrapped `serde_json::Error` exposes line and column;
-  `byte_offset` is currently `None` because translating (line, column) to a
-  byte offset requires the original input bytes. Walk `err.__cause__` to
+  `byte_offset` is `None` because translating (line, column) to a byte
+  offset requires the original input bytes. Walk `err.__cause__` to
   read `cause.line` and `cause.column`.
 
 When a format's underlying parser does not expose usable position
@@ -603,7 +603,7 @@ Rust (`MarcError::detailed()`) and Python (`MrrcException.detailed()`).
 The `bytes_near` attribute on the exception is `None` when the parser
 did not have access to a buffer at the point the error was raised
 (e.g., for wrapping variants like `IoError` / `XmlError` / `JsonError`,
-or for error paths that do not yet plumb the buffer through).
+or for error paths that do not have buffer access at error time).
 
 ## Pickle round-trip
 
