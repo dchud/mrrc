@@ -118,7 +118,22 @@ class TestRecordFieldOperations:
         
         fields = record.fields_by_tag('650')
         assert len(fields) == 3
-    
+
+    def test_fields_by_tag_returns_subscriptable_fields(self):
+        """fields_by_tag returns wrapped fields that support ['code']
+        subscripting, staying interchangeable with get_fields for pymarc
+        parity (both yield the same wrapper type)."""
+        record = Record(Leader())
+        field = Field('245', '1', '0')
+        field.add_subfield('a', 'Main title')
+        record.add_field(field)
+
+        by_tag = record.fields_by_tag('245')
+        by_get = record.get_fields('245')
+        assert by_tag[0]['a'] == 'Main title'
+        assert by_tag[0]['a'] == by_get[0]['a']
+        assert type(by_tag[0]) is type(by_get[0])
+
     def test_get_all_fields(self):
         """Test getting all fields from a record."""
         leader = Leader()
