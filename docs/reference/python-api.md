@@ -47,9 +47,9 @@ field = record.get('245')  # Returns Field or None
 ```
 
 **Field handles:** fields obtained from a record (`record[tag]`,
-`get_field`, `get_field_or_err`, `get_fields`, `fields`,
-`fields_by_tag`) are live handles — every read and write goes through
-to the record, so in-place edits persist, matching pymarc:
+`get_field`, `get_field_or_err`, `get_fields`, `fields`) are live
+handles — every read and write goes through to the record, so in-place
+edits persist, matching pymarc:
 
 ```python
 record["245"].indicator1 = "1"        # persists

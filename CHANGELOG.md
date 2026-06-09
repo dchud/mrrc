@@ -90,6 +90,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   --no-run`) in its full pre-push run, catching breakage that previously
   surfaced only in CI.
 
+### Removed
+
+- The Python `Record.fields_by_tag(tag)` method. Use the pymarc-standard
+  `get_fields(tag)`, which returns the same live-handle fields for a data tag
+  and also accepts multiple tags and control (00X) tags. The Rust
+  `Record::fields_by_tag` is unchanged.
+
 ### Fixed
 
 - `Record.remove_field(field)` now removes exactly the given field instead of
