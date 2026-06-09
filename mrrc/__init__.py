@@ -10,10 +10,10 @@ The Python wrapper aims for API compatibility with pymarc.
 from . import _mrrc
 from ._mrrc import (
     AuthorityMARCReader,
-    AuthorityRecord as _AuthorityRecord,
+    AuthorityRecord,
     Field as _Field,
     HoldingsMARCReader,
-    HoldingsRecord as _HoldingsRecord,
+    HoldingsRecord,
     Leader as _Leader,
     MARCReader as _MARCReader,
     MARCWriter as _MARCWriter,
@@ -204,7 +204,7 @@ class Field:
     Data fields use indicators and subfields as before.
     """
 
-    def __init__(self, tag: str, indicator1: str = ' ', indicator2: str = ' ', *, subfields=None, indicators=None, data: Optional[str] = None):
+    def __init__(self, tag: str, indicator1: str = ' ', indicator2: str = ' ', *, subfields: Optional[List[Subfield]] = None, indicators: Optional[List[str]] = None, data: Optional[str] = None):
         """Create a new Field.
 
         Args:
@@ -885,7 +885,7 @@ class Leader:
 class Record:
     """Enhanced Record wrapper with pymarc-compatible API."""
     
-    def __init__(self, leader: Optional[Leader] = None, *, fields=None):
+    def __init__(self, leader: Optional[Leader] = None, *, fields: Optional[List[Field]] = None):
         """Create a new Record.
 
         Args:
@@ -1632,7 +1632,7 @@ class MARCReader:
             mode (the first error fires before any recovery accumulates).
     """
 
-    def __init__(self, file_obj, to_unicode: bool = True, permissive: bool = False,
+    def __init__(self, file_obj: Any, to_unicode: bool = True, permissive: bool = False,
                  recovery_mode: Optional[str] = None,
                  validation_level: str = "structural",
                  max_errors: Optional[int] = None):
@@ -1758,7 +1758,7 @@ class MARCReader:
 class MARCWriter:
     """MARC Writer wrapper."""
     
-    def __init__(self, file_obj):
+    def __init__(self, file_obj: Any):
         """Create a new MARC writer."""
         self._inner = _MARCWriter(file_obj)
     
@@ -1784,11 +1784,6 @@ class MARCWriter:
         """Context manager support."""
         self.close()
         return False
-
-
-# Aliases for Authority and Holdings records
-AuthorityRecord = _AuthorityRecord
-HoldingsRecord = _HoldingsRecord
 
 
 def _wrap_record(rust_record) -> Record:

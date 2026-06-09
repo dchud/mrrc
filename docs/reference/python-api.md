@@ -172,7 +172,7 @@ for tracing in record.see_from_tracings():
 Note: `get_fields(tag)` returns `None` when no fields match (unlike
 `Record.get_fields`, which returns `[]`).
 
-::: mrrc._mrrc.AuthorityRecord
+::: mrrc.AuthorityRecord
 
 ```python
 try:
@@ -200,7 +200,7 @@ for caption in record.captions_basic():   # 853 fields
 Note: `get_fields(tag)` returns `None` when no fields match (unlike
 `Record.get_fields`, which returns `[]`).
 
-::: mrrc._mrrc.HoldingsRecord
+::: mrrc.HoldingsRecord
 
 ## Reader/Writer Classes
 
