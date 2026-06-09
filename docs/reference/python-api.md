@@ -31,54 +31,10 @@ field.add_subfield("a", "Title")
 record.add_field(field)
 ```
 
-**Properties (read-only):**
+All record accessors (`title`, `author`, `isbn`, …) are read-only
+properties, matching pymarc.
 
-All record accessors are properties (not methods), matching pymarc:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `leader` | `Leader` | The record's leader |
-| `title` | `str \| None` | Title from 245$a |
-| `author` | `str \| None` | Author from 100/110/111 |
-| `isbn` | `str \| None` | ISBN from 020$a |
-| `issn` | `str \| None` | ISSN from 022$a |
-| `publisher` | `str \| None` | Publisher from 260$b |
-| `pubyear` | `str \| None` | Publication year (returns str) |
-| `subjects` | `list[str]` | All subjects from 6XX$a |
-| `location` | `str \| None` | Location from 852$a |
-| `notes` | `list[str]` | All notes from 5XX |
-| `series` | `str \| None` | Series from 490$a |
-| `uniform_title` | `str \| None` | Uniform title from 130$a |
-| `physical_description` | `str \| None` | Extent from 300$a |
-| `sudoc` | `str \| None` | SuDoc classification from 086$a |
-| `issn_title` | `str \| None` | ISSN title from 222$a |
-| `issnl` | `str \| None` | ISSN-L from 024$a |
-| `addedentries` | `list[Field]` | Added entries (7XX fields) |
-| `physicaldescription` | `str \| None` | Alias for `physical_description` |
-| `uniformtitle` | `str \| None` | Alias for `uniform_title` |
-
-**Methods:**
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `add_control_field(tag, value)` | `None` | Add a control field (001-009) |
-| `control_field(tag)` | `str \| None` | Get a control field value |
-| `control_fields()` | `list[tuple[str, str]]` | Get all control fields |
-| `add_field(*fields)` | `None` | Add one or more data fields |
-| `add_ordered_field(*fields)` | `None` | Add fields in tag-sorted order |
-| `add_grouped_field(*fields)` | `None` | Add fields after same tag group |
-| `remove_field(*fields)` | `None` | Remove exactly the given fields (`Field` handle or value match; raises `ValueError` if absent); a tag string removes all fields with that tag |
-| `remove_fields(*tags)` | `None` | Remove all fields matching tags (control tags included) |
-| `fields()` | `list[Field]` | Get all fields (control + data), as live handles; enumerates identically to no-arg `get_fields()` |
-| `fields_by_tag(tag)` | `list[Field]` | Get fields matching a tag, as live handles (single-tag, data fields only; `get_fields` also covers control fields) |
-| `get(tag, default=None)` | `Field \| None` | Get first field (safe, returns None) |
-| `get_field(tag)` | `Field \| None` | Get first field with given tag (returns `None` if absent) |
-| `get_field_or_err(tag)` | `Field` | Get first field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
-| `get_fields(*tags)` | `list[Field]` | Get fields for multiple tags |
-| `as_marc()` | `bytes` | Serialize to ISO 2709 binary |
-| `as_marc21()` | `bytes` | Alias for `as_marc()` |
-| `as_json(**kwargs)` | `str` | Serialize to pymarc-compatible MARC-in-JSON |
-| `as_dict()` | `dict` | Convert to pymarc-compatible dict |
+::: mrrc.Record
 
 **Dictionary access:**
 
@@ -137,26 +93,7 @@ for sf in field.subfields():
     print(f"${sf.code} {sf.value}")
 ```
 
-**Properties and Methods:**
-
-| Property/Method | Type | Description |
-|-----------------|------|-------------|
-| `tag` | `str` | 3-character field tag |
-| `indicator1` | `str` | First indicator |
-| `indicator2` | `str` | Second indicator |
-| `data` | `str \| None` | Control field content (None for data fields) |
-| `is_control_field()` | `bool` | True for control fields (001-009) |
-| `add_subfield(code, value, pos=None)` | `None` | Add a subfield (optional positional insert) |
-| `subfields()` | `list[Subfield]` | Get all subfields |
-| `subfields_by_code(code)` | `list[str]` | Get values for a subfield code |
-| `get_subfields(*codes)` | `list[str]` | Get values for one or more subfield codes |
-| `value()` | `str` | Space-joined subfield values |
-| `format_field()` | `str` | Human-readable text representation |
-| `as_marc()` | `bytes` | Serialize to ISO 2709 binary |
-| `as_marc21()` | `bytes` | Alias for `as_marc()` |
-| `linkage_occurrence_num()` | `tuple[str, str] \| None` | Extract $6 linkage info |
-| `convert_legacy_subfields(tag, *args)` | `Field` | Classmethod: create from flat list |
-| `__getitem__(code)` | `str \| None` | Get first subfield value by code |
+::: mrrc.Field
 
 ### ControlField
 
@@ -184,12 +121,7 @@ print(sf.code)   # "a"
 print(sf.value)  # "value"
 ```
 
-**Properties:**
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `code` | `str` | Single-character subfield code |
-| `value` | `str` | Subfield value (read/write) |
+::: mrrc.Subfield
 
 ### Leader
 
@@ -237,34 +169,10 @@ for tracing in record.see_from_tracings():
     print("see from:", tracing)
 ```
 
-**Properties:**
+Note: `get_fields(tag)` returns `None` when no fields match (unlike
+`Record.get_fields`, which returns `[]`).
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `leader` | `Leader` | The 24-byte record leader |
-| `errors` | `list` | Non-fatal errors accumulated while parsing this record (empty in `recovery_mode="strict"`); see [`Record.errors`](#record) |
-
-**Heading and tracing accessors:**
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `heading()` | `Field \| None` | The main heading field (1XX), or `None` if absent |
-| `heading_text()` | `str \| None` | Subfield `a` of the main heading, or `None` |
-| `see_from_tracings()` | `list[Field]` | See-from tracings (4XX fields) |
-| `see_also_tracings()` | `list[Field]` | See-also-from tracings (5XX fields) |
-| `notes()` | `list[Field]` | Note fields: 6XX fields other than the subject tracings 650/651/655 |
-| `linking_entries()` | `list[Field]` | Heading linking entries (7XX fields) |
-
-**General field accessors:**
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `record_type()` | `str` | Leader byte 06 (type of record) as a single character |
-| `get_field(tag)` | `Field \| None` | First field with given tag (returns `None` if absent) |
-| `get_field_or_err(tag)` | `Field` | First field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
-| `get_fields(tag)` | `list[Field] \| None` | All fields matching a tag (note: returns `None` when none match, unlike `Record.get_fields` which returns `[]`) |
-| `get_control_field(tag)` | `str \| None` | Value of a control field (00X) by tag, or `None` |
-| `to_json()` | `str` | JSON summary of the record |
+::: mrrc.AuthorityRecord
 
 ```python
 try:
@@ -289,38 +197,10 @@ for caption in record.captions_basic():   # 853 fields
     print(caption)
 ```
 
-**Properties:**
+Note: `get_fields(tag)` returns `None` when no fields match (unlike
+`Record.get_fields`, which returns `[]`).
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `leader` | `Leader` | The 24-byte record leader |
-| `errors` | `list` | Non-fatal errors accumulated while parsing this record (empty in `recovery_mode="strict"`); see [`Record.errors`](#record) |
-
-**Holdings-specific accessors:**
-
-| Method | Returns | MARC tag | Description |
-|--------|---------|----------|-------------|
-| `locations()` | `list[Field]` | 852 | Location fields |
-| `captions_basic()` | `list[Field]` | 853 | Basic caption and pattern fields |
-| `captions_supplements()` | `list[Field]` | 854 | Supplementary-material caption and pattern fields |
-| `captions_indexes()` | `list[Field]` | 855 | Index caption and pattern fields |
-| `enumeration_basic()` | `list[Field]` | 863 | Basic enumeration and chronology fields |
-| `enumeration_supplements()` | `list[Field]` | 864 | Supplementary-material enumeration and chronology fields |
-| `enumeration_indexes()` | `list[Field]` | 865 | Index enumeration and chronology fields |
-| `textual_holdings_basic()` | `list[Field]` | 866 | Basic textual holdings fields |
-| `textual_holdings_supplements()` | `list[Field]` | 867 | Supplementary-material textual holdings fields |
-| `textual_holdings_indexes()` | `list[Field]` | 868 | Index textual holdings fields |
-
-**General field accessors:**
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `record_type()` | `str` | Leader byte 06 (type of record) as a single character |
-| `get_field(tag)` | `Field \| None` | First field with given tag (returns `None` if absent) |
-| `get_field_or_err(tag)` | `Field` | First field with given tag; raises [`FieldNotFound`](#exceptions) (E105) with `field_tag` and `record_control_number` populated when absent |
-| `get_fields(tag)` | `list[Field] \| None` | All fields matching a tag (note: returns `None` when none match, unlike `Record.get_fields` which returns `[]`) |
-| `get_control_field(tag)` | `str \| None` | Value of a control field (00X) by tag, or `None` |
-| `to_json()` | `str` | JSON summary of the record |
+::: mrrc.HoldingsRecord
 
 ## Reader/Writer Classes
 
@@ -423,20 +303,11 @@ with MARCWriter("output.mrc") as writer:
     writer.write(record)
 ```
 
-**Methods:**
-
-| Method | Description |
-|--------|-------------|
-| `write(record)` | Write a single record |
-| `close()` | Close the writer (automatic with context manager) |
+::: mrrc.MARCWriter
 
 ### AuthorityMARCReader
 
-Reads MARC **authority** records, yielding [`AuthorityRecord`](#authorityrecord). Same ISO 2709 binary format and iteration protocol as [`MARCReader`](#marcreader), with a smaller keyword set.
-
-```python
-AuthorityMARCReader(source, *, recovery_mode="permissive", validation_level="structural")
-```
+Reads MARC **authority** records, yielding [`AuthorityRecord`](#authorityrecord). Same ISO 2709 binary format and iteration protocol as [`MARCReader`](#marcreader), with a smaller keyword set. The record source (path, bytes, or file object) is positional; `recovery_mode` and `validation_level` are keyword-only and follow the [MARCReader recovery modes](#marcreader), except `recovery_mode` defaults to `"permissive"` here rather than `"strict"`.
 
 ```python
 from mrrc import AuthorityMARCReader
@@ -446,20 +317,11 @@ for record in AuthorityMARCReader("authorities.mrc"):
     print(record.heading_text())
 ```
 
-**Keyword Arguments:**
-
-| Kwarg | Type | Default | Description |
-|-------|------|---------|-------------|
-| `recovery_mode` | `str` | `"permissive"` | How malformed records are handled: `"strict"`, `"lenient"`, or `"permissive"` (see [MARCReader recovery modes](#marcreader)). Note the default differs from `MARCReader` (`"strict"`). |
-| `validation_level` | `str` | `"structural"` | What counts as an error during parsing. |
+::: mrrc.AuthorityMARCReader
 
 ### HoldingsMARCReader
 
-Reads MARC **holdings** records, yielding [`HoldingsRecord`](#holdingsrecord). Same shape as `AuthorityMARCReader`.
-
-```python
-HoldingsMARCReader(source, *, recovery_mode="permissive", validation_level="structural")
-```
+Reads MARC **holdings** records, yielding [`HoldingsRecord`](#holdingsrecord). Same shape and keyword semantics as `AuthorityMARCReader` (`recovery_mode` defaults to `"permissive"`).
 
 ```python
 from mrrc import HoldingsMARCReader
@@ -469,12 +331,43 @@ for record in HoldingsMARCReader("holdings.mrc"):
         print(location)
 ```
 
-**Keyword Arguments:**
+::: mrrc.HoldingsMARCReader
 
-| Kwarg | Type | Default | Description |
-|-------|------|---------|-------------|
-| `recovery_mode` | `str` | `"permissive"` | How malformed records are handled: `"strict"`, `"lenient"`, or `"permissive"` (see [MARCReader recovery modes](#marcreader)). Note the default differs from `MARCReader` (`"strict"`). |
-| `validation_level` | `str` | `"structural"` | What counts as an error during parsing. |
+## Query DSL
+
+Composable query objects passed to the `Record.fields_matching*` methods to
+select fields by tag, indicators, tag range, or subfield value/pattern.
+
+```python
+from mrrc import FieldQuery, SubfieldValueQuery
+
+# Fields with tag 650 and indicator2 = "0"
+q = FieldQuery().tag("650").indicator2("0")
+for field in record.fields_matching(q):
+    print(field)
+
+# Fields whose subfield $a equals "History"
+for field in record.fields_matching_value(
+    SubfieldValueQuery("650", "a", "History")
+):
+    print(field)
+```
+
+### FieldQuery
+
+::: mrrc.FieldQuery
+
+### TagRangeQuery
+
+::: mrrc.TagRangeQuery
+
+### SubfieldPatternQuery
+
+::: mrrc.SubfieldPatternQuery
+
+### SubfieldValueQuery
+
+::: mrrc.SubfieldValueQuery
 
 ## Format Conversion
 
@@ -569,16 +462,27 @@ ntriples = graph.serialize("ntriples")
 
 ### BibframeConfig
 
-| Method | Description |
-|--------|-------------|
-| `set_base_uri(uri)` | Set base URI for generated entities |
+::: mrrc.BibframeConfig
 
-### BibframeGraph
+### RdfGraph
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `len(graph)` | `int` | Number of triples |
-| `serialize(format)` | `str` | Serialize to RDF format |
+The RDF graph produced by [`marc_to_bibframe`](#bibframe-conversion). Use `len(graph)` for the triple count and `serialize(format)` to emit RDF in `"turtle"`, `"rdf-xml"`, `"jsonld"`, or `"ntriples"`.
+
+::: mrrc.RdfGraph
+
+## Parallel Processing
+
+Lower-level utilities for splitting and parsing large MARC files across threads.
+Most callers should use [`MARCReader`](#marcreader) with a `ThreadPoolExecutor`;
+these are the building blocks underneath.
+
+### RecordBoundaryScanner
+
+::: mrrc.RecordBoundaryScanner
+
+### ProducerConsumerPipeline
+
+::: mrrc.ProducerConsumerPipeline
 
 ## Exceptions
 

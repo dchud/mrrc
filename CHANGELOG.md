@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Python API reference is now generated from source with mkdocstrings
+  instead of hand-maintained signature tables, so it cannot drift from the
+  code. The page also gained reference sections for the query DSL
+  (`FieldQuery`, `TagRangeQuery`, `SubfieldPatternQuery`,
+  `SubfieldValueQuery`) and the parallel-processing classes.
+
 - Reader option arguments (`recovery_mode`, `validation_level`, `max_errors`)
   are now keyword-only on `MARCReader`, `AuthorityMARCReader`, and
   `HoldingsMARCReader`, matching the documented signatures; pass them by name.
