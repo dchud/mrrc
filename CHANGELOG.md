@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`FieldQuery`, `TagRangeQuery`, `SubfieldPatternQuery`,
   `SubfieldValueQuery`) and the parallel-processing classes.
 
+- Documentation fixes: the BIBFRAME-to-MARC guide example now uses the real
+  `RdfGraph.parse(...)` API (it previously referenced a nonexistent
+  `BibframeGraph.from_turtle`), and docstring examples are fenced so they
+  render as code blocks rather than leaking headings into the reference.
+
 - Reader option arguments (`recovery_mode`, `validation_level`, `max_errors`)
   are now keyword-only on `MARCReader`, `AuthorityMARCReader`, and
   `HoldingsMARCReader`, matching the documented signatures; pass them by name.

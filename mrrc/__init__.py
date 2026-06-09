@@ -289,8 +289,10 @@ class Field:
         Returns None if the subfield code doesn't exist, matching pymarc behavior.
         
         Example:
+            ```python
             field['a']  # Get first 'a' subfield value
             field['z']  # Returns None if 'z' subfield doesn't exist
+            ```
         """
         self._refresh()
         try:
@@ -404,7 +406,9 @@ class Field:
         """Get all subfield values for given codes (pymarc compatibility).
 
         Example:
+            ```python
             field.get_subfields('a', 'b')  # Get all 'a' and 'b' subfield values
+            ```
         """
         self._refresh()
         result = []
@@ -504,9 +508,11 @@ class Field:
         """Get indicators as tuple-like Indicators object (pymarc compatibility).
         
         Example:
+            ```python
             field.indicators[0]      # First indicator
             field.indicators[1]      # Second indicator
             ind1, ind2 = field.indicators  # Unpacking
+            ```
         """
         return Indicators(self.indicator1, self.indicator2)
     
@@ -679,10 +685,12 @@ class Leader:
              Dictionary mapping values to descriptions, or None if position has no defined values
              
          Example:
+             ```pycon
              >>> Leader.get_valid_values(5)
              {'a': 'Increase in encoding level', 'c': 'Corrected or revised', ...}
              >>> Leader.get_valid_values(0)  # Record length has no fixed values
              None
+             ```
          """
          position_map = {
              5: cls.RECORD_STATUS_VALUES,
@@ -705,10 +713,12 @@ class Leader:
              True if value is valid for this position, False otherwise
              
          Example:
+             ```pycon
              >>> Leader.is_valid_value(5, 'a')  # Record status
              True
              >>> Leader.is_valid_value(5, 'x')  # Invalid
              False
+             ```
          """
          valid_values = cls.get_valid_values(position)
          if valid_values is None:
@@ -727,10 +737,12 @@ class Leader:
              Description string if value is defined, None otherwise
              
          Example:
+             ```pycon
              >>> Leader.get_value_description(5, 'a')
              'Increase in encoding level'
              >>> Leader.get_value_description(5, 'x')  # Invalid
              None
+             ```
          """
          valid_values = cls.get_valid_values(position)
          if valid_values is None:
@@ -784,9 +796,11 @@ class Leader:
          """Get leader character(s) by position (pymarc compatibility).
          
          Examples:
+             ```python
              leader[5]       # Get record status character
              leader[0:5]     # Get first 5 characters (record length)
              leader[18]      # Get cataloging form character
+             ```
          """
          # Get the leader as a 24-character string
          leader_str = self._get_leader_as_string()
@@ -808,7 +822,9 @@ class Leader:
          """Set leader character by position (pymarc compatibility).
          
          Example:
+             ```python
              leader[5] = 'a'  # Set record status
+             ```
          """
          if not isinstance(index, int):
              raise TypeError("Leader position must be an integer")
@@ -1245,10 +1261,12 @@ class Record:
             List of linked 880 Field objects (empty if no linkage or no match).
 
         Example:
+            ```pycon
             >>> f245 = record.get_fields('245')[0]
             >>> linked = record.get_linked_fields(f245)
             >>> if linked:
             ...     print(f"Vernacular title: {linked[0]['a']}")
+            ```
         """
         result = []
         for f in self._inner.get_linked_fields(field._inner):
@@ -1301,10 +1319,12 @@ class Record:
             List of (original Field, linked 880 Field or None) tuples.
 
         Example:
+            ```pycon
             >>> for orig, linked in record.get_field_pairs('245'):
             ...     print(f"Romanized: {orig['a']}")
             ...     if linked:
             ...         print(f"Vernacular: {linked['a']}")
+            ```
         """
         result = []
         for orig, linked in self._inner.get_field_pairs(tag):
@@ -1338,10 +1358,12 @@ class Record:
             List of Field objects matching the criteria.
             
         Example:
+            ```pycon
             >>> # Find all 650 fields with indicator2='0' (Library of Congress Subject Headings)
             >>> lcsh_subjects = record.fields_by_indicator("650", indicator2="0")
             >>> for field in lcsh_subjects:
             ...     print(field["a"])
+            ```
         """
         result = []
         for field in self._inner.fields_by_indicator(tag, indicator1=indicator1, indicator2=indicator2):
@@ -1362,10 +1384,12 @@ class Record:
             List of Field objects within the tag range.
             
         Example:
+            ```pycon
             >>> # Find all subject fields (600-699)
             >>> subjects = record.fields_in_range("600", "699")
             >>> for field in subjects:
             ...     print(f"{field.tag}: {field['a']}")
+            ```
         """
         result = []
         for field in self._inner.fields_in_range(start_tag, end_tag):
@@ -1385,10 +1409,12 @@ class Record:
             List of Field objects matching all query criteria.
             
         Example:
+            ```pycon
             >>> query = FieldQuery().tag("650").indicator2("0").has_subfield("a")
             >>> lcsh = record.fields_matching(query)
             >>> for field in lcsh:
             ...     print(field["a"])
+            ```
         """
         result = []
         for field in self._inner.fields_matching(query):
@@ -1408,9 +1434,11 @@ class Record:
             List of Field objects matching all query criteria.
             
         Example:
+            ```pycon
             >>> # Find all 6XX subjects with indicator2='0' (LCSH) that have subfield 'a'
             >>> query = TagRangeQuery("600", "699", indicator2="0", required_subfields=["a"])
             >>> subjects = record.fields_matching_range(query)
+            ```
         """
         result = []
         for field in self._inner.fields_matching_range(query):
@@ -1430,9 +1458,11 @@ class Record:
             List of Field objects where the subfield matches the pattern.
             
         Example:
+            ```pycon
             >>> # Find all ISBN-13s (start with 978 or 979)
             >>> query = SubfieldPatternQuery("020", "a", r"^97[89]-")
             >>> isbn13_fields = record.fields_matching_pattern(query)
+            ```
         """
         result = []
         for field in self._inner.fields_matching_pattern(query):
@@ -1452,6 +1482,7 @@ class Record:
             List of Field objects where the subfield matches the value.
             
         Example:
+            ```pycon
             >>> # Find exact subject heading "History"
             >>> query = SubfieldValueQuery("650", "a", "History")
             >>> history_fields = record.fields_matching_value(query)
@@ -1459,6 +1490,7 @@ class Record:
             >>> # Find subjects containing "History" anywhere
             >>> query = SubfieldValueQuery("650", "a", "History", partial=True)
             >>> related_fields = record.fields_matching_value(query)
+            ```
         """
         result = []
         for field in self._inner.fields_matching_value(query):
@@ -1864,8 +1896,10 @@ def get_leader_valid_values(position: int) -> Optional[dict]:
         A dictionary mapping values to descriptions, or None for positions with no defined values
         
     Example:
+        ```pycon
         >>> valid = get_leader_valid_values(5)
         >>> # Returns: {'a': 'increase in encoding level', 'c': 'corrected or revised', ...}
+        ```
     """
     return _Leader.get_valid_values(position)
 
@@ -1884,8 +1918,10 @@ def get_leader_value_description(position: int, value: str) -> Optional[str]:
         The description if found, or None if the value is invalid for the position
         
     Example:
+        ```pycon
         >>> desc = get_leader_value_description(5, "a")
         >>> # Returns: "increase in encoding level"
+        ```
     """
     return _Leader.describe_value(position, value)
 
@@ -1938,8 +1974,10 @@ def read(path: Union[str, Any], format: Optional[str] = None):
         FileNotFoundError: If the file does not exist.
 
     Example:
+        ```pycon
         >>> for record in mrrc.read("data.mrc"):
         ...     print(record.title())
+        ```
     """
     import os
 
@@ -1999,9 +2037,11 @@ def write(records, path: Union[str, Any], format: Optional[str] = None) -> int:
         ValueError: If format cannot be determined or is unsupported.
 
     Example:
+        ```pycon
         >>> records = list(mrrc.read("input.mrc"))
         >>> mrrc.write(records, "output.mrc")
         100
+        ```
     """
     import os
 
@@ -2069,12 +2109,14 @@ def marc_to_bibframe(record, config: Optional[BibframeConfig] = None) -> RdfGrap
         An RdfGraph containing the BIBFRAME representation
 
     Example:
+        ```pycon
         >>> import mrrc
         >>> record = mrrc.Record(leader=mrrc.Leader())
         >>> record.add_control_field("001", "12345")
         >>> config = mrrc.BibframeConfig()
         >>> graph = mrrc.marc_to_bibframe(record, config)
         >>> print(graph.serialize("jsonld"))
+        ```
     """
     if config is None:
         config = BibframeConfig()
@@ -2100,12 +2142,14 @@ def bibframe_to_marc(graph: RdfGraph) -> 'Record':
         ValueError: If the graph cannot be converted
 
     Example:
+        ```pycon
         >>> import mrrc
         >>> # Round-trip conversion
         >>> record = mrrc.Record(leader=mrrc.Leader())
         >>> config = mrrc.BibframeConfig()
         >>> graph = mrrc.marc_to_bibframe(record, config)
         >>> recovered = mrrc.bibframe_to_marc(graph)
+        ```
     """
     inner_record = _bibframe_to_marc(graph)
     # Wrap in Python Record class

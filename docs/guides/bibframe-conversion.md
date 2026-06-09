@@ -68,10 +68,10 @@ BIBFRAME support is included in MRRC by default for both Rust and Python. No fea
 === "Python"
 
     ```python
-    from mrrc import bibframe_to_marc, BibframeGraph
+    from mrrc import bibframe_to_marc, RdfGraph, MARCWriter
 
-    # Parse RDF graph
-    graph = BibframeGraph.from_turtle(turtle_string)
+    # Parse an RDF graph from a Turtle string
+    graph = RdfGraph.parse(turtle_string, "turtle")
 
     # Convert back to MARC
     record = bibframe_to_marc(graph)
@@ -84,9 +84,9 @@ BIBFRAME support is included in MRRC by default for both Rust and Python. No fea
 === "Rust"
 
     ```rust
-    use mrrc::bibframe::{bibframe_to_marc, BibframeGraph};
+    use mrrc::bibframe::{bibframe_to_marc, RdfGraph, RdfFormat};
 
-    let graph = BibframeGraph::from_turtle(&turtle_string)?;
+    let graph = RdfGraph::parse(&turtle_string, RdfFormat::Turtle)?;
     let record = bibframe_to_marc(&graph)?;
     ```
 
