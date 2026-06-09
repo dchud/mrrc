@@ -45,6 +45,10 @@ echo "=== CHANGELOG lint ==="
 bash scripts/lint-changelog.sh
 
 echo ""
+echo "=== Process-label lint ==="
+python3 scripts/lint_process_labels.py
+
+echo ""
 echo "=== Clippy check (mrrc core) ==="
 cargo clippy --package mrrc --all-targets -- -D warnings
 

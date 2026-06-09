@@ -799,7 +799,7 @@ mod tests {
 
     #[test]
     fn test_parse_loc_style_record() {
-        // Simulates the LOC MARCXML format from issue #15
+        // Simulates the LOC MARCXML format
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
         <record xmlns="http://www.loc.gov/MARC21/slim">
             <leader>01142cam  2200301 a 4500</leader>

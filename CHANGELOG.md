@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `.cargo/check.sh`), turning broken links and unresolved mkdocstrings
   references into errors.
 
+- A process-label lint (in `.cargo/check.sh` and CI) fails the build when
+  source, tests, or non-CHANGELOG docs embed implementation-process labels
+  (bead IDs, PR/issue numbers, or release-tagged claims like "since 0.8.1"),
+  which belong in git history and the CHANGELOG instead.
+
 ### Changed
 
 - The Python API reference is now generated from source with mkdocstrings

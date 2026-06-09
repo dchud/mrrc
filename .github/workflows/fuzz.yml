@@ -3,7 +3,7 @@ name: Fuzz (nightly)
 # Scheduled coverage-guided fuzzing. Finds panics, infinite loops, and
 # memory issues in the parser that property tests and unit tests miss.
 #
-# Policy (per bd-dfn2 design decision 4):
+# Policy:
 #   - Runs nightly + on demand (workflow_dispatch); not a PR gate.
 #   - A crash FAILS the job so the red mark surfaces on the Actions
 #     dashboard. fuzz/artifacts/* uploads so the reproducer survives.

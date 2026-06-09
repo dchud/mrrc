@@ -1,8 +1,8 @@
-"""Release-readiness gate: pymarc iteration-shape parity (step 5).
+"""Release-readiness gate: pymarc iteration-shape parity.
 
 Asserts that, over a mixed-quality corpus, mrrc's permissive iteration
 produces the same per-record record-vs-None shape as pymarc 5.3.1. This is
-the cross-library half of the bd-0x73.12 release-readiness gate.
+the cross-library half of the release-readiness gate.
 
 pymarc is an optional comparison target, not a runtime or default-test
 dependency, so this is guarded by ``pytest.importorskip``. The release
