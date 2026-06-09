@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI and `.cargo/check.sh` now run `stubtest` to verify `mrrc/_mrrc.pyi`
   matches the compiled extension, preventing type-stub drift.
 
+- A documentation-build check runs on pull requests that touch `docs/`,
+  `mkdocs.yml`, or the Python sources the API reference is generated from, so a
+  broken docs build is caught before merge instead of only on the main deploy.
+  The docs build now uses `mkdocs build --strict` everywhere (PR check, deploy,
+  and `.cargo/check.sh`), turning broken links and unresolved mkdocstrings
+  references into errors.
+
 ### Changed
 
 - The Python API reference is now generated from source with mkdocstrings
@@ -77,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   benchmark matrix (`pytest-benchmark` across five Python versions) is dropped
   in favor of the CodSpeed regression gate, CHANGELOG linting now runs in CI,
   and commits that touch only `.beads/**` no longer trigger the test, benchmark,
-  and wheel workflows.
+  wheel, and lint workflows.
 
 - `.cargo/check.sh` now compiles `examples/` and benchmarks (`cargo bench
   --no-run`) in its full pre-push run, catching breakage that previously

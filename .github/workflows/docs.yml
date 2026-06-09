@@ -37,9 +37,7 @@ jobs:
         run: uv sync --extra docs --no-install-project
 
       - name: Build documentation
-        # Not run with --strict: pre-existing cross-link warnings under
-        # docs/design/profiling/ would otherwise fail the build.
-        run: uv run mkdocs build
+        run: uv run mkdocs build --strict
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
