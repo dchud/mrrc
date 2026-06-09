@@ -1,0 +1,49 @@
+name: Docs Build Check
+
+# Gate the documentation build on pull requests. The deploy workflow
+# (docs.yml) only runs on push to main, so without this a PR that breaks the
+# docs build (a malformed page, or a mkdocstrings reference to a removed
+# symbol) would merge green and only fail afterward on the main deploy.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      # The Python API reference is generated from these by mkdocstrings, so a
+      # source change can break the build just as a docs change can.
+      - 'mrrc/**.py'
+      - 'mrrc/_mrrc.pyi'
+      - '.github/workflows/docs-check.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: mkdocs build (strict)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Install dependencies
+        # See CLAUDE.md "Documentation site" for why `--no-install-project`:
+        # mkdocstrings reads mrrc/__init__.py and _mrrc.pyi statically, so the
+        # compiled extension is not needed to build the docs.
+        run: uv sync --extra docs --no-install-project
+
+      - name: Build documentation
+        run: uv run mkdocs build --strict

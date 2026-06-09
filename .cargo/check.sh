@@ -119,11 +119,11 @@ if [ "$QUICK" = false ]; then
     uv run python -m mypy.stubtest mrrc._mrrc
 
     echo ""
-    echo "=== Documentation site build (mkdocs) ==="
+    echo "=== Documentation site build (mkdocs --strict) ==="
     # Needs the `docs` extra: run `uv sync --all-extras` if mkdocs is missing.
-    # Not run with --strict: pre-existing cross-link warnings under
-    # docs/design/profiling/ would otherwise fail the build.
-    uv run mkdocs build
+    # --strict turns build warnings (broken links, unresolved mkdocstrings
+    # references) into errors, matching the CI docs gate.
+    uv run mkdocs build --strict
 fi
 
 # ASAN memory safety checks (optional, nightly feature)
