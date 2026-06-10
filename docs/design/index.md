@@ -8,6 +8,7 @@ Internal design proposals, technical specifications, and performance analysis.
 
 ## Research & Analysis
 
+- [Code Review Findings — v0.8.2](code-review-findings-v0.8.2.md) - Comprehensive fresh-eyes review with backlog gap analysis and proposed remediation epics
 - [Assessing Potential Research](ASSESSING_POTENTIAL_RESEARCH.md) - Research directions and opportunities
 - [Optimization Proposal](OPTIMIZATION_PROPOSAL.md) - Performance optimization strategies
 - [Writer Backend Performance](WRITER_BACKEND_PERFORMANCE.md) - Writer backend performance analysis
