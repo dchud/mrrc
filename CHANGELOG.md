@@ -9,23 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.8.2] - 2026-06-09
+
+### Added
+
 - `mrrc.StaleFieldError` (subclass of `MrrcException`), raised when a field
   handle is used after fields were removed from its record.
-
 - Coverage-guided fuzz targets for the JSON (`parse_json`, `parse_marcjson`),
   MARCXML (`parse_marcxml`), MODS (`parse_mods`), and MARC-8 (`decode_marc8`)
   read paths, run nightly alongside the existing binary-MARC targets.
-
 - CI and `.cargo/check.sh` now run `stubtest` to verify `mrrc/_mrrc.pyi`
   matches the compiled extension, preventing type-stub drift.
-
 - A documentation-build check runs on pull requests that touch `docs/`,
   `mkdocs.yml`, or the Python sources the API reference is generated from, so a
   broken docs build is caught before merge instead of only on the main deploy.
   The docs build now uses `mkdocs build --strict` everywhere (PR check, deploy,
   and `.cargo/check.sh`), turning broken links and unresolved mkdocstrings
   references into errors.
-
 - A process-label lint (in `.cargo/check.sh` and CI) fails the build when
   source, tests, or non-CHANGELOG docs embed implementation-process labels
   (bead IDs, PR/issue numbers, or release-tagged claims like "since 0.8.1"),
@@ -38,45 +42,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   code. The page also gained reference sections for the query DSL
   (`FieldQuery`, `TagRangeQuery`, `SubfieldPatternQuery`,
   `SubfieldValueQuery`) and the parallel-processing classes.
-
 - Documentation fixes: the BIBFRAME-to-MARC guide example now uses the real
   `RdfGraph.parse(...)` API (it previously referenced a nonexistent
   `BibframeGraph.from_turtle`), and docstring examples are fenced so they
   render as code blocks rather than leaking headings into the reference.
-
 - Reader option arguments (`recovery_mode`, `validation_level`, `max_errors`)
   are now keyword-only on `MARCReader`, `AuthorityMARCReader`, and
   `HoldingsMARCReader`, matching the documented signatures; pass them by name.
   The record source remains the first positional argument.
-
 - The `mrrc/_mrrc.pyi` type stubs now match the compiled extension exactly:
   missing members were added and entries absent at runtime were removed, so
   stub-driven type checking reflects the real API.
-
 - CI PR workflows add cancel-in-progress concurrency groups and per-job
   timeouts, skip the heavy wheel and benchmark jobs on Dependabot pull requests
   (lint, tests, and semver still run), and share one `rust-cache` configuration
   across the Rust compile jobs.
-
 - Documentation now states explicitly that CSV and Dublin Core are write-only
   (export) formats: both are lossy projections of a MARC record, so MRRC emits
   them but does not parse them back into MARC.
-
 - Documentation no longer presents specific throughput figures or pymarc
   multipliers as current measurements; early benchmark results are summarized
   with the caveat that they need re-measurement, and the benchmark docs now
   describe the measurement infrastructure and the procedure for producing
   citable numbers.
-
 - The Python CodSpeed CI job now runs in simulation mode (previously walltime),
   making PR performance-regression detection deterministic on hosted runners.
   Parallel-throughput benchmarks (Python and Rust) are excluded from CodSpeed,
   since Valgrind serializes threads; they remain runnable locally via pytest
   and criterion.
-
 - CI Windows jobs are pinned to `windows-2025` (previously `windows-latest`)
   ahead of GitHub's 2026-06-15 redirect of that label to a new image.
-
 - Pull requests now build and test a slim wheel matrix (8 jobs) instead of the
   full 30; the full `os × python` matrix still runs on push to main and on
   release tags. The standalone Rust `build.yml` workflow is removed; its
@@ -84,13 +79,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   compilation remains covered by the maturin wheel matrix. `.cargo/check.sh`
   gains a `--release` flag to build the Python extension in release mode for
   perf-sensitive debugging.
-
 - Continuous integration trims redundant work: the Python pull-request
   benchmark matrix (`pytest-benchmark` across five Python versions) is dropped
   in favor of the CodSpeed regression gate, CHANGELOG linting now runs in CI,
   and commits that touch only `.beads/**` no longer trigger the test, benchmark,
   wheel, and lint workflows.
-
 - `.cargo/check.sh` now compiles `examples/` and benchmarks (`cargo bench
   --no-run`) in its full pre-push run, catching breakage that previously
   surfaced only in CI.
@@ -110,12 +103,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   control tag now remove the control field (previously a silent no-op).
   `fields()` now enumerates repeated control tags (006/007) identically to
   `get_fields()`. (#248)
-
 - Python in-place field edits now persist to the record, matching pymarc.
   Fields obtained from a record (`record[tag]`, `get_field`, `get_fields`,
-  `fields`, `fields_by_tag`) are live handles: indicator and subfield edits,
-  and control-field `.data` assignment, write through to the record. (#241)
-
+  `fields`) are live handles: indicator and subfield edits, and control-field
+  `.data` assignment, write through to the record. (#241)
 - Corrected documentation to match the current API. The Rust API-reference
   "Key Methods" tables now use real method names, distinguish public fields
   from methods, and show accurate return types; the `AuthorityRecord` /
