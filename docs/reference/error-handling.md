@@ -268,7 +268,7 @@ when the information is available; absent values stay `None`.
 | `expected` | `str \| None` | Human-readable description of what was expected. |
 | `byte_offset` | `int \| None` | Absolute byte offset within the input stream. |
 | `record_byte_offset` | `int \| None` | Byte offset within the current record. |
-| `source` | `str \| None` | Filename or stream identifier, populated when the reader was constructed via `from_path`. |
+| `source` | `str \| None` | Filename or stream identifier. Present for parity with the Rust API; the Python readers do not currently populate it (see [Source filename plumbing](#source-filename-plumbing)). |
 | `bytes_near` | `bytes \| None` | Up to 32 bytes around the error offset, for hex-dump rendering. `None` when the parser did not have access to a buffer at error time. |
 | `bytes_near_offset` | `int \| None` | Absolute stream offset of the first byte of `bytes_near`. |
 
@@ -284,10 +284,11 @@ Subclass-specific extras:
 ### Always-present vs may-be-present per variant
 
 The parser populates `record_index` and `byte_offset` on every parse-path
-error; `record_control_number` whenever 001 is already decoded;
-`source` whenever the reader was constructed via `with_source()` or
-`from_path()`. Other fields are populated when applicable to the variant
-(e.g., `indicator_position` only on `InvalidIndicator`).
+error, and `record_control_number` whenever 001 is already decoded. Other
+fields are populated when applicable to the variant (e.g.,
+`indicator_position` only on `InvalidIndicator`); `source` is reserved for
+input identity but not populated by the Python readers (see
+[Source filename plumbing](#source-filename-plumbing)).
 
 `FieldNotFound` is an accessor error rather than a parse error; it carries
 `field_tag`, `record_control_number`, and `record_index` but not byte
@@ -315,22 +316,13 @@ information, the field stays `None` rather than being fabricated.
 
 ## Source filename plumbing
 
-The `source` attribute on errors is populated when the reader was told its
-input identity. There are two ways to set it:
-
-```python
-# 1. Builder method: any reader, any input source.
-reader = mrrc.MARCReader(file_obj).with_source("harvest.mrc")
-
-# 2. Convenience constructor: opens a file and sets source from the path.
-reader = mrrc.MARCReader.from_path("harvest.mrc")
-```
-
-When neither is used (e.g., reading from `BytesIO`), `source` stays `None`
-on emitted errors.
-
-The same `with_source` / `from_path` pattern is available on
-`AuthorityMARCReader` and `HoldingsMARCReader`.
+The `source` attribute identifies which input file or stream produced an
+error. The Rust API populates it when a reader is constructed with
+`MarcReader::from_path` or tagged with `with_source`. The Python readers do
+not currently expose this plumbing: `source` is always `None` on exceptions
+raised from `MARCReader`, `AuthorityMARCReader`, and `HoldingsMARCReader`,
+regardless of how the reader was constructed. If you need input identity in
+error reports, track the filename alongside the reader at the call site.
 
 ## Validation level vs recovery mode
 

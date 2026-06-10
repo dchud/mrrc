@@ -327,8 +327,11 @@ from mrrc import LEADER_LEN, END_OF_FIELD, END_OF_RECORD, SUBFIELD_INDICATOR
 
 ### Exception Hierarchy
 ```python
-from mrrc import MrrcException, MarcError
+from mrrc import MrrcException  # base class; per-code subclasses also importable
 ```
+
+See the [error handling reference](../reference/error-handling.md) for the full
+hierarchy and the pymarc exception name mapping.
 
 ## Migration Checklist
 

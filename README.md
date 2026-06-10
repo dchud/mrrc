@@ -43,7 +43,7 @@ from mrrc import MARCReader
 
 # Pass filename directly for best performance (releases GIL)
 for record in MARCReader("records.mrc"):
-    print(record.title())
+    print(record.title)
 ```
 
 > File paths use pure Rust I/O, releasing Python's GIL for multi-threaded workloads. See the [threading guide](https://dchud.github.io/mrrc/guides/threading-python/) for details.
