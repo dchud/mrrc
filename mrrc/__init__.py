@@ -1130,13 +1130,6 @@ class Record:
         """
         return self.get_fields()
 
-    def fields_by_tag(self, tag: str) -> List['Field']:
-        """Get all data fields with the given tag, as live handles."""
-        return [
-            _wrap_field(field, self, i)
-            for i, field in enumerate(self._inner.fields_by_tag(tag))
-        ]
-    
     @property
     def title(self) -> Optional[str]:
         """Title from 245 field."""

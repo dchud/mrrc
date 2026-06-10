@@ -1,8 +1,8 @@
 """Write-through semantics for fields obtained from a ``Record``.
 
 Fields returned by record accessors (``record[tag]``, ``get_field``,
-``get_fields``, ``fields_by_tag``) are live handles: every read and
-write goes through to the record. Handles invalidated by field
+``get_fields``) are live handles: every read and write goes through to
+the record. Handles invalidated by field
 removal raise :class:`mrrc.StaleFieldError` instead of silently
 targeting the wrong field.
 
@@ -80,10 +80,10 @@ def test_get_fields_iteration_edits_persist() -> None:
     assert all(f["9"] is None for f in record.get_fields("650"))
 
 
-def test_fields_by_tag_edit_persists() -> None:
-    """``fields_by_tag`` also returns live handles."""
+def test_get_fields_index_edit_persists() -> None:
+    """Editing a field by index from ``get_fields`` persists."""
     record = _build_record()
-    record.fields_by_tag("650")[0].add_subfield("x", "History.")
+    record.get_fields("650")[0].add_subfield("x", "History.")
     assert record.get_fields("650")[0]["x"] == "History."
 
 

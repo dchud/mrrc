@@ -102,7 +102,7 @@ class TestRecordFieldOperations:
         field.add_subfield('a', 'Test Title')
         record.add_field(field)
         
-        fields = record.fields_by_tag('245')
+        fields = record.get_fields('245')
         assert len(fields) == 1
     
     def test_get_fields_by_tag(self):
@@ -116,7 +116,7 @@ class TestRecordFieldOperations:
             field.add_subfield('a', f'Subject {i}')
             record.add_field(field)
         
-        fields = record.fields_by_tag('650')
+        fields = record.get_fields('650')
         assert len(fields) == 3
     
     def test_get_all_fields(self):

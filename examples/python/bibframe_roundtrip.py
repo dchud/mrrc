@@ -39,9 +39,9 @@ def main():
     record.add_field(field_100)
 
     print("=== Original MARC Record ===")
-    print(f"Title fields: {len(record.fields_by_tag('245'))}")
-    print(f"Creator fields: {len(record.fields_by_tag('100'))}")
-    print(f"Identifier fields: {len(record.fields_by_tag('020'))}")
+    print(f"Title fields: {len(record.get_fields('245'))}")
+    print(f"Creator fields: {len(record.get_fields('100'))}")
+    print(f"Identifier fields: {len(record.get_fields('020'))}")
 
     # Step 1: Convert MARC → BIBFRAME
     config = mrrc.BibframeConfig()
@@ -58,9 +58,9 @@ def main():
 
     # Verify round-trip fidelity
     print("\n=== Round-Trip Results ===")
-    print(f"Title fields preserved: {len(recovered_record.fields_by_tag('245'))}")
-    print(f"Creator fields preserved: {len(recovered_record.fields_by_tag('100'))}")
-    print(f"Identifier fields preserved: {len(recovered_record.fields_by_tag('020'))}")
+    print(f"Title fields preserved: {len(recovered_record.get_fields('245'))}")
+    print(f"Creator fields preserved: {len(recovered_record.get_fields('100'))}")
+    print(f"Identifier fields preserved: {len(recovered_record.get_fields('020'))}")
 
     # Count all fields
     original_field_count = sum(1 for _ in record.fields())
@@ -71,7 +71,7 @@ def main():
     print(f"  Recovered: {recovered_field_count}")
 
     # Show sample recovered field
-    title_fields = list(recovered_record.fields_by_tag("245"))
+    title_fields = list(recovered_record.get_fields("245"))
     if title_fields:
         title_field = title_fields[0]
         print(f"\nSample recovered 245 field:")

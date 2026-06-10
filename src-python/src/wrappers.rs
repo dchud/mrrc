@@ -699,14 +699,6 @@ impl PyRecord {
         self.inner.add_field(field.inner.clone());
     }
 
-    /// Get fields by tag
-    pub fn fields_by_tag(&self, tag: &str) -> Vec<PyField> {
-        self.inner
-            .fields_by_tag(tag)
-            .map(|f| PyField { inner: f.clone() })
-            .collect()
-    }
-
     /// Get the first field with a given tag (pymarc compatibility)
     pub fn get_field(&self, tag: &str) -> Option<PyField> {
         self.inner
