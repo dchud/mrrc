@@ -120,11 +120,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 
-- Bump ruff from 0.15.12 to 0.15.14
-- Bump syrupy from 5.1.0 to 5.2.0
+- Bump ruff from 0.15.12 to 0.15.15
+- Bump syrupy from 5.1.0 to 5.3.1
+- Bump pyright from 1.1.409 to 1.1.410
 - Bump astral-sh/setup-uv from 7 to 8.1.0
-- Bump CodSpeedHQ/action from 4 to 4.15.1
-- Bump actions/checkout from 6 to 6.0.2
+- Bump CodSpeedHQ/action from 4 to 4.17.0
+- Bump actions/checkout from 6 to 6.0.3
+- Bump codecov/codecov-action from 6 to 6.0.1
 
 ## [0.8.1] - 2026-05-29
 
