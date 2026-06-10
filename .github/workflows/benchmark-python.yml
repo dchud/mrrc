@@ -32,7 +32,7 @@ jobs:
     # Dependency bumps don't need the CodSpeed perf gate; skip for dependabot.
     if: github.actor != 'dependabot[bot]'
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -57,7 +57,7 @@ jobs:
           uv pip install --system pytest pytest-benchmark pytest-codspeed
 
       - name: Run benchmarks with Codspeed (1k/10k only)
-        uses: CodSpeedHQ/action@v4.15.1
+        uses: CodSpeedHQ/action@v4.17.0
         with:
           # NOTE: Only enabled if CODSPEED_TOKEN is set as a repo secret
           token: ${{ secrets.CODSPEED_TOKEN }}
