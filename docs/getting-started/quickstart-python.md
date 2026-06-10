@@ -25,8 +25,9 @@ For files with malformed records, use `permissive=True` to skip errors (yields `
 ## Access Fields
 
 ```python
-# Get a specific field (raises KeyError if missing; use .get() for safe access)
-field = record.get("245")  # Title field (returns None if missing)
+# Get a specific field; record["245"] raises KeyError if missing,
+# record.get("245") returns None instead
+field = record.get("245")  # Title field
 if field:
     print(field["a"])  # Title proper
 

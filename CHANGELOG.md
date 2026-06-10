@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corrected documentation drift: the Rust API reference showed `parse_batch_parallel` with
+  the wrong arity and a stale 5-variant `MarcError` table; `parse_batch_parallel` /
+  `parse_batch_parallel_limited` were missing from the Python API reference; the release
+  procedure understated the wheel count and used retired issue-tracker commands.
+
 ## [0.8.2] - 2026-06-09
 
 ### Added

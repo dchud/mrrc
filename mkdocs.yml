@@ -1,5 +1,9 @@
 # MRRC Documentation Configuration
-# See docs/design/DOCS-REORG.md for the full reorganization plan
+# See docs/history/DOCS-REORG.md for the full reorganization plan
+#
+# Pages under docs/design/ and contributing/project-layout.md are
+# intentionally not in nav: they are working/internal material reached
+# via links from design/index.md and contributing/index.md.
 
 site_name: MRRC Documentation
 site_url: https://dchud.github.io/mrrc/

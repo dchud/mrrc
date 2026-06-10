@@ -148,7 +148,7 @@ git --version || { echo "git not found"; exit 1; }
 
 **Expected**:
 
-- Rust 1.71+ (see `Cargo.toml` rust-version)
+- Rust at or above the MSRV declared in `Cargo.toml` (`rust-version`); the repo's `rust-toolchain.toml` pin always satisfies it
 - Python 3.10+
 - maturin 1.0+
 
@@ -900,9 +900,10 @@ Look for the "Python Release to PyPI" workflow:
 ### 8.2 Monitor Build Process
 
 **Wait for**:
-1. **build-release-wheels** job - Builds Python wheels for 5×3.10-3.14 on macOS/Ubuntu/Windows
-2. **test-release-wheels** job - Tests all wheels
-3. **publish-pypi** job - Publishes wheels to PyPI
+1. **build-release-wheels** job - Builds native wheels for Python 3.10-3.14 on macOS/Ubuntu/Windows (15 wheels)
+2. **build-cross-linux-wheels** job - Cross-compiles aarch64 and i686 Linux wheels for Python 3.10-3.14 (10 wheels)
+3. **test-release-wheels** / **validate-cross-wheels** jobs - Test native wheels; validate cross-compiled wheel tags
+4. **publish-pypi** job - Publishes all wheels to PyPI
 
 Each job has multiple matrix runs (fail-fast: false means all run even if some fail).
 
@@ -945,14 +946,14 @@ Should list your new version within 1-2 minutes.
 
 https://pypi.org/project/mrrc/
 
-Should show your new version with wheels for Python 3.10, 3.11, 3.12, 3.13, 3.14 across macOS, Ubuntu, and Windows.
+Should show your new version with wheels for Python 3.10, 3.11, 3.12, 3.13, 3.14 across macOS, Ubuntu, and Windows, plus cross-compiled aarch64 and i686 Linux wheels.
 
-**Expected**: 15 wheels total (5 Python versions × 3 platforms)
+**Expected**: 25 wheels total (5 Python versions × 3 native platforms + 5 × 2 cross-compiled Linux targets)
 
 **Checklist**:
 
 - [ ] Version appears on PyPI
-- [ ] All wheels are present (15 total)
+- [ ] All wheels are present (25 total)
 - [ ] Documentation is correct
 
 ### 8.5 Verify GitHub Release Created
@@ -1038,7 +1039,7 @@ Docs should be built and available. If not, they build automatically within a fe
 Sync any issue tracking changes:
 
 ```bash
-bd sync
+br sync --flush-only
 git status
 ```
 
@@ -1049,7 +1050,7 @@ No changes should be required unless you manually updated issue statuses.
 If there are known issues or follow-up work:
 
 ```bash
-bd create "Post-release items for X.Y.Z" \
+br create "Post-release items for X.Y.Z" \
   -t task \
   -p 3 \
   --description "Items identified during release X.Y.Z that don't block release:

@@ -484,6 +484,32 @@ these are the building blocks underneath.
 
 ::: mrrc.ProducerConsumerPipeline
 
+### parse_batch_parallel / parse_batch_parallel_limited
+
+Module functions that parse many records from one shared buffer in parallel
+(Rayon threads on the Rust side, GIL released during parsing). Pair them with
+[`RecordBoundaryScanner`](#recordboundaryscanner), which produces the
+`(offset, length)` boundary list:
+
+```python
+import mrrc
+
+data = open("records.mrc", "rb").read()
+
+scanner = mrrc.RecordBoundaryScanner()
+boundaries = scanner.scan(data)
+
+# Parse every record in parallel against the shared buffer
+records = mrrc.parse_batch_parallel(boundaries, data)
+
+# Or stop after the first N records
+first_100 = mrrc.parse_batch_parallel_limited(boundaries, data, 100)
+```
+
+Both return the compiled extension's `Record` objects (accessors like
+`title()` are methods there, unlike the wrapper `Record` yielded by
+`MARCReader`, where `title` is a property).
+
 ## Exceptions
 
 ```python

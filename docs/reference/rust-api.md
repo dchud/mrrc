@@ -317,31 +317,41 @@ fn process(path: &str) -> Result<()> {
 
 **Error Types:**
 
-| Variant | Description |
-|---------|-------------|
-| `InvalidLeader` | Leader parsing error |
-| `InvalidRecord` | Record structure error |
-| `InvalidField` | Field parsing error |
-| `IoError` | I/O error |
-| `EncodingError` | Character encoding error |
+`MarcError` carries one variant per stable error code (leader, directory,
+field, encoding, serialization, and I/O failures), each with structured
+positional context. See the [error codes reference](error-codes.md) for the
+complete per-variant documentation, and
+[docs.rs](https://docs.rs/mrrc/latest/mrrc/enum.MarcError.html) for the enum
+definition.
 
 ## Parallel Processing
 
 Use Rayon for parallel processing:
 
 ```rust
+use mrrc::boundary_scanner::RecordBoundaryScanner;
 use mrrc::rayon_parser_pool::parse_batch_parallel;
 use mrrc::RecordHelpers;
 use rayon::prelude::*;
 
-// Parse multiple record byte slices in parallel
-let records = parse_batch_parallel(&record_bytes)?;
+// Read the whole file into one buffer
+let data = std::fs::read("records.mrc")?;
+
+// Locate each record as an (offset, length) pair
+let mut scanner = RecordBoundaryScanner::new();
+let boundaries = scanner.scan(&data)?;
+
+// Parse every record in parallel against the shared buffer
+let records = parse_batch_parallel(&boundaries, &data)?;
 
 // Process records in parallel
 records.par_iter()
     .filter(|r| r.title().is_some())
     .for_each(|r| println!("{:?}", r.title()));
 ```
+
+See the [Rust concurrency tutorial](../tutorials/rust/concurrency.md) for the
+full worked example.
 
 ## See Also
 
