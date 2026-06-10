@@ -1,5 +1,5 @@
 """
-Tests for MARCReader to_unicode, permissive, and recovery_mode flags (GitHub issue #78).
+Tests for MARCReader to_unicode, permissive, and recovery_mode flags.
 
 Verifies pymarc-compatible constructor kwargs and mrrc-native recovery_mode.
 """

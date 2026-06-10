@@ -1,5 +1,5 @@
 """
-Tests for repeated control fields (GitHub issue #77).
+Tests for repeated control fields.
 
 MARC records can have repeated control fields, particularly 006 and 007.
 This test suite verifies that mrrc correctly preserves all instances of

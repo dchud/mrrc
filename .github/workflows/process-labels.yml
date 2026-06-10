@@ -1,0 +1,47 @@
+name: Process Labels
+
+# Fail the build when persistent artifacts embed implementation-process labels
+# (bead IDs, PR/issue numbers, release-tagged claims). A dedicated workflow is
+# needed because lint.yml ignores docs/** and **.md, so a docs-only change
+# would otherwise never be swept.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'src-python/**'
+      - 'mrrc/**'
+      - 'tests/**'
+      - 'docs/**'
+      - '.github/**'
+      - 'README.md'
+      - 'scripts/lint_process_labels.py'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'src-python/**'
+      - 'mrrc/**'
+      - 'tests/**'
+      - 'docs/**'
+      - '.github/**'
+      - 'README.md'
+      - 'scripts/lint_process_labels.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  process-labels:
+    name: process-label lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Lint for process labels
+        run: python3 scripts/lint_process_labels.py

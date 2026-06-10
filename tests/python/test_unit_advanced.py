@@ -331,7 +331,7 @@ class TestFormatConversionWrapping:
 
 
 class TestMarcxmlConformance:
-    """MARCXML conformance tests against standard LOC format."""
+    """MARCXML conformance tests."""
 
     def test_output_has_xml_declaration(self):
         """Verify output starts with XML declaration."""
@@ -469,8 +469,8 @@ class TestMarcxmlConformance:
         subjects = restored.get_fields('650')
         assert len(subjects) == 2
 
-    def test_parse_issue_15_example(self):
-        """Parse the exact MARCXML from issue #15 (Introduction to Algorithms)."""
+    def test_parse_complete_marcxml_record(self):
+        """Parse a complete MARCXML record (Introduction to Algorithms)."""
         from mrrc import xml_to_record
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
         <record xmlns="http://www.loc.gov/MARC21/slim">
@@ -1166,7 +1166,7 @@ class TestLinkedFieldMARCJSON:
     """Test get_linked_fields with records loaded via marcjson_to_record."""
 
     def test_soncino_mishneh_torah(self):
-        """Full Soncino Mishneh Torah example from issue #19."""
+        """Full Soncino Mishneh Torah example."""
         import json
         from mrrc import marcjson_to_record
 
@@ -1210,8 +1210,8 @@ class TestLinkedFieldMARCJSON:
 class TestSerializationRoundTrip:
     """Test that records from deserialization functions can be re-serialized.
 
-    Regression tests for GitHub issue #57: record_to_json/xml fail on records
-    returned by xml_to_record() with 'Record' object is not an instance of 'Record'.
+    Regression test: record_to_json/xml previously failed on records returned
+    by xml_to_record() with "'Record' object is not an instance of 'Record'".
     """
 
     def test_xml_to_record_then_record_to_json(self):
