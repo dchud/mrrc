@@ -3,7 +3,7 @@ name = "mrrc-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
-rust-version = "1.71"
+rust-version = "1.87"
 
 [package.metadata]
 cargo-fuzz = true

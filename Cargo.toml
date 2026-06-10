@@ -13,7 +13,7 @@ repository = "https://github.com/dchud/mrrc"
 homepage = "https://github.com/dchud/mrrc"
 documentation = "https://docs.rs/mrrc"
 readme = "README.md"
-rust-version = "1.71"
+rust-version = "1.87"
 keywords = ["marc", "bibliographic", "library", "metadata"]
 categories = ["encoding", "parser-implementations"]
 
@@ -48,7 +48,6 @@ default = []
 # Core parsing and data handling
 bytes = "1.11.1"
 nom = "8.0"
-lazy_static = "1.4"
 memchr = "2.7"
 
 # Encoding support
