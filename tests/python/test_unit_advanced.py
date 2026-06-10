@@ -331,7 +331,7 @@ class TestFormatConversionWrapping:
 
 
 class TestMarcxmlConformance:
-    """MARCXML conformance tests against standard LOC format."""
+    """MARCXML conformance tests."""
 
     def test_output_has_xml_declaration(self):
         """Verify output starts with XML declaration."""
@@ -469,8 +469,8 @@ class TestMarcxmlConformance:
         subjects = restored.get_fields('650')
         assert len(subjects) == 2
 
-    def test_parse_issue_15_example(self):
-        """Parse a LOC-style MARCXML record (Introduction to Algorithms)."""
+    def test_parse_complete_marcxml_record(self):
+        """Parse a complete MARCXML record (Introduction to Algorithms)."""
         from mrrc import xml_to_record
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
         <record xmlns="http://www.loc.gov/MARC21/slim">

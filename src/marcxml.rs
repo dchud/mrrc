@@ -798,8 +798,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_loc_style_record() {
-        // Simulates the LOC MARCXML format
+    fn test_parse_full_marcxml_record() {
+        // A complete MARCXML record (standard namespace, control and data fields)
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
         <record xmlns="http://www.loc.gov/MARC21/slim">
             <leader>01142cam  2200301 a 4500</leader>

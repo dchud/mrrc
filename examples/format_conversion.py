@@ -6,7 +6,7 @@ This example demonstrates how to convert MARC records to various
 serialization formats using the mrrc Python wrapper:
 - JSON (mrrc-specific format)
 - MARCJSON (standard MARC-JSON format)
-- MARCXML (standard LOC MARCXML format)
+- MARCXML (Library of Congress MARC 21 XML)
 - CSV (tabular format)
 
 These conversions are useful for:

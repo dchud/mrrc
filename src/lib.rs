@@ -97,7 +97,7 @@
 //! - **BIBFRAME** — LOC linked data format for bibliographic description
 //! - **JSON** — Generic JSON representation of records
 //! - **MARCJSON** — Standard JSON-LD format for MARC records
-//! - **MARCXML** — Standard LOC MARCXML with proper attributes and namespace
+//! - **MARCXML** — Standard MARC 21 XML with proper attributes and namespace
 //! - **CSV** — Tabular export format for spreadsheet applications
 //! - **Dublin Core** — Simplified metadata schema for discovery
 //! - **MODS** — Detailed metadata description schema for libraries
