@@ -8,7 +8,7 @@
 
 A Rust library for reading, writing, and manipulating MARC bibliographic records, with Python bindings.
 
-**Note:** This project was developed using agentic coding tools ([amp](https://ampcode.com/) and [Claude](https://claude.ai/)) and uses [beads](https://github.com/steveyegge/beads) for agentic issue tracking. The package has not yet had extensive practical testing by humans and should be considered experimental.
+**Note:** This project was developed using agentic coding tools ([amp](https://ampcode.com/) and [Claude](https://claude.ai/)) and uses [beads_rust](https://github.com/Dicklesworthstone/beads_rust) for agentic issue tracking. The package has not yet had extensive practical testing by humans and should be considered experimental.
 
 ## Features
 

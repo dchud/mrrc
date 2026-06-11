@@ -47,31 +47,40 @@ Be respectful, inclusive, and professional in all interactions. We're building a
 
 ### Issue Tracking
 
-MRRC uses **Beads** (`bd`) for issue tracking. This provides dependency-aware issue management integrated with git.
+MRRC uses **br** (beads_rust) for issue tracking. This provides dependency-aware issue management integrated with git.
 
-**Install Beads**:
+**Note:** `br` is non-invasive and never executes git commands. After `br sync --flush-only`, you must manually run `git add .beads/ && git commit`.
+
+**Install br**:
 ```bash
-# Follow instructions at https://github.com/steveyegge/beads
+# Follow instructions at https://github.com/Dicklesworthstone/beads_rust
 ```
 
 **Check for ready work**:
 ```bash
-bd ready --json
+br ready --json
 ```
 
 **Create a new issue**:
 ```bash
-bd create "Issue title" -t feature -p 2 --json
+br create "Issue title" -t feature -p 2 --json
 ```
 
 **Claim an issue**:
 ```bash
-bd update <issue-id> --status in_progress --json
+br update <issue-id> --status in_progress --json
 ```
 
 **Close an issue**:
 ```bash
-bd close <issue-id> --reason "Description of what was completed" --json
+br close <issue-id> --reason "Description of what was completed" --json
+```
+
+**Export the database to JSONL and commit**:
+```bash
+br sync --flush-only
+git add .beads/
+git commit -m "sync beads"
 ```
 
 ### Making Changes
@@ -262,17 +271,17 @@ For significant features:
 
 2. **Create parent epic issue**:
    ```bash
-   bd create "Epic: Your feature" -t epic -p 2
+   br create "Epic: Your feature" -t epic -p 2
    ```
 
 3. **Create subtask issues**:
    ```bash
-   bd create "Phase 1: Part of feature" -t task -p 2 --parent <epic-id>
+   br create "Phase 1: Part of feature" -t task -p 2 --parent <epic-id>
    ```
 
 4. **Link to design doc**: Add dependency in beads
    ```bash
-   bd update <issue-id> --deps discovered-from:doc-filename
+   br update <issue-id> --deps discovered-from:doc-filename
    ```
 
 5. **Document progress**: Update issue descriptions as phases complete
