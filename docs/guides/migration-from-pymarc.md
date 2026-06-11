@@ -327,7 +327,7 @@ from mrrc import LEADER_LEN, END_OF_FIELD, END_OF_RECORD, SUBFIELD_INDICATOR
 
 ### Exception Hierarchy
 ```python
-from mrrc import MrrcException  # base class; per-code subclasses also importable
+from mrrc import MrrcException
 ```
 
 See the [error handling reference](../reference/error-handling.md) for the full
