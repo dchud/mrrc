@@ -34,6 +34,24 @@ def fixture_10k(fixture_dir):
 
 
 @pytest.fixture(scope="session")
+def fixture_1k_path(fixture_dir):
+    """Path to the 1k record fixture file on disk."""
+    path = fixture_dir / "1k_records.mrc"
+    if not path.exists():
+        pytest.skip(f"Fixture not found: {path}")
+    return str(path)
+
+
+@pytest.fixture(scope="session")
+def fixture_10k_path(fixture_dir):
+    """Path to the 10k record fixture file on disk."""
+    path = fixture_dir / "10k_records.mrc"
+    if not path.exists():
+        pytest.skip(f"Fixture not found: {path}")
+    return str(path)
+
+
+@pytest.fixture(scope="session")
 def fixture_small(fixture_1k):
     """Load small fixture (first 10 records from 1k fixture)."""
     # Create a small subset for quick tests

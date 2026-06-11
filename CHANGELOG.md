@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- File-path readers now buffer their reads (64 KiB): Python `MARCReader(path)` (and the
+  authority/holdings readers) and Rust `from_path` previously issued two-plus `read(2)`
+  syscalls per record. Rust `from_path` constructors now return
+  `MarcReader<BufReader<File>>` instead of `MarcReader<File>`.
 - Updated pyo3 to 0.29, resolving RUSTSEC-2026-0176 (out-of-bounds read in `nth`/
   `nth_back` on `PyList`/`PyTuple` iterators in pyo3 ≤0.28).
 - Updated quick-xml to 0.40. MARCXML text and attribute decoding now applies XML 1.0

@@ -9,7 +9,13 @@ use crate::parse_error::ParseError;
 use mrrc::RecoveryMode;
 use pyo3::prelude::*;
 use std::fs::File;
-use std::io::{Cursor, ErrorKind, Read};
+use std::io::{BufReader, Cursor, ErrorKind, Read};
+
+/// Buffer capacity for file-path backends. Matches the core readers'
+/// `from_path` buffering: the per-record read loop issues at least two
+/// small reads per record, and 64 KiB amortizes those to roughly one
+/// syscall per buffer fill.
+pub(crate) const FILE_READ_BUF_CAPACITY: usize = 64 * 1024;
 
 /// Unified backend interface for reading MARC records from different sources
 ///
@@ -31,9 +37,9 @@ pub struct ReaderBackend {
 
 #[derive(Debug)]
 enum BackendKind {
-    /// Direct file I/O via std::fs::File
+    /// Buffered file I/O via std::fs::File
     /// Input: str path or pathlib.Path
-    RustFile(File),
+    RustFile(BufReader<File>),
 
     /// In-memory reads from bytes via std::io::Cursor
     /// Input: bytes or bytearray
@@ -80,7 +86,10 @@ impl ReaderBackend {
         // 1. Try str path
         if let Ok(path_str) = source.extract::<String>() {
             return match File::open(&path_str) {
-                Ok(file) => Ok(BackendKind::RustFile(file)),
+                Ok(file) => Ok(BackendKind::RustFile(BufReader::with_capacity(
+                    FILE_READ_BUF_CAPACITY,
+                    file,
+                ))),
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                     Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
                         "No such file or directory: '{}'",
@@ -107,7 +116,10 @@ impl ReaderBackend {
                 if let Ok(path_obj) = method.call0() {
                     if let Ok(path_str) = path_obj.extract::<String>() {
                         return match File::open(&path_str) {
-                            Ok(file) => Ok(BackendKind::RustFile(file)),
+                            Ok(file) => Ok(BackendKind::RustFile(BufReader::with_capacity(
+                                FILE_READ_BUF_CAPACITY,
+                                file,
+                            ))),
                             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                                 Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
                                     "No such file or directory: '{}'",
@@ -367,7 +379,7 @@ mod tests {
         // Test that backend can be instantiated
         let file = File::open("/dev/null").unwrap();
         let _backend = ReaderBackend {
-            kind: BackendKind::RustFile(file),
+            kind: BackendKind::RustFile(BufReader::with_capacity(FILE_READ_BUF_CAPACITY, file)),
             recovery_mode: RecoveryMode::Strict,
         };
 
