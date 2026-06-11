@@ -41,6 +41,32 @@ class TestReadingBenchmarks:
         assert len(result) == 10000
     
     @pytest.mark.benchmark
+    def test_read_1k_records_from_path(self, benchmark, fixture_1k_path):
+        """Benchmark reading 1,000 records from a file path (RustFile backend)."""
+        def read_all():
+            reader = MARCReader(fixture_1k_path)
+            records = []
+            while (record := reader.read_record()) is not None:
+                records.append(record)
+            return records
+
+        result = benchmark(read_all)
+        assert len(result) == 1000
+
+    @pytest.mark.benchmark
+    def test_read_10k_records_from_path(self, benchmark, fixture_10k_path):
+        """Benchmark reading 10,000 records from a file path (RustFile backend)."""
+        def read_all():
+            reader = MARCReader(fixture_10k_path)
+            records = []
+            while (record := reader.read_record()) is not None:
+                records.append(record)
+            return records
+
+        result = benchmark(read_all)
+        assert len(result) == 10000
+
+    @pytest.mark.benchmark
     def test_read_and_extract_titles_1k(self, benchmark, fixture_1k):
         """Benchmark reading records and extracting titles."""
         def read_with_extraction():

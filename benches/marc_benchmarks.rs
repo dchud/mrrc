@@ -48,6 +48,37 @@ fn benchmark_read_10k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark reading 1,000 MARC records from a file path.
+///
+/// Unlike the cursor benchmarks above, this exercises the real file-I/O
+/// read loop, so it is sensitive to syscall count and buffering.
+fn benchmark_read_1k_from_path(c: &mut Criterion) {
+    c.bench_function("read_1k_records_from_path", |b| {
+        b.iter(|| {
+            let mut reader = MarcReader::from_path("tests/data/fixtures/1k_records.mrc").unwrap();
+            let mut count = 0;
+            while let Ok(Some(_record)) = reader.read_record() {
+                count += 1;
+            }
+            black_box(count)
+        });
+    });
+}
+
+/// Benchmark reading 10,000 MARC records from a file path.
+fn benchmark_read_10k_from_path(c: &mut Criterion) {
+    c.bench_function("read_10k_records_from_path", |b| {
+        b.iter(|| {
+            let mut reader = MarcReader::from_path("tests/data/fixtures/10k_records.mrc").unwrap();
+            let mut count = 0;
+            while let Ok(Some(_record)) = reader.read_record() {
+                count += 1;
+            }
+            black_box(count)
+        });
+    });
+}
+
 /// Benchmark reading 1,000 MARC records with field access.
 fn benchmark_read_with_field_access_1k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("1k_records.mrc"));
@@ -178,6 +209,8 @@ criterion_group!(
     benches,
     benchmark_read_1k,
     benchmark_read_10k,
+    benchmark_read_1k_from_path,
+    benchmark_read_10k_from_path,
     benchmark_read_with_field_access_1k,
     benchmark_read_with_field_access_10k,
     benchmark_serialization_to_json_1k,
