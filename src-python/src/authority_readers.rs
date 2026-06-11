@@ -4,17 +4,18 @@
 // Python file I/O. Only type-specific logic (AuthorityMarcReader, PyAuthorityRecord)
 // lives here.
 
+use crate::backend::FILE_READ_BUF_CAPACITY;
 use crate::reader_helpers;
 use crate::wrappers::PyAuthorityRecord;
 use mrrc::authority_reader::AuthorityMarcReader;
 use mrrc::recovery::{RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
 use std::fs::File;
-use std::io::Cursor;
+use std::io::{BufReader, Cursor};
 
 /// Internal enum for Authority reader backends
 enum AuthorityReaderBackend {
-    RustFile(AuthorityMarcReader<File>),
+    RustFile(AuthorityMarcReader<BufReader<File>>),
     CursorBackend(AuthorityMarcReader<Cursor<Vec<u8>>>),
     PythonFile(Py<PyAny>),
 }
@@ -57,6 +58,7 @@ impl PyAuthorityMARCReader {
 
         // Try file path (str or pathlib.Path)
         if let Some(file) = reader_helpers::try_open_as_path(source)? {
+            let file = BufReader::with_capacity(FILE_READ_BUF_CAPACITY, file);
             let reader = AuthorityMarcReader::new(file)
                 .with_recovery_mode(rec_mode)
                 .with_validation_level(val_level);

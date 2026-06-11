@@ -42,6 +42,14 @@ use crate::record::{Field, Record};
 use crate::recovery::{self, RecoveryCap, RecoveryMode, ValidationLevel};
 use std::io::Read;
 
+/// Buffer capacity for readers opened from a filesystem path.
+///
+/// The per-record read loop issues at least two small reads per record
+/// (leader, then body); on an unbuffered `File` each is a syscall. 64 KiB
+/// amortizes that to roughly one syscall per buffer fill while staying
+/// small enough not to matter for memory.
+pub(crate) const FILE_READ_BUF_CAPACITY: usize = 64 * 1024;
+
 /// Reader for ISO 2709 binary MARC format.
 ///
 /// `MarcReader` reads one MARC record at a time from any source implementing [`std::io::Read`].
@@ -185,9 +193,11 @@ impl<R: Read> MarcReader<R> {
     }
 }
 
-impl MarcReader<std::fs::File> {
+impl MarcReader<std::io::BufReader<std::fs::File>> {
     /// Open `path` for reading and create a [`MarcReader`] whose errors
-    /// include the path as their `source_name`.
+    /// include the path as their `source_name`. Reads go through a 64 KiB
+    /// buffer, so the per-record read loop does not issue per-record
+    /// syscalls.
     ///
     /// # Errors
     ///
@@ -195,7 +205,8 @@ impl MarcReader<std::fs::File> {
     pub fn from_path(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
         let path = path.as_ref();
         let file = std::fs::File::open(path)?;
-        Ok(Self::new(file).with_source(path.display().to_string()))
+        let reader = std::io::BufReader::with_capacity(FILE_READ_BUF_CAPACITY, file);
+        Ok(Self::new(reader).with_source(path.display().to_string()))
     }
 }
 

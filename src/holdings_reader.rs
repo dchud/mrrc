@@ -117,9 +117,11 @@ impl<R: Read> HoldingsMarcReader<R> {
     }
 }
 
-impl HoldingsMarcReader<std::fs::File> {
+impl HoldingsMarcReader<std::io::BufReader<std::fs::File>> {
     /// Open `path` for reading and create a [`HoldingsMarcReader`] whose
-    /// errors include the path as their `source_name`.
+    /// errors include the path as their `source_name`. Reads go through a
+    /// 64 KiB buffer, so the per-record read loop does not issue per-record
+    /// syscalls.
     ///
     /// # Errors
     ///
@@ -127,7 +129,8 @@ impl HoldingsMarcReader<std::fs::File> {
     pub fn from_path(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
         let path = path.as_ref();
         let file = std::fs::File::open(path)?;
-        Ok(Self::new(file).with_source(path.display().to_string()))
+        let reader = std::io::BufReader::with_capacity(crate::reader::FILE_READ_BUF_CAPACITY, file);
+        Ok(Self::new(reader).with_source(path.display().to_string()))
     }
 }
 
