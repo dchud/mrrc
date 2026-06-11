@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated quick-xml to 0.40. MARCXML text and attribute decoding now applies XML 1.0
+  end-of-line and attribute-value normalization explicitly (previously the XML 1.1 EOL
+  set, which additionally folded NEL/LSEP — those are no longer normalized, matching
+  MARCXML's XML 1.0 reality).
 - Corrected the declared Rust MSRV from 1.71 to 1.87 — the floor the dependency tree
   already required, so 1.71 never actually built; a new CI job now verifies the
   workspace compiles on the declared MSRV so the claim cannot drift again. The accurate

@@ -33,6 +33,7 @@ use crate::leader::Leader;
 use crate::record::{Field, Record};
 use quick_xml::events::Event;
 use quick_xml::se::to_string as xml_to_string;
+use quick_xml::{Decoder, XmlVersion};
 use serde::{Deserialize, Serialize};
 
 /// The MARCXML namespace URI.
@@ -164,20 +165,20 @@ fn read_marcxml_record<B: std::io::BufRead>(
                         record.leader = read_leaf_text(reader, name_bytes, ctx)?;
                     },
                     "controlfield" => {
-                        let tag = attr_value(e, b"tag").unwrap_or_default();
+                        let tag = attr_value(e, b"tag", reader.decoder()).unwrap_or_default();
                         let value = read_leaf_text(reader, name_bytes, ctx)?;
                         record.controlfield.push(MarcxmlControlField { tag, value });
                     },
                     "datafield" => {
                         current_df = Some(MarcxmlDataField {
-                            tag: attr_value(e, b"tag").unwrap_or_default(),
-                            ind1: attr_value(e, b"ind1").unwrap_or_default(),
-                            ind2: attr_value(e, b"ind2").unwrap_or_default(),
+                            tag: attr_value(e, b"tag", reader.decoder()).unwrap_or_default(),
+                            ind1: attr_value(e, b"ind1", reader.decoder()).unwrap_or_default(),
+                            ind2: attr_value(e, b"ind2", reader.decoder()).unwrap_or_default(),
                             subfield: Vec::new(),
                         });
                     },
                     "subfield" => {
-                        let code = attr_value(e, b"code").unwrap_or_default();
+                        let code = attr_value(e, b"code", reader.decoder()).unwrap_or_default();
                         let value = read_leaf_text(reader, name_bytes, ctx)?;
                         if let Some(df) = current_df.as_mut() {
                             df.subfield.push(MarcxmlSubfield { code, value });
@@ -203,23 +204,23 @@ fn read_marcxml_record<B: std::io::BufRead>(
                 match name {
                     "controlfield" => {
                         record.controlfield.push(MarcxmlControlField {
-                            tag: attr_value(e, b"tag").unwrap_or_default(),
+                            tag: attr_value(e, b"tag", reader.decoder()).unwrap_or_default(),
                             value: String::new(),
                         });
                     },
                     "subfield" => {
                         if let Some(df) = current_df.as_mut() {
                             df.subfield.push(MarcxmlSubfield {
-                                code: attr_value(e, b"code").unwrap_or_default(),
+                                code: attr_value(e, b"code", reader.decoder()).unwrap_or_default(),
                                 value: String::new(),
                             });
                         }
                     },
                     "datafield" => {
                         record.datafield.push(MarcxmlDataField {
-                            tag: attr_value(e, b"tag").unwrap_or_default(),
-                            ind1: attr_value(e, b"ind1").unwrap_or_default(),
-                            ind2: attr_value(e, b"ind2").unwrap_or_default(),
+                            tag: attr_value(e, b"tag", reader.decoder()).unwrap_or_default(),
+                            ind1: attr_value(e, b"ind1", reader.decoder()).unwrap_or_default(),
+                            ind2: attr_value(e, b"ind2", reader.decoder()).unwrap_or_default(),
                             subfield: Vec::new(),
                         });
                     },
@@ -252,21 +253,22 @@ fn read_leaf_text<B: std::io::BufRead>(
             .map_err(|e| ctx.err_xml(e))?
         {
             Event::Text(t) => {
-                // xml_content() applies XML 1.1 §2.11 end-of-line normalization
-                // (CR, CRLF, NEL, LSEP → LF) per spec. quick-xml's plain decode()
-                // skips that pass; quick-xml's own docs flag it as the wrong
-                // default ("Usually you need xml_content() instead").
-                let decoded = t.xml_content().map_err(|e| {
+                // xml_content() applies XML §2.11 end-of-line normalization
+                // (CR, CRLF → LF for XML 1.0) per spec. quick-xml's plain
+                // decode() skips that pass; quick-xml's own docs flag it as
+                // the wrong default. MARCXML is XML 1.0; the version is
+                // assumed per spec when no declaration states otherwise.
+                let decoded = t.xml_content(XmlVersion::Implicit1_0).map_err(|e| {
                     MarcError::invalid_field_msg(format!("Invalid text encoding: {e}"))
                 })?;
                 out.push_str(&decoded);
             },
             Event::CData(c) => {
                 // CDATA section content is part of the document entity and is
-                // also subject to XML 1.1 §2.11 EOL normalization. xml_content()
+                // also subject to XML §2.11 EOL normalization. xml_content()
                 // additionally honors the reader's declared encoding, so this
                 // is a strict improvement over a raw UTF-8 conversion.
-                let decoded = c.xml_content().map_err(|e| {
+                let decoded = c.xml_content(XmlVersion::Implicit1_0).map_err(|e| {
                     MarcError::invalid_field_msg(format!("Invalid CDATA encoding: {e}"))
                 })?;
                 out.push_str(&decoded);
@@ -310,14 +312,28 @@ fn read_leaf_text<B: std::io::BufRead>(
     }
 }
 
-/// Extract an attribute value as an owned `String`, decoding XML escapes.
-fn attr_value(start: &quick_xml::events::BytesStart, name: &[u8]) -> Option<String> {
+/// Extract an attribute value as an owned `String`, decoding XML escapes
+/// and applying XML 1.0 attribute-value normalization.
+///
+/// Takes the reader's `Decoder` because the lib-safe quick-xml API
+/// (`decoded_and_normalized_value`) requires one; the deprecated
+/// decoder-less variants are compiled out when any crate in the build
+/// enables quick-xml's `encoding` feature.
+fn attr_value(
+    start: &quick_xml::events::BytesStart,
+    name: &[u8],
+    decoder: Decoder,
+) -> Option<String> {
     start
         .attributes()
         .with_checks(false)
         .filter_map(std::result::Result::ok)
         .find(|a| a.key.into_inner() == name)
-        .and_then(|a| a.unescape_value().ok().map(std::borrow::Cow::into_owned))
+        .and_then(|a| {
+            a.decoded_and_normalized_value(XmlVersion::Implicit1_0, decoder)
+                .ok()
+                .map(std::borrow::Cow::into_owned)
+        })
 }
 
 // ---------------------------------------------------------------------------
