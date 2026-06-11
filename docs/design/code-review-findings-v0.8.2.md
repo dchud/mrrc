@@ -27,9 +27,10 @@ Three findings deserve immediate attention regardless of how the rest is schedul
 
 1. **The declared MSRV (Rust 1.71) is false** — locked dependencies require 1.87, no CI job tests
    any MSRV, and cargo's MSRV-aware resolver will steer downstream users toward ancient dependency
-   versions mrrc has never been tested against (PKG-1).
+   versions mrrc has never been tested against (PKG-1). *(Resolved in PR #280.)*
 2. **Four user-facing documentation pages are wrong in ways that break copy-pasted code**,
    starting with the README's primary Python example, which raises `TypeError` (DOC-1..DOC-4).
+   *(Resolved in PR #278.)*
 3. **The default Python read path copies each record's bytes roughly nine times through an
    unbuffered file handle**, and the batching layer's documented GIL-amortization claims do not
    match the implementation — material for the library's headline performance story and a
@@ -57,6 +58,15 @@ pairs say so explicitly. The "Proposed epics" section suggests groupings; the "B
 reconciliation" section lists every existing bead/issue this review touched and what should happen
 to it. Severity reflects user impact; effort and severity together drive priority, and the "Quick
 wins" list at the end is the suggested first batch.
+
+## Remediation status (updated 2026-06-11)
+
+Findings carrying a `**Status:**` line below are resolved or partially resolved; findings without
+one are open as written. Resolved so far: DOC-1..DOC-4 (PR #278); DOC-5 and most of DOC-6 and
+OPS-7 (PR #279); PKG-1 and the lazy_static half of PKG-10c (PR #280); the bd-j01q quick-xml 0.40
+migration (PR #221). The Quick wins list and the backlog reconciliation table are annotated in
+place. The remaining work is tracked as beads; this document is the review record, not the
+tracker.
 
 ---
 
@@ -399,12 +409,14 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   property); same bug in the `mrrc.read()` docstring (`mrrc/__init__.py:1972`, rendered into the
   API reference). The first code a new user copies.
 - **Backlog:** new.
+- **Status:** Done — PR #278.
 
 ### DOC-2 — `MarcError` documented as an importable Python class; it does not exist
 - **Severity:** High · **Effort:** S · **Where:** `docs/reference/python-api.md:487-505`,
   `docs/guides/migration-from-pymarc.md:330`. The import raises `ImportError`; python-api's 3-class
   exception sketch contradicts the accurate 20-class hierarchy in `error-handling.md`.
 - **Backlog:** new.
+- **Status:** Done — PR #278.
 
 ### DOC-3 — error-handling.md documents Python `from_path()`/`.with_source()` that don't exist
 - **Severity:** High · **Effort:** S (doc fix now) · **Where:**
@@ -412,6 +424,9 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   Python prose; examples raise `AttributeError`. Rewrite to actual behavior now; ARCH-7 is the
   API-side resolution.
 - **Backlog:** new; sequenced-with ARCH-7.
+- **Status:** Done — PR #278, which also fixed the same nonexistent `from_path` in
+  `docs/reference/error-codes.md`'s lead example (an instance this finding's Where list missed).
+  ARCH-7 remains the API-side follow-up.
 
 ### DOC-4 — python-api.md states the wrong `recovery_mode` default, inverting the safety story
 - **Severity:** High · **Effort:** S · **Where:** `docs/reference/python-api.md:226` and kwargs
@@ -419,6 +434,7 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   and `max_errors` entirely. A reader of only this page believes errors raise by default when they
   are silently attached to `record.errors`.
 - **Backlog:** new.
+- **Status:** Done — PR #278.
 
 ### DOC-5 — Rust API reference drift
 - **Severity:** Medium · **Effort:** S · (a) `rust-api.md:333-338` `parse_batch_parallel` example
@@ -427,6 +443,8 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   (c) `parse_batch_parallel(_limited)` are public in `_mrrc.pyi` but absent from the Python API
   reference.
 - **Backlog:** new.
+- **Status:** Done — PR #279 (which also recorded that `parse_batch_parallel_limited`'s third
+  argument caps records, not threads, and that these functions return extension `Record`s).
 
 ### DOC-6 — Documentation low-severity strays
 - **Severity:** Low · **Effort:** S · (a) five orphaned doc pages not in nav (link-only — decide
@@ -434,6 +452,8 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   self-contradictory KeyError comment in `quickstart-python.md:28-29`; (d) docs.rs front page
   embeds the full README (badges, repo-relative links 404 off GitHub).
 - **Backlog:** new.
+- **Status:** Partial — PR #279 fixed (a)-(c), recording the nav exclusion as an intentional
+  decision in the mkdocs.yml comment; (d) remains open, folded into the repository-cleanup chore.
 
 ---
 
@@ -451,6 +471,10 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
 - **Backlog:** new. **Corrects bd-j01q** (its "MSRV bump to 1.79" framing is moot — the de facto
   floor is already past it; the quick-xml 0.40 bump itself remains valid). Confirms the
   `LazyLock` recommendation in PERF-8 is MSRV-safe.
+- **Status:** Done — PR #280 (rust-version 1.87 in the root and fuzz manifests, an `msrv` CI job
+  in lint.yml that reads the declared version from Cargo.toml, installation doc updated).
+  Corrected floor math for any future MSRV *lowering* under PKG-4: excluding the oxrdf family the
+  floors are indexmap 1.82 (library deps) and pyo3 1.83 (workspace), not the 1.85 stated above.
 
 ### PKG-2 — `Cargo.lock` is gitignored
 - **Severity:** Medium · **Effort:** S · **What:** Non-reproducible CI/wheel builds; upstream
@@ -523,6 +547,10 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   supports free-threading and mrrc's GIL-release architecture is exactly the workload that
   benefits).
 - **Backlog:** new.
+- **Status:** Partial — (c)'s `lazy_static` → `LazyLock` conversion landed in PR #280 (12 tables
+  converted, dependency removed); the edition 2021→2024 bump and items (a), (b), (d), (e) remain
+  open. `src-python/Cargo.toml` also lacks a `rust-version` declaration — resolved for free by
+  (d)/PKG-5 workspace inheritance.
 
 ---
 
@@ -576,6 +604,10 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   rehearsal exists anywhere, so first contact with PyPI validation is the production publish.
 - **Fix:** Correct the doc; optionally add a `workflow_dispatch` TestPyPI input for rehearsal.
 - **Backlog:** new.
+- **Status:** Partial — PR #279 corrected the wheel count and monitoring section, migrated the
+  `bd` commands to `br`, and made the MSRV wording version-agnostic. Remaining: the TestPyPI
+  rehearsal, and one residual "(15 wheels present)" at `release-procedure.md:1324` that the sweep
+  missed — both folded into the release-idempotency bead.
 
 ### OPS-8 — Workflows lack top-level least-privilege `permissions:` blocks
 - **Severity:** Medium · **Effort:** S · **What:** 10 of 15 workflows inherit the default
@@ -637,9 +669,9 @@ pulled forward whenever bd-cdey gets scheduled.
 
 ## Quick wins (first batch, all S-effort)
 
-DOC-1..DOC-4 (one PR) · PERF-1 (BufReader) · PKG-1 (MSRV truth + CI check) · PKG-2 (commit
+DOC-1..DOC-4 (one PR) — done (#278) · PERF-1 (BufReader) · PKG-1 (MSRV truth + CI check) — done (#280) · PKG-2 (commit
 Cargo.lock) · PKG-3 (unused deps) · OPS-5 (skip-existing) · OPS-7 (release-procedure `bd`→`br` +
-wheel count) · TEST-1 (delete vacuous tests, ASAN `--tests`) · CLEAN-1..3.
+wheel count) — mostly done (#279) · TEST-1 (delete vacuous tests, ASAN `--tests`) · CLEAN-1..3.
 
 ## Backlog reconciliation
 
@@ -649,7 +681,7 @@ Every existing bead/issue this review touched, and the recommended disposition:
 |---|---|
 | bd-8zv5 (continue read-path optimization) | **Replace or re-describe** with the concrete PERF-1..PERF-10 content; consider making it the E5 epic. |
 | bd-dra6 (publish pymarc comparison) | **Sequence after** PERF-1..3 + PKG-9 (they change the baseline). Review confirmed no pymarc-comparison code exists (bd-l9zh's finding stands). |
-| bd-j01q (quick-xml 0.40, MSRV 1.79) | **Premise corrected by PKG-1**: the de facto MSRV floor is already 1.87. The quick-xml bump itself remains valid; merge into E2 or do alongside PKG-1. |
+| bd-j01q (quick-xml 0.40, MSRV 1.79) | **Premise corrected by PKG-1**: the de facto MSRV floor is already 1.87. The quick-xml bump itself remains valid; merge into E2 or do alongside PKG-1. **Done:** PR #221 merged; bead and issue #192 closed. |
 | bd-cdey (MARC-8 in binary writer) | **Blocked-ish on ARCH-3** — consolidate the writers first so MARC-8 is wired once. |
 | bd-hgv6 (MarcError accessor consolidation) | **Pair with PKG-8** (`non_exhaustive`) as one error-API pass. |
 | bd-mcei (split `mrrc/__init__.py`) | Keep; **sequenced-with ARCH-6** — isolate the handle machinery as part of the split regardless of the ownership decision. |
@@ -669,7 +701,7 @@ Every existing bead/issue this review touched, and the recommended disposition:
 | #92 (DC/CSV read path) | **Reframe per ARCH-2**: declare the round-trip contract for all eight formats, not just two functions. |
 | #225 (query discoverability) | Keep; ARCH-5 is the structural fix, #225 the doc symptom. |
 | #88 (CONTRIBUTING.md) | Keep; fold the OPS-7 release-procedure corrections into the same docs-maintenance pass if convenient. |
-| mrrc-mgd (src-python/tests/ not in CI) | **Overtaken by events** — the directory no longer exists on disk; confirm and close. |
+| mrrc-mgd (src-python/tests/ not in CI) | **Overtaken by events** — the directory no longer exists on disk; confirm and close. **Done:** confirmed closed. |
 | mrrc-3ivc / #48, mrrc-b7l / #4, mrrc-1qku | Unchanged. |
 
 ## Verified clean (do not re-investigate)
@@ -692,7 +724,7 @@ Every existing bead/issue this review touched, and the recommended disposition:
   exemplary. check.sh is a faithful superset of the PR gate apart from noted items.
 - **Docs:** nav integrity (strict build); DC/CSV write-only correctly declared; no MARC-8 write
   claims outside `docs/history/`; the bogus "N/100 GIL" claim appears in code comments only, not
-  user-facing docs; version/MSRV strings are mutually consistent (their shared *value* is PKG-1);
+  user-facing docs; version/MSRV strings are mutually consistent (their shared *value* was corrected under PKG-1);
   CHANGELOG breaking-change hygiene is good; `missing_docs` enforced at zero warnings;
   `error-codes.md` anchors match `help_url` exactly.
 - **PyO3 currency:** 0.28.2, Bound API throughout, no deprecated patterns; single duplicate dep in
