@@ -1969,7 +1969,7 @@ def read(path: Union[str, Any], format: Optional[str] = None):
     Example:
         ```pycon
         >>> for record in mrrc.read("data.mrc"):
-        ...     print(record.title())
+        ...     print(record.title)
         ```
     """
     import os
