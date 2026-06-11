@@ -200,20 +200,14 @@ impl RdfGraph {
 
         for triple in &self.triples {
             let ox_triple = to_oxrdf_triple(triple)?;
-            serializer.serialize_triple(&ox_triple).map_err(|e| {
-                MarcError::from(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    e.to_string(),
-                ))
-            })?;
+            serializer
+                .serialize_triple(&ox_triple)
+                .map_err(|e| MarcError::from(std::io::Error::other(e.to_string())))?;
         }
 
-        serializer.finish().map_err(|e| {
-            MarcError::from(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                e.to_string(),
-            ))
-        })?;
+        serializer
+            .finish()
+            .map_err(|e| MarcError::from(std::io::Error::other(e.to_string())))?;
 
         Ok(())
     }

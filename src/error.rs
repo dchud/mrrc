@@ -1856,7 +1856,7 @@ mod tests {
     #[test]
     fn from_io_error_blanket_conversion() {
         fn returns_io() -> std::io::Result<()> {
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "nope"))
+            Err(std::io::Error::other("nope"))
         }
         fn wraps() -> Result<()> {
             returns_io()?;

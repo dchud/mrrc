@@ -57,10 +57,7 @@ struct FailAfterBuffer {
 impl Read for FailAfterBuffer {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         if self.pos >= self.data.len() {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "synthetic mid-record read failure",
-            ));
+            return Err(io::Error::other("synthetic mid-record read failure"));
         }
         let n = std::cmp::min(buf.len(), self.data.len() - self.pos);
         buf[..n].copy_from_slice(&self.data[self.pos..self.pos + n]);
@@ -128,10 +125,7 @@ struct FailOnFirstRead;
 
 impl Read for FailOnFirstRead {
     fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "synthetic boundary read failure",
-        ))
+        Err(io::Error::other("synthetic boundary read failure"))
     }
 }
 

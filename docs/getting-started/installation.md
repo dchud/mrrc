@@ -33,7 +33,7 @@ Pre-built wheels are available for:
 
 ## Rust
 
-**Requirements**: Rust 1.71+
+**Requirements**: Rust 1.87+ (the crate's declared MSRV, `rust-version` in `Cargo.toml`)
 
 Add to your `Cargo.toml`:
 

@@ -150,3 +150,34 @@ jobs:
 
       - name: Run security audit
         run: cargo audit
+
+  msrv:
+    name: MSRV check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      # Single source: the declared rust-version is read from Cargo.toml so
+      # the declaration and this check cannot drift apart.
+      - name: Read declared MSRV
+        id: msrv
+        run: |
+          msrv=$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' Cargo.toml)
+          test -n "$msrv" || { echo "no rust-version in Cargo.toml" >&2; exit 1; }
+          echo "msrv=$msrv" >> "$GITHUB_OUTPUT"
+
+      - name: Install MSRV toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.msrv }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      # RUSTUP_TOOLCHAIN overrides the rust-toolchain.toml pin, which would
+      # otherwise route cargo back to the pinned (newer) toolchain.
+      - name: cargo check on declared MSRV
+        run: cargo check --workspace
+        env:
+          RUSTUP_TOOLCHAIN: ${{ steps.msrv.outputs.msrv }}

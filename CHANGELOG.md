@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Corrected the declared Rust MSRV from 1.71 to 1.87 — the floor the dependency tree
+  already required, so 1.71 never actually built; a new CI job now verifies the
+  workspace compiles on the declared MSRV so the claim cannot drift again. The accurate
+  MSRV unlocked clippy-driven cleanups: the MARC-8 tables now use `std::sync::LazyLock`
+  (dropping the `lazy_static` dependency) and I/O error construction uses
+  `std::io::Error::other`.
+
 ### Fixed
 
 - Corrected Python documentation errors that broke copy-pasted code: the README and
