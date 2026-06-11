@@ -9,7 +9,8 @@ help URL to land here.
 import mrrc
 
 try:
-    list(mrrc.MARCReader.from_path("harvest.mrc"))
+    list(mrrc.MARCReader("harvest.mrc", recovery_mode="strict",
+                         validation_level="strict_marc"))
 except mrrc.MrrcException as e:
     print(e.code, e.slug, e.help_url())
     # E201 invalid_indicator https://mrrc.dev/reference/error-codes/#E201
