@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated pyo3 to 0.29, resolving RUSTSEC-2026-0176 (out-of-bounds read in `nth`/
+  `nth_back` on `PyList`/`PyTuple` iterators in pyo3 ≤0.28).
 - Updated quick-xml to 0.40. MARCXML text and attribute decoding now applies XML 1.0
   end-of-line and attribute-value normalization explicitly (previously the XML 1.1 EOL
   set, which additionally folded NEL/LSEP — those are no longer normalized, matching
