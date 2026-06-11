@@ -222,7 +222,8 @@ serializes any record's fields to ISO 2709.
 Reads MARC records from files with GIL-released I/O for parallelism.
 
 ```python
-MARCReader(file_obj, to_unicode=True, permissive=False, recovery_mode="strict")
+MARCReader(file_obj, to_unicode=True, permissive=False, recovery_mode=None,
+           validation_level="structural", max_errors=None)
 ```
 
 ```python
@@ -257,7 +258,9 @@ for record in MARCReader(data):
 |-------|------|---------|-------------|
 | `to_unicode` | `bool` | `True` | Accepted for pymarc compatibility. mrrc always converts MARC-8 to UTF-8; passing `False` emits a warning but has no effect. |
 | `permissive` | `bool` | `False` | When `True`, yields `None` for records that fail to parse instead of raising, matching pymarc's permissive behavior. |
-| `recovery_mode` | `str` | `"strict"` | Controls how malformed records are handled (see below). Cannot be combined with `permissive=True`. |
+| `recovery_mode` | `str` | `None` | Controls how malformed records are handled (see below). When not given, resolves to `"permissive"` — or `"strict"` if `permissive=True` (the inner reader raises so the outer wrapper can swallow). Cannot be combined explicitly with `permissive=True` unless `"strict"`. |
+| `validation_level` | `str` | `"structural"` | What counts as an error during parsing, orthogonal to `recovery_mode`. `"structural"` fires only ISO 2709 structural errors; `"strict_marc"` adds byte-level MARC 21 checks (indicators, subfield codes, strict UTF-8). See [Validation level vs recovery mode](error-handling.md#validation-level-vs-recovery-mode). |
+| `max_errors` | `int` | `None` | Cap on accumulated recovered errors in lenient/permissive mode; exceeding it raises `FatalReaderError`. `None` or `0` disables the cap. See [Capping recovered errors](error-handling.md#capping-recovered-errors-with-max_errors). |
 
 **Recovery Modes:**
 
@@ -265,9 +268,12 @@ Instead of skipping bad records entirely (like `permissive=True`), `recovery_mod
 
 | Mode | Behavior |
 |------|----------|
-| `"strict"` | Raise on any malformation (default). |
-| `"lenient"` | Attempt to recover, salvage valid fields from damaged records. |
-| `"permissive"` | Very lenient — accept partial data even from severely malformed records. |
+| `"strict"` | Raise on any malformation. |
+| `"lenient"` | Attempt to recover, salvage valid fields from damaged records; diagnostics attach to `record.errors`. |
+| `"permissive"` | Very lenient — accept partial data even from severely malformed records (default when `recovery_mode` is not given and `permissive=False`). |
+
+See [Recovery modes and errors](error-handling.md#recovery-modes-and-errors) for the full
+default story and guidance on choosing a mode.
 
 ```python
 # Skip bad records (pymarc-compatible)
@@ -484,26 +490,51 @@ these are the building blocks underneath.
 
 ::: mrrc.ProducerConsumerPipeline
 
+### parse_batch_parallel / parse_batch_parallel_limited
+
+Module functions that parse many records from one shared buffer in parallel
+(Rayon threads on the Rust side, GIL released during parsing). Pair them with
+[`RecordBoundaryScanner`](#recordboundaryscanner), which produces the
+`(offset, length)` boundary list:
+
+```python
+import mrrc
+
+data = open("records.mrc", "rb").read()
+
+scanner = mrrc.RecordBoundaryScanner()
+boundaries = scanner.scan(data)
+
+# Parse every record in parallel against the shared buffer
+records = mrrc.parse_batch_parallel(boundaries, data)
+
+# Or stop after the first N records
+first_100 = mrrc.parse_batch_parallel_limited(boundaries, data, 100)
+```
+
+Both return the compiled extension's `Record` objects (accessors like
+`title()` are methods there, unlike the wrapper `Record` yielded by
+`MARCReader`, where `title` is a property).
+
 ## Exceptions
 
 ```python
-from mrrc import MrrcException, MarcError
+from mrrc import MrrcException
 
 try:
-    for record in MARCReader("bad.mrc"):
+    for record in MARCReader("bad.mrc", recovery_mode="strict"):
         pass
 except MrrcException as e:
     print(f"MRRC error: {e}")
-except MarcError as e:
-    print(f"MARC error: {e}")
 ```
 
-The exception hierarchy:
+`MrrcException` is the base class for all mrrc errors; per-error-code subclasses
+(`RecordLeaderInvalid`, `TruncatedRecord`, `FatalReaderError`, …) let you catch
+specific failures, and `StaleFieldError` signals that a live field handle was
+invalidated by field removal (re-fetch the field from the record and retry).
 
-- `MrrcException` — base exception for all mrrc errors
-  - `MarcError` — MARC-specific errors (parsing, validation)
-  - `StaleFieldError` — a live field handle was invalidated by field
-    removal; re-fetch the field from the record and retry
+See the [error handling reference](error-handling.md) for the full exception
+hierarchy, pymarc name mapping, and guidance on choosing what to catch.
 
 ## See Also
 

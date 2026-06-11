@@ -20,6 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corrected Python documentation errors that broke copy-pasted code: the README and
+  `mrrc.read()` examples called `record.title()` (it is a property); docs showed imports
+  and reader constructors that do not exist in Python (`MarcError`,
+  `MARCReader.from_path()`, `.with_source()`); the API reference stated the wrong
+  `recovery_mode` default (`"strict"`; it is `"permissive"`) and omitted the
+  `validation_level` and `max_errors` keyword arguments.
+- Corrected documentation drift: the Rust API reference showed `parse_batch_parallel` with
+  the wrong arity and a stale 5-variant `MarcError` table; `parse_batch_parallel` /
+  `parse_batch_parallel_limited` were missing from the Python API reference; the release
+  procedure understated the wheel count and used retired issue-tracker commands.
+
 ## [0.8.2] - 2026-06-09
 
 ### Added
