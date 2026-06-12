@@ -361,6 +361,34 @@ impl Leader {
     }
 }
 
+impl std::fmt::Display for Leader {
+    /// Render the leader in its 24-character MARC 21 string form, e.g.
+    /// `00136nam a2200061   4500`.
+    ///
+    /// Unlike [`Leader::as_bytes`], rendering never fails: fields are
+    /// formatted as-is without validation, so a leader with out-of-range
+    /// values still displays (useful for diagnostics).
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:05}{}{}{}{}{}{}{}{:05}{}{}{}{}",
+            self.record_length,
+            self.record_status,
+            self.record_type,
+            self.bibliographic_level,
+            self.control_record_type,
+            self.character_coding,
+            self.indicator_count,
+            self.subfield_code_count,
+            self.data_base_address,
+            self.encoding_level,
+            self.cataloging_form,
+            self.multipart_level,
+            self.reserved,
+        )
+    }
+}
+
 /// Parse a 5-byte ASCII-digit field. Returns `None` when the slice is not
 /// exactly 5 bytes or when any byte is not an ASCII digit; callers map
 /// `None` to the appropriate field-specific error variant

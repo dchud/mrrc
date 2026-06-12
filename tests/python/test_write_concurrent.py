@@ -211,8 +211,8 @@ class TestRoundTrip:
          # Spot check some fields
          for orig, rt in zip(records_original, records_roundtrip):
              # Leader should match
-             assert orig.leader().record_type == rt.leader().record_type
-             assert orig.leader().bibliographic_level == rt.leader().bibliographic_level
+             assert orig.leader.record_type == rt.leader.record_type
+             assert orig.leader.bibliographic_level == rt.leader.bibliographic_level
 
              # Title (245) should match
              orig_title = orig.title
@@ -239,7 +239,7 @@ class TestRoundTrip:
          
          # Modify leader properties on first few records
          for i, record in enumerate(records_original[:3]):
-             leader = record.leader()
+             leader = record.leader
              # Change record status to 'c' (corrected)
              leader.record_status = 'c'
              # Change encoding level to 'I' (full level)
@@ -264,8 +264,8 @@ class TestRoundTrip:
          
          # Verify modifications persisted
          for i, (orig, roundtrip) in enumerate(zip(records_original[:3], records_roundtrip[:3])):
-             orig_leader = orig.leader()
-             rt_leader = roundtrip.leader()
+             orig_leader = orig.leader
+             rt_leader = roundtrip.leader
              
              # These should have been modified
              assert rt_leader.record_status == 'c'
@@ -279,7 +279,7 @@ class TestRoundTrip:
          
          # Verify remaining records unchanged
          for i, (orig, roundtrip) in enumerate(zip(records_original[3:], records_roundtrip[3:]), start=3):
-             assert orig.leader() == roundtrip.leader()
+             assert orig.leader == roundtrip.leader
 
      def test_round_trip_large_file(self, fixture_10k):
          """Round-trip test with large file (10k records)."""

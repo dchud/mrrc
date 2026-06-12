@@ -45,8 +45,8 @@ class TestRecordCreation:
         leader.bibliographic_level = 'd'
         record = Record(leader)
         # Note: accessing leader properties requires via the wrapper
-        assert record.leader().record_type == 'c'
-        assert record.leader().bibliographic_level == 'd'
+        assert record.leader.record_type == 'c'
+        assert record.leader.bibliographic_level == 'd'
 
     def test_record_equality(self):
         """Test comparing two identical records."""
@@ -1113,7 +1113,7 @@ class TestConstructorKwargs:
         record = Record(leader, fields=[
             Field('245', '1', '0', subfields=[Subfield('a', 'Title')]),
         ])
-        assert record.leader().record_type == 'a'
+        assert record.leader.record_type == 'a'
         assert record.title == 'Title'
 
 

@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Python leader surface now matches pymarc: `record.leader` is a property (was a
+  method) and assignable from a `Leader` or 24-character string; `Leader` renders and
+  compares as its 24-character MARC 21 string (`str()`, `len()`, `==` with str, `repr`)
+  and constructs from one (`Leader('00136nam a2200061   4500')`). The oracle now
+  compares leaders against pymarc value-for-value. Rust `Leader` gains a `Display` impl.
 - Migrated both crates to Rust edition 2024 and raised the MSRV from 1.87 to 1.88
   (let-chains require 1.88). The workspace now uses resolver v3, so dependency
   resolution respects `rust-version` instead of breaking the MSRV build on upgrades.

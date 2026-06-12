@@ -749,13 +749,19 @@ class Leader:
              return None
          return valid_values.get(value)
      
-     def __init__(self):
-         """Create a new Leader."""
-         # Just use the Rust Leader directly, but add aliases
-         # The Rust leader has all the properties we need
-         pass
-     
-     def __new__(cls):
+     def __init__(self, leader: Optional[str] = None):
+         """Create a new Leader, optionally from a 24-character string.
+
+         Example:
+             ```python
+             Leader()                              # default values
+             Leader('00136nam a2200061   4500')    # parsed, pymarc-style
+             ```
+         """
+         if leader is not None:
+             self._update_leader_from_string(leader)
+
+     def __new__(cls, leader: Optional[str] = None):
          """Create instance - actually returns a Rust Leader with aliases."""
          instance = object.__new__(cls)
          instance._rust_leader = _Leader()
@@ -887,12 +893,26 @@ class Leader:
          if hasattr(self, '_parent_record') and self._parent_record is not None:
              self._parent_record._leader_modified = True
      
+     def __str__(self) -> str:
+         """The 24-character MARC 21 leader string (pymarc-compatible)."""
+         return self._get_leader_as_string()
+
+     def __repr__(self) -> str:
+         return f"Leader('{self._get_leader_as_string()}')"
+
+     def __len__(self) -> int:
+         """Leaders are always 24 characters (pymarc-compatible)."""
+         return 24
+
      def __eq__(self, other: Any) -> bool:
-         """Compare leaders by content."""
-         if not isinstance(other, Leader):
-             return False
-         return bool(self._rust_leader == other._rust_leader)
-     
+         """Compare leaders by content; strings compare against the
+         24-character form (pymarc's Leader is a str subclass)."""
+         if isinstance(other, str):
+             return self._get_leader_as_string() == other
+         if isinstance(other, Leader):
+             return bool(self._rust_leader == other._rust_leader)
+         return NotImplemented
+
      def __hash__(self) -> int:
          """Hash based on rust leader."""
          return hash(id(self._rust_leader))
@@ -1506,17 +1526,32 @@ class Record:
         """Serialize to MARCJSON."""
         return self._inner.to_marcjson()
     
+    @property
     def leader(self) -> Leader:
-        """Get the leader."""
+        """The record leader (attribute, matching pymarc's record.leader)."""
         # Ensure _leader is initialized and synced
         if not hasattr(self, '_leader') or self._leader is None:
             leader = Leader()
-            leader._rust_leader = self._inner.leader()
+            leader._rust_leader = self._inner.leader
             leader._parent_record = self
             # Track that we haven't modified the leader
             self._leader_modified = False
             self._leader = leader
         return self._leader
+
+    @leader.setter
+    def leader(self, value: Union['Leader', str]) -> None:
+        """Replace the leader with a Leader or a 24-character string
+        (matching pymarc's assignable record.leader)."""
+        if isinstance(value, str):
+            value = Leader(value)
+        elif not isinstance(value, Leader):
+            raise TypeError(
+                f"leader must be a Leader or 24-character string, got {type(value).__name__}"
+            )
+        value._parent_record = self
+        self._leader = value
+        self._leader_modified = True
     
     def _sync_leader(self) -> None:
         """Sync the Python leader back to the Rust record if it was modified."""
@@ -1533,7 +1568,7 @@ class Record:
                 # In that case, we need to sync properties individually
                 if "Already borrowed" in str(e):
                     # Get the inner leader and sync all properties
-                    inner_leader = self._inner.leader()
+                    inner_leader = self._inner.leader
                     rust_leader = self._leader._rust_leader
                     
                     # Sync all properties
@@ -1569,7 +1604,7 @@ class Record:
                 }
             })
         return {
-            'leader': self.leader()._get_leader_as_string(),
+            'leader': str(self.leader),
             'fields': fields_list,
         }
 
@@ -1816,7 +1851,7 @@ def _wrap_record(rust_record) -> Record:
     wrapper = Record(None)
     wrapper._inner = rust_record
     leader = Leader()
-    leader._rust_leader = rust_record.leader()
+    leader._rust_leader = rust_record.leader
     leader._parent_record = wrapper
     wrapper._leader = leader
     wrapper._leader_modified = False
@@ -2169,7 +2204,7 @@ def parse_json_to_array(json_str: str) -> List[Record]:
     for item in data:
         record = Record()
         if 'leader' in item:
-            record.leader()._update_leader_from_string(str(item['leader']))
+            record.leader = str(item['leader'])
         if 'fields' in item:
             for field_dict in item['fields']:
                 for tag, value in field_dict.items():

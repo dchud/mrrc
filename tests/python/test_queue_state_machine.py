@@ -28,7 +28,7 @@ class TestQueueStateMachine:
         # First call triggers read_batch()
         rec1 = next(reader)
         assert rec1 is not None
-        assert rec1.leader() is not None
+        assert rec1.leader is not None
 
     def test_subsequent_calls_use_queue(self, fixture_1k):
         """Subsequent calls should pop from queue without I/O"""
@@ -45,7 +45,7 @@ class TestQueueStateMachine:
             # Verify we got different records
             if i > 0:
                 # Just verify record structure is valid
-                assert rec.leader() is not None
+                assert rec.leader is not None
 
     def test_eof_idempotence(self, fixture_1k):
         """After EOF, repeated calls should return None idempotently"""
@@ -69,7 +69,7 @@ class TestQueueStateMachine:
         
         # Verify all records are valid
         for rec in records:
-            assert rec.leader() is not None
+            assert rec.leader is not None
 
     def test_queue_reduces_gil_pressure(self, fixture_10k):
         """
@@ -128,7 +128,7 @@ class TestQueueStateMachine:
         # At minimum, verify structure consistency
         assert len(records) == 100
         for rec in records:
-            leader = rec.leader()
+            leader = rec.leader
             assert leader is not None
             # Leader is 24 characters as per MARC standard
             assert len(str(leader)) > 0

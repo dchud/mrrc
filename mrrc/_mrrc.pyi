@@ -247,8 +247,9 @@ class Record:
         if it had been raised directly.
         """
         ...
+    @property
     def leader(self) -> Leader:
-        """Get the record's leader."""
+        """The record leader (attribute, matching pymarc's record.leader)."""
         ...
     def set_leader(self, leader: Leader) -> None: ...
     def add_field(self, field: Field) -> None:

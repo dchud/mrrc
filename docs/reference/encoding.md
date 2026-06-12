@@ -103,7 +103,7 @@ Check a record's declared encoding via the leader:
 
     for record in MARCReader("records.mrc"):
         # Check what encoding the record declares
-        leader = record.leader()
+        leader = record.leader
         if leader.character_coding == 'a':
             print("Record declares UTF-8")
         else:

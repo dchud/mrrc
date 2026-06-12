@@ -291,7 +291,7 @@ class TestFormatConversionWrapping:
         """Test that leader from marcjson_to_record records supports indexing."""
         from mrrc import marcjson_to_record
         record = marcjson_to_record(self._make_marcjson())
-        ldr = record.leader()
+        ldr = record.leader
         assert type(ldr).__name__ == 'Leader'
         assert type(ldr).__module__ == 'mrrc'
         assert ldr[9] is not None
