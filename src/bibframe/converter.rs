@@ -6,7 +6,7 @@
 use crate::record::{Field, Record};
 
 use super::config::BibframeConfig;
-use super::namespaces::{classes, properties, BF, BFLC, RDF, RDFS, RELATORS};
+use super::namespaces::{BF, BFLC, RDF, RDFS, RELATORS, classes, properties};
 use super::rdf::{RdfGraph, RdfNode};
 
 /// Converts a MARC record to a BIBFRAME RDF graph.

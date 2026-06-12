@@ -48,14 +48,12 @@ pub fn try_open_as_path(source: &Bound<'_, PyAny>) -> PyResult<Option<File>> {
     }
 
     // Try pathlib.Path via __fspath__
-    if let Ok(method) = source.getattr("__fspath__") {
-        if method.is_callable() {
-            if let Ok(path_obj) = method.call0() {
-                if let Ok(path_str) = path_obj.extract::<String>() {
-                    return open_file_path(&path_str).map(Some);
-                }
-            }
-        }
+    if let Ok(method) = source.getattr("__fspath__")
+        && method.is_callable()
+        && let Ok(path_obj) = method.call0()
+        && let Ok(path_str) = path_obj.extract::<String>()
+    {
+        return open_file_path(&path_str).map(Some);
     }
 
     Ok(None)
@@ -95,10 +93,10 @@ pub fn try_extract_bytes(source: &Bound<'_, PyAny>) -> PyResult<Option<Vec<u8>>>
 ///
 /// Returns `Ok(Some(obj))` if the source has a callable .read(), `Ok(None)` otherwise.
 pub fn try_as_python_file(source: &Bound<'_, PyAny>) -> PyResult<Option<Py<PyAny>>> {
-    if let Ok(method) = source.getattr("read") {
-        if method.is_callable() {
-            return Ok(Some(source.clone().unbind()));
-        }
+    if let Ok(method) = source.getattr("read")
+        && method.is_callable()
+    {
+        return Ok(Some(source.clone().unbind()));
     }
     Ok(None)
 }

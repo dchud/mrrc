@@ -5,7 +5,7 @@
 //! - Correct entity types used
 //! - RDF structure integrity
 
-use mrrc::bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat};
+use mrrc::bibframe::{BibframeConfig, RdfFormat, marc_to_bibframe};
 use mrrc::leader::Leader;
 use mrrc::record::{Field, Record};
 use std::collections::HashSet;

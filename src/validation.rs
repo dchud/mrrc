@@ -739,12 +739,16 @@ mod tests {
         let validator = IndicatorValidator::new();
         let meanings = validator.get_indicator_meanings("100", 1);
         assert!(!meanings.is_empty());
-        assert!(meanings
-            .iter()
-            .any(|m| m.value == '0' && m.meaning == "Forename"));
-        assert!(meanings
-            .iter()
-            .any(|m| m.value == '1' && m.meaning == "Surname"));
+        assert!(
+            meanings
+                .iter()
+                .any(|m| m.value == '0' && m.meaning == "Forename")
+        );
+        assert!(
+            meanings
+                .iter()
+                .any(|m| m.value == '1' && m.meaning == "Surname")
+        );
     }
 
     #[test]
@@ -761,11 +765,15 @@ mod tests {
         let meanings = validator.get_indicator_meanings("650", 2);
         assert!(!meanings.is_empty());
         assert_eq!(meanings.len(), 8); // 0-7 thesaurus codes
-        assert!(meanings
-            .iter()
-            .any(|m| m.value == '0' && m.meaning == "LCSH"));
-        assert!(meanings
-            .iter()
-            .any(|m| m.value == '7' && m.meaning == "Source in $2"));
+        assert!(
+            meanings
+                .iter()
+                .any(|m| m.value == '0' && m.meaning == "LCSH")
+        );
+        assert!(
+            meanings
+                .iter()
+                .any(|m| m.value == '7' && m.meaning == "Source in $2")
+        );
     }
 }

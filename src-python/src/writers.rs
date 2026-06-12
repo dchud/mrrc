@@ -80,42 +80,40 @@ impl PyMARCWriter {
 
         // Check for pathlib.Path objects by looking for __fspath__ or __str__ methods
         // and trying to create a file with the path
-        if let Ok(path_method) = source.getattr("__fspath__") {
-            if path_method.is_callable() {
-                if let Ok(path_obj) = path_method.call0() {
-                    if let Ok(path_str) = path_obj.extract::<String>() {
-                        let file = File::create(&path_str).map_err(|e| {
-                            pyo3::exceptions::PyIOError::new_err(format!(
-                                "Failed to open file '{}' for writing: {}",
-                                path_str, e
-                            ))
-                        })?;
+        if let Ok(path_method) = source.getattr("__fspath__")
+            && path_method.is_callable()
+            && let Ok(path_obj) = path_method.call0()
+            && let Ok(path_str) = path_obj.extract::<String>()
+        {
+            let file = File::create(&path_str).map_err(|e| {
+                pyo3::exceptions::PyIOError::new_err(format!(
+                    "Failed to open file '{}' for writing: {}",
+                    path_str, e
+                ))
+            })?;
 
-                        let writer = BufWriter::new(file);
-                        return Ok(PyMARCWriter {
-                            backend: Some(WriterBackend::RustFile { writer }),
-                            closed: false,
-                        });
-                    }
-                }
-            }
+            let writer = BufWriter::new(file);
+            return Ok(PyMARCWriter {
+                backend: Some(WriterBackend::RustFile { writer }),
+                closed: false,
+            });
         }
 
         // Fallback: treat as Python file-like object
         // Check if it has .write() method
-        if let Ok(write_method) = source.getattr("write") {
-            if write_method.is_callable() {
-                let file_obj = source.clone().unbind();
-                return Ok(PyMARCWriter {
-                    backend: Some(WriterBackend::PythonFile { file_obj }),
-                    closed: false,
-                });
-            }
+        if let Ok(write_method) = source.getattr("write")
+            && write_method.is_callable()
+        {
+            let file_obj = source.clone().unbind();
+            return Ok(PyMARCWriter {
+                backend: Some(WriterBackend::PythonFile { file_obj }),
+                closed: false,
+            });
         }
 
         // Not a supported type
         Err(pyo3::exceptions::PyTypeError::new_err(
-            "MARCWriter() argument must be a file path (str/Path) or file-like object with .write() method"
+            "MARCWriter() argument must be a file path (str/Path) or file-like object with .write() method",
         ))
     }
 

@@ -243,7 +243,7 @@ impl Record {
     ///     }
     /// }
     /// ```
-    pub fn fields_by_tag(&self, tag: &str) -> impl Iterator<Item = &Field> {
+    pub fn fields_by_tag(&self, tag: &str) -> impl Iterator<Item = &Field> + use<'_> {
         self.fields.get(tag).map(|v| v.iter()).into_iter().flatten()
     }
 
@@ -284,7 +284,7 @@ impl Record {
         tag: &str,
         indicator1: Option<char>,
         indicator2: Option<char>,
-    ) -> impl Iterator<Item = &Field> {
+    ) -> impl Iterator<Item = &Field> + use<'_> {
         self.fields_by_tag(tag).filter(move |field| {
             if let Some(ind1) = indicator1 {
                 if field.indicator1 != ind1 {
@@ -315,7 +315,11 @@ impl Record {
     ///     println!("Subject field: {}", field.tag);
     /// }
     /// ```
-    pub fn fields_in_range(&self, start_tag: &str, end_tag: &str) -> impl Iterator<Item = &Field> {
+    pub fn fields_in_range(
+        &self,
+        start_tag: &str,
+        end_tag: &str,
+    ) -> impl Iterator<Item = &Field> + use<'_> {
         let start = start_tag.to_string();
         let end = end_tag.to_string();
         self.fields
@@ -334,7 +338,11 @@ impl Record {
     ///     println!("Field: {}", field.tag);
     /// }
     /// ```
-    pub fn fields_with_subfield(&self, tag: &str, code: char) -> impl Iterator<Item = &Field> {
+    pub fn fields_with_subfield(
+        &self,
+        tag: &str,
+        code: char,
+    ) -> impl Iterator<Item = &Field> + use<'_> {
         self.fields_by_tag(tag)
             .filter(move |field| field.get_subfield(code).is_some())
     }
@@ -706,7 +714,7 @@ impl Record {
     ///     field.indicator2 = '0';
     /// }
     /// ```
-    pub fn fields_by_tag_mut(&mut self, tag: &str) -> impl Iterator<Item = &mut Field> {
+    pub fn fields_by_tag_mut(&mut self, tag: &str) -> impl Iterator<Item = &mut Field> + use<'_> {
         let tag_str = tag.to_string();
         self.fields
             .get_mut(tag_str.as_str())

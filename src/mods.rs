@@ -31,8 +31,8 @@
 
 use std::fmt::Write;
 
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 
 use crate::error::{MarcError, Result};
 use crate::leader::Leader;
@@ -1545,8 +1545,8 @@ fn parse_target_audience(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::record::{Field, Record};
     use crate::Leader;
+    use crate::record::{Field, Record};
 
     fn make_test_leader() -> Leader {
         Leader {

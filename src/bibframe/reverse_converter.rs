@@ -10,7 +10,7 @@ use crate::error::Result;
 use crate::leader::Leader;
 use crate::record::{Field, Record};
 
-use super::namespaces::{classes, properties, BF, RDF, RDFS, RELATORS};
+use super::namespaces::{BF, RDF, RDFS, RELATORS, classes, properties};
 use super::rdf::{RdfGraph, RdfNode};
 
 /// Converts a BIBFRAME RDF graph to a MARC record.
@@ -141,7 +141,7 @@ impl<'a> BibframeToMarcConverter<'a> {
             if let Some(props) = self.subject_index.get(work_key) {
                 for (pred, obj) in props {
                     if pred == &format!("{RDF}type") {
-                        if let RdfNode::Uri(ref type_uri) = obj {
+                        if let RdfNode::Uri(type_uri) = obj {
                             record_type = work_type_to_leader_06(type_uri);
                         }
                     }
@@ -154,7 +154,7 @@ impl<'a> BibframeToMarcConverter<'a> {
             if let Some(props) = self.subject_index.get(instance_key) {
                 for (pred, obj) in props {
                     if pred == &format!("{RDF}type") {
-                        if let RdfNode::Uri(ref type_uri) = obj {
+                        if let RdfNode::Uri(type_uri) = obj {
                             bib_level = instance_type_to_leader_07(type_uri);
                         }
                     }
@@ -209,14 +209,14 @@ impl<'a> BibframeToMarcConverter<'a> {
 
                         for (id_pred, id_obj) in id_props {
                             if id_pred == &format!("{RDF}type") {
-                                if let RdfNode::Uri(ref type_uri) = id_obj {
+                                if let RdfNode::Uri(type_uri) = id_obj {
                                     if type_uri.contains("Lccn") || type_uri.contains("Local") {
                                         is_control_id = true;
                                     }
                                 }
                             }
                             if id_pred == &format!("{RDF}value") {
-                                if let RdfNode::Literal { value: ref v, .. } = id_obj {
+                                if let RdfNode::Literal { value: v, .. } = id_obj {
                                     value = Some(v.clone());
                                 }
                             }
@@ -1123,7 +1123,7 @@ fn provision_type_to_indicator(type_uri: &str) -> char {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bibframe::{marc_to_bibframe, BibframeConfig};
+    use crate::bibframe::{BibframeConfig, marc_to_bibframe};
     use crate::leader::Leader;
 
     fn make_test_leader() -> Leader {
@@ -1165,10 +1165,12 @@ mod tests {
         assert!(result.fields.contains_key("245"));
         let titles = result.fields.get("245").unwrap();
         assert!(!titles.is_empty());
-        assert!(titles[0]
-            .subfields
-            .iter()
-            .any(|s| s.code == 'a' && s.value.contains("Test Title")));
+        assert!(
+            titles[0]
+                .subfields
+                .iter()
+                .any(|s| s.code == 'a' && s.value.contains("Test Title"))
+        );
     }
 
     #[test]
@@ -1220,10 +1222,12 @@ mod tests {
 
         assert!(result.fields.contains_key("020"));
         let isbns = result.fields.get("020").unwrap();
-        assert!(isbns[0]
-            .subfields
-            .iter()
-            .any(|s| s.value.contains("9780123456789")));
+        assert!(
+            isbns[0]
+                .subfields
+                .iter()
+                .any(|s| s.value.contains("9780123456789"))
+        );
     }
 
     #[test]
@@ -1288,10 +1292,12 @@ mod tests {
         // Should have series field
         assert!(result.fields.contains_key("830"));
         let series = result.fields.get("830").unwrap();
-        assert!(series[0]
-            .subfields
-            .iter()
-            .any(|s| s.value.contains("Computer science")));
+        assert!(
+            series[0]
+                .subfields
+                .iter()
+                .any(|s| s.value.contains("Computer science"))
+        );
     }
 
     #[test]
@@ -1312,14 +1318,18 @@ mod tests {
         // Should have linking entry
         assert!(result.fields.contains_key("780"));
         let linking = result.fields.get("780").unwrap();
-        assert!(linking[0]
-            .subfields
-            .iter()
-            .any(|s| s.code == 't' && s.value.contains("Previous Title")));
-        assert!(linking[0]
-            .subfields
-            .iter()
-            .any(|s| s.code == 'x' && s.value.contains("1234-5678")));
+        assert!(
+            linking[0]
+                .subfields
+                .iter()
+                .any(|s| s.code == 't' && s.value.contains("Previous Title"))
+        );
+        assert!(
+            linking[0]
+                .subfields
+                .iter()
+                .any(|s| s.code == 'x' && s.value.contains("1234-5678"))
+        );
     }
 
     #[test]
@@ -1340,9 +1350,11 @@ mod tests {
         // Should have series statement
         assert!(result.fields.contains_key("490"));
         let series = result.fields.get("490").unwrap();
-        assert!(series[0]
-            .subfields
-            .iter()
-            .any(|s| s.value.contains("Library science")));
+        assert!(
+            series[0]
+                .subfields
+                .iter()
+                .any(|s| s.value.contains("Library science"))
+        );
     }
 }

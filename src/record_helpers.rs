@@ -201,11 +201,7 @@ pub trait RecordHelpers: MarcRecord {
         self.get_control_field("008").and_then(|field_008| {
             if field_008.len() >= 38 {
                 let lang = &field_008[35..38];
-                if lang == "   " {
-                    None
-                } else {
-                    Some(lang)
-                }
+                if lang == "   " { None } else { Some(lang) }
             } else {
                 None
             }

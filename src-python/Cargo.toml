@@ -1,7 +1,7 @@
 [package]
 name = "mrrc-python"
 version = "0.8.2"
-edition = "2021"
+edition = "2024"
 description = "PyO3 bindings for the mrrc MARC library"
 license = "MIT"
 repository = "https://github.com/dchud/mrrc"

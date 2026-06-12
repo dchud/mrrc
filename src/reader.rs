@@ -36,7 +36,7 @@
 use crate::error::Result;
 use crate::formats::FormatReader;
 use crate::iso2709::{DataFieldParseConfig, ParseContext};
-use crate::iso2709_skeleton::{parse_iso2709_record, Iso2709Builder};
+use crate::iso2709_skeleton::{Iso2709Builder, parse_iso2709_record};
 use crate::leader::Leader;
 use crate::record::{Field, Record};
 use crate::recovery::{self, RecoveryCap, RecoveryMode, ValidationLevel};

@@ -9,7 +9,7 @@
 use crate::error::marc_error_to_py_err;
 use crate::wrappers::PyRecord;
 use mrrc::bibframe::{
-    bibframe_to_marc, marc_to_bibframe, BibframeConfig, RdfFormat, RdfGraph, RdfNode,
+    BibframeConfig, RdfFormat, RdfGraph, RdfNode, bibframe_to_marc, marc_to_bibframe,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

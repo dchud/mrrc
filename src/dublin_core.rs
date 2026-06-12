@@ -411,8 +411,8 @@ fn escape_xml(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::record::{Field, Record};
     use crate::Leader;
+    use crate::record::{Field, Record};
 
     fn make_test_leader() -> Leader {
         Leader {

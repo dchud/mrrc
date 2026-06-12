@@ -13,7 +13,7 @@ use crate::error::{MarcError, Result};
 use crate::iso2709::ParseContext;
 use crate::leader::Leader;
 use crate::record::{Field, Record};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Convert a MARC record to MARCJSON format.
 ///

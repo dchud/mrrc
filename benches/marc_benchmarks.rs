@@ -4,8 +4,8 @@
 //! This benchmark suite tests the performance of reading, writing, and processing
 //! MARC records using Criterion.rs for statistical analysis.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mrrc::{json, marcxml, MarcReader, MarcWriter, RecordHelpers};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use mrrc::{MarcReader, MarcWriter, RecordHelpers, json, marcxml};
 use std::io::Cursor;
 
 /// Load test fixtures from the test data directory.

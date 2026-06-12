@@ -5,7 +5,7 @@
 //! - Handling conversion results
 //! - Working with the result record
 
-use mrrc::bibframe::{bibframe_to_marc, marc_to_bibframe, BibframeConfig, RdfFormat};
+use mrrc::bibframe::{BibframeConfig, RdfFormat, bibframe_to_marc, marc_to_bibframe};
 use mrrc::leader::Leader;
 use mrrc::record::{Field, Record};
 

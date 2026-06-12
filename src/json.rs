@@ -23,7 +23,7 @@
 
 use crate::error::Result;
 use crate::record::{Field, Record};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Convert a MARC record to JSON.
 ///

@@ -792,7 +792,7 @@ impl MarcError {
     ///   the shape changes later. Pre-1.0, the shape may still evolve.
     #[must_use]
     pub fn to_json_value(&self) -> serde_json::Value {
-        use serde_json::{json, Map, Value};
+        use serde_json::{Map, Value, json};
         let mut m: Map<String, Value> = Map::new();
         m.insert("schema_version".into(), json!(SCHEMA_VERSION));
         m.insert("class".into(), json!(self.kind_name()));
@@ -1396,7 +1396,9 @@ impl MarcError {
             MarcError::WriterError { message, .. } => format!("writer error: {message}"),
             MarcError::FatalReaderError {
                 cap, errors_seen, ..
-            } => format!("fatal reader error: recovered-error cap exceeded ({errors_seen} errors, cap {cap})"),
+            } => format!(
+                "fatal reader error: recovered-error cap exceeded ({errors_seen} errors, cap {cap})"
+            ),
         }
     }
 

@@ -30,8 +30,8 @@
 
 use crate::error::{MarcError, Result};
 use crate::iso2709::{
-    self, is_control_field_tag, parse_4digits, parse_5digits, parse_data_field, read_leader_bytes,
-    read_record_data, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN,
+    self, DataFieldParseConfig, FIELD_TERMINATOR, LEADER_LEN, ParseContext, is_control_field_tag,
+    parse_4digits, parse_5digits, parse_data_field, read_leader_bytes, read_record_data,
 };
 use crate::leader::Leader;
 use crate::record::Field;

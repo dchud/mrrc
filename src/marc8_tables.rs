@@ -347,7 +347,7 @@ static EXTENDED_ARABIC: LazyLock<HashMap<u8, CharacterMapping>> = LazyLock::new(
     m.insert(0xB0, (0x0685, false)); // ARABIC LETTER HAH WITH THREE DOTS ABOVE
     m.insert(0xB1, (0x0686, false)); // ARABIC LETTER TCHEH
     m.insert(0xB2, (0x06BF, false)); // ARABIC LETTER TCHEH WITH DOT ABOVE
-                                     // ... (truncated for brevity, would continue with all 256 characters)
+    // ... (truncated for brevity, would continue with all 256 characters)
     m
 });
 

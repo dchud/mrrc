@@ -104,7 +104,7 @@ impl PyAuthorityMARCReader {
 
         let backend = self.backend.take().unwrap();
 
-        let result = match backend {
+        match backend {
             AuthorityReaderBackend::RustFile(mut reader) => match reader.read_record() {
                 Ok(Some(record)) => {
                     self.backend = Some(AuthorityReaderBackend::RustFile(reader));
@@ -148,9 +148,7 @@ impl PyAuthorityMARCReader {
                     },
                 }
             },
-        };
-
-        result
+        }
     }
 
     pub fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {

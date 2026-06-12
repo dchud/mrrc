@@ -11,7 +11,7 @@
 use crate::error::marc_error_to_py_err;
 use crate::wrappers::PyRecord;
 use mrrc::iso2709::ParseContext;
-use mrrc::{csv, dublin_core, json, marcjson, marcxml, mods, Record};
+use mrrc::{Record, csv, dublin_core, json, marcjson, marcxml, mods};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 
@@ -24,10 +24,10 @@ fn extract_record(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<Record> {
     }
 
     // Otherwise, try to get the _inner attribute (wrapped Record)
-    if let Ok(inner) = record.getattr("_inner") {
-        if let Ok(py_record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
-            return Ok(py_record.inner.clone());
-        }
+    if let Ok(inner) = record.getattr("_inner")
+        && let Ok(py_record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>()
+    {
+        return Ok(py_record.inner.clone());
     }
 
     Err(PyTypeError::new_err(
@@ -423,11 +423,11 @@ pub fn records_to_csv(records: &pyo3::Bound<'_, pyo3::types::PyList>) -> PyResul
         }
 
         // Try wrapped Record with _inner attribute
-        if let Ok(inner) = item.getattr("_inner") {
-            if let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
-                rust_records.push(record.inner.clone());
-                continue;
-            }
+        if let Ok(inner) = item.getattr("_inner")
+            && let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>()
+        {
+            rust_records.push(record.inner.clone());
+            continue;
         }
 
         return Err(pyo3::exceptions::PyTypeError::new_err(
@@ -470,11 +470,11 @@ pub fn records_to_csv_filtered(
         }
 
         // Try wrapped Record with _inner attribute
-        if let Ok(inner) = item.getattr("_inner") {
-            if let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>() {
-                rust_records.push(record.inner.clone());
-                continue;
-            }
+        if let Ok(inner) = item.getattr("_inner")
+            && let Ok(record) = inner.extract::<pyo3::PyRef<'_, PyRecord>>()
+        {
+            rust_records.push(record.inner.clone());
+            continue;
         }
 
         return Err(pyo3::exceptions::PyTypeError::new_err(
@@ -485,12 +485,11 @@ pub fn records_to_csv_filtered(
     // Create a closure that calls the Python filter function
     Python::attach(|py| {
         csv::records_to_csv_filtered(&rust_records, |tag| {
-            let result = filter_fn
+            filter_fn
                 .call1(py, (tag,))
                 .ok()
                 .and_then(|obj| obj.extract::<bool>(py).ok())
-                .unwrap_or(false);
-            result
+                .unwrap_or(false)
         })
         .map_err(marc_error_to_py_err)
     })
