@@ -91,6 +91,12 @@ if [ "$QUICK" = false ]; then
     cargo audit
 
     echo ""
+    echo "=== Feature gate check (no default features) ==="
+    # The bibframe feature is default-on; verify the crate still compiles
+    # with it off (targets needing it declare required-features and skip).
+    cargo check --package mrrc --no-default-features --all-targets --quiet
+
+    echo ""
     echo "=== Unused dependency check ==="
     # Fix with: cargo install cargo-machete --locked
     command -v cargo-machete &> /dev/null \

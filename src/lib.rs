@@ -79,7 +79,7 @@
 //! - [`reader`] — Reading MARC records from binary data streams
 //! - [`writer`] — Writing MARC records to binary format
 //! - [`formats`] — Format traits and ISO 2709 support
-//! - [`bibframe`] — BIBFRAME linked data conversion
+//! - [`bibframe`] — BIBFRAME linked data conversion (cargo feature `bibframe`, on by default)
 //! - [`boundary_scanner`] — Record boundary detection for parallel processing
 //! - [`leader`] — MARC record leader (24-byte header)
 //! - [`json`] — JSON serialization/deserialization
@@ -107,6 +107,7 @@ pub mod authority_queries;
 pub mod authority_reader;
 pub mod authority_record;
 pub mod authority_writer;
+#[cfg(feature = "bibframe")]
 pub mod bibframe;
 pub mod bibliographic_helpers;
 pub mod boundary_scanner;

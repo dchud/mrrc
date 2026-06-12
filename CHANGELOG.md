@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The version is now declared once, in `[workspace.package]`: both crates inherit it and
   `pyproject.toml` reads it via `dynamic = ["version"]`. Shared dependencies and
   `rust-version` are also workspace-inherited, so they cannot drift between crates.
+- BIBFRAME/RDF support is now behind the default-on `bibframe` cargo feature. Default
+  builds and the Python wheel are unchanged; `--no-default-features` drops the
+  oxrdf/oxrdfio dependency tree for MARC-only users.
 - Record parsing no longer copies every record's bytes into the error-diagnostics
   buffer: the parse buffer is shared by refcount instead, deleting a per-record
   alloc+memcpy that every read path paid so that the under-1% of records that error
