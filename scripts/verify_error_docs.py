@@ -10,7 +10,7 @@ gap the error_coverage harness can't (a new code with no manifest case).
 It reconciles three sources of truth and fails (exit 1) on any disagreement:
 
   1. `src/error.rs`            — the MarcError variants and their codes
-                                 (the `code()` match arms).
+                                 (the `metadata()` match arms).
   2. `docs/reference/error-codes.md` — the documented error codes.
   3. `tests/error_coverage.toml`     — the per-code coverage manifest.
 
@@ -41,11 +41,19 @@ SRC_DIRS = [REPO / "src", REPO / "src-python" / "src"]
 
 
 def variant_to_code() -> dict[str, str]:
-    """Parse the `MarcError::Variant { .. } => "ENNN"` arms in error.rs."""
+    """Parse the variant-to-code pairs from the `metadata()` arms in error.rs.
+
+    Each arm has the shape `MarcError::Variant { <bindings> } => ErrorMetadata
+    { code: "ENNN", ... }` with `code` as the first field of the struct
+    literal; `[^}]*` spans the binding list (which contains no braces).
+    """
     text = ERROR_RS.read_text(encoding="utf-8")
-    pairs = re.findall(r"MarcError::(\w+)\s*\{\s*\.\.\s*\}\s*=>\s*\"(E\d+)\"", text)
+    pairs = re.findall(
+        r"MarcError::(\w+)\s*\{[^}]*\}\s*=>\s*ErrorMetadata\s*\{\s*code:\s*\"(E\d+)\"",
+        text,
+    )
     if not pairs:
-        sys.exit(f"FATAL: no code() arms parsed from {ERROR_RS}")
+        sys.exit(f"FATAL: no metadata() code arms parsed from {ERROR_RS}")
     return {variant: code for variant, code in pairs}
 
 
