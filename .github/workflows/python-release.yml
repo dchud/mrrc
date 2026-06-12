@@ -105,11 +105,16 @@ jobs:
           # Compiles the extension from source — proves the sdist is the
           # working fallback for platforms outside the wheel matrix.
           pip install dist/mrrc-*.tar.gz
+          # Run from outside the repo root: python -c puts the CWD on
+          # sys.path, and the source ./mrrc/ directory (no compiled
+          # extension) would shadow the installed package.
+          cd "$RUNNER_TEMP"
           python -c "
           import mrrc
-          records = list(mrrc.MARCReader(open('tests/data/simple_book.mrc','rb').read()))
+          data = open('$GITHUB_WORKSPACE/tests/data/simple_book.mrc','rb').read()
+          records = list(mrrc.MARCReader(data))
           assert len(records) == 1 and records[0].title == 'The Great Gatsby'
-          print('sdist install OK')
+          print('sdist install OK from', mrrc.__file__)
           "
 
   validate-cross-wheels:
