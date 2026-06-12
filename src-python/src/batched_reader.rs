@@ -15,7 +15,6 @@ use crate::buffered_reader::BufferedMarcReader;
 use crate::parse_error::ParseError;
 use mrrc::RecoveryMode;
 use pyo3::prelude::*;
-use smallvec::SmallVec;
 use std::collections::VecDeque;
 
 /// State machine for batched MARC reading with GIL management
@@ -35,7 +34,7 @@ pub struct BatchedMarcReader {
 
     /// Queue of record bytes, ready for parsing
     /// Using VecDeque for O(1) pop_front() performance
-    record_queue: VecDeque<SmallVec<[u8; 4096]>>,
+    record_queue: VecDeque<Vec<u8>>,
 
     /// Cumulative capacity tracking (bytes in queue)
     queue_capacity_bytes: usize,
@@ -87,7 +86,7 @@ impl BatchedMarcReader {
             && let Some(record) = self.record_queue.pop_front()
         {
             self.queue_capacity_bytes = self.queue_capacity_bytes.saturating_sub(record.len());
-            return Ok(Some(record.to_vec()));
+            return Ok(Some(record));
         }
 
         // === STATE: CHECK_EOF_STATE ===
@@ -114,7 +113,7 @@ impl BatchedMarcReader {
         // Re-check queue (should not be empty now)
         if let Some(record) = self.record_queue.pop_front() {
             self.queue_capacity_bytes = self.queue_capacity_bytes.saturating_sub(record.len());
-            Ok(Some(record.to_vec()))
+            Ok(Some(record))
         } else {
             // Defensive: should never happen if batch was non-empty
             Ok(None)
@@ -139,7 +138,7 @@ impl BatchedMarcReader {
     /// # Returns
     /// Vec<SmallVec<[u8; 4096]>> - Records read in this batch (may be < batch_size)
     /// Empty vec indicates EOF (no more records available)
-    fn read_batch(&mut self, py: Python<'_>) -> Result<Vec<SmallVec<[u8; 4096]>>, ParseError> {
+    fn read_batch(&mut self, py: Python<'_>) -> Result<Vec<Vec<u8>>, ParseError> {
         let mut batch = Vec::with_capacity(self.batch_size);
         let mut bytes_read = 0usize;
 
@@ -153,7 +152,7 @@ impl BatchedMarcReader {
             match self.buffered_reader.read_next_record_bytes(py) {
                 Ok(Some(record_bytes)) => {
                     bytes_read = bytes_read.saturating_add(record_bytes.len());
-                    batch.push(SmallVec::from_slice(&record_bytes));
+                    batch.push(record_bytes);
                 },
                 Ok(None) => {
                     // EOF reached during batch read
@@ -193,6 +192,7 @@ impl BatchedMarcReader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use smallvec::SmallVec;
 
     #[test]
     fn test_batched_reader_queue_operations() {

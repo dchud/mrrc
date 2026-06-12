@@ -8,9 +8,8 @@
 use crate::batched_reader::BatchedMarcReader;
 use crate::batched_unified_reader::BatchedUnifiedReader;
 use crate::wrappers::PyRecord;
-use mrrc::{MarcReader, RecoveryMode, ValidationLevel};
+use mrrc::{RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
-use smallvec::SmallVec;
 
 /// Internal enum for different reader backends
 #[allow(clippy::large_enum_variant)]
@@ -206,13 +205,12 @@ impl PyMARCReader {
             match record_bytes {
                 None => Ok(None),
                 Some(bytes) => {
-                    // CRITICAL: Copy to owned SmallVec for parsing closure
-                    let bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&bytes);
                     // Stash the chunk for pymarc-compat `current_chunk`. Set
                     // unconditionally — success and failure callers both want
                     // it (success readers can compare; failure readers can
-                    // diagnose).
-                    self.last_chunk = Some(bytes_owned.to_vec());
+                    // diagnose). The one remaining per-record copy on this
+                    // path; the owned bytes move into the parse below.
+                    self.last_chunk = Some(bytes.clone());
 
                     // Step 2: Parse bytes (GIL released). Return the raw
                     // MarcError across the GIL boundary so the typed variant
@@ -223,11 +221,8 @@ impl PyMARCReader {
                     let val_level = self.validation_level;
                     let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py
                         .detach(|| {
-                            let cursor = std::io::Cursor::new(bytes_owned.to_vec());
-                            let mut parser = MarcReader::new(cursor)
-                                .with_recovery_mode(rec_mode)
-                                .with_validation_level(val_level);
-                            parser.read_record().map_err(Box::new)
+                            mrrc::parse_record_from_bytes(bytes, rec_mode, val_level)
+                                .map_err(Box::new)
                         });
                     let record =
                         parse_result.map_err(|e| crate::error::marc_error_to_py_err(*e))?;
@@ -324,14 +319,11 @@ impl PyMARCReader {
             },
         };
 
-        // CRITICAL: Copy to owned SmallVec for parsing closure
-        // The slice returned by read_next_record_bytes() is valid only during step 1.
-        // We create an owned copy that can be moved into the detach() closure.
-        let record_bytes_owned: SmallVec<[u8; 4096]> = SmallVec::from_slice(&record_bytes);
-        // Stash the chunk for pymarc-compat `current_chunk`. Set
-        // unconditionally — both the parse-succeeds and parse-fails
-        // exit paths in step 3 want this populated.
-        slf.last_chunk = Some(record_bytes_owned.to_vec());
+        // Stash the chunk for pymarc-compat `current_chunk` — the one
+        // remaining per-record copy on this path (making it lazy is
+        // tracked separately). The owned Vec from read_next_record_bytes
+        // moves into the parse below without further copies.
+        slf.last_chunk = Some(record_bytes.clone());
 
         // ===== STEP 2: Parse bytes (GIL released) =====
         // Parse the record while GIL is released to allow other threads to execute.
@@ -345,11 +337,7 @@ impl PyMARCReader {
         let rec_mode = slf.recovery_mode;
         let val_level = slf.validation_level;
         let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py.detach(|| {
-            let cursor = std::io::Cursor::new(record_bytes_owned.to_vec());
-            let mut parser = MarcReader::new(cursor)
-                .with_recovery_mode(rec_mode)
-                .with_validation_level(val_level);
-            parser.read_record().map_err(Box::new)
+            mrrc::parse_record_from_bytes(record_bytes, rec_mode, val_level).map_err(Box::new)
         });
 
         // ===== STEP 3: Convert to PyRecord (GIL re-acquired) =====

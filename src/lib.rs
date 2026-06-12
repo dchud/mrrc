@@ -174,7 +174,7 @@ pub use holdings_writer::HoldingsMarcWriter;
 pub use leader::Leader;
 pub use marc_record::MarcRecord;
 pub use producer_consumer_pipeline::{PipelineConfig, PipelineError, ProducerConsumerPipeline};
-pub use reader::MarcReader;
+pub use reader::{MarcReader, parse_record_from_bytes};
 pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
 pub use record_builder_generic::GenericRecordBuilder;
 pub use record_helpers::RecordHelpers;

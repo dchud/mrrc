@@ -223,7 +223,54 @@ where
     };
 
     ctx.begin_record();
+    let leader = parse_and_validate_leader::<B>(
+        &leader_bytes,
+        ctx,
+        cap,
+        recovery_mode,
+        validation_level,
+        errors,
+    )?;
 
+    let record_length = leader.record_length as usize;
+
+    ctx.advance(LEADER_LEN);
+
+    // Read the full record data. In non-Strict modes a short read returns
+    // a zero-padded buffer of `expected_len` plus the actual bytes_read;
+    // strict mode has already errored out via `?`. The truncated-record
+    // dispatch in `parse_record_body` is the lenient/permissive recovery
+    // point. Wrapping in Arc moves the Vec (no byte copy).
+    let (record_data, bytes_read) = read_record_data(reader, record_length, recovery_mode, ctx)?;
+    let record_data = std::sync::Arc::new(record_data);
+    let body_range = 0..record_data.len();
+    let buffer_base_offset = ctx.stream_byte_offset;
+
+    parse_record_body::<B>(
+        leader,
+        &record_data,
+        body_range,
+        buffer_base_offset,
+        bytes_read,
+        ctx,
+        cap,
+        recovery_mode,
+        validation_level,
+        errors,
+    )
+}
+
+/// Parse and validate the 24 leader bytes: structural parse, read-readiness
+/// validation, optional `StrictMarc` semantic validation (dispatched through
+/// the builder), and the per-reader record-type guard.
+fn parse_and_validate_leader<B: Iso2709Builder>(
+    leader_bytes: &[u8; LEADER_LEN],
+    ctx: &mut ParseContext,
+    cap: &mut RecoveryCap,
+    recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
+    errors: &mut Vec<MarcError>,
+) -> Result<Leader> {
     // Leader errors bypass ParseContext (Leader::from_bytes builds MarcError
     // directly via leader_msg); enrich any raised error with positional
     // context from the live ParseContext plus a byte window around the
@@ -232,13 +279,13 @@ where
     // record_byte_offset / source_name — the structured-positional-context
     // promise of the v0.8 error work.
     let leader_offset = ctx.stream_byte_offset;
-    let leader = Leader::from_bytes(&leader_bytes).map_err(|e| {
+    let leader = Leader::from_bytes(leader_bytes).map_err(|e| {
         e.with_position(ctx)
-            .with_bytes_near(&leader_bytes, leader_offset)
+            .with_bytes_near(leader_bytes, leader_offset)
     })?;
     leader.validate_for_reading().map_err(|e| {
         e.with_position(ctx)
-            .with_bytes_near(&leader_bytes, leader_offset)
+            .with_bytes_near(leader_bytes, leader_offset)
     })?;
 
     // At StrictMarc, run MARC 21 semantic leader validation: record_status,
@@ -256,7 +303,7 @@ where
     {
         let enriched = e
             .with_position(ctx)
-            .with_bytes_near(&leader_bytes, leader_offset);
+            .with_bytes_near(leader_bytes, leader_offset);
         if recovery_mode == RecoveryMode::Strict {
             return Err(enriched);
         }
@@ -265,27 +312,138 @@ where
     }
 
     B::validate_record_type(&leader, ctx)?;
+    Ok(leader)
+}
+
+/// Parse one complete ISO 2709 record (leader + body) from in-memory bytes,
+/// with no reader I/O and no per-record byte copies: the caller's buffer is
+/// shared with the parse context by refcount, and the directory/field
+/// parsers work on slices of it. `record_bytes` is the full record — the
+/// 24-byte leader followed by the body — exactly as a length-delimited
+/// reader assembles it.
+///
+/// Returns `Ok(None)` for an empty buffer (EOF parity with the reader
+/// entry point) or when the recovery cap is exhausted.
+///
+/// # Errors
+///
+/// Same error surface as [`parse_iso2709_record`]: structural and
+/// validation failures abort in `RecoveryMode::Strict` and accumulate into
+/// `errors` otherwise.
+pub fn parse_iso2709_record_from_bytes<B: Iso2709Builder>(
+    record_bytes: &std::sync::Arc<Vec<u8>>,
+    ctx: &mut ParseContext,
+    cap: &mut RecoveryCap,
+    recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
+    errors: &mut Vec<MarcError>,
+) -> Result<Option<B::Output>> {
+    if cap.is_exhausted() || record_bytes.is_empty() {
+        return Ok(None);
+    }
+
+    ctx.begin_record();
+
+    if record_bytes.len() < LEADER_LEN {
+        return Err(ctx.err_truncated_record(Some(LEADER_LEN), Some(record_bytes.len())));
+    }
+    let leader_bytes: [u8; LEADER_LEN] = record_bytes[..LEADER_LEN]
+        .try_into()
+        .expect("length checked above");
+
+    let leader = parse_and_validate_leader::<B>(
+        &leader_bytes,
+        ctx,
+        cap,
+        recovery_mode,
+        validation_level,
+        errors,
+    )?;
 
     let record_length = leader.record_length as usize;
-    let base_address = leader.data_base_address as usize;
-    let directory_size = base_address - 24;
+    let expected_data_len = record_length.saturating_sub(LEADER_LEN);
+    let buffer_base_offset = ctx.stream_byte_offset;
 
     ctx.advance(LEADER_LEN);
 
-    // Read the full record data. In non-Strict modes a short read returns
-    // a zero-padded buffer of `expected_len` plus the actual bytes_read;
-    // strict mode has already errored out via `?`. The truncated-record
-    // dispatch below is the lenient/permissive recovery point.
-    let (record_data, bytes_read) = read_record_data(reader, record_length, recovery_mode, ctx)?;
+    let body_len = record_bytes.len() - LEADER_LEN;
+    if body_len < expected_data_len {
+        // Mirror read_record_data's short-read behavior: strict aborts with
+        // E005; lenient/permissive parse a zero-padded body so downstream
+        // recovery sees the same input shape as the reader path. The pad
+        // copy happens only on this truncated-record path.
+        if recovery_mode == RecoveryMode::Strict {
+            return Err(ctx.err_truncated_record(Some(expected_data_len), Some(body_len)));
+        }
+        let mut padded = record_bytes[LEADER_LEN..].to_vec();
+        padded.resize(expected_data_len, 0);
+        let padded = std::sync::Arc::new(padded);
+        let range = 0..expected_data_len;
+        return parse_record_body::<B>(
+            leader,
+            &padded,
+            range,
+            ctx.stream_byte_offset,
+            body_len,
+            ctx,
+            cap,
+            recovery_mode,
+            validation_level,
+            errors,
+        );
+    }
+
+    // Clamp to the leader's claimed length for parity with the reader path,
+    // which reads exactly expected_data_len bytes.
+    let body_range = LEADER_LEN..LEADER_LEN + expected_data_len;
+    parse_record_body::<B>(
+        leader,
+        record_bytes,
+        body_range,
+        buffer_base_offset,
+        expected_data_len,
+        ctx,
+        cap,
+        recovery_mode,
+        validation_level,
+        errors,
+    )
+}
+
+/// Shared back half of record parsing: directory walk, field decode, and
+/// recovery dispatch, operating on `ctx_buffer[body_range]` — the record
+/// body. `ctx_buffer` may be the body alone (reader path) or the full
+/// record including its leader (slice path); `ctx_buffer_base_offset` is
+/// the absolute stream offset of `ctx_buffer[0]` so error hex dumps align
+/// either way. `bytes_read` is the count of real (non-padding) body bytes.
+#[allow(
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::cognitive_complexity
+)]
+fn parse_record_body<B: Iso2709Builder>(
+    leader: Leader,
+    ctx_buffer: &std::sync::Arc<Vec<u8>>,
+    body_range: std::ops::Range<usize>,
+    ctx_buffer_base_offset: usize,
+    bytes_read: usize,
+    ctx: &mut ParseContext,
+    cap: &mut RecoveryCap,
+    recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
+    errors: &mut Vec<MarcError>,
+) -> Result<Option<B::Output>> {
+    let record_length = leader.record_length as usize;
+    let base_address = leader.data_base_address as usize;
+    let directory_size = base_address - 24;
     let expected_data_len = record_length.saturating_sub(LEADER_LEN);
 
-    // Hand the loaded buffer to the context so `err_*` helpers raised during
+    // Hand the buffer to the context so `err_*` helpers raised during
     // directory/field parsing capture a bytes_near window for hex-dump
-    // rendering. Wrapping in Arc moves the Vec (no byte copy) and sharing
-    // with the context is a refcount bump.
-    let record_data = std::sync::Arc::new(record_data);
+    // rendering; sharing is a refcount bump, not a copy.
     let record_data_offset = ctx.stream_byte_offset;
-    ctx.set_parse_buffer(std::sync::Arc::clone(&record_data), record_data_offset);
+    ctx.set_parse_buffer(std::sync::Arc::clone(ctx_buffer), ctx_buffer_base_offset);
+    let record_data: &[u8] = &ctx_buffer[body_range];
 
     if bytes_read < expected_data_len {
         // recovery_mode is Lenient or Permissive (Strict already returned).
@@ -296,7 +454,7 @@ where
         // authority + holdings fall through to best-effort directory parsing).
         if let Some(result) = B::try_recover_truncated(
             leader.clone(),
-            &record_data,
+            record_data,
             base_address,
             recovery_mode,
             ctx,
