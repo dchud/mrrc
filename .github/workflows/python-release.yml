@@ -22,10 +22,17 @@ on:
 permissions:
   contents: read
 
+env:
+  # Same setting as the PR wheel gate and check.sh: build under the
+  # abi3 forward-compatibility flag so a CPython newer than the pinned
+  # pyo3 supports fails here the same way it would fail there.
+  PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+
 jobs:
   build-release-wheels:
     name: Build release wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-2025]
@@ -57,6 +64,7 @@ jobs:
   build-cross-linux-wheels:
     name: Build cross-compiled ${{ matrix.target }} wheel (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       matrix:
         target: [aarch64-unknown-linux-gnu, i686-unknown-linux-gnu]
@@ -84,6 +92,7 @@ jobs:
   build-sdist:
     name: Build sdist
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
@@ -102,6 +111,7 @@ jobs:
     name: Test install from sdist
     needs: build-sdist
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
@@ -135,6 +145,7 @@ jobs:
     name: Validate ${{ matrix.target }} wheel (Python ${{ matrix.python-version }})
     needs: build-cross-linux-wheels
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       matrix:
         target: [aarch64-unknown-linux-gnu, i686-unknown-linux-gnu]
@@ -175,6 +186,8 @@ jobs:
     name: Import-smoke ${{ matrix.target }} wheel (Python 3.12)
     needs: build-cross-linux-wheels
     runs-on: ubuntu-latest
+    # QEMU emulation makes the aarch64 leg slow; the budget covers it.
+    timeout-minutes: 30
     strategy:
       matrix:
         target: [aarch64-unknown-linux-gnu, i686-unknown-linux-gnu]
@@ -225,6 +238,7 @@ jobs:
     name: Test release wheels on ${{ matrix.os }}
     needs: build-release-wheels
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-2025]
@@ -252,32 +266,15 @@ jobs:
           # [test] via self-reference) so test runtime deps + type checkers
           # stay in sync with pyproject.toml as a single source of truth.
           WHEEL=$(ls dist/mrrc-*.whl | head -1)
-          uv pip install --system "${WHEEL}[dev]"
+          uv pip install --system "${WHEEL}[dev]" pytest-rerunfailures
 
       - name: Run pytest (core tests, excludes benchmarks)
-        run: |
-          pytest tests/python/ -m "not benchmark" -v
-        # Retry on macOS due to intermittent runner flakiness
-        if: runner.os != 'macOS'
-
-      - name: Run pytest with retry (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          max_attempts=3
-          attempt=1
-          while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt of $max_attempts"
-            if pytest tests/python/ -m "not benchmark" -v; then
-              echo "Tests passed on attempt $attempt"
-              exit 0
-            fi
-            echo "Attempt $attempt failed, retrying..."
-            attempt=$((attempt + 1))
-            sleep 5
-          done
-          echo "All $max_attempts attempts failed"
-          exit 1
         shell: bash
+        env:
+          # Per-test reruns absorb intermittent macOS runner flakiness
+          # with per-test signal instead of rerunning the whole suite.
+          RERUN_FLAGS: ${{ runner.os == 'macOS' && '--reruns 2 --reruns-delay 5' || '' }}
+        run: pytest tests/python/ -m "not benchmark" -v $RERUN_FLAGS
 
       - name: Run type checking
         run: |
@@ -288,6 +285,7 @@ jobs:
     name: Publish to PyPI
     needs: [test-release-wheels, validate-cross-wheels, smoke-test-cross-wheels, test-sdist]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       id-token: write
     steps:
@@ -324,6 +322,7 @@ jobs:
     needs: publish-pypi
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:

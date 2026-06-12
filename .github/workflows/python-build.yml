@@ -53,6 +53,9 @@ jobs:
 
       - uses: PyO3/maturin-action@v1
         with:
+          # Compiler cache backed by the GitHub Actions cache: wheel builds
+          # otherwise compile cold on every run.
+          sccache: "true"
           manylinux: off
           args: --release --out dist -i python3.12
 
@@ -90,7 +93,7 @@ jobs:
           # from pyproject.toml so test deps stay in sync with the package
           # and the pymarc parity oracle executes instead of skipping.
           WHEEL=$(ls dist/*.whl | head -1)
-          uv pip install --system "${WHEEL}[test,oracle]"
+          uv pip install --system "${WHEEL}[test,oracle]" pytest-rerunfailures
 
       - name: Verify the pymarc oracle is installed
         shell: bash
@@ -137,6 +140,9 @@ jobs:
 
       - uses: PyO3/maturin-action@v1
         with:
+          # Compiler cache backed by the GitHub Actions cache: wheel builds
+          # otherwise compile cold on every run.
+          sccache: "true"
           manylinux: off
           args: --release --out dist -i python${{ matrix.python-version }}
 
@@ -186,7 +192,7 @@ jobs:
           # from pyproject.toml so test deps stay in sync with the package
           # and the pymarc parity oracle executes instead of skipping.
           WHEEL=$(ls dist/*.whl | head -1)
-          uv pip install --system "${WHEEL}[test,oracle]"
+          uv pip install --system "${WHEEL}[test,oracle]" pytest-rerunfailures
 
       - name: Verify the pymarc oracle is installed
         shell: bash
@@ -197,30 +203,12 @@ jobs:
           python -c "import pymarc, importlib.metadata as m; print('pymarc', m.version('pymarc'))"
 
       - name: Run pytest (core tests, excludes benchmarks)
-        run: |
-          pytest tests/python/ -m "not benchmark" -v
-        # Retry on macOS due to intermittent runner flakiness
-        # See: mrrc-vxmp - tests pass but job occasionally fails
-        if: runner.os != 'macOS'
-
-      - name: Run pytest with retry (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          max_attempts=3
-          attempt=1
-          while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt of $max_attempts"
-            if pytest tests/python/ -m "not benchmark" -v; then
-              echo "Tests passed on attempt $attempt"
-              exit 0
-            fi
-            echo "Attempt $attempt failed, retrying..."
-            attempt=$((attempt + 1))
-            sleep 5
-          done
-          echo "All $max_attempts attempts failed"
-          exit 1
         shell: bash
+        env:
+          # Per-test reruns absorb intermittent macOS runner flakiness
+          # with per-test signal instead of rerunning the whole suite.
+          RERUN_FLAGS: ${{ runner.os == 'macOS' && '--reruns 2 --reruns-delay 5' || '' }}
+        run: pytest tests/python/ -m "not benchmark" -v $RERUN_FLAGS
 
   # Full matrix on push to main: os {ubuntu, macos, windows} x
   # python {3.10..3.14}. 15 build + 15 test = 30 jobs.
@@ -247,6 +235,9 @@ jobs:
 
       - uses: PyO3/maturin-action@v1
         with:
+          # Compiler cache backed by the GitHub Actions cache: wheel builds
+          # otherwise compile cold on every run.
+          sccache: "true"
           manylinux: off
           args: --release --out dist -i python${{ matrix.python-version }}
 
@@ -289,7 +280,7 @@ jobs:
           # from pyproject.toml so test deps stay in sync with the package
           # and the pymarc parity oracle executes instead of skipping.
           WHEEL=$(ls dist/*.whl | head -1)
-          uv pip install --system "${WHEEL}[test,oracle]"
+          uv pip install --system "${WHEEL}[test,oracle]" pytest-rerunfailures
 
       - name: Verify the pymarc oracle is installed
         shell: bash
@@ -300,27 +291,9 @@ jobs:
           python -c "import pymarc, importlib.metadata as m; print('pymarc', m.version('pymarc'))"
 
       - name: Run pytest (core tests, excludes benchmarks)
-        run: |
-          pytest tests/python/ -m "not benchmark" -v
-        # Retry on macOS due to intermittent runner flakiness
-        # See: mrrc-vxmp - tests pass but job occasionally fails
-        if: runner.os != 'macOS'
-
-      - name: Run pytest with retry (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          max_attempts=3
-          attempt=1
-          while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt of $max_attempts"
-            if pytest tests/python/ -m "not benchmark" -v; then
-              echo "Tests passed on attempt $attempt"
-              exit 0
-            fi
-            echo "Attempt $attempt failed, retrying..."
-            attempt=$((attempt + 1))
-            sleep 5
-          done
-          echo "All $max_attempts attempts failed"
-          exit 1
         shell: bash
+        env:
+          # Per-test reruns absorb intermittent macOS runner flakiness
+          # with per-test signal instead of rerunning the whole suite.
+          RERUN_FLAGS: ${{ runner.os == 'macOS' && '--reruns 2 --reruns-delay 5' || '' }}
+        run: pytest tests/python/ -m "not benchmark" -v $RERUN_FLAGS
