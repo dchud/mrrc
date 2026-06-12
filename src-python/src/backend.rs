@@ -111,35 +111,33 @@ impl ReaderBackend {
 
         // 2. Try pathlib.Path via __fspath__()
         let fspath_method = source.getattr("__fspath__");
-        if let Ok(method) = fspath_method {
-            if method.is_callable() {
-                if let Ok(path_obj) = method.call0() {
-                    if let Ok(path_str) = path_obj.extract::<String>() {
-                        return match File::open(&path_str) {
-                            Ok(file) => Ok(BackendKind::RustFile(BufReader::with_capacity(
-                                FILE_READ_BUF_CAPACITY,
-                                file,
-                            ))),
-                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                                Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
-                                    "No such file or directory: '{}'",
-                                    path_str
-                                )))
-                            },
-                            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                                Err(pyo3::exceptions::PyPermissionError::new_err(format!(
-                                    "Permission denied: '{}'",
-                                    path_str
-                                )))
-                            },
-                            Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
-                                "Failed to open file '{}': {}",
-                                path_str, e
-                            ))),
-                        };
-                    }
-                }
-            }
+        if let Ok(method) = fspath_method
+            && method.is_callable()
+            && let Ok(path_obj) = method.call0()
+            && let Ok(path_str) = path_obj.extract::<String>()
+        {
+            return match File::open(&path_str) {
+                Ok(file) => Ok(BackendKind::RustFile(BufReader::with_capacity(
+                    FILE_READ_BUF_CAPACITY,
+                    file,
+                ))),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
+                        "No such file or directory: '{}'",
+                        path_str
+                    )))
+                },
+                Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                    Err(pyo3::exceptions::PyPermissionError::new_err(format!(
+                        "Permission denied: '{}'",
+                        path_str
+                    )))
+                },
+                Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
+                    "Failed to open file '{}': {}",
+                    path_str, e
+                ))),
+            };
         }
 
         // 3. Try bytes/bytearray
@@ -149,11 +147,11 @@ impl ReaderBackend {
 
         // 4. Try file-like object with .read() method
         let read_method = source.getattr("read");
-        if let Ok(method) = read_method {
-            if method.is_callable() {
-                // Store as PythonFile backend
-                return Ok(BackendKind::PythonFile(source.clone().unbind()));
-            }
+        if let Ok(method) = read_method
+            && method.is_callable()
+        {
+            // Store as PythonFile backend
+            return Ok(BackendKind::PythonFile(source.clone().unbind()));
         }
 
         // 5. Unknown type - fail fast with descriptive error
@@ -219,7 +217,7 @@ impl ReaderBackend {
                 return Err(ParseError::io_error(format!(
                     "Failed to read record leader: {}",
                     e
-                )))
+                )));
             },
         }
 

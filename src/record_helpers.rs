@@ -201,11 +201,7 @@ pub trait RecordHelpers: MarcRecord {
         self.get_control_field("008").and_then(|field_008| {
             if field_008.len() >= 38 {
                 let lang = &field_008[35..38];
-                if lang == "   " {
-                    None
-                } else {
-                    Some(lang)
-                }
+                if lang == "   " { None } else { Some(lang) }
             } else {
                 None
             }
@@ -302,10 +298,10 @@ pub trait RecordHelpers: MarcRecord {
     #[must_use]
     fn publication_year(&self) -> Option<u32> {
         // Try from field 260 first
-        if let Some(info) = self.publication_info() {
-            if let Some(year) = info.publication_year() {
-                return Some(year);
-            }
+        if let Some(info) = self.publication_info()
+            && let Some(year) = info.publication_year()
+        {
+            return Some(year);
         }
 
         // Fall back to field 008

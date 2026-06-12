@@ -6,7 +6,7 @@
 //!
 //! Expected speedup on 4-core system: ~3.8-4.0x
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use mrrc::MarcReader;
 use rayon::prelude::*;
 use std::io::Cursor;

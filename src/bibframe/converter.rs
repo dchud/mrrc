@@ -6,7 +6,7 @@
 use crate::record::{Field, Record};
 
 use super::config::BibframeConfig;
-use super::namespaces::{classes, properties, BF, BFLC, RDF, RDFS, RELATORS};
+use super::namespaces::{BF, BFLC, RDF, RDFS, RELATORS, classes, properties};
 use super::rdf::{RdfGraph, RdfNode};
 
 /// Converts a MARC record to a BIBFRAME RDF graph.
@@ -940,14 +940,14 @@ impl<'a> MarcToBibframeConverter<'a> {
                     RdfNode::bf_class("Identifier"),
                 );
                 // Add source as separate property
-                if field.indicator1 == '7' {
-                    if let Some(source) = field.subfields.iter().find(|s| s.code == '2') {
-                        self.graph.add(
-                            id_node.clone(),
-                            format!("{BF}source"),
-                            RdfNode::literal(&source.value),
-                        );
-                    }
+                if field.indicator1 == '7'
+                    && let Some(source) = field.subfields.iter().find(|s| s.code == '2')
+                {
+                    self.graph.add(
+                        id_node.clone(),
+                        format!("{BF}source"),
+                        RdfNode::literal(&source.value),
+                    );
                 }
             },
         }
@@ -1679,15 +1679,14 @@ impl<'a> MarcToBibframeConverter<'a> {
             .control_fields
             .get("008")
             .and_then(|v| v.first())
+            && field_008.len() >= 6
         {
-            if field_008.len() >= 6 {
-                let date_entered = &field_008[0..6];
-                self.graph.add(
-                    admin_node.clone(),
-                    format!("{BF}{}", properties::CREATION_DATE),
-                    RdfNode::literal(date_entered),
-                );
-            }
+            let date_entered = &field_008[0..6];
+            self.graph.add(
+                admin_node.clone(),
+                format!("{BF}{}", properties::CREATION_DATE),
+                RdfNode::literal(date_entered),
+            );
         }
 
         // Link to instance

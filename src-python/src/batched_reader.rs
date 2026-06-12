@@ -83,11 +83,11 @@ impl BatchedMarcReader {
         py: Python<'_>,
     ) -> Result<Option<Vec<u8>>, ParseError> {
         // === STATE: CHECK_QUEUE_NON_EMPTY ===
-        if !self.record_queue.is_empty() {
-            if let Some(record) = self.record_queue.pop_front() {
-                self.queue_capacity_bytes = self.queue_capacity_bytes.saturating_sub(record.len());
-                return Ok(Some(record.to_vec()));
-            }
+        if !self.record_queue.is_empty()
+            && let Some(record) = self.record_queue.pop_front()
+        {
+            self.queue_capacity_bytes = self.queue_capacity_bytes.saturating_sub(record.len());
+            return Ok(Some(record.to_vec()));
         }
 
         // === STATE: CHECK_EOF_STATE ===

@@ -168,18 +168,18 @@ fn working_with_holdings_records() {
     println!("Holdings Record Type: {}", record.leader.record_type);
 
     // Access location and call number (852 field)
-    if let Some(fields) = record.get_fields("852") {
-        if let Some(field) = fields.first() {
-            println!("\nLocation Information:");
-            if let Some(inst) = field.get_subfield('a') {
-                println!("  Institution: {inst}");
-            }
-            if let Some(location) = field.get_subfield('b') {
-                println!("  Location: {location}");
-            }
-            if let Some(call_num) = field.get_subfield('c') {
-                println!("  Call number: {call_num}");
-            }
+    if let Some(fields) = record.get_fields("852")
+        && let Some(field) = fields.first()
+    {
+        println!("\nLocation Information:");
+        if let Some(inst) = field.get_subfield('a') {
+            println!("  Institution: {inst}");
+        }
+        if let Some(location) = field.get_subfield('b') {
+            println!("  Location: {location}");
+        }
+        if let Some(call_num) = field.get_subfield('c') {
+            println!("  Call number: {call_num}");
         }
     }
 
@@ -200,11 +200,10 @@ fn working_with_holdings_records() {
     }
 
     // Access textual notes (866 field)
-    if let Some(fields) = record.get_fields("866") {
-        if let Some(field) = fields.first() {
-            if let Some(note) = field.get_subfield('a') {
-                println!("\nHoldings Note: {note}");
-            }
-        }
+    if let Some(fields) = record.get_fields("866")
+        && let Some(field) = fields.first()
+        && let Some(note) = field.get_subfield('a')
+    {
+        println!("\nHoldings Note: {note}");
     }
 }

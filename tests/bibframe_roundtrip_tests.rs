@@ -3,7 +3,7 @@
 //! These tests verify that MARC → BIBFRAME → MARC conversion preserves
 //! essential bibliographic data with acceptable data loss documentation.
 
-use mrrc::bibframe::{bibframe_to_marc, marc_to_bibframe, BibframeConfig};
+use mrrc::bibframe::{BibframeConfig, bibframe_to_marc, marc_to_bibframe};
 use mrrc::leader::Leader;
 use mrrc::record::{Field, Record};
 

@@ -72,7 +72,7 @@ impl<W: Write> AuthorityMarcWriter<W> {
                 _ => {
                     return Err(MarcError::invalid_field_msg(
                         "Invalid field structure".to_string(),
-                    ))
+                    ));
                 },
             }
 

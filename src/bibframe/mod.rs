@@ -64,8 +64,8 @@ mod reverse_converter;
 
 pub use config::{BibframeConfig, RdfFormat};
 pub use namespaces::{
-    bflc, classes, properties, BF, BFLC, CARRIER_TYPES, CONTENT_TYPES, COUNTRIES, LANGUAGES,
-    LC_NAMES, LC_SUBJECTS, MADSRDF, MEDIA_TYPES, RDF, RDFS, RELATORS, XSD,
+    BF, BFLC, CARRIER_TYPES, CONTENT_TYPES, COUNTRIES, LANGUAGES, LC_NAMES, LC_SUBJECTS, MADSRDF,
+    MEDIA_TYPES, RDF, RDFS, RELATORS, XSD, bflc, classes, properties,
 };
 pub use rdf::{RdfGraph, RdfNode, RdfTriple};
 

@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
-use mrrc::bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat};
+use mrrc::bibframe::{BibframeConfig, RdfFormat, marc_to_bibframe};
 use mrrc::leader::Leader;
 use mrrc::record::{Field, Record};
 
@@ -105,24 +105,24 @@ fn extract_structural_facts(rdf_xml: &str) -> HashSet<String> {
 fn extract_literal_values(rdf_xml: &str, facts: &mut HashSet<String>) {
     for line in rdf_xml.lines() {
         // Extract mainTitle values (both bf:mainTitle and <mainTitle>)
-        if line.contains("mainTitle") {
-            if let Some(value) = extract_element_value(line) {
-                facts.insert(format!("title:{}", normalize_value(&value)));
-            }
+        if line.contains("mainTitle")
+            && let Some(value) = extract_element_value(line)
+        {
+            facts.insert(format!("title:{}", normalize_value(&value)));
         }
 
         // Extract rdfs:label values for agents/subjects
-        if line.contains("rdfs:label") || line.contains("<label") {
-            if let Some(value) = extract_element_value(line) {
-                facts.insert(format!("label:{}", normalize_value(&value)));
-            }
+        if (line.contains("rdfs:label") || line.contains("<label"))
+            && let Some(value) = extract_element_value(line)
+        {
+            facts.insert(format!("label:{}", normalize_value(&value)));
         }
 
         // Extract rdf:value for identifiers
-        if line.contains("rdf:value") || line.contains("<value") {
-            if let Some(value) = extract_element_value(line) {
-                facts.insert(format!("identifier:{}", normalize_value(&value)));
-            }
+        if (line.contains("rdf:value") || line.contains("<value"))
+            && let Some(value) = extract_element_value(line)
+        {
+            facts.insert(format!("identifier:{}", normalize_value(&value)));
         }
     }
 }

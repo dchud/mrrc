@@ -22,8 +22,8 @@
 //! invocation. Only `*.pending` files are gitignored (see `.gitignore`).
 
 use mrrc::{
-    marcjson, marcxml, Field, Leader, MarcError, MarcReader, MarcWriter, Record, RecoveryMode,
-    Subfield, ValidationLevel,
+    Field, Leader, MarcError, MarcReader, MarcWriter, Record, RecoveryMode, Subfield,
+    ValidationLevel, marcjson, marcxml,
 };
 use proptest::prelude::*;
 use smallvec::SmallVec;

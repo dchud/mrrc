@@ -112,10 +112,9 @@ pub fn find_unicode_in_marc8(unicode_char: u32) -> Option<(CharacterSetId, u32)>
     // Try ANSEL Extended Latin (but skip combining marks for encoding)
     if let Some((byte, is_combining)) =
         find_in_charset(CharacterSetId::AnselExtendedLatin, unicode_char)
+        && !is_combining
     {
-        if !is_combining {
-            return Some((CharacterSetId::AnselExtendedLatin, byte));
-        }
+        return Some((CharacterSetId::AnselExtendedLatin, byte));
     }
 
     // Try single-byte character sets in order
@@ -347,7 +346,7 @@ static EXTENDED_ARABIC: LazyLock<HashMap<u8, CharacterMapping>> = LazyLock::new(
     m.insert(0xB0, (0x0685, false)); // ARABIC LETTER HAH WITH THREE DOTS ABOVE
     m.insert(0xB1, (0x0686, false)); // ARABIC LETTER TCHEH
     m.insert(0xB2, (0x06BF, false)); // ARABIC LETTER TCHEH WITH DOT ABOVE
-                                     // ... (truncated for brevity, would continue with all 256 characters)
+    // ... (truncated for brevity, would continue with all 256 characters)
     m
 });
 

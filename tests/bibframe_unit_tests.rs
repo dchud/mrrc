@@ -3,7 +3,7 @@
 //! These tests verify individual conversion mappings and indicator handling
 //! without requiring full baseline comparison.
 
-use mrrc::bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat};
+use mrrc::bibframe::{BibframeConfig, RdfFormat, marc_to_bibframe};
 use mrrc::leader::Leader;
 use mrrc::record::{Field, Record};
 

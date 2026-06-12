@@ -159,24 +159,24 @@ impl FieldQuery {
     #[must_use]
     pub fn matches(&self, field: &Field) -> bool {
         // Check tag
-        if let Some(ref tag) = self.tag {
-            if field.tag != *tag {
-                return false;
-            }
+        if let Some(ref tag) = self.tag
+            && field.tag != *tag
+        {
+            return false;
         }
 
         // Check first indicator
-        if let Some(ind1) = self.indicator1 {
-            if field.indicator1 != ind1 {
-                return false;
-            }
+        if let Some(ind1) = self.indicator1
+            && field.indicator1 != ind1
+        {
+            return false;
         }
 
         // Check second indicator
-        if let Some(ind2) = self.indicator2 {
-            if field.indicator2 != ind2 {
-                return false;
-            }
+        if let Some(ind2) = self.indicator2
+            && field.indicator2 != ind2
+        {
+            return false;
         }
 
         // Check required subfields
@@ -221,16 +221,16 @@ impl TagRangeQuery {
             return false;
         }
 
-        if let Some(ind1) = self.indicator1 {
-            if field.indicator1 != ind1 {
-                return false;
-            }
+        if let Some(ind1) = self.indicator1
+            && field.indicator1 != ind1
+        {
+            return false;
         }
 
-        if let Some(ind2) = self.indicator2 {
-            if field.indicator2 != ind2 {
-                return false;
-            }
+        if let Some(ind2) = self.indicator2
+            && field.indicator2 != ind2
+        {
+            return false;
         }
 
         for &required_code in &self.required_subfields {

@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Migrated both crates to Rust edition 2024 and raised the MSRV from 1.87 to 1.88
+  (let-chains require 1.88). The workspace now uses resolver v3, so dependency
+  resolution respects `rust-version` instead of breaking the MSRV build on upgrades.
 - Releases now publish a source distribution and macOS universal2 wheels, so Intel Macs
   and platforms outside the wheel matrix can install mrrc (previously "no matching
   distribution"). PyPI metadata completed: real author, PEP 639 license expression,

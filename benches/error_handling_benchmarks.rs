@@ -31,7 +31,7 @@
 //! profiling. Codspeed exercises the same scenarios in CI for general
 //! drift awareness.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use mrrc::{MarcReader, RecoveryMode};
 use std::io::Cursor;
 

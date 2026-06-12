@@ -3,7 +3,7 @@
 //! These tests verify conversion of complete bibliographic records with
 //! multiple field types and format variations (books, serials, music, maps, etc.)
 
-use mrrc::bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat};
+use mrrc::bibframe::{BibframeConfig, RdfFormat, marc_to_bibframe};
 use mrrc::leader::Leader;
 use mrrc::record::{Field, Record};
 

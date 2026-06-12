@@ -31,7 +31,7 @@
 use crate::authority_record::AuthorityRecord;
 use crate::error::Result;
 use crate::iso2709::{DataFieldParseConfig, ParseContext};
-use crate::iso2709_skeleton::{parse_iso2709_record, Iso2709Builder};
+use crate::iso2709_skeleton::{Iso2709Builder, parse_iso2709_record};
 use crate::leader::Leader;
 use crate::record::Field;
 use crate::recovery::{RecoveryCap, RecoveryMode, ValidationLevel};

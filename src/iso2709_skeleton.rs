@@ -30,8 +30,8 @@
 
 use crate::error::{MarcError, Result};
 use crate::iso2709::{
-    self, is_control_field_tag, parse_4digits, parse_5digits, parse_data_field, read_leader_bytes,
-    read_record_data, DataFieldParseConfig, ParseContext, FIELD_TERMINATOR, LEADER_LEN,
+    self, DataFieldParseConfig, FIELD_TERMINATOR, LEADER_LEN, ParseContext, is_control_field_tag,
+    parse_4digits, parse_5digits, parse_data_field, read_leader_bytes, read_record_data,
 };
 use crate::leader::Leader;
 use crate::record::Field;
@@ -251,17 +251,17 @@ where
     // structural leader errors. In lenient/permissive the violation is
     // recorded against `errors` + `cap` and parsing continues with the
     // (semantically dubious but structurally parseable) leader.
-    if validation_level == ValidationLevel::StrictMarc {
-        if let Err(e) = B::validate_leader_strict_marc(&leader) {
-            let enriched = e
-                .with_position(ctx)
-                .with_bytes_near(&leader_bytes, leader_offset);
-            if recovery_mode == RecoveryMode::Strict {
-                return Err(enriched);
-            }
-            errors.push(enriched);
-            cap.note(ctx)?;
+    if validation_level == ValidationLevel::StrictMarc
+        && let Err(e) = B::validate_leader_strict_marc(&leader)
+    {
+        let enriched = e
+            .with_position(ctx)
+            .with_bytes_near(&leader_bytes, leader_offset);
+        if recovery_mode == RecoveryMode::Strict {
+            return Err(enriched);
         }
+        errors.push(enriched);
+        cap.note(ctx)?;
     }
 
     B::validate_record_type(&leader, ctx)?;

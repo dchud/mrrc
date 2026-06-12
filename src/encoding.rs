@@ -12,7 +12,7 @@
 //! support for MARC-8 escape sequences and character set switching.
 
 use crate::error::{MarcError, Result};
-use crate::marc8_tables::{get_charset_table, CharacterSetId};
+use crate::marc8_tables::{CharacterSetId, get_charset_table};
 
 /// Character encoding for MARC records.
 ///

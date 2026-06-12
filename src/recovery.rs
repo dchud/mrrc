@@ -225,15 +225,16 @@ pub fn try_recover_record(
             // to salvage) or points before the data area (the field
             // header is malformed beyond what we can recover from).
             let available_end = std::cmp::min(end_position, partial_data.len());
-            if start_position >= data_start && start_position < available_end {
-                if let Ok(field) = try_parse_field(
+            if start_position >= data_start
+                && start_position < available_end
+                && let Ok(field) = try_parse_field(
                     &partial_data[start_position..available_end],
                     &tag,
                     SUBFIELD_DELIMITER,
                     FIELD_TERMINATOR,
-                ) {
-                    record.add_field(field);
-                }
+                )
+            {
+                record.add_field(field);
             }
             continue;
         }

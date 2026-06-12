@@ -1,11 +1,11 @@
 [workspace]
 members = [".", "src-python"]
-resolver = "2"
+resolver = "3"
 
 [package]
 name = "mrrc"
 version = "0.8.2"
-edition = "2021"
+edition = "2024"
 authors = ["Daniel Chudnov"]
 description = "A Rust library for reading, writing, and manipulating MARC bibliographic records in ISO 2709 binary format"
 license = "MIT"
@@ -13,7 +13,7 @@ repository = "https://github.com/dchud/mrrc"
 homepage = "https://github.com/dchud/mrrc"
 documentation = "https://docs.rs/mrrc"
 readme = "README.md"
-rust-version = "1.87"
+rust-version = "1.88"
 keywords = ["marc", "bibliographic", "library", "metadata"]
 categories = ["encoding", "parser-implementations"]
 

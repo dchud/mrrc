@@ -31,8 +31,8 @@
 
 use std::fmt::Write;
 
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 
 use crate::error::{MarcError, Result};
 use crate::leader::Leader;
@@ -1440,10 +1440,10 @@ fn parse_record_info(
                         if !text.is_empty() {
                             record.add_control_field("001".to_string(), text);
                         }
-                        if let Some(src) = source {
-                            if !src.is_empty() {
-                                record.add_control_field("003".to_string(), src);
-                            }
+                        if let Some(src) = source
+                            && !src.is_empty()
+                        {
+                            record.add_control_field("003".to_string(), src);
                         }
                     },
                     b"recordContentSource" => {
@@ -1545,8 +1545,8 @@ fn parse_target_audience(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::record::{Field, Record};
     use crate::Leader;
+    use crate::record::{Field, Record};
 
     fn make_test_leader() -> Leader {
         Leader {

@@ -5,7 +5,7 @@
 mod common;
 
 use common::make_leader;
-use mrrc::{define_field_accessors, Field};
+use mrrc::{Field, define_field_accessors};
 
 // Example record type for testing
 #[derive(Debug)]

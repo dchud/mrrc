@@ -792,7 +792,7 @@ impl MarcError {
     ///   the shape changes later. Pre-1.0, the shape may still evolve.
     #[must_use]
     pub fn to_json_value(&self) -> serde_json::Value {
-        use serde_json::{json, Map, Value};
+        use serde_json::{Map, Value, json};
         let mut m: Map<String, Value> = Map::new();
         m.insert("schema_version".into(), json!(SCHEMA_VERSION));
         m.insert("class".into(), json!(self.kind_name()));
@@ -1396,7 +1396,9 @@ impl MarcError {
             MarcError::WriterError { message, .. } => format!("writer error: {message}"),
             MarcError::FatalReaderError {
                 cap, errors_seen, ..
-            } => format!("fatal reader error: recovered-error cap exceeded ({errors_seen} errors, cap {cap})"),
+            } => format!(
+                "fatal reader error: recovered-error cap exceeded ({errors_seen} errors, cap {cap})"
+            ),
         }
     }
 
@@ -1717,19 +1719,20 @@ pub fn render_hex_dump(window: &BytesNear, byte_offset: Option<usize>) -> String
         }
         out.push('|');
         // Caret under the offending byte, when it falls in this row.
-        if let Some(abs) = byte_offset {
-            if abs >= row_start && abs < row_start + chunk.len() {
-                let col = abs - row_start;
-                // Prefix: 4 spaces + "0x####:  " = 4 + 9 = 13 chars
-                //   + 3 chars per byte for `col` bytes
-                //   + extra space after 8 bytes
-                let caret_col = 13 + col * 3 + usize::from(col >= 8);
-                out.push('\n');
-                for _ in 0..caret_col {
-                    out.push(' ');
-                }
-                out.push_str("^^ offending byte");
+        if let Some(abs) = byte_offset
+            && abs >= row_start
+            && abs < row_start + chunk.len()
+        {
+            let col = abs - row_start;
+            // Prefix: 4 spaces + "0x####:  " = 4 + 9 = 13 chars
+            //   + 3 chars per byte for `col` bytes
+            //   + extra space after 8 bytes
+            let caret_col = 13 + col * 3 + usize::from(col >= 8);
+            out.push('\n');
+            for _ in 0..caret_col {
+                out.push(' ');
             }
+            out.push_str("^^ offending byte");
         }
     }
     out

@@ -8,10 +8,10 @@
 // Rust `Display` output as its message, so an error never gets dropped.
 
 use mrrc::{BytesNear, MarcError};
+use pyo3::PyErr;
 use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
-use pyo3::PyErr;
 
 /// Map a Rust [`MarcError`] to a Python exception.
 pub fn marc_error_to_py_err(err: MarcError) -> PyErr {

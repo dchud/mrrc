@@ -12,7 +12,7 @@
 use crate::boundary_scanner::RecordBoundaryScanner;
 use crate::rayon_parser_pool::parse_batch_parallel;
 use crate::record::Record;
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, bounded};
 use std::fs::File;
 use std::io::Read;
 use std::thread;
