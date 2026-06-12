@@ -91,6 +91,13 @@ if [ "$QUICK" = false ]; then
     cargo audit
 
     echo ""
+    echo "=== Unused dependency check ==="
+    # Fix with: cargo install cargo-machete --locked
+    command -v cargo-machete &> /dev/null \
+        || { echo "ERROR: cargo-machete missing — run 'cargo install cargo-machete --locked'"; exit 1; }
+    cargo machete
+
+    echo ""
     if [ "$RELEASE" = true ]; then
         echo "=== Maturin Python extension build (--release) ==="
         # Release-mode codegen (inlining, optimizations) matches the wheels
