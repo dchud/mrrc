@@ -8,6 +8,9 @@ on:
   # Allow manual trigger for on-demand testing
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
