@@ -88,3 +88,31 @@ path = "fuzz_targets/decode_marc8.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "parse_authority"
+path = "fuzz_targets/parse_authority.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_holdings"
+path = "fuzz_targets/parse_holdings.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_bibframe"
+path = "fuzz_targets/parse_bibframe.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_lenient"
+path = "fuzz_targets/parse_lenient.rs"
+test = false
+doc = false
+bench = false

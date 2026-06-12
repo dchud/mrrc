@@ -20,6 +20,10 @@ playbook for investigating CI findings.
 | `parse_marcxml` | MARCXML reader | Active |
 | `parse_mods` | MODS XML reader | Active |
 | `parse_json` / `parse_marcjson` | JSON readers | Active |
+| `parse_authority` | `AuthorityMarcReader::read_record` over ISO 2709 authority records | Active |
+| `parse_holdings` | `HoldingsMarcReader::read_record` over ISO 2709 holdings records | Active |
+| `parse_bibframe` | RDF parsing (oxrdfio) plus BIBFRAME-to-MARC reverse conversion | Active |
+| `parse_lenient` | Full ISO 2709 reader stream in `RecoveryMode::Lenient` | Active |
 
 `parse_record` is the first target and the highest-value one — any bytes
 passing through mrrc eventually hit its code paths. The other targets
@@ -70,6 +74,28 @@ this catches that the other targets do not: per-mode divergence in the
 parser/recovery boundary — a bug where one mode silently accepts what
 another rejects would not show up as a panic in any single mode but
 surfaces here as a cross-mode disagreement.
+
+`parse_authority` and `parse_holdings` drive the type-specific readers.
+Both share ISO 2709 framing with `parse_record` but install their own
+record builders and leader/06 type checks, and their fields land in
+type-specific record structures rather than the bibliographic one —
+that divergent builder code is what these targets reach and
+`parse_record` does not.
+
+`parse_bibframe` covers the BIBFRAME read path: RDF parsing via oxrdfio
+(the largest external-parser dependency surface in the read stack)
+followed by the BIBFRAME-to-MARC reverse conversion when the bytes
+parse as a graph. The first input byte selects the RDF concrete syntax
+(RDF/XML, JSON-LD, Turtle, or N-Triples); the rest is fed to the
+parser as-is.
+
+`parse_lenient` drains a whole stream through the reader in
+`RecoveryMode::Lenient`. `parse_record` runs the same reader in its
+default strict mode (stopping at the first malformed record) and
+`recovery_mode_consistency` reads only the first record per mode, so
+this is the only target exercising the salvage path across a stream:
+per-record error accumulation, skip-ahead to the next record boundary,
+and the error-cap bookkeeping.
 
 ## Installing cargo-fuzz
 

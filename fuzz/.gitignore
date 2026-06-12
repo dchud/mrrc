@@ -35,3 +35,14 @@ corpus/*/*
 !corpus/parse_marcxml/simple_record
 !corpus/parse_mods/simple_monograph
 !corpus/decode_marc8/eacc_multibyte
+!corpus/parse_authority/simple_authority
+!corpus/parse_holdings/simple_holdings
+!corpus/parse_bibframe/simple_book_rdfxml
+!corpus/parse_bibframe/simple_book_jsonld
+!corpus/parse_bibframe/simple_book_turtle
+!corpus/parse_bibframe/simple_book_ntriples
+!corpus/parse_lenient/simple_book
+!corpus/parse_lenient/music_score
+!corpus/parse_lenient/simple_authority
+!corpus/parse_lenient/with_control_fields
+!corpus/parse_lenient/multi_records
