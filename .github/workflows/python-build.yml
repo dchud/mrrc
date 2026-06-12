@@ -116,7 +116,8 @@ jobs:
         run: |
           # The parity tests skip silently when pymarc is missing; fail
           # the job here instead so oracle coverage cannot quietly vanish.
-          python -c "import pymarc; print('pymarc', pymarc.__version__)"
+          # pymarc has no __version__ attribute; read the dist metadata.
+          python -c "import pymarc, importlib.metadata as m; print('pymarc', m.version('pymarc'))"
 
       - name: Run pytest (core tests, excludes benchmarks)
         run: |
@@ -218,7 +219,8 @@ jobs:
         run: |
           # The parity tests skip silently when pymarc is missing; fail
           # the job here instead so oracle coverage cannot quietly vanish.
-          python -c "import pymarc; print('pymarc', pymarc.__version__)"
+          # pymarc has no __version__ attribute; read the dist metadata.
+          python -c "import pymarc, importlib.metadata as m; print('pymarc', m.version('pymarc'))"
 
       - name: Run pytest (core tests, excludes benchmarks)
         run: |
