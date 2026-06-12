@@ -175,6 +175,7 @@ harness = false
 [[bench]]
 name = "format_benchmarks"
 harness = false
+required-features = ["bibframe"]
 
 # Release profile for a performance-marketed PyO3 extension: LTO and a
 # single codegen unit make cross-crate inlining deterministic (no more
