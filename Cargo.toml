@@ -137,8 +137,18 @@ harness = false
 name = "rayon_file_io_profiling"
 harness = false
 
+# Release profile for a performance-marketed PyO3 extension: LTO and a
+# single codegen unit make cross-crate inlining deterministic (no more
+# codegen-unit-partitioning lottery in instruction-count benchmarks) and
+# faster; strip debuginfo from shipped wheels.
 [profile.release]
 opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
 
+# Inherits release (lto, codegen-units) so CodSpeed measures the same
+# codegen the wheels ship; keep debuginfo for profiling work.
 [profile.bench]
 debug = true
+strip = "none"
