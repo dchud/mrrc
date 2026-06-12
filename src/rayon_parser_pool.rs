@@ -149,28 +149,113 @@ pub fn parse_batch_parallel_limited(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::leader::Leader;
+    use crate::record::Field;
+    use crate::writer::MarcWriter;
 
     // Skip rayon tests under Miri: crossbeam-epoch 0.9.18 has a known stacked borrows
     // violation (crossbeam-rs/crossbeam#1181). Re-enable when crossbeam-epoch 0.10 ships.
     // Tracking: https://github.com/dchud/mrrc/issues/48
 
+    /// Build a valid bibliographic record with the given 001 control number
+    /// and a 245 title field.
+    fn build_test_record(control_number: &str) -> Record {
+        let leader = Leader {
+            record_length: 0,
+            record_status: 'n',
+            record_type: 'a',
+            bibliographic_level: 'm',
+            control_record_type: ' ',
+            character_coding: 'a',
+            indicator_count: 2,
+            subfield_code_count: 2,
+            data_base_address: 0,
+            encoding_level: ' ',
+            cataloging_form: ' ',
+            multipart_level: ' ',
+            reserved: "4500".to_string(),
+        };
+        let mut record = Record::new(leader);
+        record.add_control_field("001".to_string(), control_number.to_string());
+        let field = Field::builder("245".to_string(), '1', '0')
+            .subfield_str('a', "Title")
+            .build();
+        record.add_field(field);
+        record
+    }
+
+    /// Serialize `record` to ISO 2709 bytes.
+    fn emit_binary(record: &Record) -> Vec<u8> {
+        let mut buffer = Vec::new();
+        {
+            let mut writer = MarcWriter::new(&mut buffer);
+            writer.write_record(record).expect("write should succeed");
+        }
+        buffer
+    }
+
+    /// Concatenate the records into one buffer and return it together with
+    /// the (offset, length) boundary of each record.
+    fn build_stream(records: &[Record]) -> (Vec<u8>, Vec<(usize, usize)>) {
+        let mut buffer = Vec::new();
+        let mut boundaries = Vec::new();
+        for record in records {
+            let bytes = emit_binary(record);
+            boundaries.push((buffer.len(), bytes.len()));
+            buffer.extend_from_slice(&bytes);
+        }
+        (buffer, boundaries)
+    }
+
     #[test]
     #[cfg_attr(miri, ignore)]
     fn test_parse_batch_parallel_single_record() {
-        // Create a minimal valid MARC record (leader + terminator)
-        let mut record_data = vec![0u8; 24]; // Leader is 24 bytes
-        record_data[0] = b'0';
-        record_data[1] = b'0';
-        record_data[5] = b'a'; // Status
-        record_data[6] = b'c'; // Type
-        record_data.push(0x1D); // Record terminator
+        let record = build_test_record("rec0001");
+        let bytes = emit_binary(&record);
+        let boundaries = vec![(0, bytes.len())];
 
-        let boundaries = vec![(0, record_data.len())];
-        let result = parse_batch_parallel(&boundaries, &record_data);
+        let records = parse_batch_parallel(&boundaries, &bytes).expect("parse should succeed");
 
-        // Expect Ok with 1 record (even if parsing fails, the error handling is correct)
-        // This validates parallel parsing infrastructure works
-        assert!(result.is_ok() || result.is_err()); // Just verify it runs
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].get_control_field("001"), Some("rec0001"));
+        let fields = records[0].get_fields("245").expect("245 field present");
+        assert_eq!(fields[0].get_subfield('a'), Some("Title"));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_parse_batch_parallel_multiple_records_preserve_order() {
+        let originals: Vec<Record> = (0..5)
+            .map(|i| build_test_record(&format!("rec{i:04}")))
+            .collect();
+        let (buffer, boundaries) = build_stream(&originals);
+
+        let records = parse_batch_parallel(&boundaries, &buffer).expect("parse should succeed");
+
+        assert_eq!(records.len(), 5);
+        for (i, record) in records.iter().enumerate() {
+            assert_eq!(
+                record.get_control_field("001"),
+                Some(format!("rec{i:04}").as_str()),
+                "record {i} out of order or corrupted"
+            );
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_parse_batch_parallel_malformed_record_propagates_error() {
+        let originals = vec![build_test_record("rec0000"), build_test_record("rec0001")];
+        let (mut buffer, boundaries) = build_stream(&originals);
+        // Corrupt the second record's directory: its first entry's 4-byte
+        // length field starts 27 bytes into the record.
+        let second_start = boundaries[1].0;
+        for byte in &mut buffer[second_start + 27..second_start + 31] {
+            *byte = b'X';
+        }
+
+        let result = parse_batch_parallel(&boundaries, &buffer);
+        assert!(result.is_err(), "corrupted record should fail the batch");
     }
 
     #[test]
@@ -199,17 +284,20 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore)]
     fn test_parse_batch_parallel_limited() {
-        let mut record_data = vec![];
-        // Add multiple dummy record boundaries
-        for i in 0..5u8 {
-            record_data.push(i);
-            record_data.push(0x1D);
-        }
+        let originals: Vec<Record> = (0..5)
+            .map(|i| build_test_record(&format!("rec{i:04}")))
+            .collect();
+        let (buffer, boundaries) = build_stream(&originals);
 
-        let boundaries: Vec<_> = (0..5).map(|i| (i * 2, 2)).collect();
+        let records =
+            parse_batch_parallel_limited(&boundaries, &buffer, 2).expect("parse should succeed");
 
-        let result = parse_batch_parallel_limited(&boundaries, &record_data, 2);
-        // Should only attempt to parse 2 records
-        assert!(result.is_ok() || result.is_err());
+        assert_eq!(
+            records.len(),
+            2,
+            "limit of 2 should yield exactly 2 records"
+        );
+        assert_eq!(records[0].get_control_field("001"), Some("rec0000"));
+        assert_eq!(records[1].get_control_field("001"), Some("rec0001"));
     }
 }
