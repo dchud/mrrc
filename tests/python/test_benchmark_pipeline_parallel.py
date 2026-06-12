@@ -14,8 +14,10 @@ performance. It uses:
 Expected performance: 2.0x speedup (2 threads), 3.74x (4 threads)
 """
 
-import pytest
 from concurrent.futures import ThreadPoolExecutor
+
+import pytest
+
 from mrrc import ProducerConsumerPipeline
 
 
@@ -30,7 +32,7 @@ class TestProducerConsumerPipelineBasic:
         def read_pipeline():
             pipeline = ProducerConsumerPipeline.from_file(fixture_path)
             count = 0
-            for record in pipeline:
+            for _record in pipeline:
                 count += 1
             return count
 
@@ -46,7 +48,7 @@ class TestProducerConsumerPipelineBasic:
             total = 0
             for _ in range(4):
                 pipeline = ProducerConsumerPipeline.from_file(fixture_path)
-                for record in pipeline:
+                for _record in pipeline:
                     total += 1
             return total
 
@@ -67,7 +69,7 @@ class TestProducerConsumerPipelineBasic:
             def read_pipeline(_):
                 pipeline = ProducerConsumerPipeline.from_file(fixture_path)
                 count = 0
-                for record in pipeline:
+                for _record in pipeline:
                     count += 1
                 return count
 
@@ -93,7 +95,7 @@ class TestProducerConsumerPipelineBasic:
             def read_pipeline(_):
                 pipeline = ProducerConsumerPipeline.from_file(fixture_path)
                 count = 0
-                for record in pipeline:
+                for _record in pipeline:
                     count += 1
                 return count
 
@@ -166,7 +168,7 @@ class TestProducerConsumerPipelineMultiFile:
             total = 0
             for _ in range(4):
                 pipeline = ProducerConsumerPipeline.from_file(fixture_path)
-                for record in pipeline:
+                for _record in pipeline:
                     total += 1
             return total
 
@@ -189,7 +191,7 @@ class TestProducerConsumerPipelineMultiFile:
             def process_file(_):
                 pipeline = ProducerConsumerPipeline.from_file(fixture_path)
                 count = 0
-                for record in pipeline:
+                for _record in pipeline:
                     count += 1
                 return count
 
@@ -213,7 +215,7 @@ class TestProducerConsumerPipelineMultiFile:
             def process_file(_):
                 pipeline = ProducerConsumerPipeline.from_file(fixture_path)
                 count = 0
-                for record in pipeline:
+                for _record in pipeline:
                     count += 1
                 return count
 

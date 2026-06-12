@@ -2,9 +2,10 @@
 Pytest configuration and fixtures for Python wrapper benchmarks.
 """
 
-import pytest
-from pathlib import Path
 import io
+from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture(scope="session")
@@ -62,7 +63,7 @@ def fixture_small(fixture_1k):
         small_records.append(record)
         if i >= 9:  # 10 records
             break
-    
+
     # Serialize back to bytes
     from mrrc import MARCWriter
     output = io.BytesIO()
@@ -77,14 +78,14 @@ def fixture_small(fixture_1k):
 def fixture_217(fixture_1k):
     """Create a fixture with exactly 217 records (tests partial batch at EOF)."""
     from mrrc import MARCReader, MARCWriter
-    
+
     reader = MARCReader(io.BytesIO(fixture_1k))
     records = []
     for i, record in enumerate(reader):
         records.append(record)
         if i >= 216:  # 217 records (0-216 inclusive)
             break
-    
+
     output = io.BytesIO()
     writer = MARCWriter(output)
     for record in records:
@@ -97,14 +98,14 @@ def fixture_217(fixture_1k):
 def fixture_500(fixture_1k):
      """Create a fixture with exactly 500 records."""
      from mrrc import MARCReader, MARCWriter
-     
+
      reader = MARCReader(io.BytesIO(fixture_1k))
      records = []
      for i, record in enumerate(reader):
          records.append(record)
          if i >= 499:  # 500 records
              break
-     
+
      output = io.BytesIO()
      writer = MARCWriter(output)
      for record in records:
@@ -118,14 +119,14 @@ def fixture_5k(fixture_1k, fixture_10k):
      """Create a fixture with 5k records (halfway between 1k and 10k)."""
      # Use first 5 copies of 1k fixture
      from mrrc import MARCReader, MARCWriter
-     
+
      reader = MARCReader(io.BytesIO(fixture_10k))
      records = []
      for i, record in enumerate(reader):
          records.append(record)
          if i >= 4999:  # 5000 records
              break
-     
+
      output = io.BytesIO()
      writer = MARCWriter(output)
      for record in records:

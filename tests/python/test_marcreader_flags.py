@@ -6,9 +6,10 @@ Verifies pymarc-compatible constructor kwargs and mrrc-native recovery_mode.
 
 import io
 import warnings
-import pytest
-import mrrc
 
+import pytest
+
+import mrrc
 
 # ============================================================================
 # Helpers
@@ -122,7 +123,7 @@ class TestPermissive:
         record = next(reader)
         assert record is not None
         # Second record is malformed — should raise
-        with pytest.raises(Exception):
+        with pytest.raises(mrrc.exceptions.MrrcException):
             next(reader)
 
     def test_permissive_true_yields_none_for_bad_record(self):

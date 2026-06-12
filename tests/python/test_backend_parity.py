@@ -12,7 +12,9 @@ import json
 import os
 import threading
 from pathlib import Path
+
 import pytest
+
 import mrrc
 
 
@@ -48,11 +50,15 @@ class TestParityRustFileVsPythonFile:
             records_pythonfile = self.read_all_records(f)
 
         # Verify same number of records
-        assert len(records_rustfile) == len(records_pythonfile), \
-            f"Record count mismatch: RustFile={len(records_rustfile)}, PythonFile={len(records_pythonfile)}"
+        assert len(records_rustfile) == len(records_pythonfile), (
+            f"Record count mismatch: RustFile={len(records_rustfile)}, "
+            f"PythonFile={len(records_pythonfile)}"
+        )
 
         # Verify each record is identical
-        for i, (rec_rust, rec_py) in enumerate(zip(records_rustfile, records_pythonfile)):
+        for i, (rec_rust, rec_py) in enumerate(
+            zip(records_rustfile, records_pythonfile, strict=False)
+        ):
             # Compare marcjson for content parity
             rust_json = self._record_to_comparable(rec_rust)
             py_json = self._record_to_comparable(rec_py)
@@ -70,7 +76,9 @@ class TestParityRustFileVsPythonFile:
             records_pythonfile = self.read_all_records(f)
 
         assert len(records_rustfile) == len(records_pythonfile)
-        for i, (rec_rust, rec_py) in enumerate(zip(records_rustfile, records_pythonfile)):
+        for i, (rec_rust, rec_py) in enumerate(
+            zip(records_rustfile, records_pythonfile, strict=False)
+        ):
             rust_json = self._record_to_comparable(rec_rust)
             py_json = self._record_to_comparable(rec_py)
             assert rust_json == py_json, f"Record {i} mismatch"
@@ -87,7 +95,9 @@ class TestParityRustFileVsPythonFile:
             records_pythonfile = self.read_all_records(f)
 
         assert len(records_rustfile) == len(records_pythonfile)
-        for i, (rec_rust, rec_py) in enumerate(zip(records_rustfile, records_pythonfile)):
+        for i, (rec_rust, rec_py) in enumerate(
+            zip(records_rustfile, records_pythonfile, strict=False)
+        ):
             rust_json = self._record_to_comparable(rec_rust)
             py_json = self._record_to_comparable(rec_py)
             assert rust_json == py_json, f"Record {i} mismatch"
@@ -128,7 +138,9 @@ class TestParityCursorBackendVsRustFile:
         records_rustfile = self.read_all_records(test_file)
 
         assert len(records_cursor) == len(records_rustfile)
-        for i, (rec_cursor, rec_rust) in enumerate(zip(records_cursor, records_rustfile)):
+        for i, (rec_cursor, rec_rust) in enumerate(
+            zip(records_cursor, records_rustfile, strict=False)
+        ):
             cursor_json = self._record_to_comparable(rec_cursor)
             rust_json = self._record_to_comparable(rec_rust)
             assert cursor_json == rust_json, \
@@ -148,7 +160,9 @@ class TestParityCursorBackendVsRustFile:
         records_rustfile = self.read_all_records(test_file)
 
         assert len(records_cursor) == len(records_rustfile)
-        for i, (rec_cursor, rec_rust) in enumerate(zip(records_cursor, records_rustfile)):
+        for i, (rec_cursor, rec_rust) in enumerate(
+            zip(records_cursor, records_rustfile, strict=False)
+        ):
             cursor_json = self._record_to_comparable(rec_cursor)
             rust_json = self._record_to_comparable(rec_rust)
             assert cursor_json == rust_json, f"Record {i} mismatch"
@@ -169,7 +183,9 @@ class TestParityCursorBackendVsRustFile:
         records_rustfile = self.read_all_records(test_file)
 
         assert len(records_bytesio) == len(records_rustfile)
-        for i, (rec_bio, rec_rust) in enumerate(zip(records_bytesio, records_rustfile)):
+        for i, (rec_bio, rec_rust) in enumerate(
+            zip(records_bytesio, records_rustfile, strict=False)
+        ):
             bio_json = self._record_to_comparable(rec_bio)
             rust_json = self._record_to_comparable(rec_rust)
             assert bio_json == rust_json, f"Record {i} mismatch"

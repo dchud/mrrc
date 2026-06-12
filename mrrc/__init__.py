@@ -7,55 +7,83 @@ reading, writing, and manipulation of MARC bibliographic records.
 The Python wrapper aims for API compatibility with pymarc.
 """
 
+import contextlib
+from typing import Any, ClassVar, Optional, Union
+
 from . import _mrrc
 from ._mrrc import (
     AuthorityMARCReader,
     AuthorityRecord,
-    Field as _Field,
-    HoldingsMARCReader,
-    HoldingsRecord,
-    Leader as _Leader,
-    MARCReader as _MARCReader,
-    MARCWriter as _MARCWriter,
-    Record as _Record,
-    RecordBoundaryScanner,
-    ProducerConsumerPipeline,
-    Subfield,
-    parse_batch_parallel,
-    parse_batch_parallel_limited,
-    record_to_json,
-    json_to_record as _json_to_record,
-    record_to_xml,
-    xml_to_record as _xml_to_record,
-    xml_to_records as _xml_to_records,
-    record_to_marcjson,
-    marcjson_to_record as _marcjson_to_record,
-    record_to_dublin_core,
-    record_to_dublin_core_xml,
-    record_to_mods,
-    mods_to_record as _mods_to_record,
-    mods_collection_to_records as _mods_collection_to_records,
-    dublin_core_to_xml,
-    record_to_csv,
-    records_to_csv,
-    records_to_csv_filtered,
-    # Query DSL classes
-    FieldQuery,
-    TagRangeQuery,
-    SubfieldPatternQuery,
-    SubfieldValueQuery,
     # BIBFRAME conversion support (LOC linked data format)
     BibframeConfig,
+    # Query DSL classes
+    FieldQuery,
+    HoldingsMARCReader,
+    HoldingsRecord,
+    ProducerConsumerPipeline,
     RdfGraph,
-    marc_to_bibframe as _marc_to_bibframe,
+    RecordBoundaryScanner,
+    Subfield,
+    SubfieldPatternQuery,
+    SubfieldValueQuery,
+    TagRangeQuery,
+    dublin_core_to_xml,
+    parse_batch_parallel,
+    parse_batch_parallel_limited,
+    record_to_csv,
+    record_to_dublin_core,
+    record_to_dublin_core_xml,
+    record_to_json,
+    record_to_marcjson,
+    record_to_mods,
+    record_to_xml,
+    records_to_csv,
+    records_to_csv_filtered,
+)
+from ._mrrc import (
+    Field as _Field,
+)
+from ._mrrc import (
+    Leader as _Leader,
+)
+from ._mrrc import (
+    MARCReader as _MARCReader,
+)
+from ._mrrc import (
+    MARCWriter as _MARCWriter,
+)
+from ._mrrc import (
+    Record as _Record,
+)
+from ._mrrc import (
     bibframe_to_marc as _bibframe_to_marc,
 )
-from typing import Optional, List, Union, Any, Tuple
+from ._mrrc import (
+    json_to_record as _json_to_record,
+)
+from ._mrrc import (
+    marc_to_bibframe as _marc_to_bibframe,
+)
+from ._mrrc import (
+    marcjson_to_record as _marcjson_to_record,
+)
+from ._mrrc import (
+    mods_collection_to_records as _mods_collection_to_records,
+)
+from ._mrrc import (
+    mods_to_record as _mods_to_record,
+)
+from ._mrrc import (
+    xml_to_record as _xml_to_record,
+)
+from ._mrrc import (
+    xml_to_records as _xml_to_records,
+)
 
 # Exception hierarchy — re-exported from mrrc.exceptions so the public API
 # (`mrrc.InvalidIndicator`, `mrrc.RecordLeaderInvalid`, etc.) is unchanged.
 # See mrrc/exceptions.py for the full hierarchy and per-class behavior.
-from .exceptions import (  # noqa: F401, E402
+from .exceptions import (  # noqa: F401
     BadSubfieldCode,
     BadSubfieldCodeWarning,
     BaseAddressInvalid,
@@ -98,7 +126,7 @@ class StaleFieldError(MrrcException):
     """
 
 
-def _wrap_field(rust_field, parent: 'Optional[Record]' = None, occurrence: int = 0) -> 'Field':
+def _wrap_field(rust_field, parent: 'Record | None' = None, occurrence: int = 0) -> 'Field':
     """Wrap a Rust _Field in a Python Field wrapper.
 
     With ``parent``, the wrapper is a live handle: ``occurrence`` is the
@@ -151,12 +179,12 @@ MARC_XML_SCHEMA = 'http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd'
 
 class Indicators:
     """Tuple-like wrapper for field indicators (pymarc compatibility)."""
-    
+
     def __init__(self, ind1: str, ind2: str):
         """Create indicators tuple."""
         self.ind1 = ind1
         self.ind2 = ind2
-    
+
     def __getitem__(self, index: int) -> str:
         """Get indicator by index (0 or 1)."""
         if index == 0:
@@ -165,7 +193,7 @@ class Indicators:
             return self.ind2
         else:
             raise IndexError("Indicator index must be 0 or 1")
-    
+
     def __setitem__(self, index: int, value: str) -> None:
         """Set indicator by index (0 or 1)."""
         if index == 0:
@@ -174,7 +202,7 @@ class Indicators:
             self.ind2 = value
         else:
             raise IndexError("Indicator index must be 0 or 1")
-    
+
     def __eq__(self, other: Any) -> bool:
         """Compare indicators."""
         if isinstance(other, Indicators):
@@ -182,15 +210,15 @@ class Indicators:
         elif isinstance(other, (tuple, list)) and len(other) == 2:
             return bool(self.ind1 == other[0] and self.ind2 == other[1])
         return False
-    
+
     def __repr__(self) -> str:
         """String representation."""
         return f"Indicators('{self.ind1}', '{self.ind2}')"
-    
+
     def __hash__(self) -> int:
         """Hash based on both indicators."""
         return hash((self.ind1, self.ind2))
-    
+
     def __iter__(self):
         """Allow unpacking like a tuple."""
         return iter([self.ind1, self.ind2])
@@ -204,7 +232,16 @@ class Field:
     Data fields use indicators and subfields as before.
     """
 
-    def __init__(self, tag: str, indicator1: str = ' ', indicator2: str = ' ', *, subfields: Optional[List[Subfield]] = None, indicators: Optional[List[str]] = None, data: Optional[str] = None):
+    def __init__(
+        self,
+        tag: str,
+        indicator1: str = ' ',
+        indicator2: str = ' ',
+        *,
+        subfields: list[Subfield] | None = None,
+        indicators: list[str] | None = None,
+        data: str | None = None,
+    ):
         """Create a new Field.
 
         Args:
@@ -216,14 +253,16 @@ class Field:
             data: For control fields, the data string value.
         """
         self._data = data
-        self._parent: Optional['Record'] = None
+        self._parent: Record | None = None
         self._occurrence = 0
         self._generation = 0
         if data is not None:
             # Control field: create a minimal _inner for tag access only
             self._inner = _Field(tag, ' ', ' ')
         else:
-            self._inner = _Field(tag, indicator1, indicator2, subfields=subfields, indicators=indicators)
+            self._inner = _Field(
+                tag, indicator1, indicator2, subfields=subfields, indicators=indicators
+            )
 
     def _refresh(self) -> None:
         """Re-sync a live handle from its record; no-op when detached.
@@ -282,12 +321,12 @@ class Field:
         if self._parent is not None:
             self._refresh()
         return getattr(self._inner, name)
-    
-    def __getitem__(self, code: str) -> Optional[str]:
+
+    def __getitem__(self, code: str) -> str | None:
         """Get first subfield value by code (pymarc compatibility).
-        
+
         Returns None if the subfield code doesn't exist, matching pymarc behavior.
-        
+
         Example:
             ```python
             field['a']  # Get first 'a' subfield value
@@ -319,7 +358,7 @@ class Field:
             self._inner.add_subfield(code, value)
             self._writeback()
 
-    def get(self, code: str, default: Optional[str] = None) -> Optional[str]:
+    def get(self, code: str, default: str | None = None) -> str | None:
         """Get first subfield value by code or return default."""
         self._refresh()
         try:
@@ -338,7 +377,7 @@ class Field:
             return False
 
     @property
-    def data(self) -> Optional[str]:
+    def data(self) -> str | None:
         """Control field data value (pymarc compatibility).
 
         Returns the data string for control fields, None for data fields.
@@ -366,7 +405,9 @@ class Field:
         return ' '.join(sf.value for sf in self._inner.subfields())
 
     def format_field(self) -> str:
-        """Return human-readable text without indicators or subfield codes (pymarc compatibility)."""
+        """Return human-readable text without indicators or subfield codes
+        (pymarc compatibility).
+        """
         if self.is_control_field():
             return self._data or ''
         return ' '.join(sf.value for sf in self.subfields())
@@ -402,7 +443,7 @@ class Field:
             f"{self._inner.indicator2} {len(self._inner.subfields())} subfields>"
         )
 
-    def get_subfields(self, *codes: str) -> List[str]:
+    def get_subfields(self, *codes: str) -> list[str]:
         """Get all subfield values for given codes (pymarc compatibility).
 
         Example:
@@ -413,13 +454,11 @@ class Field:
         self._refresh()
         result = []
         for code in codes:
-            try:
+            with contextlib.suppress(Exception):
                 result.extend(self._inner.subfields_by_code(code))
-            except Exception:
-                pass
         return result
 
-    def delete_subfield(self, code: str) -> Optional[str]:
+    def delete_subfield(self, code: str) -> str | None:
         """Delete first subfield with given code and return its value.
 
         Matches pymarc's ``Field.delete_subfield()`` behavior: removes the
@@ -444,8 +483,8 @@ class Field:
         except Exception:
             pass
         return result
-    
-    def add_subfield(self, code: str, value: str, pos: Optional[int] = None) -> None:
+
+    def add_subfield(self, code: str, value: str, pos: int | None = None) -> None:
         """Add a subfield, optionally at a specific position (pymarc compatibility)."""
         self._refresh()
         if pos is None:
@@ -462,12 +501,12 @@ class Field:
                 self._inner.add_subfield(sf.code, sf.value)
         self._writeback()
 
-    def subfields(self) -> List[Any]:
+    def subfields(self) -> list[Any]:
         """Get all subfields."""
         self._refresh()
         return self._inner.subfields()
 
-    def subfields_by_code(self, code: str) -> List[str]:
+    def subfields_by_code(self, code: str) -> list[str]:
         """Get subfield values by code."""
         self._refresh()
         return self._inner.subfields_by_code(code)
@@ -502,11 +541,11 @@ class Field:
         self._refresh()
         self._inner.indicator2 = value
         self._writeback()
-    
+
     @property
     def indicators(self) -> 'Indicators':
         """Get indicators as tuple-like Indicators object (pymarc compatibility).
-        
+
         Example:
             ```python
             field.indicators[0]      # First indicator
@@ -515,9 +554,9 @@ class Field:
             ```
         """
         return Indicators(self.indicator1, self.indicator2)
-    
+
     @indicators.setter
-    def indicators(self, value: Union['Indicators', Tuple[str, str], List[str]]) -> None:
+    def indicators(self, value: Union['Indicators', tuple[str, str], list[str]]) -> None:
         """Set indicators from Indicators object or tuple/list (pymarc compatibility)."""
         if isinstance(value, Indicators):
             self.indicator1 = value.ind1
@@ -527,13 +566,13 @@ class Field:
             self.indicator2 = value[1]
         else:
             raise ValueError("indicators must be Indicators object or [ind1, ind2] tuple/list")
-    
+
     def is_subject_field(self) -> bool:
         """Check if this is a subject field (6xx)."""
         tag = self.tag
         return tag.startswith('6') and len(tag) >= 2
 
-    def linkage_occurrence_num(self) -> Optional[str]:
+    def linkage_occurrence_num(self) -> str | None:
         """Extract the occurrence number from subfield $6 linkage (pymarc compatibility)."""
         if self.is_control_field():
             return None
@@ -559,7 +598,7 @@ class Field:
                 self.indicator1 == other.indicator1 and
                 self.indicator2 == other.indicator2 and
                 self.subfields() == other.subfields())
-    
+
     def as_marc(self) -> bytes:
         """Serialize field to ISO 2709 binary format (pymarc compatibility)."""
         if self.is_control_field():
@@ -599,21 +638,21 @@ class ControlField(Field):
 
 class Leader:
      """Enhanced Leader wrapper with pymarc-compatible API.
-     
+
      Provides both property-based access and MARC 21 reference information for leader positions.
      """
-     
+
      # MARC 21 Reference: Position 5 - Record Status
-     RECORD_STATUS_VALUES = {
+     RECORD_STATUS_VALUES: ClassVar[dict[str, str]] = {
          'a': 'Increase in encoding level',
          'c': 'Corrected or revised',
          'd': 'Deleted',
          'n': 'New',
          'p': 'Increase in encoding level from prepublication',
      }
-     
+
      # MARC 21 Reference: Position 6 - Type of record
-     RECORD_TYPE_VALUES = {
+     RECORD_TYPE_VALUES: ClassVar[dict[str, str]] = {
          'a': 'Language material',
          'b': 'Notated music',
          'c': 'Notated music',
@@ -631,9 +670,9 @@ class Leader:
          'r': 'Three-dimensional artifact or naturally occurring object',
          't': 'Manuscript language material',
      }
-     
+
      # MARC 21 Reference: Position 7 - Bibliographic level
-     BIBLIOGRAPHIC_LEVEL_VALUES = {
+     BIBLIOGRAPHIC_LEVEL_VALUES: ClassVar[dict[str, str]] = {
          'a': 'Monographic component part',
          'b': 'Serial component part',
          'c': 'Collection',
@@ -642,9 +681,9 @@ class Leader:
          'm': 'Monograph',
          's': 'Serial',
      }
-     
+
      # MARC 21 Reference: Position 17 - Encoding level
-     ENCODING_LEVEL_VALUES = {
+     ENCODING_LEVEL_VALUES: ClassVar[dict[str, str]] = {
          ' ': 'Full level',
          '1': 'Full level, material not examined',
          '2': 'Less-than-full level, material not examined',
@@ -656,9 +695,9 @@ class Leader:
          'u': 'Unknown',
          'z': 'Not applicable',
      }
-     
+
      # MARC 21 Reference: Position 18 - Descriptive cataloging form (Cataloging form)
-     CATALOGING_FORM_VALUES = {
+     CATALOGING_FORM_VALUES: ClassVar[dict[str, str]] = {
          ' ': 'Non-ISBD',
          'a': 'AACR 2',
          'c': 'ISBD punctuation omitted',
@@ -666,24 +705,24 @@ class Leader:
          'n': 'Non-ISBD punctuation omitted',
          'u': 'Unknown',
      }
-     
+
      @classmethod
-     def get_valid_values(cls, position: int) -> Optional[dict]:
+     def get_valid_values(cls, position: int) -> dict | None:
          """Get dictionary of valid values for a leader position.
-         
+
          MARC 21 positions with defined valid values:
          - 5: Record status (RECORD_STATUS_VALUES)
          - 6: Type of record (RECORD_TYPE_VALUES)
          - 7: Bibliographic level (BIBLIOGRAPHIC_LEVEL_VALUES)
          - 17: Encoding level (ENCODING_LEVEL_VALUES)
          - 18: Cataloging form (CATALOGING_FORM_VALUES)
-         
+
          Args:
              position: Leader position (0-23)
-             
+
          Returns:
              Dictionary mapping values to descriptions, or None if position has no defined values
-             
+
          Example:
              ```pycon
              >>> Leader.get_valid_values(5)
@@ -700,18 +739,18 @@ class Leader:
              18: cls.CATALOGING_FORM_VALUES,
          }
          return position_map.get(position)
-     
+
      @classmethod
      def is_valid_value(cls, position: int, value: str) -> bool:
          """Check if a value is valid for a leader position.
-         
+
          Args:
              position: Leader position (0-23)
              value: Single character value to validate
-             
+
          Returns:
              True if value is valid for this position, False otherwise
-             
+
          Example:
              ```pycon
              >>> Leader.is_valid_value(5, 'a')  # Record status
@@ -724,18 +763,18 @@ class Leader:
          if valid_values is None:
              return True  # Position without defined values accepts any single char
          return value in valid_values
-     
+
      @classmethod
-     def get_value_description(cls, position: int, value: str) -> Optional[str]:
+     def get_value_description(cls, position: int, value: str) -> str | None:
          """Get description of a leader value.
-         
+
          Args:
              position: Leader position (0-23)
              value: Single character value
-             
+
          Returns:
              Description string if value is defined, None otherwise
-             
+
          Example:
              ```pycon
              >>> Leader.get_value_description(5, 'a')
@@ -748,8 +787,8 @@ class Leader:
          if valid_values is None:
              return None
          return valid_values.get(value)
-     
-     def __init__(self, leader: Optional[str] = None):
+
+     def __init__(self, leader: str | None = None):
          """Create a new Leader, optionally from a 24-character string.
 
          Example:
@@ -761,13 +800,13 @@ class Leader:
          if leader is not None:
              self._update_leader_from_string(leader)
 
-     def __new__(cls, leader: Optional[str] = None):
+     def __new__(cls, leader: str | None = None):
          """Create instance - actually returns a Rust Leader with aliases."""
          instance = object.__new__(cls)
          instance._rust_leader = _Leader()
          instance._parent_record = None
          return instance
-     
+
      def __getattr__(self, name: str) -> Any:
          """Delegate attribute access, handling aliases."""
          # Aliases for pymarc compatibility
@@ -777,7 +816,7 @@ class Leader:
              return self._rust_leader.multipart_level
          # Delegate everything else
          return getattr(self._rust_leader, name)
-     
+
      def __setattr__(self, name: str, value: Any) -> None:
          """Delegate attribute setting, handling aliases."""
          if name in ('_rust_leader', '_parent_record'):
@@ -797,10 +836,10 @@ class Leader:
              # Mark parent record as having modified leader
              if hasattr(self, '_parent_record') and self._parent_record is not None:
                  self._parent_record._leader_modified = True
-     
-     def __getitem__(self, index: Union[int, slice]) -> Union[str, Optional[str]]:
+
+     def __getitem__(self, index: int | slice) -> str | str | None:
          """Get leader character(s) by position (pymarc compatibility).
-         
+
          Examples:
              ```python
              leader[5]       # Get record status character
@@ -810,7 +849,7 @@ class Leader:
          """
          # Get the leader as a 24-character string
          leader_str = self._get_leader_as_string()
-         
+
          if isinstance(index, slice):
              # Slice access: leader[0:5]
              start = index.start or 0
@@ -823,10 +862,10 @@ class Leader:
              if index < 0 or index >= len(leader_str):
                  raise IndexError("Leader position out of range")
              return leader_str[index]
-     
+
      def __setitem__(self, index: int, value: str) -> None:
          """Set leader character by position (pymarc compatibility).
-         
+
          Example:
              ```python
              leader[5] = 'a'  # Set record status
@@ -836,19 +875,19 @@ class Leader:
              raise TypeError("Leader position must be an integer")
          if not isinstance(value, str) or len(value) != 1:
              raise ValueError("Leader value must be a single character string")
-         
+
          # Get current leader as string
          leader_str = self._get_leader_as_string()
-         
+
          if index < 0 or index >= len(leader_str):
              raise IndexError("Leader position out of range")
-         
+
          # Replace character at position
          new_leader_str = leader_str[:index] + value + leader_str[index+1:]
-         
+
          # Update the leader based on the position
          self._update_leader_from_string(new_leader_str)
-     
+
      def _get_leader_as_string(self) -> str:
          """Get the leader as a 24-character MARC21 leader string."""
          # Build leader string from properties
@@ -866,14 +905,14 @@ class Leader:
          leader.append(self._rust_leader.cataloging_form)
          leader.append(self._rust_leader.multipart_level)
          leader.append(self._rust_leader.reserved)
-         
+
          return ''.join(leader)
-     
+
      def _update_leader_from_string(self, leader_str: str) -> None:
          """Update leader properties from a 24-character string."""
          if len(leader_str) != 24:
              raise ValueError(f"Leader string must be exactly 24 characters, got {len(leader_str)}")
-         
+
          # Parse MARC21 leader format (positions as per standard)
          self._rust_leader.record_length = int(leader_str[0:5])
          self._rust_leader.record_status = leader_str[5]
@@ -888,11 +927,11 @@ class Leader:
          self._rust_leader.cataloging_form = leader_str[18]
          self._rust_leader.multipart_level = leader_str[19]
          self._rust_leader.reserved = leader_str[20:24]
-         
+
          # Mark parent record as having modified leader
          if hasattr(self, '_parent_record') and self._parent_record is not None:
              self._parent_record._leader_modified = True
-     
+
      def __str__(self) -> str:
          """The 24-character MARC 21 leader string (pymarc-compatible)."""
          return self._get_leader_as_string()
@@ -920,8 +959,8 @@ class Leader:
 
 class Record:
     """Enhanced Record wrapper with pymarc-compatible API."""
-    
-    def __init__(self, leader: Optional[Leader] = None, *, fields: Optional[List[Field]] = None):
+
+    def __init__(self, leader: Leader | None = None, *, fields: list[Field] | None = None):
         """Create a new Record.
 
         Args:
@@ -937,7 +976,7 @@ class Record:
         if fields:
             for field in fields:
                 self.add_field(field)
-    
+
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Record."""
         return getattr(self._inner, name)
@@ -953,7 +992,7 @@ class Record:
         if _is_control_tag(tag):
             return self._inner.control_field(tag) is not None
         return self.get_field(tag) is not None
-    
+
     def __getitem__(self, tag: str) -> 'Field':
          """Get first field with given tag (pymarc compatibility).
 
@@ -972,8 +1011,8 @@ class Record:
          if field:
              return _wrap_field(field, self, 0)
          raise KeyError(tag)
-    
-    def get_fields(self, *tags: str) -> List['Field']:
+
+    def get_fields(self, *tags: str) -> list['Field']:
         """Get all fields with given tags.
 
         If no tags provided, returns all fields (control + data).
@@ -1002,7 +1041,7 @@ class Record:
                         result.append(_wrap_field(field, self, i))
 
         return result
-    
+
     def add_field(self, *fields: 'Field') -> None:
         """Add one or more fields to the record."""
         for field in fields:
@@ -1010,7 +1049,7 @@ class Record:
                 self._inner.add_control_field(field.tag, field.data or '')
             else:
                 self._inner.add_field(field._inner)
-    
+
     def get(self, tag: str, default=None):
         """Get first field with given tag, or default (pymarc compatibility)."""
         try:
@@ -1137,12 +1176,12 @@ class Record:
     def add_control_field(self, tag: str, value: str) -> None:
         """Add a control field."""
         self._inner.add_control_field(tag, value)
-    
-    def control_field(self, tag: str) -> Optional[str]:
+
+    def control_field(self, tag: str) -> str | None:
         """Get a control field value."""
         return self._inner.control_field(tag)
-    
-    def fields(self) -> List['Field']:
+
+    def fields(self) -> list['Field']:
         """Get all fields (control + data), as live handles.
 
         Enumerates identically to no-arg :meth:`get_fields`: repeated
@@ -1151,88 +1190,88 @@ class Record:
         return self.get_fields()
 
     @property
-    def title(self) -> Optional[str]:
+    def title(self) -> str | None:
         """Title from 245 field."""
         return self._inner.title()
 
     @property
-    def author(self) -> Optional[str]:
+    def author(self) -> str | None:
         """Author from 100/110/111 field."""
         return self._inner.author()
 
     @property
-    def isbn(self) -> Optional[str]:
+    def isbn(self) -> str | None:
         """ISBN from 020 field."""
         return self._inner.isbn()
 
     @property
-    def issn(self) -> Optional[str]:
+    def issn(self) -> str | None:
         """ISSN from 022 field."""
         return self._inner.issn()
 
     @property
-    def subjects(self) -> List[str]:
+    def subjects(self) -> list[str]:
         """All subject headings from 6XX subject fields."""
         return self._inner.subjects()
 
     @property
-    def location(self) -> List[str]:
+    def location(self) -> list[str]:
         """All location fields (852)."""
         return self._inner.location()
 
     @property
-    def notes(self) -> List[str]:
+    def notes(self) -> list[str]:
         """All notes from 5xx fields."""
         return self._inner.notes()
 
     @property
-    def publisher(self) -> Optional[str]:
+    def publisher(self) -> str | None:
         """Publisher from 260 or 264 (RDA) field."""
         return self._inner.publisher()
 
     @property
-    def uniform_title(self) -> Optional[str]:
+    def uniform_title(self) -> str | None:
         """Uniform title from 130 field."""
         return self._inner.uniform_title()
 
     @property
-    def sudoc(self) -> Optional[str]:
+    def sudoc(self) -> str | None:
         """SuDoc from 086 field."""
         return self._inner.sudoc()
 
     @property
-    def issn_title(self) -> Optional[str]:
+    def issn_title(self) -> str | None:
         """ISSN title from 222 field."""
         return self._inner.issn_title()
 
     @property
-    def issnl(self) -> Optional[str]:
+    def issnl(self) -> str | None:
         """ISSN-L from 024 field."""
         return self._inner.issnl()
 
     @property
-    def pubyear(self) -> Optional[str]:
+    def pubyear(self) -> str | None:
         """Publication year (returns str, matching pymarc)."""
         result = self._inner.pubyear()
         return str(result) if result is not None else None
 
     @property
-    def series(self) -> Optional[str]:
+    def series(self) -> str | None:
         """Series from 490 field."""
         return self._inner.series()
 
     @property
-    def physical_description(self) -> Optional[str]:
+    def physical_description(self) -> str | None:
         """Physical description from 300 field."""
         return self._inner.physical_description()
 
     @property
-    def physicaldescription(self) -> Optional[str]:
+    def physicaldescription(self) -> str | None:
         """Physical description (pymarc-compatible name)."""
         return self.physical_description
 
     @property
-    def uniformtitle(self) -> Optional[str]:
+    def uniformtitle(self) -> str | None:
         """Uniform title (pymarc-compatible name)."""
         return self.uniform_title
 
@@ -1240,28 +1279,28 @@ class Record:
     def addedentries(self) -> list:
         """Added entries from 700/710/711/730 fields (pymarc compatibility)."""
         return self.get_fields('700', '710', '711', '730')
-    
+
     def is_book(self) -> bool:
         """Check if this is a book."""
         return self._inner.is_book()
-    
+
     def is_serial(self) -> bool:
         """Check if this is a serial."""
         return self._inner.is_serial()
-    
+
     def is_music(self) -> bool:
         """Check if this is music."""
         return self._inner.is_music()
-    
+
     def is_audiovisual(self) -> bool:
         """Check if this is audiovisual."""
         return self._inner.is_audiovisual()
-    
+
     # =========================================================================
     # Linked field navigation (880 alternate graphic representation)
     # =========================================================================
 
-    def get_linked_fields(self, field: 'Field') -> List['Field']:
+    def get_linked_fields(self, field: 'Field') -> list['Field']:
         """Find all 880 fields linked to a given field via subfield $6.
 
         Given a non-880 field that has a $6 linkage subfield, returns all 880
@@ -1322,7 +1361,7 @@ class Record:
             return wrapper
         return None
 
-    def get_field_pairs(self, tag: str) -> List[Tuple['Field', Optional['Field']]]:
+    def get_field_pairs(self, tag: str) -> list[tuple['Field', Optional['Field']]]:
         """Get field pairs of original fields with their linked 880 counterparts.
 
         Args:
@@ -1355,21 +1394,21 @@ class Record:
     # =========================================================================
 
     def fields_by_indicator(
-        self, tag: str, *, indicator1: Optional[str] = None, indicator2: Optional[str] = None
-    ) -> List['Field']:
+        self, tag: str, *, indicator1: str | None = None, indicator2: str | None = None
+    ) -> list['Field']:
         """Get fields matching indicator values.
-        
+
         This is a convenience method for filtering by indicators.
         For more complex queries, use `fields_matching()` with a `FieldQuery`.
-        
+
         Args:
             tag: The 3-character field tag to search.
             indicator1: Optional first indicator value (None = match any).
             indicator2: Optional second indicator value (None = match any).
-            
+
         Returns:
             List of Field objects matching the criteria.
-            
+
         Example:
             ```pycon
             >>> # Find all 650 fields with indicator2='0' (Library of Congress Subject Headings)
@@ -1379,23 +1418,25 @@ class Record:
             ```
         """
         result = []
-        for field in self._inner.fields_by_indicator(tag, indicator1=indicator1, indicator2=indicator2):
+        for field in self._inner.fields_by_indicator(
+            tag, indicator1=indicator1, indicator2=indicator2
+        ):
             result.append(_wrap_field(field))
         return result
-    
-    def fields_in_range(self, start_tag: str, end_tag: str) -> List['Field']:
+
+    def fields_in_range(self, start_tag: str, end_tag: str) -> list['Field']:
         """Get fields within a tag range (inclusive).
-        
+
         Useful for querying groups of related fields, such as all subject fields
         (600-699) or all added entry fields (700-799).
-        
+
         Args:
             start_tag: Start of range (inclusive), e.g., "600".
             end_tag: End of range (inclusive), e.g., "699".
-            
+
         Returns:
             List of Field objects within the tag range.
-            
+
         Example:
             ```pycon
             >>> # Find all subject fields (600-699)
@@ -1408,19 +1449,19 @@ class Record:
         for field in self._inner.fields_in_range(start_tag, end_tag):
             result.append(_wrap_field(field))
         return result
-    
-    def fields_matching(self, query: 'FieldQuery') -> List['Field']:
+
+    def fields_matching(self, query: 'FieldQuery') -> list['Field']:
         """Get fields matching a FieldQuery.
-        
+
         This method enables complex field matching using the Query DSL.
         A FieldQuery can combine tag, indicator, and subfield requirements.
-        
+
         Args:
             query: A FieldQuery object with the matching criteria.
-            
+
         Returns:
             List of Field objects matching all query criteria.
-            
+
         Example:
             ```pycon
             >>> query = FieldQuery().tag("650").indicator2("0").has_subfield("a")
@@ -1433,19 +1474,19 @@ class Record:
         for field in self._inner.fields_matching(query):
             result.append(_wrap_field(field))
         return result
-    
-    def fields_matching_range(self, query: 'TagRangeQuery') -> List['Field']:
+
+    def fields_matching_range(self, query: 'TagRangeQuery') -> list['Field']:
         """Get fields matching a TagRangeQuery.
-        
+
         This method finds fields within a tag range that also match indicator
         and subfield requirements.
-        
+
         Args:
             query: A TagRangeQuery object with range and filter criteria.
-            
+
         Returns:
             List of Field objects matching all query criteria.
-            
+
         Example:
             ```pycon
             >>> # Find all 6XX subjects with indicator2='0' (LCSH) that have subfield 'a'
@@ -1457,19 +1498,19 @@ class Record:
         for field in self._inner.fields_matching_range(query):
             result.append(_wrap_field(field))
         return result
-    
-    def fields_matching_pattern(self, query: 'SubfieldPatternQuery') -> List['Field']:
+
+    def fields_matching_pattern(self, query: 'SubfieldPatternQuery') -> list['Field']:
         """Get fields matching a SubfieldPatternQuery (regex matching).
-        
+
         This method finds fields where a specific subfield's value matches
         a regular expression pattern.
-        
+
         Args:
             query: A SubfieldPatternQuery object with tag, subfield, and regex.
-            
+
         Returns:
             List of Field objects where the subfield matches the pattern.
-            
+
         Example:
             ```pycon
             >>> # Find all ISBN-13s (start with 978 or 979)
@@ -1481,25 +1522,25 @@ class Record:
         for field in self._inner.fields_matching_pattern(query):
             result.append(_wrap_field(field))
         return result
-    
-    def fields_matching_value(self, query: 'SubfieldValueQuery') -> List['Field']:
+
+    def fields_matching_value(self, query: 'SubfieldValueQuery') -> list['Field']:
         """Get fields matching a SubfieldValueQuery (exact or partial string matching).
-        
+
         This method finds fields where a specific subfield's value matches
         a string exactly or as a substring.
-        
+
         Args:
             query: A SubfieldValueQuery object with tag, subfield, value, and match type.
-            
+
         Returns:
             List of Field objects where the subfield matches the value.
-            
+
         Example:
             ```pycon
             >>> # Find exact subject heading "History"
             >>> query = SubfieldValueQuery("650", "a", "History")
             >>> history_fields = record.fields_matching_value(query)
-            
+
             >>> # Find subjects containing "History" anywhere
             >>> query = SubfieldValueQuery("650", "a", "History", partial=True)
             >>> related_fields = record.fields_matching_value(query)
@@ -1509,23 +1550,23 @@ class Record:
         for field in self._inner.fields_matching_value(query):
             result.append(_wrap_field(field))
         return result
-    
+
     def to_json(self) -> str:
         """Serialize to JSON."""
         return self._inner.to_json()
-    
+
     def to_xml(self) -> str:
         """Serialize to MARCXML."""
         return self._inner.to_xml()
-    
+
     def to_dublin_core(self) -> str:
         """Serialize to Dublin Core."""
         return self._inner.to_dublin_core()
-    
+
     def to_marcjson(self) -> str:
         """Serialize to MARCJSON."""
         return self._inner.to_marcjson()
-    
+
     @property
     def leader(self) -> Leader:
         """The record leader (attribute, matching pymarc's record.leader)."""
@@ -1552,13 +1593,13 @@ class Record:
         value._parent_record = self
         self._leader = value
         self._leader_modified = True
-    
+
     def _sync_leader(self) -> None:
         """Sync the Python leader back to the Rust record if it was modified."""
         # Only sync if the leader was actually accessed/modified
         if not getattr(self, '_leader_modified', False):
             return
-       
+
         if hasattr(self, '_leader') and self._leader is not None:
             # Just directly replace the inner leader with our modified one
             try:
@@ -1570,7 +1611,7 @@ class Record:
                     # Get the inner leader and sync all properties
                     inner_leader = self._inner.leader
                     rust_leader = self._leader._rust_leader
-                    
+
                     # Sync all properties
                     inner_leader.record_length = rust_leader.record_length
                     inner_leader.record_status = rust_leader.record_status
@@ -1588,7 +1629,7 @@ class Record:
                     # Note: set_leader will still be called implicitly
                 else:
                     raise
-    
+
     def as_dict(self) -> dict:
         """Return pymarc-compatible MARC-in-JSON dict (code4lib schema)."""
         fields_list: list[dict[str, Any]] = []
@@ -1629,30 +1670,27 @@ class Record:
         # Compare leaders and control fields and fields
         self_fields = self._inner.fields()
         other_fields = other._inner.fields()
-        
+
         # Same number of fields
         if len(self_fields) != len(other_fields):
             return False
-        
+
         # Compare each field
-        for self_f, other_f in zip(self_fields, other_fields):
+        for self_f, other_f in zip(self_fields, other_fields, strict=False):
             if (self_f.tag != other_f.tag or
                 self_f.indicator1 != other_f.indicator1 or
                 self_f.indicator2 != other_f.indicator2 or
                 len(self_f.subfields()) != len(other_f.subfields())):
                 return False
-            for self_sf, other_sf in zip(self_f.subfields(), other_f.subfields()):
+            for self_sf, other_sf in zip(self_f.subfields(), other_f.subfields(), strict=False):
                 if self_sf.code != other_sf.code or self_sf.value != other_sf.value:
                     return False
-        
+
         # Compare control fields
         self_cfs = self._inner.control_fields()
         other_cfs = other._inner.control_fields()
-        if self_cfs != other_cfs:
-            return False
-        
-        return True
-    
+        return self_cfs == other_cfs
+
     def __hash__(self) -> int:
         """Hash based on leader."""
         return hash(id(self._inner))
@@ -1693,9 +1731,9 @@ class MARCReader:
     """
 
     def __init__(self, file_obj: Any, to_unicode: bool = True, permissive: bool = False,
-                 recovery_mode: Optional[str] = None,
+                 recovery_mode: str | None = None,
                  validation_level: str = "structural",
-                 max_errors: Optional[int] = None):
+                 max_errors: int | None = None):
         """Create a new MARC reader."""
         if not to_unicode:
             import warnings
@@ -1732,14 +1770,14 @@ class MARCReader:
         # mirror pymarc.MARCReader semantics so existing pymarc-shape
         # error-diagnosis code (``if reader.current_exception: ...``)
         # works against mrrc unchanged.
-        self.current_exception: Optional[Exception] = None
-        self.current_chunk: Optional[bytes] = None
+        self.current_exception: Exception | None = None
+        self.current_chunk: bytes | None = None
 
     def __iter__(self):
         """Iterate over records."""
         return self
 
-    def __next__(self) -> Optional[Record]:
+    def __next__(self) -> Record | None:
         """Get next record.
 
         When ``permissive=True``, returns ``None`` for records that fail
@@ -1768,7 +1806,7 @@ class MARCReader:
         """The backend type: ``"rust_file"``, ``"cursor"``, or ``"python_file"``."""
         return self._inner.backend_type
 
-    def read_record(self) -> Optional[Record]:
+    def read_record(self) -> Record | None:
         """Read next record (pymarc compatibility)."""
         try:
             return next(self)
@@ -1817,29 +1855,29 @@ class MARCReader:
 
 class MARCWriter:
     """MARC Writer wrapper."""
-    
+
     def __init__(self, file_obj: Any):
         """Create a new MARC writer."""
         self._inner = _MARCWriter(file_obj)
-    
+
     def write(self, record: Record) -> None:
         """Write a record."""
         # Sync any modifications to the leader before writing
         record._sync_leader()
         self._inner.write_record(record._inner)
-    
+
     def write_record(self, record: Record) -> None:
         """Write a record (alias for write)."""
         self.write(record)
-    
+
     def close(self) -> None:
         """Close the writer."""
         self._inner.close()
-    
+
     def __enter__(self):
         """Context manager support."""
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager support."""
         self.close()
@@ -1868,7 +1906,7 @@ def xml_to_record(xml_str: str) -> Record:
     return _wrap_record(_xml_to_record(xml_str))
 
 
-def xml_to_records(xml_str: str) -> List[Record]:
+def xml_to_records(xml_str: str) -> list[Record]:
     """Convert a MARCXML collection string to a list of Records."""
     return [_wrap_record(r) for r in _xml_to_records(xml_str)]
 
@@ -1883,12 +1921,12 @@ def mods_to_record(mods_str: str) -> Record:
     return _wrap_record(_mods_to_record(mods_str))
 
 
-def mods_collection_to_records(mods_str: str) -> List[Record]:
+def mods_collection_to_records(mods_str: str) -> list[Record]:
     """Convert a MODS collection XML string to a list of Records."""
     return [_wrap_record(r) for r in _mods_collection_to_records(mods_str)]
 
 
-def parse_xml_to_array(xml_file) -> List[Record]:
+def parse_xml_to_array(xml_file) -> list[Record]:
     """Parse MARCXML to a list of Records (pymarc compatibility).
 
     Accepts file paths (str/Path), open file handles, or XML strings.
@@ -1897,7 +1935,7 @@ def parse_xml_to_array(xml_file) -> List[Record]:
     if isinstance(xml_file, (str, os.PathLike)):
         path = str(xml_file)
         if os.path.isfile(path):
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, encoding='utf-8') as f:
                 xml_str = f.read()
         else:
             xml_str = path
@@ -1908,21 +1946,21 @@ def parse_xml_to_array(xml_file) -> List[Record]:
     return xml_to_records(xml_str)
 
 
-def get_leader_valid_values(position: int) -> Optional[dict]:
+def get_leader_valid_values(position: int) -> dict | None:
     """Get valid values for a specific leader position (MARC 21 spec reference).
-    
-    Module-level function (also available as Leader.get_valid_values(position) 
+
+    Module-level function (also available as Leader.get_valid_values(position)
     or instance_leader.get_valid_values(position)).
-    
+
     Returns a dictionary mapping valid character values to their descriptions
     for the given position. Returns None if the position has no defined valid values.
-    
+
     Args:
         position: The leader position (5-19)
-        
+
     Returns:
         A dictionary mapping values to descriptions, or None for positions with no defined values
-        
+
     Example:
         ```pycon
         >>> valid = get_leader_valid_values(5)
@@ -1932,19 +1970,19 @@ def get_leader_valid_values(position: int) -> Optional[dict]:
     return _Leader.get_valid_values(position)
 
 
-def get_leader_value_description(position: int, value: str) -> Optional[str]:
+def get_leader_value_description(position: int, value: str) -> str | None:
     """Get description for a specific value at a leader position.
-    
+
     Module-level function (also available as Leader.describe_value(position, value)
     or instance_leader.describe_value(position, value)).
-    
+
     Args:
         position: The leader position (5-19)
         value: The character value to look up
-        
+
     Returns:
         The description if found, or None if the value is invalid for the position
-        
+
     Example:
         ```pycon
         >>> desc = get_leader_value_description(5, "a")
@@ -1956,15 +1994,15 @@ def get_leader_value_description(position: int, value: str) -> Optional[str]:
 
 def get_leader_is_valid_value(position: int, value: str) -> bool:
     """Check if a value is valid for a specific leader position.
-    
+
     Positions without defined valid values accept any value.
-    
+
     Module-level function (also available as Leader.is_valid_value(position, value)).
-    
+
     Args:
         position: The leader position (5-19)
         value: The character value to validate
-        
+
     Returns:
         True if the value is valid for the position, False otherwise
     """
@@ -1985,7 +2023,7 @@ Leader.get_value_description = staticmethod(get_leader_value_description)  # typ
 
 
 # Format-agnostic reader helper
-def read(path: Union[str, Any], format: Optional[str] = None):
+def read(path: str | Any, format: str | None = None):
     """Read MARC records from a file, auto-detecting format from extension.
 
     Args:
@@ -2040,15 +2078,14 @@ def read(path: Union[str, Any], format: Optional[str] = None):
 
     # Return appropriate reader
     if format == 'marc':
-        f = open(path, 'rb')
-        return MARCReader(f)
+        return MARCReader(path)
     else:
         raise ValueError(
             f"Unsupported format '{format}'. Supported formats: marc"
         )
 
 
-def write(records, path: Union[str, Any], format: Optional[str] = None) -> int:
+def write(records, path: str | Any, format: str | None = None) -> int:
     """Write MARC records to a file, auto-detecting format from extension.
 
     Args:
@@ -2123,7 +2160,7 @@ def write(records, path: Union[str, Any], format: Optional[str] = None) -> int:
 # BIBFRAME Conversion Functions (LOC Linked Data Format)
 # =============================================================================
 
-def marc_to_bibframe(record, config: Optional[BibframeConfig] = None) -> RdfGraph:
+def marc_to_bibframe(record, config: BibframeConfig | None = None) -> RdfGraph:
     """Convert a MARC record to a BIBFRAME RDF graph.
 
     This function transforms a MARC bibliographic record into a BIBFRAME 2.0
@@ -2189,12 +2226,12 @@ def bibframe_to_marc(graph: RdfGraph) -> 'Record':
 def map_records(func, *files: str) -> None:
     """Apply a function to each record in one or more MARC files (pymarc compatibility)."""
     for path in files:
-        reader = MARCReader(open(path, 'rb'))
+        reader = MARCReader(path)
         for record in reader:
             func(record)
 
 
-def parse_json_to_array(json_str: str) -> List[Record]:
+def parse_json_to_array(json_str: str) -> list[Record]:
     """Parse a JSON array of pymarc-format records (pymarc compatibility)."""
     import json as _json
     data = _json.loads(json_str)
@@ -2224,78 +2261,78 @@ def parse_json_to_array(json_str: str) -> List[Record]:
 
 
 __all__ = [
-    # MARC format constants
-    "LEADER_LEN",
     "DIRECTORY_ENTRY_LEN",
     "END_OF_FIELD",
     "END_OF_RECORD",
-    "SUBFIELD_INDICATOR",
+    # MARC format constants
+    "LEADER_LEN",
     "MARC_XML_NS",
     "MARC_XML_SCHEMA",
-    # Exception hierarchy
-    "MrrcException",
-    "RecordLengthInvalid",
-    "RecordLeaderInvalid",
-    "BaseAddressInvalid",
-    "BaseAddressNotFound",
-    "RecordDirectoryInvalid",
-    "EndOfRecordNotFound",
-    "FieldNotFound",
-    "FatalReaderError",
-    "BadSubfieldCodeWarning",
-    "StaleFieldError",
+    "SUBFIELD_INDICATOR",
     # Core classes
     "AuthorityMARCReader",
     "AuthorityRecord",
-    "HoldingsMARCReader",
-    "HoldingsRecord",
-    "Leader",
-    "Indicators",
-    "Subfield",
+    "BadSubfieldCodeWarning",
+    "BaseAddressInvalid",
+    "BaseAddressNotFound",
+    # BIBFRAME conversion support (LOC linked data format)
+    "BibframeConfig",
     "ControlField",
+    "EndOfRecordNotFound",
+    "FatalReaderError",
     "Field",
-    "Record",
-    "MARCReader",
-    "MARCWriter",
-    "RecordBoundaryScanner",
-    "ProducerConsumerPipeline",
+    "FieldNotFound",
     # Query DSL classes
     "FieldQuery",
-    "TagRangeQuery",
+    "HoldingsMARCReader",
+    "HoldingsRecord",
+    "Indicators",
+    "Leader",
+    "MARCReader",
+    "MARCWriter",
+    # Exception hierarchy
+    "MrrcException",
+    "ProducerConsumerPipeline",
+    "RdfGraph",
+    "Record",
+    "RecordBoundaryScanner",
+    "RecordDirectoryInvalid",
+    "RecordLeaderInvalid",
+    "RecordLengthInvalid",
+    "StaleFieldError",
+    "Subfield",
     "SubfieldPatternQuery",
     "SubfieldValueQuery",
+    "TagRangeQuery",
+    "bibframe_to_marc",
+    "dublin_core_to_xml",
+    "get_leader_is_valid_value",
+    "get_leader_valid_values",
+    "get_leader_value_description",
+    "json_to_record",
+    # Convenience functions
+    "map_records",
+    "marc_to_bibframe",
+    "marcjson_to_record",
+    "mods_collection_to_records",
+    "mods_to_record",
     # Functions
     "parse_batch_parallel",
     "parse_batch_parallel_limited",
-    "record_to_json",
-    "json_to_record",
-    "record_to_xml",
-    "xml_to_record",
-    "xml_to_records",
+    "parse_json_to_array",
     "parse_xml_to_array",
-    "record_to_marcjson",
-    "marcjson_to_record",
-    "record_to_dublin_core",
-    "record_to_dublin_core_xml",
-    "record_to_mods",
-    "mods_to_record",
-    "mods_collection_to_records",
-    "dublin_core_to_xml",
-    "record_to_csv",
-    "records_to_csv",
-    "records_to_csv_filtered",
-    "get_leader_valid_values",
-    "get_leader_value_description",
-    "get_leader_is_valid_value",
-    # BIBFRAME conversion support (LOC linked data format)
-    "BibframeConfig",
-    "RdfGraph",
-    "marc_to_bibframe",
-    "bibframe_to_marc",
     # Format-agnostic helpers
     "read",
+    "record_to_csv",
+    "record_to_dublin_core",
+    "record_to_dublin_core_xml",
+    "record_to_json",
+    "record_to_marcjson",
+    "record_to_mods",
+    "record_to_xml",
+    "records_to_csv",
+    "records_to_csv_filtered",
     "write",
-    # Convenience functions
-    "map_records",
-    "parse_json_to_array",
+    "xml_to_record",
+    "xml_to_records",
 ]

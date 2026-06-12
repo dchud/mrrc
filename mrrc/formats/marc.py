@@ -69,9 +69,6 @@ def read(source):
     Returns:
         Iterator over Record objects.
     """
-    if isinstance(source, str):
-        f = open(source, "rb")
-        return MARCReader(f)
     return MARCReader(source)
 
 
@@ -86,13 +83,13 @@ def write(records, dest):
         Number of records written.
     """
     if isinstance(dest, str):
-        f = open(dest, "wb")
-        writer = MARCWriter(f)
-        count = 0
-        for record in records:
-            writer.write(_wrap_record(record))
-            count += 1
-        writer.close()
+        with open(dest, "wb") as f:
+            writer = MARCWriter(f)
+            count = 0
+            for record in records:
+                writer.write(_wrap_record(record))
+                count += 1
+            writer.close()
         return count
     else:
         writer = MARCWriter(dest)

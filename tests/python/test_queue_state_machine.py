@@ -14,7 +14,9 @@ This test suite confirms:
 """
 
 import io
+
 import pytest
+
 from mrrc import MARCReader, MARCWriter
 
 
@@ -24,7 +26,7 @@ class TestQueueStateMachine:
     def test_first_call_reads_batch(self, fixture_1k):
         """First __next__() call should read full batch (100 records)"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # First call triggers read_batch()
         rec1 = next(reader)
         assert rec1 is not None
@@ -33,11 +35,11 @@ class TestQueueStateMachine:
     def test_subsequent_calls_use_queue(self, fixture_1k):
         """Subsequent calls should pop from queue without I/O"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # First call reads batch of 100
         rec1 = next(reader)
         assert rec1 is not None
-        
+
         # Next 99 calls should come from queue (no batch read)
         for i in range(99):
             rec = next(reader)
@@ -50,11 +52,11 @@ class TestQueueStateMachine:
     def test_eof_idempotence(self, fixture_1k):
         """After EOF, repeated calls should return None idempotently"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # Consume all records
         records = list(reader)
         assert len(records) > 0
-        
+
         # Repeated calls should still return None (StopIteration)
         for _ in range(5):
             with pytest.raises(StopIteration):
@@ -63,10 +65,10 @@ class TestQueueStateMachine:
     def test_iteration_semantic_unchanged(self, fixture_1k):
         """Iterator protocol should work unchanged (yield all records)"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         records = list(reader)
         assert len(records) == 1000
-        
+
         # Verify all records are valid
         for rec in records:
             assert rec.leader is not None
@@ -78,37 +80,37 @@ class TestQueueStateMachine:
         is done in test_batch_reading_c1.py
         """
         reader = MARCReader(io.BytesIO(fixture_10k))
-        
+
         # Consume 100 records - should be mostly from queue after first batch read
         records = []
         for i, rec in enumerate(reader):
             records.append(rec)
             if i >= 99:  # First 100 records
                 break
-        
+
         assert len(records) == 100
-        
+
         # Continue with next 100 - will trigger next batch read
         for i, rec in enumerate(reader):
             records.append(rec)
             if i >= 99:  # Next 100 records
                 break
-        
+
         assert len(records) == 200
 
     def test_first_batch_boundary(self, fixture_1k):
         """Test reading exactly to batch boundary (100 records)"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # Read exactly 100 records
         records = []
         for i, rec in enumerate(reader):
             records.append(rec)
             if i >= 99:  # First 100 records (batch size)
                 break
-        
+
         assert len(records) == 100
-        
+
         # Next read should continue from queue (records 101-200 from same batch)
         next_rec = next(reader)
         assert next_rec is not None
@@ -116,14 +118,14 @@ class TestQueueStateMachine:
     def test_queue_ordering_preserved(self, fixture_1k):
         """Records should be returned in file order from queue"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # Collect first 100 records
         records = []
         for i, rec in enumerate(reader):
             records.append(rec)
             if i >= 99:
                 break
-        
+
         # Each record should have sequential IDs (if present)
         # At minimum, verify structure consistency
         assert len(records) == 100
@@ -136,29 +138,29 @@ class TestQueueStateMachine:
     def test_read_record_legacy_api_uses_queue(self, fixture_1k):
         """Legacy read_record() method should also use queue state machine"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # Legacy API
         rec1 = reader.read_record()
         assert rec1 is not None
-        
+
         rec2 = reader.read_record()
         assert rec2 is not None
-        
+
         # Both records should be different
         # (they come from same batch, just different records)
 
     def test_mixed_iteration_and_read_record(self, fixture_1k):
         """Can mix __next__ and read_record calls"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # Use __next__
         rec1 = next(reader)
         assert rec1 is not None
-        
+
         # Use read_record (legacy)
         rec2 = reader.read_record()
         assert rec2 is not None
-        
+
         # Back to __next__
         rec3 = next(reader)
         assert rec3 is not None
@@ -166,15 +168,15 @@ class TestQueueStateMachine:
     def test_reader_repr_reflects_state(self, fixture_1k):
         """Reader repr should indicate reader state"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # Just verify repr doesn't crash
         repr_str = repr(reader)
         assert repr_str is not None
         assert "MARCReader" in repr_str
-        
+
         # Consume all
         list(reader)
-        
+
         # Repr should still work after consumption
         repr_str2 = repr(reader)
         assert repr_str2 is not None
@@ -186,10 +188,10 @@ class TestQueueEdgeCases:
     def test_batch_boundary_1000_records(self, fixture_1k):
         """File with 1000 records (10 batches of 100)"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         records = list(reader)
         assert len(records) == 1000
-        
+
         # EOF on next call
         with pytest.raises(StopIteration):
             next(reader)
@@ -197,7 +199,7 @@ class TestQueueEdgeCases:
     def test_batch_boundary_10000_records(self, fixture_10k):
         """File with 10000 records (100 batches of 100)"""
         reader = MARCReader(io.BytesIO(fixture_10k))
-        
+
         records = list(reader)
         assert len(records) == 10000
 

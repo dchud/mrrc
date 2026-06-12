@@ -17,6 +17,7 @@ import threading
 import time
 
 import pytest
+
 from mrrc import MARCReader
 
 

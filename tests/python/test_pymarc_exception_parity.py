@@ -127,10 +127,9 @@ def test_pymarc_compatible_name_re_exported_from_top_level_mrrc(name: str) -> No
     ``mrrc.<Name>`` so ``from pymarc import RecordDirectoryInvalid``
     has a 1:1 ``from mrrc import RecordDirectoryInvalid`` replacement
     without callers having to know about ``mrrc.exceptions``."""
-    if name == "BadSubfieldCodeWarning":
-        # Optional re-export — record this as a documented gap if it
-        # surfaces, but don't block on it for the warning case.
-        if not hasattr(mrrc, name):
+    # Optional re-export — record this as a documented gap if it
+    # surfaces, but don't block on it for the warning case.
+    if name == "BadSubfieldCodeWarning" and not hasattr(mrrc, name):
             pytest.skip(
                 f"{name} not re-exported on top-level mrrc; documented "
                 f"as accessible via mrrc.exceptions"

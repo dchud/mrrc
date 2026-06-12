@@ -12,6 +12,7 @@ boundary detection using 0x1D (record terminator) delimiters. These tests verify
 """
 
 import pytest
+
 from mrrc import MARCReader, RecordBoundaryScanner
 
 
@@ -60,14 +61,14 @@ class TestBoundaryScannerBasics:
     def test_scan_empty_buffer(self):
         """Empty buffer should raise error."""
         scanner = RecordBoundaryScanner()
-        with pytest.raises(Exception):  # MarcError
+        with pytest.raises(ValueError):
             scanner.scan(b"")
 
     def test_scan_no_terminators(self):
         """Buffer with no record terminators should raise error."""
         data = bytes([1, 2, 3, 4])  # No 0x1D terminators
         scanner = RecordBoundaryScanner()
-        with pytest.raises(Exception):  # MarcError
+        with pytest.raises(ValueError):
             scanner.scan(data)
 
 
@@ -148,7 +149,7 @@ class TestBoundaryScannerLimiting:
 
         # Verify we found records
         assert total_records > 0, "Should find at least one record"
-        
+
         # Test that scan_limited returns correct number
         half = (total_records + 1) // 2
         limited_boundaries = scanner.scan_limited(multi_records_bytes, half)
@@ -244,9 +245,9 @@ class TestBoundaryScannerIntegration:
         """Verify boundaries are suitable for parallel record processing."""
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan(multi_records_bytes)
-        
+
         assert len(boundaries) > 0, "Should find at least one record"
-        
+
         # Verify boundaries are non-overlapping
         for i, (offset1, len1) in enumerate(boundaries):
             for j, (offset2, len2) in enumerate(boundaries):
@@ -322,7 +323,7 @@ class TestBoundaryScannerAcceptanceCriteria:
         # All scanned bytes should be covered exactly once
         # Note: May not cover entire file if last record is incomplete
         assert len(seen_ranges) == len(seen_ranges), "Should not have duplicates"
-        
+
         # Verify boundaries don't exceed file size
         for offset, length in boundaries:
             assert offset + length <= len(multi_records_bytes), \
