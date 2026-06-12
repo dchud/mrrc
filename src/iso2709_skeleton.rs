@@ -281,9 +281,11 @@ where
 
     // Hand the loaded buffer to the context so `err_*` helpers raised during
     // directory/field parsing capture a bytes_near window for hex-dump
-    // rendering.
+    // rendering. Wrapping in Arc moves the Vec (no byte copy) and sharing
+    // with the context is a refcount bump.
+    let record_data = std::sync::Arc::new(record_data);
     let record_data_offset = ctx.stream_byte_offset;
-    ctx.set_parse_buffer(&record_data, record_data_offset);
+    ctx.set_parse_buffer(std::sync::Arc::clone(&record_data), record_data_offset);
 
     if bytes_read < expected_data_len {
         // recovery_mode is Lenient or Permissive (Strict already returned).
