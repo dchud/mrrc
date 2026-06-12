@@ -304,6 +304,65 @@ impl<R: Read> MarcReader<R> {
     }
 }
 
+/// Parse one complete MARC record (24-byte leader + body) from owned
+/// in-memory bytes, with no reader I/O and no per-record byte copies: the
+/// buffer is moved into a shared handle that both the parser and the
+/// error-diagnostics context borrow from.
+///
+/// Each call parses one record with fresh per-record state, exactly like
+/// constructing a [`MarcReader`] over the bytes and reading once — minus
+/// the copies. Use [`MarcReader`] for streams; use this for bytes you
+/// already hold (one record per call).
+///
+/// Non-fatal diagnostics accumulated in `Lenient`/`Permissive` modes are
+/// attached to the returned record's `errors`, matching
+/// [`MarcReader::read_record`].
+///
+/// Returns `Ok(None)` for an empty buffer.
+///
+/// # Errors
+///
+/// Returns an error if the bytes are malformed (in `Strict` mode, the
+/// first structural defect; in recovery modes, only unrecoverable ones).
+///
+/// # Examples
+///
+/// ```no_run
+/// use mrrc::{parse_record_from_bytes, RecoveryMode, ValidationLevel};
+/// # fn doc() -> Result<(), Box<dyn std::error::Error>> {
+/// let bytes: Vec<u8> = std::fs::read("one_record.mrc")?;
+/// let record = parse_record_from_bytes(
+///     bytes,
+///     RecoveryMode::Strict,
+///     ValidationLevel::Structural,
+/// )?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn parse_record_from_bytes(
+    record_bytes: Vec<u8>,
+    recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
+) -> Result<Option<Record>> {
+    let mut ctx = ParseContext::new();
+    let mut cap = RecoveryCap::new();
+    let mut errors = Vec::new();
+    let result = crate::iso2709_skeleton::parse_iso2709_record_from_bytes::<BibBuilder>(
+        &std::sync::Arc::new(record_bytes),
+        &mut ctx,
+        &mut cap,
+        recovery_mode,
+        validation_level,
+        &mut errors,
+    )?;
+    Ok(result.map(|mut record| {
+        if !errors.is_empty() {
+            record.errors = std::sync::Arc::new(errors);
+        }
+        record
+    }))
+}
+
 /// Adapter for the bibliographic reader's per-record state. Wraps a
 /// [`Record`] and threads it through the shared [`parse_iso2709_record`]
 /// skeleton.
