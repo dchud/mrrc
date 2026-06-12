@@ -39,7 +39,7 @@ use crate::iso2709::{DataFieldParseConfig, ParseContext};
 use crate::iso2709_skeleton::{Iso2709Builder, parse_iso2709_record};
 use crate::leader::Leader;
 use crate::record::{Field, Record};
-use crate::recovery::{self, RecoveryCap, RecoveryMode, ValidationLevel};
+use crate::recovery::{RecoveryCap, RecoveryMode, ValidationLevel};
 use std::io::Read;
 
 /// Buffer capacity for readers opened from a filesystem path.
@@ -402,26 +402,11 @@ impl Iso2709Builder for BibBuilder {
         self.record.add_field(field);
     }
 
-    /// Bibliographic reader honors the truncated-record salvage path via
-    /// [`recovery::try_recover_record`]; authority + holdings rely on the
-    /// trait's default `None` and fall through to best-effort parsing.
-    fn try_recover_truncated(
-        leader: Leader,
-        partial_data: &[u8],
-        base_address: usize,
-        mode: RecoveryMode,
-        ctx: &ParseContext,
-        errors: &mut Vec<crate::error::MarcError>,
-    ) -> Option<Result<Record>> {
-        Some(recovery::try_recover_record(
-            leader,
-            partial_data,
-            base_address,
-            mode,
-            ctx,
-            errors,
-        ))
-    }
+    /// Bibliographic salvage diagnostics keep the numeric parser's
+    /// `InvalidField` (E106) shape for non-digit directory bytes on the
+    /// truncated-record walk; authority + holdings use the skeleton's
+    /// `DirectoryInvalid` (E101) on every walk.
+    const TRUNCATED_WALK_DIGIT_ERRORS_AS_INVALID_FIELD: bool = true;
 
     #[inline]
     fn finalize(self) -> Record {
@@ -818,5 +803,93 @@ mod tests {
             "expected BaseAddressInvalid, got: {err:?}"
         );
         assert_eq!(err.code(), "E003");
+    }
+
+    /// Assemble a structurally valid ISO 2709 record from `(tag, body)`
+    /// pairs, where each body carries indicators and subfields but not
+    /// the trailing `FIELD_TERMINATOR` (added here).
+    fn build_record(fields: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut directory = Vec::new();
+        let mut data = Vec::new();
+        for (tag, body) in fields {
+            let start = data.len();
+            data.extend_from_slice(body);
+            data.push(FIELD_TERMINATOR);
+            directory.extend_from_slice(tag.as_bytes());
+            directory.extend_from_slice(format!("{:04}", body.len() + 1).as_bytes());
+            directory.extend_from_slice(format!("{start:05}").as_bytes());
+        }
+        directory.push(FIELD_TERMINATOR);
+        let base_address = 24 + directory.len();
+        let record_length = base_address + data.len() + 1;
+
+        let mut out = Vec::new();
+        out.extend_from_slice(format!("{record_length:05}").as_bytes());
+        out.extend_from_slice(b"nam a22");
+        out.extend_from_slice(format!("{base_address:05}").as_bytes());
+        out.extend_from_slice(b" i 4500");
+        assert_eq!(out.len(), 24);
+        out.extend_from_slice(&directory);
+        out.extend_from_slice(&data);
+        out.push(RECORD_TERMINATOR);
+        out
+    }
+
+    /// A record truncated inside its final field still yields the intact
+    /// earlier fields in lenient mode: directory start positions are
+    /// data-area-relative, so the salvage walk must slice fields at
+    /// `data_start + start_position`, not at body-relative offsets.
+    #[test]
+    fn test_lenient_truncated_record_salvages_intact_fields() {
+        let mut field_245 = b"10".to_vec();
+        field_245.push(SUBFIELD_DELIMITER);
+        field_245.push(b'a');
+        field_245.extend_from_slice(b"Test title");
+        let mut field_650 = b" 0".to_vec();
+        field_650.push(SUBFIELD_DELIMITER);
+        field_650.push(b'a');
+        field_650.extend_from_slice(b"History");
+
+        let full = build_record(&[("245", &field_245), ("650", &field_650)]);
+        // Cut into the 650 body and drop the record terminator.
+        let truncated = &full[..full.len() - 5];
+
+        let mut reader = MarcReader::new(Cursor::new(truncated.to_vec()))
+            .with_recovery_mode(RecoveryMode::Lenient);
+        let record = reader
+            .read_record()
+            .expect("lenient truncated read")
+            .expect("truncated record should be salvaged");
+
+        assert!(
+            record.errors.iter().any(|e| e.code() == "E005"),
+            "truncation must be diagnosed, got {:?}",
+            record.errors
+        );
+        let f245 = record
+            .get_field("245")
+            .expect("intact field 245 should be salvaged");
+        assert_eq!(f245.get_subfield('a'), Some("Test title"));
+    }
+
+    /// A truncated record whose base address claims no directory at all
+    /// (`base_address` == 24) salvages to an empty record in lenient mode
+    /// rather than erroring: there are no directory entries to walk.
+    #[test]
+    fn test_lenient_truncated_record_without_directory_yields_empty_record() {
+        // record_length 30, base_address 24, body absent entirely.
+        let leader = b"00030nam a2200024 i 4500";
+        let mut reader =
+            MarcReader::new(Cursor::new(leader.to_vec())).with_recovery_mode(RecoveryMode::Lenient);
+        let record = reader
+            .read_record()
+            .expect("lenient truncated read")
+            .expect("record should be salvaged");
+        assert_eq!(record.fields().count(), 0);
+        assert!(
+            record.errors.iter().any(|e| e.code() == "E005"),
+            "truncation must be diagnosed, got {:?}",
+            record.errors
+        );
     }
 }
