@@ -67,6 +67,11 @@ function_parameter_count_changed = "allow"
 # `with_*` setters.
 enum_marked_non_exhaustive = "allow"
 enum_variant_marked_non_exhaustive = "allow"
+# The truncated-record salvage path is consolidated into the ISO 2709
+# skeleton: recovery::try_recover_record and try_parse_field are removed
+# from the public API, leaving the skeleton's clamped-buffer walk as the
+# single entry point. Intentional pre-1.0 removal.
+function_missing = "allow"
 
 [features]
 default = ["bibframe"]
