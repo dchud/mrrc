@@ -138,6 +138,41 @@ jobs:
       - name: Run stubtest
         run: uv run python -m mypy.stubtest mrrc._mrrc
 
+  typecheck:
+    name: Type check (mypy + pyright on mrrc/)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Sync dev dependencies
+        run: uv sync --extra dev
+
+      - name: Build extension
+        run: uv run maturin develop
+
+      # Same commands as check.sh: both checkers gate the wrapper package
+      # in CI exactly as they do locally.
+      - name: Run mypy on mrrc/
+        run: uv run mypy mrrc/
+
+      - name: Run pyright on mrrc/
+        run: uv run pyright mrrc/
+
   msrv:
     name: MSRV check
     runs-on: ubuntu-latest
