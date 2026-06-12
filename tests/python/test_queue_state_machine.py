@@ -15,7 +15,7 @@ This test suite confirms:
 
 import io
 import pytest
-from mrrc import MARCReader
+from mrrc import MARCReader, MARCWriter
 
 
 class TestQueueStateMachine:
@@ -211,11 +211,51 @@ class TestQueueEdgeCases:
     def test_queue_empty_check(self, fixture_1k):
         """Queue should be checked before EOF check"""
         reader = MARCReader(io.BytesIO(fixture_1k))
-        
+
         # Reading all should work correctly even as queue empties
         count = 0
         for rec in reader:
             count += 1
             assert rec is not None
-        
+
         assert count == 1000
+
+    def test_empty_input_yields_no_records(self):
+        """Empty input hits EOF before the first batch fills: zero
+        records, no exception."""
+        reader = MARCReader(io.BytesIO(b""))
+
+        records = list(reader)
+        assert len(records) == 0
+
+    def test_single_record_file(self, fixture_small):
+        """A file holding exactly one record fills a partial batch of
+        one and then EOFs cleanly."""
+        # Build a single-record file from the first fixture record.
+        source = MARCReader(io.BytesIO(fixture_small))
+        rec = next(source)
+
+        output = io.BytesIO()
+        writer = MARCWriter(output)
+        writer.write_record(rec)
+        writer.close()
+
+        reader = MARCReader(io.BytesIO(output.getvalue()))
+        records = list(reader)
+        assert len(records) == 1
+        with pytest.raises(StopIteration):
+            next(reader)
+
+    def test_batch_boundary_201_crosses_hard_cap(self, fixture_1k):
+        """Reading one record past the 200-record batch hard cap must
+        deliver record 201 from a fresh batch with nothing lost."""
+        reader = MARCReader(io.BytesIO(fixture_1k))
+
+        records = []
+        for i, rec in enumerate(reader):
+            records.append(rec)
+            if i >= 200:
+                break
+
+        assert len(records) == 201
+        assert all(rec is not None for rec in records)

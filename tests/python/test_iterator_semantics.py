@@ -286,8 +286,30 @@ class TestResumeAfterPartialRead:
         # Resume - read rest
         for record in reader:
             records.append(record)
-        
+
         assert len(records) == 1000
+
+    def test_records_outlive_partially_consumed_reader(self, fixture_10k):
+        """Destroying a partially-consumed reader must not invalidate
+        records already handed out: they are independent objects, not
+        views into reader-owned memory."""
+        import gc
+
+        reader = MARCReader(io.BytesIO(fixture_10k))
+
+        records = []
+        for record in reader:
+            records.append(record)
+            if len(records) >= 100:
+                break
+
+        del reader
+        gc.collect()
+
+        # Records handed out before the reader was destroyed stay valid.
+        assert len(records) == 100
+        for record in records:
+            assert record.leader is not None
 
 
 class TestConcurrentIterators:

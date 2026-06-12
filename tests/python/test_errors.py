@@ -596,6 +596,17 @@ class TestFfiTypedExceptions:
         with pytest.raises(mrrc.MrrcException):
             list(reader)
 
+    def test_input_shorter_than_record_length_field_raises(self):
+        """Input shorter than the 5-byte record-length field can never
+        hold a record; it must surface as a typed ``mrrc.MrrcException``
+        rather than crash or silently yield nothing.
+        """
+        import io
+
+        reader = mrrc.MARCReader(io.BytesIO(b"01"))
+        with pytest.raises(mrrc.MrrcException):
+            list(reader)
+
     def test_wrong_authority_record_type_raises_invalid_field(self):
         """An `AuthorityMARCReader` fed a bibliographic-typed record
         rejects it via a typed exception.
