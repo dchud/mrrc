@@ -7,8 +7,11 @@ name: Fuzz (nightly)
 #   - Runs nightly + on demand (workflow_dispatch); not a PR gate.
 #   - A crash FAILS the job so the red mark surfaces on the Actions
 #     dashboard. fuzz/artifacts/* uploads so the reproducer survives.
-#   - Triage is manual. No auto-filing. Reproducers get copied into
-#     tests/ as regressions — see docs/contributing/fuzzing.md.
+#   - A scheduled failure files (or comments on) a tracking issue so it
+#     cannot pass unnoticed. Triage is manual. Reproducers get copied
+#     into tests/ as regressions — see docs/contributing/fuzzing.md.
+#   - The grown corpus is cached per target across runs so coverage
+#     depth compounds instead of regrowing from the committed seeds.
 
 on:
   schedule:
@@ -63,6 +66,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-fuzz-
 
+      - name: Cache fuzz corpus
+        uses: actions/cache@v5
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          # The run-scoped key never matches an existing entry, so every
+          # run restores the newest corpus via restore-keys and saves its
+          # own grown corpus as a fresh entry. The committed seeds merge
+          # in from checkout either way.
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target }}-
+
       - name: Run ${{ matrix.target }}
         env:
           MAX_TOTAL_TIME: ${{ github.event.inputs.max_total_time || '300' }}
@@ -74,6 +89,12 @@ jobs:
         # incompatible with `-Zsanitizer=address` (static libc).
         run: cargo +nightly fuzz run ${{ matrix.target }} --target x86_64-unknown-linux-gnu -- -max_total_time=$MAX_TOTAL_TIME
 
+      - name: Minimize corpus before caching
+        # Sheds redundant inputs while keeping coverage, so the cached
+        # corpus stays small enough for fast libfuzzer startup. Skipped
+        # when the fuzz run failed (the cache also skips saving then).
+        run: cargo +nightly fuzz cmin ${{ matrix.target }} --target x86_64-unknown-linux-gnu
+
       - name: Upload crash artifacts
         if: failure()
         uses: actions/upload-artifact@v7
@@ -82,3 +103,28 @@ jobs:
           path: fuzz/artifacts/
           if-no-files-found: warn
           retention-days: 30
+
+  notify-failure:
+    name: File failure issue
+    needs: fuzz
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: File or update the failure-tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Nightly fuzz run failed"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --json number,title \
+            --jq '[.[] | select(.title == env.TITLE)][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
+              --body "Failed again: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
+              --body "Scheduled run failed: $RUN_URL — crash artifacts (if any) are attached to the run. Later failures will be added here as comments. Triage playbook: docs/contributing/fuzzing.md."
+          fi

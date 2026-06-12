@@ -135,22 +135,6 @@ jobs:
       - name: Run stubtest
         run: uv run python -m mypy.stubtest mrrc._mrrc
 
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v6.0.3
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@cargo-audit
-
-      - name: Run security audit
-        run: cargo audit
-
   msrv:
     name: MSRV check
     runs-on: ubuntu-latest

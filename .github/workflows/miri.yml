@@ -35,3 +35,28 @@ jobs:
           # Prevent insta from spawning `cargo metadata` to discover the
           # workspace root — Miri can't execute subprocesses (no pidfd_spawnp).
           INSTA_WORKSPACE_ROOT: ${{ github.workspace }}
+
+  notify-failure:
+    name: File failure issue
+    needs: miri
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: File or update the failure-tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Nightly Miri run failed"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --json number,title \
+            --jq '[.[] | select(.title == env.TITLE)][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
+              --body "Failed again: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
+              --body "Scheduled run failed: $RUN_URL. Later failures will be added here as comments."
+          fi
