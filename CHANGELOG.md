@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `Cargo.lock` is now committed, so CI, wheel builds, and local checkouts resolve the
+  same dependency versions; Dependabot manages version bumps as reviewable diffs.
 - Record parsing no longer copies every record's bytes into the error-diagnostics
   buffer: the parse buffer is shared by refcount instead, deleting a per-record
   alloc+memcpy that every read path paid so that the under-1% of records that error

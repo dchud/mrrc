@@ -1,6 +1,8 @@
 # Rust build artifacts and benchmarks
 target/
-Cargo.lock
+# The root Cargo.lock is committed for reproducible builds; the fuzz workspace
+# (isolated, nightly toolchain) keeps its own lockfile untracked.
+fuzz/Cargo.lock
 **/*.rs.bk
 *.pdb
 
