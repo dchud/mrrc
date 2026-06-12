@@ -5,8 +5,19 @@ on:
     tags:
       - 'v*'
   # Dry run: builds and tests every artifact (wheels, sdist) without
-  # publishing — the publish/release steps are gated on tag refs.
+  # publishing to PyPI — the PyPI publish and GitHub Release steps are
+  # gated on tag refs. Selecting publish-target=testpypi additionally
+  # rehearses the publish against TestPyPI (requires a TestPyPI trusted
+  # publisher configured for this repository and workflow).
   workflow_dispatch:
+    inputs:
+      publish-target:
+        description: "none = build/test only; testpypi = rehearsal publish to TestPyPI"
+        type: choice
+        options:
+          - none
+          - testpypi
+        default: none
 
 jobs:
   build-release-wheels:
@@ -153,6 +164,60 @@ jobs:
             exit 1
           fi
 
+  # The filename check above covers all 10 cross-compiled wheels; this job
+  # additionally installs and imports one representative wheel per target
+  # inside a matching container, so a wheel that builds but cannot load
+  # (bad linkage, wrong interpreter ABI) fails before publish.
+  smoke-test-cross-wheels:
+    name: Import-smoke ${{ matrix.target }} wheel (Python 3.12)
+    needs: build-cross-linux-wheels
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [aarch64-unknown-linux-gnu, i686-unknown-linux-gnu]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-wheels-${{ matrix.target }}-3.12
+          path: dist
+
+      - name: Set up QEMU (aarch64 emulation)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Write import-smoke script
+        run: |
+          # Executed with python -I so neither the CWD nor the script
+          # directory lands on sys.path; otherwise the source ./mrrc/
+          # directory (no compiled extension) shadows the installed wheel.
+          cat > smoke.py <<'EOF'
+          import mrrc
+          data = open("tests/data/simple_book.mrc", "rb").read()
+          records = list(mrrc.MARCReader(data))
+          assert len(records) == 1
+          assert records[0].title == "The Great Gatsby"
+          print("wheel import OK:", mrrc.__file__)
+          EOF
+
+      - name: Import-smoke aarch64 wheel under QEMU
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          docker run --rm --platform linux/arm64 -v "$PWD":/work -w /work \
+            python:3.12-slim \
+            sh -c 'pip install --no-cache-dir dist/*.whl && python -I smoke.py'
+
+      - name: Import-smoke i686 wheel in 32-bit container
+        if: matrix.target == 'i686-unknown-linux-gnu'
+        run: |
+          # i686 binaries run natively on the x86_64 runner kernel; linux32
+          # sets the uname personality so pip accepts the i686 wheel tag.
+          docker run --rm --platform linux/386 -v "$PWD":/work -w /work \
+            quay.io/pypa/manylinux2014_i686 \
+            linux32 sh -c '/opt/python/cp312-cp312/bin/pip install --no-cache-dir dist/*.whl && /opt/python/cp312-cp312/bin/python -I smoke.py'
+
   test-release-wheels:
     name: Test release wheels on ${{ matrix.os }}
     needs: build-release-wheels
@@ -218,10 +283,45 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    needs: [test-release-wheels, validate-cross-wheels, test-sdist]
+    needs: [test-release-wheels, validate-cross-wheels, smoke-test-cross-wheels, test-sdist]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          # Collects release-wheels-* and release-sdist.
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -l dist/
+
+      - name: Publish to PyPI
+        # Skipped on workflow_dispatch runs; only tag pushes publish.
+        # skip-existing makes re-runs after a partial failure upload only
+        # the missing files instead of dying on "file already exists".
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+      - name: Publish to TestPyPI (rehearsal)
+        if: github.event_name == 'workflow_dispatch' && inputs.publish-target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  # Separate job so a GitHub Release failure can be re-run without
+  # re-entering the PyPI publish path, and vice versa.
+  github-release:
+    name: Create GitHub Release
+    needs: publish-pypi
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6.0.3
@@ -237,8 +337,6 @@ jobs:
           merge-multiple: true
 
       - name: Extract release notes from CHANGELOG
-        id: changelog
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           # Extract the section for this version (between its header and the next ## header)
@@ -246,20 +344,8 @@ jobs:
           # Write to file to avoid shell quoting issues
           echo "$NOTES" > release_notes.md
 
-      - name: Publish to PyPI
-        # Skipped on workflow_dispatch dry runs; only tag pushes publish.
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: pypa/gh-action-pypi-publish@release/v1
-
-      - name: List artifacts (dry run)
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: |
-          echo "Dry run — artifacts that a tag push would publish:"
-          ls -l dist/
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: dist/*
           body_path: release_notes.md
