@@ -117,6 +117,10 @@ harness = false
 name = "parallel_benchmarks"
 harness = false
 
+[[bench]]
+name = "format_benchmarks"
+harness = false
+
 # Release profile for a performance-marketed PyO3 extension: LTO and a
 # single codegen unit make cross-crate inlining deterministic (no more
 # codegen-unit-partitioning lottery in instruction-count benchmarks) and

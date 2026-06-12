@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no reader I/O and no per-record copies. The Python `MARCReader` read path now uses it,
   collapsing the former chain of per-record buffer copies between the source and the
   parser to a single pymarc-compatibility stash (`current_chunk`).
+- Criterion benches for the serialization formats that had no CI perf signal — CSV, MODS,
+  Dublin Core, BIBFRAME (Turtle), and MARC-in-JSON (both directions for MODS and
+  MARC-in-JSON) — plus a single-thread parser-pool bench that tracks the
+  producer-consumer pipeline's per-record cost deterministically under simulation.
 - The pymarc parity oracle now executes in CI and check.sh instead of silently skipping:
   a new `oracle` extra pins pymarc in uv.lock (Dependabot adjudicates behavior changes on
   bump PRs), and the oracle extends beyond iteration shape to value-level comparisons —
