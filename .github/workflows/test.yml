@@ -30,9 +30,16 @@ concurrency:
 
 jobs:
   test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    name: Test Suite (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # All three OSes on every run: platform-sensitive paths (from_path,
+    # file I/O, the rayon pipeline) get Rust-level coverage on macOS and
+    # Windows instead of relying on the Python wheel suite alone.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-2025]
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6.0.3
 
