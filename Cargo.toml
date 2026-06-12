@@ -60,7 +60,10 @@ constructible_struct_adds_field = "allow"
 function_parameter_count_changed = "allow"
 
 [features]
-default = []
+default = ["bibframe"]
+# BIBFRAME linked-data conversion (the `bibframe` module). On by default;
+# build with --no-default-features to drop the oxrdf/oxrdfio dependency tree.
+bibframe = ["dep:oxrdf", "dep:oxrdfio"]
 
 [dependencies]
 # Core parsing and data handling
@@ -90,9 +93,9 @@ smallvec = { workspace = true }
 rayon = "1.7"
 crossbeam-channel = "0.5"
 
-# RDF serialization for BIBFRAME support
-oxrdfio = "0.2"
-oxrdf = "0.3"
+# RDF serialization for BIBFRAME support (the `bibframe` feature)
+oxrdfio = { version = "0.2", optional = true }
+oxrdf = { version = "0.3", optional = true }
 
 [dev-dependencies]
 proptest = "1.0"
@@ -123,6 +126,40 @@ similar_names = "allow"
 # Type complexity is managed separately
 type_complexity = "allow"
 
+# Targets that exercise the BIBFRAME module are skipped when the
+# `bibframe` feature is off (e.g. the --no-default-features check).
+[[example]]
+name = "marc_to_bibframe"
+required-features = ["bibframe"]
+
+[[example]]
+name = "bibframe_to_marc"
+required-features = ["bibframe"]
+
+[[example]]
+name = "bibframe_batch"
+required-features = ["bibframe"]
+
+[[test]]
+name = "bibframe_unit_tests"
+required-features = ["bibframe"]
+
+[[test]]
+name = "bibframe_integration_tests"
+required-features = ["bibframe"]
+
+[[test]]
+name = "bibframe_validation_tests"
+required-features = ["bibframe"]
+
+[[test]]
+name = "bibframe_roundtrip_tests"
+required-features = ["bibframe"]
+
+[[test]]
+name = "bibframe_baseline_comparison"
+required-features = ["bibframe"]
+
 [[bench]]
 name = "marc_benchmarks"
 harness = false
@@ -138,6 +175,7 @@ harness = false
 [[bench]]
 name = "format_benchmarks"
 harness = false
+required-features = ["bibframe"]
 
 # Release profile for a performance-marketed PyO3 extension: LTO and a
 # single codegen unit make cross-crate inlining deterministic (no more

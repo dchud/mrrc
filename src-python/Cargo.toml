@@ -10,7 +10,9 @@ repository.workspace = true
 
 [dependencies]
 pyo3 = { version = "0.29", features = ["extension-module"] }
-mrrc = { path = ".." }
+# Enable bibframe explicitly (independent of mrrc's default features)
+# so the wheel always ships full functionality.
+mrrc = { path = "..", features = ["bibframe"] }
 serde_json = { workspace = true }
 # SmallVec for buffered reader: we own the bytes here to safely cross the GIL boundary.
 # Typical MARC records (100B-5KB) fit in 4KB inline buffer without allocation.
