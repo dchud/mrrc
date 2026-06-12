@@ -74,8 +74,13 @@ if [ "$QUICK" = false ]; then
     cargo build --examples --quiet
 
     echo ""
-    echo "=== Compile benchmarks (no run) ==="
-    cargo bench --no-run --quiet
+    echo "=== Type-check benchmarks ==="
+    # cargo check skips codegen and linking: the bench profile inherits
+    # fat LTO + codegen-units=1, so `cargo bench --no-run` does a serial
+    # whole-program LTO link per bench target (minutes); type-checking
+    # catches the same compile errors in seconds. CodSpeed CI does the
+    # real LTO build.
+    cargo check --benches --quiet
 
     echo ""
     echo "=== Documentation check ==="
