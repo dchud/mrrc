@@ -22,8 +22,9 @@
 //! invocation. Only `*.pending` files are gitignored (see `.gitignore`).
 
 use mrrc::{
-    Field, Leader, MarcError, MarcReader, MarcWriter, Record, RecoveryMode, Subfield,
-    ValidationLevel, marcjson, marcxml,
+    AuthorityMarcReader, AuthorityMarcWriter, AuthorityRecord, Field, HoldingsMarcReader,
+    HoldingsMarcWriter, HoldingsRecord, Leader, MarcError, MarcReader, MarcWriter, Record,
+    RecoveryMode, Subfield, ValidationLevel, marcjson, marcxml,
 };
 use proptest::prelude::*;
 use smallvec::SmallVec;
@@ -348,6 +349,79 @@ fn emit_binary(record: &Record) -> Vec<u8> {
     buffer
 }
 
+/// Assert the ISO 2709 framing invariants on emitted bytes: the leader's
+/// record-length field matches the byte count, the record ends with a
+/// `RECORD_TERMINATOR`, and the directory entries tile the data area exactly
+/// (consecutive starts, terminator-inclusive lengths, no entry past the
+/// data area). Shared by the bibliographic, authority, and holdings writer
+/// properties — all three writers emit the same framing.
+fn assert_iso2709_framing(buffer: &[u8]) -> Result<(), TestCaseError> {
+    let declared = parse_record_length(buffer);
+    prop_assert_eq!(
+        declared,
+        buffer.len(),
+        "leader.record_length ({}) != emitted byte count ({})",
+        declared,
+        buffer.len()
+    );
+
+    let base = parse_data_base_address(buffer);
+    let record_length = parse_record_length(buffer);
+    let entries = parse_directory(buffer);
+
+    let data_area_size = record_length - base;
+    prop_assert_eq!(
+        buffer[record_length - 1],
+        RECORD_TERMINATOR,
+        "last byte should be RECORD_TERMINATOR"
+    );
+
+    let mut expected_start = 0usize;
+    let mut total_length = 0usize;
+    for entry in &entries {
+        prop_assert_eq!(
+            entry.start,
+            expected_start,
+            "entry {} start {} != expected {}",
+            entry.tag,
+            entry.start,
+            expected_start
+        );
+        prop_assert!(entry.length >= 1, "entry {} length is zero", entry.tag);
+        let field_end_in_data = entry.start + entry.length;
+        prop_assert!(
+            field_end_in_data < data_area_size,
+            "entry {} extends past data area (end={}, data_area_size={})",
+            entry.tag,
+            field_end_in_data,
+            data_area_size
+        );
+        // Each field's declared length includes its trailing FIELD_TERMINATOR.
+        let term_pos = base + entry.start + entry.length - 1;
+        prop_assert_eq!(
+            buffer[term_pos],
+            FIELD_TERMINATOR,
+            "entry {} should end with FIELD_TERMINATOR at {}",
+            entry.tag,
+            term_pos
+        );
+        expected_start += entry.length;
+        total_length += entry.length;
+    }
+
+    // Lengths plus the trailing record-terminator byte should tile the
+    // entire data area.
+    prop_assert_eq!(
+        total_length + 1,
+        data_area_size,
+        "sum of field lengths ({}) + RECORD_TERMINATOR != data area size ({})",
+        total_length,
+        data_area_size
+    );
+
+    Ok(())
+}
+
 // ============================================================================
 // Property tests
 // ============================================================================
@@ -427,58 +501,14 @@ proptest! {
         prop_assert!(!buf.is_empty(), "Serialized record is empty");
     }
 
-    /// The record-length field in the leader must match the number of bytes
-    /// the writer actually emitted.
+    /// ISO 2709 framing invariants on the emitted bytes: the leader's
+    /// record-length field matches the byte count, and directory entries
+    /// tile the data area exactly (consecutive starts, terminator-inclusive
+    /// lengths, no entry pointing outside the data area).
     #[test]
-    fn leader_length_matches_emitted_bytes(record in arb_record()) {
+    fn bibliographic_writer_emits_valid_iso2709_framing(record in arb_record()) {
         let buffer = emit_binary(&record);
-        let declared = parse_record_length(&buffer);
-        prop_assert_eq!(declared, buffer.len(),
-            "leader.record_length ({}) != emitted byte count ({})",
-            declared, buffer.len());
-    }
-
-    /// Every directory entry must tile the data area exactly: entries
-    /// start immediately after one another, their lengths (each of which
-    /// includes the field terminator) sum to the data-area size minus the
-    /// record terminator, and no entry points outside the data area.
-    #[test]
-    fn directory_entries_tile_data_area(record in arb_record()) {
-        let buffer = emit_binary(&record);
-        let base = parse_data_base_address(&buffer);
-        let record_length = parse_record_length(&buffer);
-        let entries = parse_directory(&buffer);
-
-        let data_area_size = record_length - base;
-        prop_assert_eq!(buffer[record_length - 1], RECORD_TERMINATOR,
-            "last byte should be RECORD_TERMINATOR");
-
-        let mut expected_start = 0usize;
-        let mut total_length = 0usize;
-        for entry in &entries {
-            prop_assert_eq!(entry.start, expected_start,
-                "entry {} start {} != expected {}",
-                entry.tag, entry.start, expected_start);
-            prop_assert!(entry.length >= 1,
-                "entry {} length is zero", entry.tag);
-            let field_end_in_data = entry.start + entry.length;
-            prop_assert!(field_end_in_data < data_area_size,
-                "entry {} extends past data area (end={}, data_area_size={})",
-                entry.tag, field_end_in_data, data_area_size);
-            // Each field's declared length includes its trailing FIELD_TERMINATOR.
-            let term_pos = base + entry.start + entry.length - 1;
-            prop_assert_eq!(buffer[term_pos], FIELD_TERMINATOR,
-                "entry {} should end with FIELD_TERMINATOR at {}",
-                entry.tag, term_pos);
-            expected_start += entry.length;
-            total_length += entry.length;
-        }
-
-        // Lengths plus the trailing record-terminator byte should tile the
-        // entire data area.
-        prop_assert_eq!(total_length + 1, data_area_size,
-            "sum of field lengths ({}) + RECORD_TERMINATOR != data area size ({})",
-            total_length, data_area_size);
+        assert_iso2709_framing(&buffer)?;
     }
 
     /// Every indicator byte emitted in a data field must be a digit or a
@@ -1106,5 +1136,258 @@ proptest! {
 
         // After FatalReaderError, the reader is exhausted.
         prop_assert!(matches!(reader.read_record(), Ok(None)));
+    }
+}
+
+// ============================================================================
+// Authority and holdings strategies and round-trip properties
+// ============================================================================
+//
+// The authority and holdings writers share the ISO 2709 framing rules with
+// the bibliographic writer but are separate implementations. These
+// properties give both writers the same generative verification the
+// bibliographic writer has: anything the strategies can build must
+// serialize, parse back structurally identical through the paired reader,
+// and satisfy the byte-level framing invariants.
+
+/// Generate a leader for an authority record (leader/06 = `'z'`).
+///
+/// Record status draws from the MARC 21 Authority position-5 set.
+/// Positions 7 and 8 are undefined for authority records, so the strategy
+/// includes the fill character there. Encoding level draws from the
+/// authority position-17 set {n, o}.
+fn arb_authority_leader() -> impl Strategy<Value = Leader> {
+    (
+        prop_oneof![
+            Just('a'),
+            Just('c'),
+            Just('d'),
+            Just('n'),
+            Just('o'),
+            Just('s'),
+            Just('x'),
+        ],
+        prop_oneof![Just(' '), Just('|')], // position 7: undefined
+        prop_oneof![Just(' '), Just('|')], // position 8: undefined
+        prop_oneof![Just(' '), Just('a')], // character coding
+        prop_oneof![Just('n'), Just('o')], // encoding level
+    )
+        .prop_map(
+            |(
+                record_status,
+                bibliographic_level,
+                control_record_type,
+                character_coding,
+                encoding_level,
+            )| {
+                Leader {
+                    record_length: 0,
+                    record_status,
+                    record_type: 'z',
+                    bibliographic_level,
+                    control_record_type,
+                    character_coding,
+                    indicator_count: 2,
+                    subfield_code_count: 2,
+                    data_base_address: 0,
+                    encoding_level,
+                    cataloging_form: ' ',
+                    multipart_level: ' ',
+                    reserved: "4500".to_string(),
+                }
+            },
+        )
+}
+
+/// Generate a leader for a holdings record (leader/06 in {x, y, v, u}).
+///
+/// Record status draws from the MARC 21 Holdings position-5 set {c, d, n};
+/// encoding level from the holdings position-17 set.
+fn arb_holdings_leader() -> impl Strategy<Value = Leader> {
+    (
+        prop_oneof![Just('c'), Just('d'), Just('n')],
+        prop_oneof![Just('x'), Just('y'), Just('v'), Just('u')],
+        prop_oneof![Just(' '), Just('|')], // position 7: undefined
+        prop_oneof![Just(' '), Just('|')], // position 8: undefined
+        prop_oneof![Just(' '), Just('a')], // character coding
+        prop_oneof![
+            Just('1'),
+            Just('2'),
+            Just('3'),
+            Just('4'),
+            Just('5'),
+            Just('m'),
+            Just('u'),
+            Just('z'),
+        ],
+    )
+        .prop_map(
+            |(
+                record_status,
+                record_type,
+                bibliographic_level,
+                control_record_type,
+                character_coding,
+                encoding_level,
+            )| {
+                Leader {
+                    record_length: 0,
+                    record_status,
+                    record_type,
+                    bibliographic_level,
+                    control_record_type,
+                    character_coding,
+                    indicator_count: 2,
+                    subfield_code_count: 2,
+                    data_base_address: 0,
+                    encoding_level,
+                    cataloging_form: ' ',
+                    multipart_level: ' ',
+                    reserved: "4500".to_string(),
+                }
+            },
+        )
+}
+
+/// Generate a structurally valid authority record: `0..=3` control fields
+/// (repeated tags allowed — `AuthorityRecord` stores multiple values per
+/// control tag) and `0..=10` data fields.
+fn arb_authority_record() -> BoxedStrategy<AuthorityRecord> {
+    (
+        arb_authority_leader(),
+        prop::collection::vec((arb_control_tag(), arb_control_value()), 0..=3),
+        prop::collection::vec(arb_data_field_with(arb_subfield_value()), 0..=10),
+    )
+        .prop_map(|(leader, control_fields, data_fields)| {
+            let mut record = AuthorityRecord::new(leader);
+            for (tag, value) in control_fields {
+                record.add_control_field(tag, value);
+            }
+            for field in data_fields {
+                record.add_field(field);
+            }
+            record
+        })
+        .boxed()
+}
+
+/// Generate a structurally valid holdings record, same shape as
+/// [`arb_authority_record`].
+fn arb_holdings_record() -> BoxedStrategy<HoldingsRecord> {
+    (
+        arb_holdings_leader(),
+        prop::collection::vec((arb_control_tag(), arb_control_value()), 0..=3),
+        prop::collection::vec(arb_data_field_with(arb_subfield_value()), 0..=10),
+    )
+        .prop_map(|(leader, control_fields, data_fields)| {
+            let mut record = HoldingsRecord::new(leader);
+            for (tag, value) in control_fields {
+                record.add_control_field(tag, value);
+            }
+            for field in data_fields {
+                record.add_field(field);
+            }
+            record
+        })
+        .boxed()
+}
+
+/// Serialize an authority record to ISO 2709 bytes (test convenience).
+fn emit_authority_binary(record: &AuthorityRecord) -> Vec<u8> {
+    let mut buffer = Vec::new();
+    {
+        let mut writer = AuthorityMarcWriter::new(&mut buffer);
+        writer.write_record(record).expect("write should succeed");
+    }
+    buffer
+}
+
+/// Serialize a holdings record to ISO 2709 bytes (test convenience).
+fn emit_holdings_binary(record: &HoldingsRecord) -> Vec<u8> {
+    let mut buffer = Vec::new();
+    {
+        let mut writer = HoldingsMarcWriter::new(&mut buffer);
+        writer.write_record(record).expect("write should succeed");
+    }
+    buffer
+}
+
+/// Clone a leader with the writer-computed positions zeroed
+/// (`record_length`, `data_base_address`) so leaders can be compared
+/// before and after a round-trip.
+fn leader_ignoring_computed(leader: &Leader) -> Leader {
+    Leader {
+        record_length: 0,
+        data_base_address: 0,
+        ..leader.clone()
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        cases: 64,
+        ..ProptestConfig::default()
+    })]
+
+    /// Authority binary round-trip: any authority record the strategy can
+    /// build must serialize through `AuthorityMarcWriter` and parse back
+    /// structurally identical through `AuthorityMarcReader`.
+    #[test]
+    fn authority_binary_roundtrip(record in arb_authority_record()) {
+        let buffer = emit_authority_binary(&record);
+        let mut reader = AuthorityMarcReader::new(Cursor::new(&buffer));
+        let parsed = reader
+            .read_record()
+            .expect("read should succeed")
+            .expect("should get a record");
+
+        prop_assert_eq!(
+            leader_ignoring_computed(&record.leader),
+            leader_ignoring_computed(&parsed.leader)
+        );
+        prop_assert_eq!(&record.control_fields, &parsed.control_fields);
+        prop_assert_eq!(&record.fields, &parsed.fields);
+
+        let next = reader.read_record().expect("read should succeed");
+        prop_assert!(next.is_none(), "expected exactly one record in buffer");
+    }
+
+    /// The authority writer must emit bytes satisfying the ISO 2709
+    /// framing invariants (leader length, directory tiling).
+    #[test]
+    fn authority_writer_emits_valid_iso2709_framing(record in arb_authority_record()) {
+        let buffer = emit_authority_binary(&record);
+        assert_iso2709_framing(&buffer)?;
+    }
+
+    /// Holdings binary round-trip: any holdings record the strategy can
+    /// build must serialize through `HoldingsMarcWriter` and parse back
+    /// structurally identical through `HoldingsMarcReader`.
+    #[test]
+    fn holdings_binary_roundtrip(record in arb_holdings_record()) {
+        let buffer = emit_holdings_binary(&record);
+        let mut reader = HoldingsMarcReader::new(Cursor::new(&buffer));
+        let parsed = reader
+            .read_record()
+            .expect("read should succeed")
+            .expect("should get a record");
+
+        prop_assert_eq!(
+            leader_ignoring_computed(&record.leader),
+            leader_ignoring_computed(&parsed.leader)
+        );
+        prop_assert_eq!(&record.control_fields, &parsed.control_fields);
+        prop_assert_eq!(&record.fields, &parsed.fields);
+
+        let next = reader.read_record().expect("read should succeed");
+        prop_assert!(next.is_none(), "expected exactly one record in buffer");
+    }
+
+    /// The holdings writer must emit bytes satisfying the ISO 2709
+    /// framing invariants (leader length, directory tiling).
+    #[test]
+    fn holdings_writer_emits_valid_iso2709_framing(record in arb_holdings_record()) {
+        let buffer = emit_holdings_binary(&record);
+        assert_iso2709_framing(&buffer)?;
     }
 }
