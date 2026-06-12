@@ -1,0 +1,19 @@
+_:b1 a <http://id.loc.gov/ontologies/bibframe/Work> .
+_:b2 a <http://id.loc.gov/ontologies/bibframe/Instance> .
+_:b1 <http://id.loc.gov/ontologies/bibframe/hasInstance> _:b2 .
+_:b2 <http://id.loc.gov/ontologies/bibframe/instanceOf> _:b1 .
+_:b1 a <http://id.loc.gov/ontologies/bibframe/Text> .
+_:b3 a <http://id.loc.gov/ontologies/bibframe/Title> ;
+	<http://id.loc.gov/ontologies/bibframe/mainTitle> "The Great Gatsby" .
+_:b2 <http://id.loc.gov/ontologies/bibframe/title> _:b3 ;
+	<http://id.loc.gov/ontologies/bibframe/responsibilityStatement> "F. Scott Fitzgerald" .
+_:b4 a <http://id.loc.gov/ontologies/bflc/PrimaryContribution> .
+_:b5 a <http://id.loc.gov/ontologies/bibframe/Person> ;
+	<http://www.w3.org/2000/01/rdf-schema#label> "Fitzgerald, F. Scott" .
+_:b4 <http://id.loc.gov/ontologies/bibframe/agent> _:b5 .
+_:b1 <http://id.loc.gov/ontologies/bibframe/contribution> _:b4 .
+_:b6 a <http://id.loc.gov/ontologies/bibframe/Topic> ;
+	<http://www.w3.org/2000/01/rdf-schema#label> "American fiction" .
+_:b1 <http://id.loc.gov/ontologies/bibframe/subject> _:b6 .
+_:b7 a <http://id.loc.gov/ontologies/bibframe/AdminMetadata> .
+_:b2 <http://id.loc.gov/ontologies/bibframe/adminMetadata> _:b7 .
