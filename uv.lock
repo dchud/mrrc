@@ -623,6 +623,9 @@ docs = [
     { name = "mkdocstrings", extra = ["python"] },
     { name = "pymdown-extensions" },
 ]
+oracle = [
+    { name = "pymarc" },
+]
 test = [
     { name = "pytest" },
     { name = "pytest-benchmark" },
@@ -637,6 +640,7 @@ requires-dist = [
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.24" },
     { name = "mrrc", extras = ["test"], marker = "extra == 'dev'" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0" },
+    { name = "pymarc", marker = "extra == 'oracle'", specifier = ">=5.3" },
     { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = ">=10.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1" },
     { name = "pytest", marker = "extra == 'benchmark'", specifier = ">=7.0" },
@@ -648,7 +652,7 @@ requires-dist = [
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'benchmark'", specifier = ">=2.0" },
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'test'", specifier = ">=2.0" },
 ]
-provides-extras = ["test", "dev", "benchmark", "docs"]
+provides-extras = ["test", "dev", "benchmark", "docs", "oracle"]
 
 [[package]]
 name = "mypy"
@@ -788,6 +792,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c3/b2/bc9c9196916376152d655522fdcebac55e66de6603a76a02bca1b6414f6c/pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f", size = 4955991, upload-time = "2026-03-29T13:29:33.898Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176", size = 1231151, upload-time = "2026-03-29T13:29:30.038Z" },
+]
+
+[[package]]
+name = "pymarc"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/28/8cd999db1c4c6d7e855e7596bc17294829e95e818473afbb655cfa167dd0/pymarc-5.3.1.tar.gz", hash = "sha256:d289233d7298aeae45d976081710391cf21e754f73928132508b8adfe8ea0b49", size = 235395, upload-time = "2025-06-18T13:57:51.3Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ca/ba/058498db9945b4f0b1bbf9d2e3095d3c4c21934946953056b1a0751cc5a1/pymarc-5.3.1-py3-none-any.whl", hash = "sha256:3fcc09f9d51ef27c40f8d215e3219d0f3eb29716a0767e689c4923e38182ad73", size = 160259, upload-time = "2025-06-18T13:57:46.869Z" },
 ]
 
 [[package]]

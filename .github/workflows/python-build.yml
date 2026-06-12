@@ -105,10 +105,18 @@ jobs:
       - name: Install wheel and test dependencies
         shell: bash
         run: |
-          # Install the wheel together with the [test] extra from
-          # pyproject.toml so test deps stay in sync with the package.
+          # Install the wheel together with the [test] and [oracle] extras
+          # from pyproject.toml so test deps stay in sync with the package
+          # and the pymarc parity oracle executes instead of skipping.
           WHEEL=$(ls dist/*.whl | head -1)
-          uv pip install --system "${WHEEL}[test]"
+          uv pip install --system "${WHEEL}[test,oracle]"
+
+      - name: Verify the pymarc oracle is installed
+        shell: bash
+        run: |
+          # The parity tests skip silently when pymarc is missing; fail
+          # the job here instead so oracle coverage cannot quietly vanish.
+          python -c "import pymarc; print('pymarc', pymarc.__version__)"
 
       - name: Run pytest (core tests, excludes benchmarks)
         run: |
@@ -199,10 +207,18 @@ jobs:
       - name: Install wheel and test dependencies
         shell: bash
         run: |
-          # Install the wheel together with the [test] extra from
-          # pyproject.toml so test deps stay in sync with the package.
+          # Install the wheel together with the [test] and [oracle] extras
+          # from pyproject.toml so test deps stay in sync with the package
+          # and the pymarc parity oracle executes instead of skipping.
           WHEEL=$(ls dist/*.whl | head -1)
-          uv pip install --system "${WHEEL}[test]"
+          uv pip install --system "${WHEEL}[test,oracle]"
+
+      - name: Verify the pymarc oracle is installed
+        shell: bash
+        run: |
+          # The parity tests skip silently when pymarc is missing; fail
+          # the job here instead so oracle coverage cannot quietly vanish.
+          python -c "import pymarc; print('pymarc', pymarc.__version__)"
 
       - name: Run pytest (core tests, excludes benchmarks)
         run: |
