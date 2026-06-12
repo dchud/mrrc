@@ -206,17 +206,13 @@ impl PyLeader {
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "<Leader record_type={} bib_level={}>",
-            self.inner.record_type, self.inner.bibliographic_level
-        )
+        format!("Leader('{}')", self.inner)
     }
 
+    /// The 24-character MARC 21 leader string, matching pymarc's
+    /// str-shaped Leader.
     fn __str__(&self) -> String {
-        format!(
-            "Leader(status={}, type={}, level={})",
-            self.inner.record_status, self.inner.record_type, self.inner.bibliographic_level
-        )
+        self.inner.to_string()
     }
 
     fn __eq__(&self, other: &PyLeader) -> bool {
@@ -654,7 +650,8 @@ impl PyRecord {
         PyRecord::from(Record::new(leader.inner.clone()))
     }
 
-    /// Get the leader
+    /// The record leader (attribute, matching pymarc's record.leader)
+    #[getter]
     pub fn leader(&self) -> PyLeader {
         PyLeader {
             inner: self.inner.leader.clone(),

@@ -142,7 +142,7 @@ class TestSmallVecMemoryBehavior:
         # Verify all records have valid structure (no truncation)
         for record in records:
             # Leader is accessible and not None
-            leader = record.leader()
+            leader = record.leader
             assert leader is not None
 
 

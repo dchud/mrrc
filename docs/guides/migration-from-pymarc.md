@@ -221,9 +221,9 @@ print(cf.data)                  # '12345'
 
 ### Leader Access - Attribute-Based and Position-Based
 ```python
-# Attribute-based access. Note: mrrc exposes the leader as a method call,
-# record.leader(), where pymarc uses a record.leader attribute.
-leader = record.leader()
+# Attribute-based access, matching pymarc: record.leader is an attribute,
+# str(record.leader) is the 24-character leader string.
+leader = record.leader
 leader.record_status = 'c'          # Set record status
 leader.record_type = 'a'            # Set record type
 leader.bibliographic_level = 'd'    # Set bibliographic level

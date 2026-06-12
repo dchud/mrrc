@@ -79,6 +79,7 @@ def _read_both(data: bytes):
 
 
 def _assert_record_values_match(mrrc_record, pymarc_record, where: str) -> None:
+    assert str(mrrc_record.leader) == str(pymarc_record.leader), f"{where}: leader"
     assert mrrc_record.title == pymarc_record.title, f"{where}: title"
     mrrc_fields = mrrc_record.fields()
     pymarc_fields = pymarc_record.fields

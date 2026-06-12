@@ -180,7 +180,7 @@ def analyze_collection(path):
             languages[lang] += 1
 
         # Material type from leader
-        leader = record.leader()
+        leader = record.leader
         if leader.record_type == 'a':
             if leader.bibliographic_level == 'm':
                 material_types["Book"] += 1

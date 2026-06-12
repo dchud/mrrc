@@ -225,7 +225,7 @@ def profile_with_object_creation(test_file: Path) -> Dict[str, Any]:
         for record in reader:
             # Materialize record as dict to measure object conversion cost
             record_dict = {
-                "leader": record.leader(),
+                "leader": record.leader,
                 "fields": [],
             }
             for field in record.fields():
@@ -372,7 +372,7 @@ def profile_parsing_vs_iteration(test_file: Path) -> Dict[str, Any]:
         count_parse = 0
         for record in reader:
             # Access properties to force materialization
-            _ = record.leader()
+            _ = record.leader
             _ = record.control_fields()
             count_parse += 1
     elapsed_parse = time.perf_counter() - start
