@@ -6,6 +6,8 @@ Thank you for your interest in contributing to MRRC! This document provides guid
 
 Be respectful, inclusive, and professional in all interactions. We're building a library for librarians and information professionals—let's maintain that spirit of collaboration.
 
+To report a security vulnerability, see the [security policy](SECURITY.md) instead of opening a public issue.
+
 ## Getting Started
 
 ### Prerequisites

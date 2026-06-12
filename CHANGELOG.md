@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Community files: issue and pull request templates, and a security policy (`SECURITY.md`)
+  pointing at GitHub private advisories.
 - `parse_record_from_bytes`: parse one complete MARC record from in-memory bytes with
   no reader I/O and no per-record copies. The Python `MARCReader` read path now uses it,
   collapsing the former chain of per-record buffer copies between the source and the
