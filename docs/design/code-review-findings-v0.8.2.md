@@ -59,14 +59,24 @@ reconciliation" section lists every existing bead/issue this review touched and 
 to it. Severity reflects user impact; effort and severity together drive priority, and the "Quick
 wins" list at the end is the suggested first batch.
 
-## Remediation status (updated 2026-06-11)
+## Remediation status (updated 2026-06-13)
 
-Findings carrying a `**Status:**` line below are resolved or partially resolved; findings without
-one are open as written. Resolved so far: DOC-1..DOC-4 (PR #278); DOC-5 and most of DOC-6 and
-OPS-7 (PR #279); PKG-1 and the lazy_static half of PKG-10c (PR #280); the bd-j01q quick-xml 0.40
-migration (PR #221). The Quick wins list and the backlog reconciliation table are annotated in
-place. The remaining work is tracked as beads; this document is the review record, not the
-tracker.
+A full coverage audit on 2026-06-13, after the post-review parallel work tracks (PRs #284–#321),
+accounted for every finding: of 55 line-items, 36 are resolved, 5 are in flight in PR #311, 12 are
+ticketed as open beads, 1 is deferred by recorded decision, and the single gap found is now
+ticketed. This section is the current summary; per-finding `**Status:**` lines below record
+details for findings resolved before or shortly after the first update.
+
+Resolved since the 2026-06-11 update: PERF-1..3 (PRs #285/#292/#294); PAR-2..4 (#286/#298/#301);
+TEST-1 (#310 + #320), TEST-2 (#306 — the PartialEq portion needs a manual impl, not derives, and
+moved to bd-d7aq.1), TEST-3 (#305/#321), TEST-4 (#303), TEST-5 (#315 + #320), TEST-7 (#319; the
+docstring item rides with bd-0pg6.6); PKG-2..9 (#296/#299/#313/#318/#291/#304/#307/#287 + #289),
+PKG-10c/d (#280/#288/#304); OPS-2..9 (#302/#295/#300/#308/#279), OPS-10c (#302); DOC-6d and
+CLEAN-1..2 (#319). OPS-1 was deliberately deferred with rationale in PR #308's body and is now
+tracked as bd-9cux; the audit's one untracked finding, OPS-10f, is now bd-g4tn. Remaining open
+work lives in the bd-d7aq (architecture), bd-0pg6 (read-path performance), bd-qhll/bd-pk26.7
+(recovery skeleton), and bd-yfe6.9 (toolchain hygiene) beads; this document is the review record,
+not the tracker.
 
 ---
 
@@ -452,8 +462,9 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   self-contradictory KeyError comment in `quickstart-python.md:28-29`; (d) docs.rs front page
   embeds the full README (badges, repo-relative links 404 off GitHub).
 - **Backlog:** new.
-- **Status:** Partial — PR #279 fixed (a)-(c), recording the nav exclusion as an intentional
-  decision in the mkdocs.yml comment; (d) remains open, folded into the repository-cleanup chore.
+- **Status:** Done — PR #279 fixed (a)-(c), recording the nav exclusion as an intentional
+  decision in the mkdocs.yml comment; PR #319 resolved (d) by replacing the docs.rs README embed
+  with curated crate-level docs.
 
 ---
 
@@ -547,10 +558,10 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   supports free-threading and mrrc's GIL-release architecture is exactly the workload that
   benefits).
 - **Backlog:** new.
-- **Status:** Partial — (c)'s `lazy_static` → `LazyLock` conversion landed in PR #280 (12 tables
-  converted, dependency removed); the edition 2021→2024 bump and items (a), (b), (d), (e) remain
-  open. `src-python/Cargo.toml` also lacks a `rust-version` declaration — resolved for free by
-  (d)/PKG-5 workspace inheritance.
+- **Status:** Partial — (c) landed fully (`lazy_static` → `LazyLock` in PR #280; edition 2024 in
+  PR #288); (d) landed via PR #304's workspace inheritance, which also gave `src-python` its
+  missing `rust-version`. Items (a), (b), and (e) remain open in bd-yfe6.9 (the PartialEq half of
+  (b) in bd-d7aq.1).
 
 ---
 
@@ -604,10 +615,10 @@ unusually complete and accurate (see "Verified clean"). DOC-1..DOC-5 are one nat
   rehearsal exists anywhere, so first contact with PyPI validation is the production publish.
 - **Fix:** Correct the doc; optionally add a `workflow_dispatch` TestPyPI input for rehearsal.
 - **Backlog:** new.
-- **Status:** Partial — PR #279 corrected the wheel count and monitoring section, migrated the
-  `bd` commands to `br`, and made the MSRV wording version-agnostic. Remaining: the TestPyPI
-  rehearsal, and one residual "(15 wheels present)" at `release-procedure.md:1324` that the sweep
-  missed — both folded into the release-idempotency bead.
+- **Status:** Done — PR #279 corrected the wheel count and monitoring section, migrated the
+  `bd` commands to `br`, and made the MSRV wording version-agnostic; PR #300 added the TestPyPI
+  rehearsal (a `publish-target` dispatch input) and confirmed the residual wheel-count line was
+  already fixed.
 
 ### OPS-8 — Workflows lack top-level least-privilege `permissions:` blocks
 - **Severity:** Medium · **Effort:** S · **What:** 10 of 15 workflows inherit the default
