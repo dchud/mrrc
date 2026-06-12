@@ -30,9 +30,9 @@ When a coding agent receives a task "prepare release version X.Y.Z", it should f
 ### Machine-Checkable Success Criteria
 
 ```bash
-# 1. All version files updated and matching
-ROOT_VER=$(sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version' | sed 's/.*"\([^"]*\)".*/\1/')
-[ "$ROOT_VER" = "$VERSION" ] || exit 1
+# 1. Workspace version updated (single source: [workspace.package] in Cargo.toml)
+WS_VER=$(sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version' | sed 's/.*"\([^"]*\)".*/\1/')
+[ "$WS_VER" = "$VERSION" ] || exit 1
 
 # 2. CHANGELOG.md structure correct
 [ "$(grep -c "## \[Unreleased\]" CHANGELOG.md)" = "1" ] || exit 1
@@ -68,9 +68,9 @@ bash << 'EOF'
 set -e
 echo "Checking release preparation..."
 
-# Versions
-ROOT=$(sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version' | sed 's/.*"\([^"]*\)".*/\1/')
-[ "$ROOT" = "$VERSION" ] && echo "✓ Versions match" || (echo "✗ Version mismatch" && exit 1)
+# Version (single source: [workspace.package] in Cargo.toml)
+WS=$(sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version' | sed 's/.*"\([^"]*\)".*/\1/')
+[ "$WS" = "$VERSION" ] && echo "✓ Versions match" || (echo "✗ Version mismatch" && exit 1)
 
 # Changelog
 [ "$(grep -c "## \[Unreleased\]" CHANGELOG.md)" = "1" ] && echo "✓ Changelog structure OK" || (echo "✗ Changelog issue" && exit 1)
@@ -333,10 +333,10 @@ MRRC currently uses **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 - **MINOR** (e.g., 0.4.0 → 0.5.0): New features, backward-compatible API additions
 - **MAJOR** (e.g., 0.4.0 → 1.0.0): Breaking changes, significant redesigns
 
-**Current version**: Check `Cargo.toml`:
+**Current version**: Check `[workspace.package]` in `Cargo.toml`:
 
 ```bash
-grep '^version' Cargo.toml
+sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version'
 ```
 
 ### 2.2 Document Version Rationale
@@ -347,110 +347,57 @@ Note the reason for the chosen version increment in your release notes/commit me
 
 ## Update Configuration Files
 
-Update version numbers in all configuration files. **Do this in order** and **verify each file** before proceeding.
+The version is declared once, in `[workspace.package]` in the root `Cargo.toml`. Both crates inherit it (`version.workspace = true`), and `pyproject.toml` declares `dynamic = ["version"]`, so maturin reads the same value. One edit updates everything.
 
 The VERSION variable is used throughout. Ensure `$VERSION` is set before starting (see [Preflight Dependencies](#preflight-dependencies-setup)).
 
-### 3.1 Update Root Cargo.toml
+### 3.1 Update the Workspace Version
 
 **File**: `Cargo.toml` (in repo root)
 
-Find the `[package]` section (should be near the top) and update the `version` field:
+Update the `version` field in the `[workspace.package]` section:
 
 ```bash
 # Show current version
-echo "=== Current Root Cargo.toml version ==="
-sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version'
+echo "=== Current workspace version ==="
+sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version'
 
 # Update version (using sed)
-sed -i.bak '/^\[package\]/,/^\[/{
+sed -i.bak '/^\[workspace\.package\]/,/^\[/{
   s/^version = .*/version = "'$VERSION'"/
 }' Cargo.toml
 
+# Refresh the committed Cargo.lock so it records the new crate versions
+cargo update --workspace --quiet
+
 # Verify
-echo "=== Updated Root Cargo.toml version ==="
-sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version'
+echo "=== Updated workspace version ==="
+sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version'
 ```
 
 **Checklist**:
 
-- [ ] Root Cargo.toml updated
-- [ ] Version number shows `version = "X.Y.Z"` where X.Y.Z matches $VERSION
+- [ ] `[workspace.package]` shows `version = "X.Y.Z"` where X.Y.Z matches $VERSION
 - [ ] No other section's version was changed
+- [ ] Cargo.lock shows both `mrrc` and `mrrc-python` at the new version
 
-### 3.2 Update Python Cargo.toml
-
-**File**: `src-python/Cargo.toml`
-
-Update the version in the `[package]` section to match the root version:
-
-```bash
-# Show current version
-echo "=== Current Python Cargo.toml version ==="
-sed -n '/^\[package\]/,/^\[/p' src-python/Cargo.toml | grep '^version'
-
-# Update version
-sed -i.bak 's/^version = .*/version = "'$VERSION'"/' src-python/Cargo.toml
-
-# Verify
-echo "=== Updated Python Cargo.toml version ==="
-grep '^version' src-python/Cargo.toml
-```
-
-**Checklist**:
-
-- [ ] Python Cargo.toml updated
-- [ ] Version number matches root (should show `version = "X.Y.Z"`)
-
-### 3.3 Update pyproject.toml
-
-**File**: `pyproject.toml` (in repo root)
-
-Update the version in the `[project]` section:
-
-```bash
-# Show current version
-echo "=== Current pyproject.toml version ==="
-sed -n '/^\[project\]/,/^\[/p' pyproject.toml | grep '^version'
-
-# Update version
-sed -i.bak 's/^version = .*/version = "'$VERSION'"/' pyproject.toml
-
-# Verify
-echo "=== Updated pyproject.toml version ==="
-sed -n '/^\[project\]/,/^\[/p' pyproject.toml | grep '^version'
-```
-
-**Checklist**:
-
-- [ ] pyproject.toml updated
-- [ ] Version number matches root and Python Cargo.toml
-
-### 3.4 Verify All Versions Match
+### 3.2 Verify Both Crates Inherit the New Version
 
 ```bash
 echo "=== Version Consistency Check ==="
-ROOT_VER=$(sed -n '/^\[package\]/,/^\[/p' Cargo.toml | grep '^version' | head -1 | sed 's/.*= "\([^"]*\)".*/\1/')
-PYTHON_VER=$(grep '^version' src-python/Cargo.toml | head -1 | sed 's/.*= "\([^"]*\)".*/\1/')
-PYPROJECT_VER=$(sed -n '/^\[project\]/,/^\[/p' pyproject.toml | grep '^version' | head -1 | sed 's/.*= "\([^"]*\)".*/\1/')
+cargo metadata --format-version 1 --no-deps \
+  | jq -r '.packages[] | "\(.name) \(.version)"'
+echo "Expected: mrrc $VERSION and mrrc-python $VERSION"
 
-echo "Root Cargo.toml: $ROOT_VER"
-echo "Python Cargo.toml: $PYTHON_VER"
-echo "pyproject.toml: $PYPROJECT_VER"
-echo "Expected: $VERSION"
-
-# Exit with failure if any don't match
-if [ "$ROOT_VER" != "$VERSION" ] || [ "$PYTHON_VER" != "$VERSION" ] || [ "$PYPROJECT_VER" != "$VERSION" ]; then
-  echo "ERROR: Version mismatch detected!"
-  exit 1
-fi
-echo "✓ All versions match"
+cargo metadata --format-version 1 --no-deps \
+  | jq -e --arg v "$VERSION" 'all(.packages[]; .version == $v)' >/dev/null \
+  && echo "✓ All versions match" \
+  || { echo "ERROR: Version mismatch detected!"; exit 1; }
 ```
 
 **Checklist**:
 
-- [ ] All three version numbers are identical
-- [ ] All match the $VERSION variable
+- [ ] Both crates report the new version
 - [ ] Script exits with success (code 0)
 
 ---
@@ -693,11 +640,9 @@ Before committing version changes and creating the git tag, perform one final ve
 ### 6.0 Final Verification
 
 ```bash
-# 1. Verify all version files match
+# 1. Verify both crates report the workspace version
 echo "=== Version Check ==="
-echo "Root: $(grep '^version' Cargo.toml)"
-echo "Python Cargo: $(grep '^version' src-python/Cargo.toml)"
-echo "PyProject: $(grep '^version' pyproject.toml)"
+cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | "\(.name) \(.version)"'
 
 # 2. Verify changelog was updated
 echo ""
@@ -714,7 +659,7 @@ All checks must pass before proceeding to git operations.
 
 **Checklist**:
 
-- [ ] All three version numbers are identical
+- [ ] Both crates report the new version (inherited from `[workspace.package]`)
 - [ ] Changelog shows new version with today's date
 - [ ] All tests pass
 - [ ] Git status is clean (only version files changed)
@@ -730,12 +675,12 @@ All checks must pass before proceeding to git operations.
 Remove the `.bak` files created by sed during version updates:
 
 ```bash
-rm -f Cargo.toml.bak src-python/Cargo.toml.bak pyproject.toml.bak CHANGELOG.md.bak
+rm -f Cargo.toml.bak CHANGELOG.md.bak
 ```
 
 **Checklist**:
 
-- [ ] No `.bak` files remain in repository root or src-python/
+- [ ] No `.bak` files remain in the repository root
 
 ---
 
@@ -781,7 +726,7 @@ Stage and commit the updated files:
 
 ```bash
 # Stage the exact files we modified
-git add Cargo.toml src-python/Cargo.toml pyproject.toml CHANGELOG.md
+git add Cargo.toml Cargo.lock CHANGELOG.md
 
 # Verify staging
 echo "=== Staged changes ==="
@@ -790,7 +735,7 @@ git diff --cached --stat
 # Commit with clear message
 git commit -m "chore(release): v$VERSION
 
-- Update Cargo.toml, src-python/Cargo.toml, pyproject.toml to $VERSION
+- Update workspace version to $VERSION (both crates and the Python package inherit it)
 - Update CHANGELOG.md with release notes and date ($RELEASE_DATE)
 - All pre-release checks passing, ready for publication"
 
@@ -801,7 +746,7 @@ git log --oneline -1
 
 **Checklist**:
 
-- [ ] Only these 4 files staged: Cargo.toml, src-python/Cargo.toml, pyproject.toml, CHANGELOG.md
+- [ ] Only these 3 files staged: Cargo.toml, Cargo.lock, CHANGELOG.md
 - [ ] Commit message includes version number
 - [ ] `git log --oneline -1` shows the new commit
 - [ ] Git status shows nothing to commit
@@ -1254,14 +1199,14 @@ twine upload dist/mrrc-*.whl
 4. **Do NOT re-release**: docs.rs will automatically rebuild the docs for the existing version within a few minutes
 5. Verify rebuild by checking the page again
 
-### Version Mismatch Between Cargo/PyProject
+### Version Mismatch Between Crate and Wheel
 
-**Problem**: Deployment uses version A in Cargo.toml but version B in pyproject.toml
+**Problem**: A published artifact reports a version different from `[workspace.package]`
 
 **Steps**:
-1. Verify all three configs match: `Cargo.toml`, `src-python/Cargo.toml`, `pyproject.toml`
+1. The version has a single source: `[workspace.package]` in the root `Cargo.toml`. Both crates inherit it and `pyproject.toml` is `dynamic = ["version"]`, so a mismatch means the artifact was built from a stale checkout or a tag pointing at the wrong commit.
 2. If mismatch exists:
-   - Fix all to the same version
+   - Fix the workspace version
    - Delete the incorrect tag: `git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`
    - Recommit and retag (see GitHub Actions Build Fails section)
 
@@ -1297,10 +1242,9 @@ twine upload dist/mrrc-*.whl
 
 **Phase 3: Configuration File Updates**
 
-- [ ] Cargo.toml updated
-- [ ] src-python/Cargo.toml updated
-- [ ] pyproject.toml updated
-- [ ] All three versions match
+- [ ] `[workspace.package]` version in Cargo.toml updated
+- [ ] Cargo.lock refreshed (`cargo update --workspace`)
+- [ ] Both crates report the new version (`cargo metadata`)
 
 **Phase 4: Changelog & Documentation**
 
@@ -1313,7 +1257,7 @@ twine upload dist/mrrc-*.whl
 
 **Phase 5: Final Sanity Check**
 
-- [ ] Version consistency verified (all three files match)
+- [ ] Version consistency verified (both crates inherit the workspace version)
 - [ ] Changelog shows new version with correct date
 - [ ] All tests pass (full `.cargo/check.sh`)
 - [ ] Git status is clean (only config files changed)
@@ -1356,10 +1300,10 @@ twine upload dist/mrrc-*.whl
 
 | File | Purpose | Version String |
 |------|---------|-----------------|
-| `Cargo.toml` | Root Rust package | Line 7: `version = "X.Y.Z"` |
-| `src-python/Cargo.toml` | Python binding package | Line 3: `version = "X.Y.Z"` |
-| `pyproject.toml` | Python project metadata | Line 7: `version = "X.Y.Z"` |
-| `CHANGELOG.md` | Release notes | Line 8+: Version headers |
+| `Cargo.toml` | Workspace root | `[workspace.package]` `version = "X.Y.Z"` — the single source |
+| `src-python/Cargo.toml` | Python binding package | `version.workspace = true` (inherited, no edit) |
+| `pyproject.toml` | Python project metadata | `dynamic = ["version"]` (read by maturin, no edit) |
+| `CHANGELOG.md` | Release notes | Version headers |
 | `README.md` | Project overview | Various (checked for version refs) |
 
 ### GitHub Actions Workflows
@@ -1389,10 +1333,9 @@ twine upload dist/mrrc-*.whl
 # Pre-release verification
 .cargo/check.sh
 
-# Version checks
-grep '^version' Cargo.toml
-grep '^version' src-python/Cargo.toml
-grep '^version' pyproject.toml
+# Version checks (single source: [workspace.package] in Cargo.toml)
+sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version'
+cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | "\(.name) \(.version)"'
 
 # Git operations
 git tag -a vX.Y.Z -m "Release version X.Y.Z"

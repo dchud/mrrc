@@ -2,18 +2,36 @@
 members = [".", "src-python"]
 resolver = "3"
 
-[package]
-name = "mrrc"
+# Single source of truth for fields shared by both crates. The Python
+# package version is also derived from here: pyproject.toml declares
+# `dynamic = ["version"]` and maturin reads src-python/Cargo.toml,
+# which inherits this version.
+[workspace.package]
 version = "0.8.2"
 edition = "2024"
+rust-version = "1.88"
 authors = ["Daniel Chudnov"]
-description = "A Rust library for reading, writing, and manipulating MARC bibliographic records in ISO 2709 binary format"
 license = "MIT"
 repository = "https://github.com/dchud/mrrc"
+
+# Dependencies used by both crates, declared once so versions and
+# features cannot drift between them.
+[workspace.dependencies]
+serde_json = "1.0"
+smallvec = { version = "1.11", features = ["union", "serde"] }
+
+[package]
+name = "mrrc"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "A Rust library for reading, writing, and manipulating MARC bibliographic records in ISO 2709 binary format"
+license.workspace = true
+repository.workspace = true
 homepage = "https://github.com/dchud/mrrc"
 documentation = "https://docs.rs/mrrc"
 readme = "README.md"
-rust-version = "1.88"
+rust-version.workspace = true
 keywords = ["marc", "bibliographic", "library", "metadata"]
 categories = ["encoding", "parser-implementations"]
 
@@ -53,7 +71,7 @@ unicode-normalization = "0.1"
 
 # Serialization formats
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde_json = { workspace = true }
 quick-xml = { version = "0.40", features = ["serialize"] }
 
 # Ordered map for insertion order preservation
@@ -66,7 +84,7 @@ thiserror = "2.0"
 regex = "1.10"
 
 # Inline small-vector storage for field/subfield collections
-smallvec = { version = "1.11", features = ["union", "serde"] }
+smallvec = { workspace = true }
 
 # Parallelism
 rayon = "1.7"

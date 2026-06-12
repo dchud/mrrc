@@ -4,7 +4,10 @@ build-backend = "maturin"
 
 [project]
 name = "mrrc"
-version = "0.8.2"
+# The version comes from [workspace.package] in the root Cargo.toml:
+# maturin reads src-python/Cargo.toml (manifest-path below), which
+# inherits the workspace version.
+dynamic = ["version"]
 description = "MRRC: A fast MARC library written in Rust with Python bindings"
 readme = "README.md"
 # PEP 639 license expression; the license classifier is omitted per PEP 639.
