@@ -87,20 +87,19 @@ impl<'a> BibframeToMarcConverter<'a> {
         let instance_type = format!("{BF}{}", classes::INSTANCE);
 
         for triple in self.graph.triples() {
-            if triple.predicate == rdf_type {
-                if let RdfNode::Uri(ref type_uri) = triple.object {
-                    // Check for Work (or Work subtypes like Text, NotatedMusic, etc.)
-                    if (type_uri == &work_type || is_work_subtype(type_uri))
-                        && self.work_node.is_none()
-                    {
-                        self.work_node = Some(node_to_key(&triple.subject));
-                    }
-                    // Check for Instance (or Instance subtypes)
-                    if (type_uri == &instance_type || is_instance_subtype(type_uri))
-                        && self.instance_node.is_none()
-                    {
-                        self.instance_node = Some(node_to_key(&triple.subject));
-                    }
+            if triple.predicate == rdf_type
+                && let RdfNode::Uri(ref type_uri) = triple.object
+            {
+                // Check for Work (or Work subtypes like Text, NotatedMusic, etc.)
+                if (type_uri == &work_type || is_work_subtype(type_uri)) && self.work_node.is_none()
+                {
+                    self.work_node = Some(node_to_key(&triple.subject));
+                }
+                // Check for Instance (or Instance subtypes)
+                if (type_uri == &instance_type || is_instance_subtype(type_uri))
+                    && self.instance_node.is_none()
+                {
+                    self.instance_node = Some(node_to_key(&triple.subject));
                 }
             }
         }
@@ -137,27 +136,27 @@ impl<'a> BibframeToMarcConverter<'a> {
         let mut bib_level = 'm'; // Default: monograph
 
         // Determine record type from Work type
-        if let Some(ref work_key) = self.work_node {
-            if let Some(props) = self.subject_index.get(work_key) {
-                for (pred, obj) in props {
-                    if pred == &format!("{RDF}type") {
-                        if let RdfNode::Uri(type_uri) = obj {
-                            record_type = work_type_to_leader_06(type_uri);
-                        }
-                    }
+        if let Some(ref work_key) = self.work_node
+            && let Some(props) = self.subject_index.get(work_key)
+        {
+            for (pred, obj) in props {
+                if pred == &format!("{RDF}type")
+                    && let RdfNode::Uri(type_uri) = obj
+                {
+                    record_type = work_type_to_leader_06(type_uri);
                 }
             }
         }
 
         // Determine bibliographic level from Instance type
-        if let Some(ref instance_key) = self.instance_node {
-            if let Some(props) = self.subject_index.get(instance_key) {
-                for (pred, obj) in props {
-                    if pred == &format!("{RDF}type") {
-                        if let RdfNode::Uri(type_uri) = obj {
-                            bib_level = instance_type_to_leader_07(type_uri);
-                        }
-                    }
+        if let Some(ref instance_key) = self.instance_node
+            && let Some(props) = self.subject_index.get(instance_key)
+        {
+            for (pred, obj) in props {
+                if pred == &format!("{RDF}type")
+                    && let RdfNode::Uri(type_uri) = obj
+                {
+                    bib_level = instance_type_to_leader_07(type_uri);
                 }
             }
         }
@@ -182,10 +181,10 @@ impl<'a> BibframeToMarcConverter<'a> {
     /// Extracts control fields (001, 008, etc.).
     fn extract_control_fields(&mut self, record: &mut Record) {
         // Try to extract control number from Instance identifiedBy
-        if let Some(ref instance_key) = self.instance_node {
-            if let Some(control_num) = self.find_control_number(instance_key) {
-                record.add_control_field("001".to_string(), control_num);
-            }
+        if let Some(ref instance_key) = self.instance_node
+            && let Some(control_num) = self.find_control_number(instance_key)
+        {
+            record.add_control_field("001".to_string(), control_num);
         }
 
         // Create minimal 008 field
@@ -208,24 +207,21 @@ impl<'a> BibframeToMarcConverter<'a> {
                         let mut value = None;
 
                         for (id_pred, id_obj) in id_props {
-                            if id_pred == &format!("{RDF}type") {
-                                if let RdfNode::Uri(type_uri) = id_obj {
-                                    if type_uri.contains("Lccn") || type_uri.contains("Local") {
-                                        is_control_id = true;
-                                    }
-                                }
+                            if id_pred == &format!("{RDF}type")
+                                && let RdfNode::Uri(type_uri) = id_obj
+                                && (type_uri.contains("Lccn") || type_uri.contains("Local"))
+                            {
+                                is_control_id = true;
                             }
-                            if id_pred == &format!("{RDF}value") {
-                                if let RdfNode::Literal { value: v, .. } = id_obj {
-                                    value = Some(v.clone());
-                                }
+                            if id_pred == &format!("{RDF}value")
+                                && let RdfNode::Literal { value: v, .. } = id_obj
+                            {
+                                value = Some(v.clone());
                             }
                         }
 
-                        if is_control_id {
-                            if let Some(v) = value {
-                                return Some(v);
-                            }
+                        if is_control_id && let Some(v) = value {
+                            return Some(v);
                         }
                     }
                 }
@@ -321,17 +317,17 @@ impl<'a> BibframeToMarcConverter<'a> {
                         let activity_key = node_to_key(obj);
                         if let Some(activity_props) = self.subject_index.get(&activity_key) {
                             for (act_pred, act_obj) in activity_props {
-                                if act_pred == &format!("{BF}{}", properties::DATE) {
-                                    if let RdfNode::Literal { value, .. } = act_obj {
-                                        // Extract 4-digit year
-                                        let year: String = value
-                                            .chars()
-                                            .filter(char::is_ascii_digit)
-                                            .take(4)
-                                            .collect();
-                                        if year.len() == 4 {
-                                            return Some(year);
-                                        }
+                                if act_pred == &format!("{BF}{}", properties::DATE)
+                                    && let RdfNode::Literal { value, .. } = act_obj
+                                {
+                                    // Extract 4-digit year
+                                    let year: String = value
+                                        .chars()
+                                        .filter(char::is_ascii_digit)
+                                        .take(4)
+                                        .collect();
+                                    if year.len() == 4 {
+                                        return Some(year);
                                     }
                                 }
                             }
@@ -366,14 +362,14 @@ impl<'a> BibframeToMarcConverter<'a> {
                 // Also extract responsibility statement
                 let resp_prop = format!("{BF}{}", properties::RESPONSIBILITY_STATEMENT);
                 for (pred, obj) in props.clone() {
-                    if pred == resp_prop {
-                        if let RdfNode::Literal { value, .. } = obj {
-                            // Add to existing 245 if present
-                            if let Some(fields) = record.fields.get_mut("245") {
-                                if let Some(field) = fields.first_mut() {
-                                    field.add_subfield('c', value);
-                                }
-                            }
+                    if pred == resp_prop
+                        && let RdfNode::Literal { value, .. } = obj
+                    {
+                        // Add to existing 245 if present
+                        if let Some(fields) = record.fields.get_mut("245")
+                            && let Some(field) = fields.first_mut()
+                        {
+                            field.add_subfield('c', value);
                         }
                     }
                 }
@@ -419,10 +415,10 @@ impl<'a> BibframeToMarcConverter<'a> {
                                 matches!(o, RdfNode::Uri(u) if u.contains("PrimaryContribution"))
                             });
 
-                            if is_primary {
-                                if let Some(field) = self.create_agent_field(&contrib_key, "1") {
-                                    record.add_field(field);
-                                }
+                            if is_primary
+                                && let Some(field) = self.create_agent_field(&contrib_key, "1")
+                            {
+                                record.add_field(field);
                             }
                         }
                     }
@@ -447,10 +443,10 @@ impl<'a> BibframeToMarcConverter<'a> {
                                 matches!(o, RdfNode::Uri(u) if u.contains("PrimaryContribution"))
                             });
 
-                            if !is_primary {
-                                if let Some(field) = self.create_agent_field(&contrib_key, "7") {
-                                    record.add_field(field);
-                                }
+                            if !is_primary
+                                && let Some(field) = self.create_agent_field(&contrib_key, "7")
+                            {
+                                record.add_field(field);
                             }
                         }
                     }
@@ -475,13 +471,13 @@ impl<'a> BibframeToMarcConverter<'a> {
         // Determine agent type and tag
         let mut agent_type = "Person";
         for (pred, obj) in agent_props {
-            if pred == &format!("{RDF}type") {
-                if let RdfNode::Uri(type_uri) = obj {
-                    if type_uri.contains("Organization") {
-                        agent_type = "Organization";
-                    } else if type_uri.contains("Meeting") {
-                        agent_type = "Meeting";
-                    }
+            if pred == &format!("{RDF}type")
+                && let RdfNode::Uri(type_uri) = obj
+            {
+                if type_uri.contains("Organization") {
+                    agent_type = "Organization";
+                } else if type_uri.contains("Meeting") {
+                    agent_type = "Meeting";
                 }
             }
         }
@@ -500,10 +496,10 @@ impl<'a> BibframeToMarcConverter<'a> {
 
         // Extract agent label
         for (pred, obj) in agent_props {
-            if pred == &format!("{RDFS}label") {
-                if let RdfNode::Literal { value, .. } = obj {
-                    field.add_subfield('a', value.clone());
-                }
+            if pred == &format!("{RDFS}label")
+                && let RdfNode::Literal { value, .. } = obj
+            {
+                field.add_subfield('a', value.clone());
             }
         }
 
@@ -557,10 +553,10 @@ impl<'a> BibframeToMarcConverter<'a> {
         // Determine subject type and tag
         let mut tag = "650"; // Default: topical
         for (pred, obj) in subject_props {
-            if pred == &format!("{RDF}type") {
-                if let RdfNode::Uri(type_uri) = obj {
-                    tag = subject_type_to_tag(type_uri);
-                }
+            if pred == &format!("{RDF}type")
+                && let RdfNode::Uri(type_uri) = obj
+            {
+                tag = subject_type_to_tag(type_uri);
             }
         }
 
@@ -568,16 +564,16 @@ impl<'a> BibframeToMarcConverter<'a> {
 
         // Extract label
         for (pred, obj) in subject_props {
-            if pred == &format!("{RDFS}label") {
-                if let RdfNode::Literal { value, .. } = obj {
-                    // Split on "--" for subdivisions
-                    let parts: Vec<&str> = value.split("--").collect();
-                    if let Some(first) = parts.first() {
-                        field.add_subfield('a', first.trim().to_string());
-                    }
-                    for part in parts.iter().skip(1) {
-                        field.add_subfield('x', part.trim().to_string());
-                    }
+            if pred == &format!("{RDFS}label")
+                && let RdfNode::Literal { value, .. } = obj
+            {
+                // Split on "--" for subdivisions
+                let parts: Vec<&str> = value.split("--").collect();
+                if let Some(first) = parts.first() {
+                    field.add_subfield('a', first.trim().to_string());
+                }
+                for part in parts.iter().skip(1) {
+                    field.add_subfield('x', part.trim().to_string());
                 }
             }
         }
@@ -610,10 +606,10 @@ impl<'a> BibframeToMarcConverter<'a> {
         // Determine identifier type and tag
         let mut tag = "035"; // Default: system control number
         for (pred, obj) in id_props {
-            if pred == &format!("{RDF}type") {
-                if let RdfNode::Uri(type_uri) = obj {
-                    tag = identifier_type_to_tag(type_uri);
-                }
+            if pred == &format!("{RDF}type")
+                && let RdfNode::Uri(type_uri) = obj
+            {
+                tag = identifier_type_to_tag(type_uri);
             }
         }
 
@@ -621,10 +617,10 @@ impl<'a> BibframeToMarcConverter<'a> {
 
         // Extract value
         for (pred, obj) in id_props {
-            if pred == &format!("{RDF}value") {
-                if let RdfNode::Literal { value, .. } = obj {
-                    field.add_subfield('a', value.clone());
-                }
+            if pred == &format!("{RDF}value")
+                && let RdfNode::Literal { value, .. } = obj
+            {
+                field.add_subfield('a', value.clone());
             }
         }
 
@@ -654,12 +650,12 @@ impl<'a> BibframeToMarcConverter<'a> {
                 // Also check for copyright date
                 let copyright_prop = format!("{BF}{}", properties::COPYRIGHT_DATE);
                 for (pred, obj) in props.clone() {
-                    if pred == copyright_prop {
-                        if let RdfNode::Literal { value, .. } = obj {
-                            let mut field = Field::new("264".to_string(), ' ', '4');
-                            field.add_subfield('c', value);
-                            record.add_field(field);
-                        }
+                    if pred == copyright_prop
+                        && let RdfNode::Literal { value, .. } = obj
+                    {
+                        let mut field = Field::new("264".to_string(), ' ', '4');
+                        field.add_subfield('c', value);
+                        record.add_field(field);
                     }
                 }
             }
@@ -674,10 +670,10 @@ impl<'a> BibframeToMarcConverter<'a> {
         // Determine activity type for indicator
         let mut ind2 = '1'; // Default: publication
         for (pred, obj) in activity_props {
-            if pred == &format!("{RDF}type") {
-                if let RdfNode::Uri(type_uri) = obj {
-                    ind2 = provision_type_to_indicator(type_uri);
-                }
+            if pred == &format!("{RDF}type")
+                && let RdfNode::Uri(type_uri) = obj
+            {
+                ind2 = provision_type_to_indicator(type_uri);
             }
         }
 
@@ -694,12 +690,12 @@ impl<'a> BibframeToMarcConverter<'a> {
                 let place_key = node_to_key(obj);
                 if let Some(place_props) = self.subject_index.get(&place_key) {
                     for (place_pred, place_obj) in place_props {
-                        if place_pred == &format!("{RDFS}label") {
-                            if let RdfNode::Literal { value, .. } = place_obj {
-                                // Only add if we don't already have a place
-                                if !field.subfields.iter().any(|s| s.code == 'a') {
-                                    field.add_subfield('a', value.clone());
-                                }
+                        if place_pred == &format!("{RDFS}label")
+                            && let RdfNode::Literal { value, .. } = place_obj
+                        {
+                            // Only add if we don't already have a place
+                            if !field.subfields.iter().any(|s| s.code == 'a') {
+                                field.add_subfield('a', value.clone());
                             }
                         }
                     }
@@ -715,24 +711,22 @@ impl<'a> BibframeToMarcConverter<'a> {
                 let agent_key = node_to_key(obj);
                 if let Some(agent_props) = self.subject_index.get(&agent_key) {
                     for (agent_pred, agent_obj) in agent_props {
-                        if agent_pred == &format!("{RDFS}label") {
-                            if let RdfNode::Literal { value, .. } = agent_obj {
-                                if !field.subfields.iter().any(|s| s.code == 'b') {
-                                    field.add_subfield('b', value.clone());
-                                }
-                            }
+                        if agent_pred == &format!("{RDFS}label")
+                            && let RdfNode::Literal { value, .. } = agent_obj
+                            && !field.subfields.iter().any(|s| s.code == 'b')
+                        {
+                            field.add_subfield('b', value.clone());
                         }
                     }
                 }
             }
 
             // Date - try simpleDate first
-            if pred.ends_with("simpleDate") || pred == &format!("{BF}{}", properties::DATE) {
-                if let RdfNode::Literal { value, .. } = obj {
-                    if !field.subfields.iter().any(|s| s.code == 'c') {
-                        field.add_subfield('c', value.clone());
-                    }
-                }
+            if (pred.ends_with("simpleDate") || pred == &format!("{BF}{}", properties::DATE))
+                && let RdfNode::Literal { value, .. } = obj
+                && !field.subfields.iter().any(|s| s.code == 'c')
+            {
+                field.add_subfield('c', value.clone());
             }
         }
 
@@ -754,15 +748,15 @@ impl<'a> BibframeToMarcConverter<'a> {
                 let mut field = Field::new("300".to_string(), ' ', ' ');
 
                 for (pred, obj) in props {
-                    if pred == &extent_prop {
-                        if let RdfNode::Literal { value, .. } = obj {
-                            field.add_subfield('a', value.clone());
-                        }
+                    if pred == &extent_prop
+                        && let RdfNode::Literal { value, .. } = obj
+                    {
+                        field.add_subfield('a', value.clone());
                     }
-                    if pred == &dimensions_prop {
-                        if let RdfNode::Literal { value, .. } = obj {
-                            field.add_subfield('c', value.clone());
-                        }
+                    if pred == &dimensions_prop
+                        && let RdfNode::Literal { value, .. } = obj
+                    {
+                        field.add_subfield('c', value.clone());
                     }
                 }
 
@@ -781,19 +775,19 @@ impl<'a> BibframeToMarcConverter<'a> {
 
             if let Some(props) = self.subject_index.get(instance_key) {
                 for (pred, obj) in props {
-                    if pred == &note_prop {
-                        if let RdfNode::Literal { value, .. } = obj {
-                            let mut field = Field::new("500".to_string(), ' ', ' ');
-                            field.add_subfield('a', value.clone());
-                            record.add_field(field);
-                        }
+                    if pred == &note_prop
+                        && let RdfNode::Literal { value, .. } = obj
+                    {
+                        let mut field = Field::new("500".to_string(), ' ', ' ');
+                        field.add_subfield('a', value.clone());
+                        record.add_field(field);
                     }
-                    if pred == &summary_prop {
-                        if let RdfNode::Literal { value, .. } = obj {
-                            let mut field = Field::new("520".to_string(), ' ', ' ');
-                            field.add_subfield('a', value.clone());
-                            record.add_field(field);
-                        }
+                    if pred == &summary_prop
+                        && let RdfNode::Literal { value, .. } = obj
+                    {
+                        let mut field = Field::new("520".to_string(), ' ', ' ');
+                        field.add_subfield('a', value.clone());
+                        record.add_field(field);
                     }
                 }
             }
@@ -823,21 +817,20 @@ impl<'a> BibframeToMarcConverter<'a> {
                                     let title_key = node_to_key(series_obj);
                                     if let Some(title_props) = self.subject_index.get(&title_key) {
                                         for (t_pred, t_obj) in title_props {
-                                            if t_pred.ends_with("mainTitle") {
-                                                if let RdfNode::Literal { value, .. } = t_obj {
-                                                    title.clone_from(value);
-                                                }
+                                            if t_pred.ends_with("mainTitle")
+                                                && let RdfNode::Literal { value, .. } = t_obj
+                                            {
+                                                title.clone_from(value);
                                             }
                                         }
                                     }
                                 }
                                 // Also check for rdfs:label
-                                if series_pred == &format!("{RDFS}label") {
-                                    if let RdfNode::Literal { value, .. } = series_obj {
-                                        if title.is_empty() {
-                                            title.clone_from(value);
-                                        }
-                                    }
+                                if series_pred == &format!("{RDFS}label")
+                                    && let RdfNode::Literal { value, .. } = series_obj
+                                    && title.is_empty()
+                                {
+                                    title.clone_from(value);
                                 }
                             }
 
@@ -863,15 +856,15 @@ impl<'a> BibframeToMarcConverter<'a> {
                 let mut enumeration = None;
 
                 for (pred, obj) in props {
-                    if pred == &series_stmt_prop {
-                        if let RdfNode::Literal { value, .. } = obj {
-                            series_statement = Some(value.clone());
-                        }
+                    if pred == &series_stmt_prop
+                        && let RdfNode::Literal { value, .. } = obj
+                    {
+                        series_statement = Some(value.clone());
                     }
-                    if pred == &series_enum_prop {
-                        if let RdfNode::Literal { value, .. } = obj {
-                            enumeration = Some(value.clone());
-                        }
+                    if pred == &series_enum_prop
+                        && let RdfNode::Literal { value, .. } = obj
+                    {
+                        enumeration = Some(value.clone());
                     }
                 }
 
@@ -936,10 +929,10 @@ impl<'a> BibframeToMarcConverter<'a> {
                 let title_key = node_to_key(obj);
                 if let Some(title_props) = self.subject_index.get(&title_key) {
                     for (t_pred, t_obj) in title_props {
-                        if t_pred.ends_with("mainTitle") {
-                            if let RdfNode::Literal { value, .. } = t_obj {
-                                field.add_subfield('t', value.clone());
-                            }
+                        if t_pred.ends_with("mainTitle")
+                            && let RdfNode::Literal { value, .. } = t_obj
+                        {
+                            field.add_subfield('t', value.clone());
                         }
                     }
                 }
@@ -956,19 +949,19 @@ impl<'a> BibframeToMarcConverter<'a> {
                     let mut id_value = None;
 
                     for (id_pred, id_obj) in id_props {
-                        if id_pred == &format!("{RDF}type") {
-                            if let RdfNode::Uri(type_uri) = id_obj {
-                                if type_uri.ends_with("Issn") {
-                                    id_type = "Issn";
-                                } else if type_uri.ends_with("Isbn") {
-                                    id_type = "Isbn";
-                                }
+                        if id_pred == &format!("{RDF}type")
+                            && let RdfNode::Uri(type_uri) = id_obj
+                        {
+                            if type_uri.ends_with("Issn") {
+                                id_type = "Issn";
+                            } else if type_uri.ends_with("Isbn") {
+                                id_type = "Isbn";
                             }
                         }
-                        if id_pred == &format!("{RDF}value") {
-                            if let RdfNode::Literal { value, .. } = id_obj {
-                                id_value = Some(value.clone());
-                            }
+                        if id_pred == &format!("{RDF}value")
+                            && let RdfNode::Literal { value, .. } = id_obj
+                        {
+                            id_value = Some(value.clone());
                         }
                     }
 

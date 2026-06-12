@@ -61,12 +61,12 @@ fn load_records_from_test_data() -> Vec<String> {
     // In real code, use MarcReader to load actual records
     if let Ok(entries) = std::fs::read_dir(test_dir) {
         for entry in entries.flatten() {
-            if let Some(filename) = entry.file_name().to_str() {
-                if filename.ends_with(".mrc") {
-                    // Simulate loading records
-                    for i in 0..10 {
-                        records.push(format!("record-{filename}-{i}"));
-                    }
+            if let Some(filename) = entry.file_name().to_str()
+                && filename.ends_with(".mrc")
+            {
+                // Simulate loading records
+                for i in 0..10 {
+                    records.push(format!("record-{filename}-{i}"));
                 }
             }
         }

@@ -214,16 +214,16 @@ impl PublicationInfo {
     pub fn format_statement(&self) -> String {
         let mut parts = Vec::new();
 
-        if let Some(place) = &self.place {
-            if !place.is_empty() {
-                parts.push(place.clone());
-            }
+        if let Some(place) = &self.place
+            && !place.is_empty()
+        {
+            parts.push(place.clone());
         }
 
-        if let Some(publisher) = &self.publisher {
-            if !publisher.is_empty() {
-                parts.push(publisher.clone());
-            }
+        if let Some(publisher) = &self.publisher
+            && !publisher.is_empty()
+        {
+            parts.push(publisher.clone());
         }
 
         let base = if parts.is_empty() {

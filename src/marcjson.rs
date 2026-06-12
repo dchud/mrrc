@@ -161,10 +161,10 @@ pub fn marcjson_to_record(json: &Value) -> Result<Record> {
                     for sf in subfields_arr {
                         if let Some(sf_obj) = sf.as_object() {
                             for (code, value) in sf_obj {
-                                if let Some(code_char) = code.chars().next() {
-                                    if let Some(str_value) = value.as_str() {
-                                        field.add_subfield(code_char, str_value.to_string());
-                                    }
+                                if let Some(code_char) = code.chars().next()
+                                    && let Some(str_value) = value.as_str()
+                                {
+                                    field.add_subfield(code_char, str_value.to_string());
                                 }
                             }
                         }

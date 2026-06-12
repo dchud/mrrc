@@ -13,7 +13,7 @@ repository = "https://github.com/dchud/mrrc"
 homepage = "https://github.com/dchud/mrrc"
 documentation = "https://docs.rs/mrrc"
 readme = "README.md"
-rust-version = "1.87"
+rust-version = "1.88"
 keywords = ["marc", "bibliographic", "library", "metadata"]
 categories = ["encoding", "parser-implementations"]
 

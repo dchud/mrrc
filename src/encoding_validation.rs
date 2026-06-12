@@ -51,10 +51,11 @@ impl EncodingValidator {
                 if Self::is_likely_different_encoding(value, primary_encoding) {
                     inconsistent_field_count += 1;
                     let detected = Self::detect_encoding_from_string(value);
-                    if let Some(enc) = detected {
-                        if enc != primary_encoding && !mixed_encodings.contains(&enc) {
-                            mixed_encodings.push(enc);
-                        }
+                    if let Some(enc) = detected
+                        && enc != primary_encoding
+                        && !mixed_encodings.contains(&enc)
+                    {
+                        mixed_encodings.push(enc);
                     }
                 }
             }
@@ -67,10 +68,11 @@ impl EncodingValidator {
                     if Self::is_likely_different_encoding(&subfield.value, primary_encoding) {
                         inconsistent_field_count += 1;
                         let detected = Self::detect_encoding_from_string(&subfield.value);
-                        if let Some(enc) = detected {
-                            if enc != primary_encoding && !mixed_encodings.contains(&enc) {
-                                mixed_encodings.push(enc);
-                            }
+                        if let Some(enc) = detected
+                            && enc != primary_encoding
+                            && !mixed_encodings.contains(&enc)
+                        {
+                            mixed_encodings.push(enc);
                         }
                     }
                 }

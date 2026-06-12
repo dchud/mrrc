@@ -1440,10 +1440,10 @@ fn parse_record_info(
                         if !text.is_empty() {
                             record.add_control_field("001".to_string(), text);
                         }
-                        if let Some(src) = source {
-                            if !src.is_empty() {
-                                record.add_control_field("003".to_string(), src);
-                            }
+                        if let Some(src) = source
+                            && !src.is_empty()
+                        {
+                            record.add_control_field("003".to_string(), src);
                         }
                     },
                     b"recordContentSource" => {

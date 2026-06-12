@@ -286,15 +286,15 @@ impl Record {
         indicator2: Option<char>,
     ) -> impl Iterator<Item = &Field> + use<'_> {
         self.fields_by_tag(tag).filter(move |field| {
-            if let Some(ind1) = indicator1 {
-                if field.indicator1 != ind1 {
-                    return false;
-                }
+            if let Some(ind1) = indicator1
+                && field.indicator1 != ind1
+            {
+                return false;
             }
-            if let Some(ind2) = indicator2 {
-                if field.indicator2 != ind2 {
-                    return false;
-                }
+            if let Some(ind2) = indicator2
+                && field.indicator2 != ind2
+            {
+                return false;
             }
             true
         })
@@ -513,13 +513,13 @@ impl Record {
         // Find all 880 fields
         let mut found = None;
         for field_880 in self.fields_by_tag("880") {
-            if let Some(sf6) = field_880.get_subfield('6') {
-                if let Some(linkage_880) = crate::field_linkage::LinkageInfo::parse(sf6) {
-                    // Check if this 880's linkage points back to our original field
-                    if linkage_880.occurrence == linkage.occurrence {
-                        found = Some(field_880);
-                        break;
-                    }
+            if let Some(sf6) = field_880.get_subfield('6')
+                && let Some(linkage_880) = crate::field_linkage::LinkageInfo::parse(sf6)
+            {
+                // Check if this 880's linkage points back to our original field
+                if linkage_880.occurrence == linkage.occurrence {
+                    found = Some(field_880);
+                    break;
                 }
             }
         }
@@ -546,12 +546,11 @@ impl Record {
 
         let mut results = Vec::new();
         for field_880 in self.fields_by_tag("880") {
-            if let Some(sf6) = field_880.get_subfield('6') {
-                if let Some(linkage_880) = crate::field_linkage::LinkageInfo::parse(sf6) {
-                    if linkage_880.occurrence == linkage.occurrence {
-                        results.push(field_880);
-                    }
-                }
+            if let Some(sf6) = field_880.get_subfield('6')
+                && let Some(linkage_880) = crate::field_linkage::LinkageInfo::parse(sf6)
+                && linkage_880.occurrence == linkage.occurrence
+            {
+                results.push(field_880);
             }
         }
         results
@@ -591,12 +590,12 @@ impl Record {
 
         // Find the original field with matching tag and occurrence
         for field_orig in self.fields_by_tag(original_tag) {
-            if let Some(sf6_orig) = field_orig.get_subfield('6') {
-                if let Some(linkage_orig) = crate::field_linkage::LinkageInfo::parse(sf6_orig) {
-                    // Check if this original field links to our 880
-                    if linkage_orig.occurrence == linkage.occurrence {
-                        return Some(field_orig);
-                    }
+            if let Some(sf6_orig) = field_orig.get_subfield('6')
+                && let Some(linkage_orig) = crate::field_linkage::LinkageInfo::parse(sf6_orig)
+            {
+                // Check if this original field links to our 880
+                if linkage_orig.occurrence == linkage.occurrence {
+                    return Some(field_orig);
                 }
             }
         }
@@ -674,12 +673,11 @@ impl Record {
 
         // Search all fields
         for field in self.fields() {
-            if let Some(sf6) = field.get_subfield('6') {
-                if let Some(linkage) = crate::field_linkage::LinkageInfo::parse(sf6) {
-                    if linkage.occurrence == occurrence {
-                        results.push(field);
-                    }
-                }
+            if let Some(sf6) = field.get_subfield('6')
+                && let Some(linkage) = crate::field_linkage::LinkageInfo::parse(sf6)
+                && linkage.occurrence == occurrence
+            {
+                results.push(field);
             }
         }
 
@@ -918,21 +916,20 @@ impl crate::field_query_helpers::FieldQueryHelpers for Record {
         let mut results = Vec::new();
 
         // Check primary author (100)
-        if let Some(field) = self.get_field("100") {
-            if let Some(name) = field.get_subfield('a') {
-                if let Some(dates) = field.get_subfield('d') {
-                    results.push((name, dates));
-                }
-            }
+        if let Some(field) = self.get_field("100")
+            && let Some(name) = field.get_subfield('a')
+            && let Some(dates) = field.get_subfield('d')
+        {
+            results.push((name, dates));
         }
 
         // Check added entry authors (700)
         if let Some(fields) = self.get_fields("700") {
             for field in fields {
-                if let Some(name) = field.get_subfield('a') {
-                    if let Some(dates) = field.get_subfield('d') {
-                        results.push((name, dates));
-                    }
+                if let Some(name) = field.get_subfield('a')
+                    && let Some(dates) = field.get_subfield('d')
+                {
+                    results.push((name, dates));
                 }
             }
         }

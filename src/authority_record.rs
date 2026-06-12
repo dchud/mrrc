@@ -133,10 +133,10 @@ impl AuthorityRecord {
     pub fn heading(&self) -> Option<&Field> {
         // Get the first 1XX field
         for tag in &["100", "110", "111", "130", "148", "150", "151", "155"] {
-            if let Some(fields) = self.fields.get(*tag) {
-                if let Some(field) = fields.first() {
-                    return Some(field);
-                }
+            if let Some(fields) = self.fields.get(*tag)
+                && let Some(field) = fields.first()
+            {
+                return Some(field);
             }
         }
         None

@@ -39,11 +39,11 @@ fn extract_types(rdf_xml: &str) -> HashSet<String> {
     for line in rdf_xml.lines() {
         if line.contains("rdf:type") || line.contains("<type ") {
             // Extract the class URI from the line
-            if let Some(start) = line.find("rdf:resource=\"") {
-                if let Some(end) = line[start + 14..].find('\"') {
-                    let class_uri = &line[start + 14..start + 14 + end];
-                    types.insert(class_uri.to_string());
-                }
+            if let Some(start) = line.find("rdf:resource=\"")
+                && let Some(end) = line[start + 14..].find('\"')
+            {
+                let class_uri = &line[start + 14..start + 14 + end];
+                types.insert(class_uri.to_string());
             }
         }
     }

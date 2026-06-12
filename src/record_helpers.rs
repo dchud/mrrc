@@ -298,10 +298,10 @@ pub trait RecordHelpers: MarcRecord {
     #[must_use]
     fn publication_year(&self) -> Option<u32> {
         // Try from field 260 first
-        if let Some(info) = self.publication_info() {
-            if let Some(year) = info.publication_year() {
-                return Some(year);
-            }
+        if let Some(info) = self.publication_info()
+            && let Some(year) = info.publication_year()
+        {
+            return Some(year);
         }
 
         // Fall back to field 008

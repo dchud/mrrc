@@ -151,10 +151,10 @@ fn working_with_subfields(record: &Record) {
     // Get 650 fields with subfield 'x' (topical subdivision)
     println!("\n650 fields with topical subdivisions:");
     for field in record.fields_by_tag("650") {
-        if let Some(main) = field.get_subfield('a') {
-            if let Some(subd) = field.get_subfield('x') {
-                println!("  {main} -- {subd}");
-            }
+        if let Some(main) = field.get_subfield('a')
+            && let Some(subd) = field.get_subfield('x')
+        {
+            println!("  {main} -- {subd}");
         }
     }
 }
