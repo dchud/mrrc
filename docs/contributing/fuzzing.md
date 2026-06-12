@@ -166,8 +166,14 @@ seeds (the `-X` flag means "only ignored files"):
 git clean -fdX fuzz/corpus/parse_record/
 ```
 
-CI runners start fresh each nightly run and throw away mutator adds when
-the runner tears down, so no cleanup is needed there.
+In CI the grown corpus persists across nightly runs through an
+`actions/cache` entry per fuzz target, so coverage depth compounds
+instead of regrowing from the committed seeds. Each run minimizes the
+corpus (`cargo fuzz cmin`) before caching, which keeps the entries
+small; no manual cleanup is needed there. To fold accumulated CI
+coverage back into the committed seeds, occasionally run `cmin`
+locally on a corpus that includes the cached CI inputs and commit the
+survivors as new seeds (with matching `fuzz/.gitignore` allow lines).
 
 ## Playbook: investigating a CI failure
 

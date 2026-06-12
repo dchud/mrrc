@@ -1,0 +1,77 @@
+name: Security Audit
+
+# cargo-audit on pushes and PRs, plus a daily schedule so an advisory
+# published during a quiet stretch surfaces the next morning instead of
+# at the next push. A scheduled failure files (or comments on) a
+# tracking issue.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.beads/**'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.beads/**'
+  schedule:
+    # Daily at 05:00 UTC, offset from the other scheduled workflows
+    # (ASAN 02:00, fuzz 03:00, Miri 06:00).
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Run security audit
+        run: cargo audit
+
+  notify-failure:
+    name: File failure issue
+    needs: security-audit
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: File or update the failure-tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Scheduled cargo-audit run failed"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --json number,title \
+            --jq '[.[] | select(.title == env.TITLE)][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
+              --body "Failed again: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
+              --body "Scheduled run failed: $RUN_URL — likely a new RustSec advisory against a locked dependency. Later failures will be added here as comments."
+          fi
