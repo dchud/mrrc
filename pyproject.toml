@@ -59,6 +59,15 @@ docs = [
     "mkdocstrings[python]>=0.24",
     "pymdown-extensions>=10.0",
 ]
+# pymarc is the oracle the parity tests compare against. Managed as an
+# extra so the version is locked in uv.lock and Dependabot bumps it on
+# the normal cadence: a pymarc release that changes behavior fails the
+# oracle on the bump PR, where the divergence gets adjudicated (adopt
+# the new behavior or document the deliberate divergence) instead of
+# being discovered by users.
+oracle = [
+    "pymarc>=5.3",
+]
 
 [tool.maturin]
 python-packages = ["mrrc"]

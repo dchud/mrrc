@@ -98,6 +98,11 @@ if [ "$QUICK" = false ]; then
 
     echo ""
     echo "=== Python tests (core functionality, excludes benchmarks) ==="
+    # The pymarc parity oracle skips silently when pymarc is missing;
+    # fail here instead. pymarc comes from the oracle extra — fix with:
+    #   uv sync --all-extras
+    uv run python -c "import pymarc" 2>/dev/null \
+        || { echo "ERROR: pymarc (oracle extra) missing — run 'uv sync --all-extras'"; exit 1; }
     uv run python -m pytest tests/python/ -m "not benchmark" -q
 
     echo ""

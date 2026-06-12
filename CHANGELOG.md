@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The pymarc parity oracle now executes in CI and check.sh instead of silently skipping:
+  a new `oracle` extra pins pymarc in uv.lock (Dependabot adjudicates behavior changes on
+  bump PRs), and the oracle extends beyond iteration shape to value-level comparisons —
+  title, `format_field()`, `value()`, and `as_marc()` byte-equality over the 1k corpus.
+
 ### Changed
 
 - File-path readers now buffer their reads (64 KiB): Python `MARCReader(path)` (and the
