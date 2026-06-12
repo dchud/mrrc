@@ -121,22 +121,6 @@ harness = false
 name = "parallel_benchmarks"
 harness = false
 
-[[bench]]
-name = "profiling_harness"
-harness = false
-
-[[bench]]
-name = "detailed_profiling"
-harness = false
-
-[[bench]]
-name = "rayon_profiling"
-harness = false
-
-[[bench]]
-name = "rayon_file_io_profiling"
-harness = false
-
 # Release profile for a performance-marketed PyO3 extension: LTO and a
 # single codegen unit make cross-crate inlining deterministic (no more
 # codegen-unit-partitioning lottery in instruction-count benchmarks) and

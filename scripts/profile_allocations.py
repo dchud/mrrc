@@ -1,63 +1,8 @@
 #!/usr/bin/env python3
 """
-Analyze allocation patterns in single-threaded MARC parsing.
-Uses valgrind massif to profile heap usage.
+Estimate allocation patterns in single-threaded MARC parsing
+from the Record structure layout.
 """
-
-import subprocess
-import json
-import os
-import sys
-from pathlib import Path
-
-def run_massif():
-    """Run valgrind massif on profiling harness"""
-    print("Running valgrind massif on profiling harness...")
-    
-    # Build the harness
-    subprocess.run(["cargo", "bench", "--bench", "profiling_harness", "--no-run"],
-                   capture_output=True, check=True)
-    
-    # Find the compiled binary
-    harness_path = Path("target/release/deps/profiling_harness-")
-    binaries = list(Path("target/release/deps").glob("profiling_harness-*"))
-    if not binaries:
-        print("Error: Could not find compiled benchmark binary")
-        sys.exit(1)
-    
-    binary = binaries[0]
-    print(f"Using binary: {binary}")
-    
-    # Run with massif (brief run, just to profile allocation patterns)
-    cmd = [
-        "valgrind",
-        "--tool=massif",
-        "--massif-out-file=massif.out",
-        f"--max-snapshots=100",
-        str(binary),
-    ]
-    
-    print(f"Command: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        print("Valgrind output:")
-        print(result.stdout)
-        print(result.stderr)
-        sys.exit(1)
-    
-    # Run ms_print to analyze results
-    print("\n" + "="*60)
-    print("MEMORY PROFILING RESULTS")
-    print("="*60 + "\n")
-    
-    ms_result = subprocess.run(["ms_print", "massif.out"],
-                                capture_output=True, text=True)
-    print(ms_result.stdout)
-    
-    if os.path.exists("massif.out"):
-        os.remove("massif.out")
-
 
 def analyze_record_structure():
     """Estimate allocation overhead from Record structure"""
@@ -131,14 +76,4 @@ def analyze_record_structure():
 if __name__ == "__main__":
     print("MARC Record Allocation Profiling")
     print("=" * 60)
-    
-    # Check if valgrind is available
-    try:
-        subprocess.run(["which", "valgrind"], capture_output=True, check=True)
-        analyze_record_structure()
-        # Only run massif if valgrind is available
-        # run_massif()
-    except subprocess.CalledProcessError:
-        print("Note: valgrind not found, skipping runtime profiling")
-        print("Running analysis based on source code structure...\n")
-        analyze_record_structure()
+    analyze_record_structure()
