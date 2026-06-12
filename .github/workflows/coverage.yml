@@ -1,6 +1,14 @@
 name: Code Coverage
 
+# Measures coverage for the Rust core (cargo llvm-cov) and the Python
+# wrapper (pytest-cov over mrrc/) and uploads both to codecov.io for
+# visibility. Scheduled weekly; not a PR gate.
+
 on:
+  schedule:
+    # Weekly on Mondays at 04:00 UTC, offset from the daily scheduled
+    # workflows (ASAN 02:00, fuzz 03:00, audit 05:00, Miri 06:00).
+    - cron: '0 4 * * 1'
   workflow_dispatch:
 
 env:
@@ -8,14 +16,17 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  coverage:
-    name: Code Coverage
+  coverage-rust:
+    name: Rust coverage (llvm-cov)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6.0.3
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
 
       - name: Cache cargo
         uses: actions/cache@v5
@@ -26,27 +37,98 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install tarpaulin
-        uses: taiki-e/install-action@cargo-tarpaulin
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
-      - name: Generate coverage reports
-        run: |
-          # Exclude mrrc-python (PyO3 bindings) as it requires Python linking
-          # Focus coverage on the core mrrc library
-          cargo tarpaulin --out Xml Html --package mrrc --timeout 300 --exclude-files examples/ --exclude-files tests/
+      - name: Generate coverage (lcov)
+        # mrrc-python (PyO3 bindings) is excluded: it needs Python linking
+        # and its behavior is exercised by the Python lane below.
+        run: cargo llvm-cov --package mrrc --lcov --output-path lcov.info
+
+      - name: Render HTML report
+        run: cargo llvm-cov report --html
 
       - name: Upload coverage to codecov.io
         uses: codecov/codecov-action@v6.0.1
         with:
-          files: ./cobertura.xml
-          flags: unit-tests
-          fail_ci_if_error: false
-          verbose: true
+          files: ./lcov.info
+          flags: rust
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: coverage-report
-          path: tarpaulin-report.html
+          name: coverage-report-rust
+          path: target/llvm-cov/html/
+
+  coverage-python:
+    name: Python coverage (pytest-cov)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Sync dependencies
+        run: uv sync --all-extras
+
+      - name: Build extension
+        run: uv run maturin develop --release
+
+      - name: Run pytest with coverage
+        # Coverage is measured over the pure-Python wrapper (mrrc/); the
+        # compiled _mrrc extension is opaque to coverage.py and its lines
+        # are covered by the Rust lane instead.
+        run: |
+          uv run --with pytest-cov python -m pytest tests/python/ -m "not benchmark" -q \
+            --cov=mrrc --cov-report=xml:coverage-python.xml --cov-report=term
+
+      - name: Upload coverage to codecov.io
+        uses: codecov/codecov-action@v6.0.1
+        with:
+          files: ./coverage-python.xml
+          flags: python
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  notify-failure:
+    name: File failure issue
+    needs: [coverage-rust, coverage-python]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: File or update the failure-tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Scheduled coverage run failed"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --json number,title \
+            --jq '[.[] | select(.title == env.TITLE)][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
+              --body "Failed again: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
+              --body "Scheduled run failed: $RUN_URL. Later failures will be added here as comments."
+          fi
