@@ -1,8 +1,13 @@
 name: Code Coverage
 
 # Measures coverage for the Rust core (cargo llvm-cov) and the Python
-# wrapper (pytest-cov over mrrc/) and uploads both to codecov.io for
-# visibility. Scheduled weekly; not a PR gate.
+# wrapper (pytest-cov over mrrc/), enforces per-lane minimums natively,
+# and renders reports into the job summary. No external coverage
+# service: thresholds fail the job directly and HTML reports upload as
+# artifacts. Scheduled weekly; not a PR gate.
+#
+# Ratchet policy: when a scheduled run reports a figure comfortably
+# above a lane's minimum, raise that minimum to just below the figure.
 
 on:
   schedule:
@@ -17,6 +22,11 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  # Minimum line-coverage percentages enforced per lane. The Rust floor
+  # is an initial conservative value — measure on the first scheduled
+  # run and ratchet. The Python floor sits just below the measured 83%.
+  RUST_MIN_LINES: 60
+  PYTHON_MIN_LINES: 80
 
 jobs:
   coverage-rust:
@@ -45,21 +55,28 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
-      - name: Generate coverage (lcov)
+      - name: Run tests under coverage instrumentation
         # mrrc-python (PyO3 bindings) is excluded: it needs Python linking
         # and its behavior is exercised by the Python lane below.
-        run: cargo llvm-cov --package mrrc --lcov --output-path lcov.info
+        # --no-report collects profiles only; the report steps below reuse
+        # them without rerunning the tests.
+        run: cargo llvm-cov --package mrrc --no-report
+
+      - name: Report to job summary
+        run: |
+          {
+            echo '## Rust line coverage'
+            echo '```text'
+            cargo llvm-cov report --summary-only
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce minimum line coverage
+        run: cargo llvm-cov report --fail-under-lines "$RUST_MIN_LINES"
 
       - name: Render HTML report
+        if: always()
         run: cargo llvm-cov report --html
-
-      - name: Upload coverage to codecov.io
-        uses: codecov/codecov-action@v6.0.1
-        with:
-          files: ./lcov.info
-          flags: rust
-          fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v7
@@ -101,15 +118,28 @@ jobs:
         # are covered by the Rust lane instead.
         run: |
           uv run --with pytest-cov python -m pytest tests/python/ -m "not benchmark" -q \
-            --cov=mrrc --cov-report=xml:coverage-python.xml --cov-report=term
+            --cov=mrrc --cov-report=term
 
-      - name: Upload coverage to codecov.io
-        uses: codecov/codecov-action@v6.0.1
+      - name: Report to job summary
+        run: |
+          {
+            echo '## Python line coverage (mrrc/ wrapper)'
+            uv run --with pytest-cov python -m coverage report --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce minimum line coverage
+        run: uv run --with pytest-cov python -m coverage report --fail-under "$PYTHON_MIN_LINES"
+
+      - name: Render HTML report
+        if: failure()
+        run: uv run --with pytest-cov python -m coverage html
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
         with:
-          files: ./coverage-python.xml
-          flags: python
-          fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-report-python
+          path: htmlcov/
 
   notify-failure:
     name: File failure issue
@@ -133,5 +163,5 @@ jobs:
               --body "Failed again: $RUN_URL"
           else
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
-              --body "Scheduled run failed: $RUN_URL. Later failures will be added here as comments."
+              --body "Scheduled run failed: $RUN_URL — a lane either had test failures or dropped below its coverage minimum (RUST_MIN_LINES / PYTHON_MIN_LINES in coverage.yml). The HTML report is attached to the run as an artifact. Later failures will be added here as comments."
           fi
