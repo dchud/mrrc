@@ -62,6 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (dropping the `lazy_static` dependency) and I/O error construction uses
   `std::io::Error::other`.
 
+### Removed
+
+- Deleted four dead manual-profiling bench harnesses (`profiling_harness`,
+  `detailed_profiling`, `rayon_profiling`, `rayon_file_io_profiling`). They produced no
+  CI or CodSpeed signal, referenced documents that no longer exist, and one wrote
+  scratch files to `/tmp`. The bench target now contains only criterion benches.
+
 ### Fixed
 
 - Corrected Python documentation errors that broke copy-pasted code: the README and
