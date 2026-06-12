@@ -1,4 +1,8 @@
-#![doc = include_str!("../README.md")]
+// The README is *not* embedded as crate docs (no `#![doc =
+// include_str!("../README.md")]`): it carries CI badges and
+// repo-relative links that 404 when rendered anywhere but GitHub. The
+// crate-level docs below are the docs.rs front page; the README remains
+// the GitHub/crates.io landing page (`readme = "README.md"`).
 #![warn(missing_docs)]
 // MarcError carries structured positional metadata (record index, byte
 // offsets, control number, source filename, etc.) which makes its struct

@@ -82,6 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `detailed_profiling`, `rayon_profiling`, `rayon_file_io_profiling`). They produced no
   CI or CodSpeed signal, referenced documents that no longer exist, and one wrote
   scratch files to `/tmp`. The bench target now contains only criterion benches.
+- The placeholder `mrrc` binary (`src/main.rs`, a banner print) and the orphaned
+  `tests/create_sample_data.py` (fixtures come from `scripts/generate_benchmark_fixtures.py`).
+- The docs.rs front page no longer embeds the README (whose CI badges and repo-relative
+  links 404 off GitHub); it now renders the curated crate-level docs instead.
 
 ### Fixed
 
