@@ -12,6 +12,8 @@ they own their data and are added to a record with ``add_field``.
 
 from __future__ import annotations
 
+import copy
+
 import pytest
 
 import mrrc
@@ -185,3 +187,244 @@ def test_edits_survive_marc_roundtrip() -> None:
     assert reread is not None
     assert reread["245"]["a"] == "Persisted title /"
     assert reread["005"].data == "20260603120000.0"
+
+
+# ---------------------------------------------------------------------
+# Mutation during get_fields iteration
+# ---------------------------------------------------------------------
+
+
+def test_remove_all_during_iteration_stales_pending_handles() -> None:
+    """Removing a tag mid-iteration stales the not-yet-visited handles.
+
+    ``get_fields`` returns a snapshot list, so the loop itself completes;
+    every handle yielded after the removal raises instead of reading a
+    wrong field.
+    """
+    record = _build_record()
+    seen: list[str] = []
+    for index, field in enumerate(record.get_fields("650")):
+        if index == 0:
+            record.remove_fields("650")
+        try:
+            seen.append(field["a"])
+        except mrrc.StaleFieldError:
+            seen.append("stale")
+    assert seen == ["stale", "stale", "stale"]
+
+
+def test_remove_one_occurrence_during_iteration_stales_all_handles() -> None:
+    """Removing a single occurrence invalidates every outstanding handle.
+
+    Staleness is record-wide: handles to the surviving occurrences raise
+    StaleFieldError rather than shifting to a neighboring field.
+    """
+    record = _build_record()
+    handles = record.get_fields("650")
+    record.remove_field_at("650", 1)
+    for handle in handles:
+        with pytest.raises(mrrc.StaleFieldError):
+            handle["a"]
+    # Re-fetched handles see the post-removal state in order.
+    assert [f["a"] for f in record.get_fields("650")] == ["Cats.", "Birds."]
+
+
+def test_removal_stales_handles_of_other_tags() -> None:
+    """Removing one tag invalidates handles to unrelated tags as well."""
+    record = _build_record()
+    title = record["245"]
+    record.remove_field_at("650", 1)
+    with pytest.raises(mrrc.StaleFieldError):
+        title["a"]
+
+
+def test_addition_during_iteration_keeps_snapshot_and_handles() -> None:
+    """Adding a field mid-iteration neither grows the loop nor stales handles."""
+    record = _build_record()
+    visited: list[str] = []
+    for index, field in enumerate(record.get_fields("650")):
+        if index == 0:
+            extra = mrrc.Field("650", " ", "0")
+            extra.add_subfield("a", "Fish.")
+            record.add_field(extra)
+        visited.append(field["a"])
+    assert visited == ["Cats.", "Dogs.", "Birds."]
+    assert len(record.get_fields("650")) == 4
+
+
+# ---------------------------------------------------------------------
+# Handles across copy / deepcopy
+# ---------------------------------------------------------------------
+
+
+def test_copy_of_handle_aliases_same_field() -> None:
+    """``copy.copy`` of a handle yields another live handle to the field."""
+    record = _build_record()
+    duplicate = copy.copy(record["245"])
+    duplicate.add_subfield("n", "Part 1.")
+    assert record["245"]["n"] == "Part 1."
+
+
+def test_copy_of_handle_goes_stale_with_the_original() -> None:
+    """A shallow-copied handle is invalidated by the same removals."""
+    record = _build_record()
+    original = record["245"]
+    duplicate = copy.copy(original)
+    record.remove_fields("245")
+    with pytest.raises(mrrc.StaleFieldError):
+        original["a"]
+    with pytest.raises(mrrc.StaleFieldError):
+        duplicate["a"]
+
+
+def test_deepcopy_of_handle_raises_type_error() -> None:
+    """Handles cannot be deep-copied; deepcopy raises TypeError."""
+    record = _build_record()
+    with pytest.raises(TypeError):
+        copy.deepcopy(record["245"])
+
+
+def test_copy_of_detached_field_shares_state() -> None:
+    """``copy.copy`` of a detached field shares the underlying data."""
+    field = mrrc.Field("500", " ", " ")
+    field.add_subfield("a", "A general note.")
+    duplicate = copy.copy(field)
+    duplicate.add_subfield("b", "Shared.")
+    assert field.subfields_by_code("b") == ["Shared."]
+
+
+def test_deepcopy_of_detached_field_raises_type_error() -> None:
+    """Detached fields cannot be deep-copied either."""
+    field = mrrc.Field("500", " ", " ")
+    field.add_subfield("a", "A general note.")
+    with pytest.raises(TypeError):
+        copy.deepcopy(field)
+
+
+def test_deepcopy_of_record_raises_type_error() -> None:
+    """Records do not support deepcopy; handles cannot cross copies."""
+    record = _build_record()
+    with pytest.raises(TypeError):
+        copy.deepcopy(record)
+
+
+# ---------------------------------------------------------------------
+# Same-tag remove plus re-add: no occurrence aliasing
+# ---------------------------------------------------------------------
+
+
+def test_handle_stale_read_after_remove_and_readd_same_tag() -> None:
+    """A pre-removal handle never reads a re-added same-tag field."""
+    record = _build_record()
+    old = record.get_fields("650")[0]
+    record.remove_fields("650")
+    replacement = mrrc.Field("650", " ", "0")
+    replacement.add_subfield("a", "Fish.")
+    record.add_field(replacement)
+    with pytest.raises(mrrc.StaleFieldError):
+        old["a"]
+
+
+def test_handle_stale_write_after_remove_and_readd_same_tag() -> None:
+    """A pre-removal handle never writes to a re-added same-tag field."""
+    record = _build_record()
+    old = record.get_fields("650")[0]
+    record.remove_fields("650")
+    replacement = mrrc.Field("650", " ", "0")
+    replacement.add_subfield("a", "Fish.")
+    record.add_field(replacement)
+    with pytest.raises(mrrc.StaleFieldError):
+        old.add_subfield("x", "History.")
+    assert record.get_fields("650")[0].subfields_by_code("x") == []
+
+
+def test_remove_occurrence_then_readd_requires_refetch() -> None:
+    """After occurrence removal plus re-add, only re-fetched handles work."""
+    record = _build_record()
+    first = record.get_fields("650")[0]
+    record.remove_field_at("650", 0)
+    replacement = mrrc.Field("650", " ", "0")
+    replacement.add_subfield("a", "Fish.")
+    record.add_field(replacement)
+    with pytest.raises(mrrc.StaleFieldError):
+        first["a"]
+    assert [f["a"] for f in record.get_fields("650")] == [
+        "Dogs.",
+        "Birds.",
+        "Fish.",
+    ]
+
+
+def test_remove_field_by_handle_stales_other_handles() -> None:
+    """``remove_field(handle)`` removes that occurrence and stales the rest."""
+    record = _build_record()
+    handles = record.get_fields("650")
+    record.remove_field(handles[1])
+    for handle in handles:
+        with pytest.raises(mrrc.StaleFieldError):
+            handle["a"]
+    assert [f["a"] for f in record.get_fields("650")] == ["Cats.", "Birds."]
+
+
+# ---------------------------------------------------------------------
+# Reader-produced records behave like constructed records
+# ---------------------------------------------------------------------
+
+
+@pytest.fixture()
+def reader_record() -> mrrc.Record:
+    """A record parsed from disk rather than built field by field."""
+    with open("tests/data/simple_book.mrc", "rb") as fh:
+        record = next(mrrc.MARCReader(fh))
+    assert record is not None
+    return record
+
+
+def test_reader_record_handle_write_through(reader_record: mrrc.Record) -> None:
+    reader_record["245"]["a"] = "Revised title /"
+    assert reader_record["245"]["a"] == "Revised title /"
+
+
+def test_reader_record_alias_visibility(reader_record: mrrc.Record) -> None:
+    first = reader_record["245"]
+    second = reader_record["245"]
+    first.add_subfield("n", "Part 1.")
+    assert second["n"] == "Part 1."
+
+
+def test_reader_record_get_fields_edit_persists(
+    reader_record: mrrc.Record,
+) -> None:
+    for field in reader_record.get_fields("650"):
+        field.add_subfield("x", "History.")
+    assert all(f["x"] == "History." for f in reader_record.get_fields("650"))
+
+
+def test_reader_record_stale_after_removal(reader_record: mrrc.Record) -> None:
+    handle = reader_record["650"]
+    reader_record.remove_fields("650")
+    with pytest.raises(mrrc.StaleFieldError):
+        handle["a"]
+
+
+def test_reader_record_stale_after_remove_and_readd(
+    reader_record: mrrc.Record,
+) -> None:
+    handle = reader_record["650"]
+    reader_record.remove_fields("650")
+    replacement = mrrc.Field("650", " ", "0")
+    replacement.add_subfield("a", "Jazz age fiction.")
+    reader_record.add_field(replacement)
+    with pytest.raises(mrrc.StaleFieldError):
+        handle["a"]
+    assert reader_record["650"]["a"] == "Jazz age fiction."
+
+
+def test_reader_record_edits_survive_roundtrip(
+    reader_record: mrrc.Record,
+) -> None:
+    reader_record["245"]["a"] = "Persisted title /"
+    data = reader_record.as_marc()
+    reread = next(mrrc.MARCReader(data))
+    assert reread is not None
+    assert reread["245"]["a"] == "Persisted title /"
