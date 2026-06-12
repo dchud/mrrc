@@ -90,6 +90,7 @@ impl RecoveryCap {
 }
 
 /// Strategy for handling malformed or truncated records.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RecoveryMode {
     /// Strict mode: return errors for any malformation (default)
@@ -107,6 +108,7 @@ pub enum RecoveryMode {
 /// Single rule across all readers (bibliographic, authority, holdings):
 /// [`Structural`](Self::Structural) is lossy everywhere;
 /// [`StrictMarc`](Self::StrictMarc) is strict everywhere.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ValidationLevel {
     /// Only ISO 2709 structural errors fire (leader, directory, EOR,

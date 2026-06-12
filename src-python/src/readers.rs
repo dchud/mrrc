@@ -409,12 +409,10 @@ impl PyMARCReader {
         }
         self.accumulated_errors = self.accumulated_errors.saturating_add(record.errors.len());
         if self.accumulated_errors > cap {
-            return Err(Box::new(mrrc::MarcError::FatalReaderError {
-                cap,
-                errors_seen: self.accumulated_errors,
-                record_index: Some(self.records_yielded.saturating_add(1)),
-                source_name: None,
-            }));
+            return Err(Box::new(
+                mrrc::MarcError::fatal_reader_error(cap, self.accumulated_errors)
+                    .with_record_index(Some(self.records_yielded.saturating_add(1))),
+            ));
         }
         Ok(())
     }

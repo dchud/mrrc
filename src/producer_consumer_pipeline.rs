@@ -42,6 +42,7 @@ impl Default for PipelineConfig {
 pub type PipelineResult<T> = Result<T, PipelineError>;
 
 /// Errors that can occur during pipeline operations
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum PipelineError {
     /// I/O error during file reading
