@@ -7,7 +7,7 @@
 // kwargs rejected — the mapping falls back to a bare `PyValueError` with the
 // Rust `Display` output as its message, so an error never gets dropped.
 
-use mrrc::{BytesNear, MarcError};
+use mrrc::MarcError;
 use pyo3::PyErr;
 use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::prelude::*;
@@ -69,311 +69,86 @@ fn build_typed<'py>(py: Python<'py>, err: &MarcError) -> PyResult<Bound<'py, PyA
 /// Pull the Python class name and kwargs out of `err`. Note: `IoError`
 /// returns Err so the caller falls through to `PyIOError`, which is the
 /// proper Python class for I/O errors (matches built-in `OSError`).
+///
+/// The positional kwargs (`record_index`, `byte_offset`, `found`, ...) are
+/// driven uniformly from [`MarcError::metadata`] — every mrrc exception
+/// class accepts the full positional set with `None` defaults, so absent
+/// fields simply pass through as `None`. Only the Python class name and the
+/// per-class extra kwargs (`message`, `expected_length`/`actual_length`,
+/// `cap`/`errors_seen` — rejected by classes that don't declare them) need
+/// the per-variant `match`.
 fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bound<'py, PyDict>)> {
+    let md = err.metadata();
     let kwargs = PyDict::new(py);
+    kwargs.set_item("record_index", md.record_index)?;
+    kwargs.set_item("record_control_number", md.record_control_number)?;
+    kwargs.set_item("field_tag", md.field_tag)?;
+    kwargs.set_item("source", md.source_name)?;
+    kwargs.set_item("byte_offset", md.byte_offset)?;
+    kwargs.set_item("record_byte_offset", md.record_byte_offset)?;
+    kwargs.set_item("indicator_position", md.indicator_position)?;
+    kwargs.set_item("subfield_code", md.subfield_code)?;
+    kwargs.set_item("expected", md.expected)?;
+    match md.found {
+        Some(bytes) => kwargs.set_item("found", PyBytes::new(py, bytes))?,
+        None => kwargs.set_item("found", py.None())?,
+    }
+    match md.bytes_near {
+        Some(window) => {
+            kwargs.set_item("bytes_near", PyBytes::new(py, &window.bytes))?;
+            kwargs.set_item("bytes_near_offset", window.start_offset)?;
+        },
+        None => {
+            kwargs.set_item("bytes_near", py.None())?;
+            kwargs.set_item("bytes_near_offset", py.None())?;
+        },
+    }
+
     let class_name: &'static str = match err {
-        MarcError::InvalidLeader {
-            record_index,
-            byte_offset,
-            record_byte_offset,
-            source_name,
-            message,
-            bytes_near,
-        } => {
-            populate_common(py, &kwargs, *record_index, None, None, source_name)?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            kwargs.set_item("record_byte_offset", *record_byte_offset)?;
+        MarcError::InvalidLeader { message, .. } => {
             kwargs.set_item("message", message)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "RecordLeaderInvalid"
         },
-        MarcError::RecordLengthInvalid {
-            record_index,
-            byte_offset,
-            source_name,
-            found,
-            expected,
-            bytes_near,
-        } => {
-            populate_common(py, &kwargs, *record_index, None, None, source_name)?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            set_found(py, &kwargs, found.as_deref())?;
-            kwargs.set_item("expected", expected)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
-            "RecordLengthInvalid"
-        },
-        MarcError::BaseAddressInvalid {
-            record_index,
-            byte_offset,
-            source_name,
-            record_control_number,
-            found,
-            expected,
-            bytes_near,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                None,
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            set_found(py, &kwargs, found.as_deref())?;
-            kwargs.set_item("expected", expected)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
-            "BaseAddressInvalid"
-        },
-        MarcError::BaseAddressNotFound {
-            record_index,
-            byte_offset,
-            source_name,
-            record_control_number,
-            bytes_near,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                None,
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
-            "BaseAddressNotFound"
-        },
-        MarcError::DirectoryInvalid {
-            record_index,
-            byte_offset,
-            record_byte_offset,
-            source_name,
-            record_control_number,
-            field_tag,
-            found,
-            expected,
-            bytes_near,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                field_tag.as_deref(),
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            kwargs.set_item("record_byte_offset", *record_byte_offset)?;
-            set_found(py, &kwargs, found.as_deref())?;
-            kwargs.set_item("expected", expected)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
-            "RecordDirectoryInvalid"
-        },
+        MarcError::RecordLengthInvalid { .. } => "RecordLengthInvalid",
+        MarcError::BaseAddressInvalid { .. } => "BaseAddressInvalid",
+        MarcError::BaseAddressNotFound { .. } => "BaseAddressNotFound",
+        MarcError::DirectoryInvalid { .. } => "RecordDirectoryInvalid",
         MarcError::TruncatedRecord {
-            record_index,
-            byte_offset,
-            record_byte_offset,
-            source_name,
-            record_control_number,
             expected_length,
             actual_length,
-            bytes_near,
+            ..
         } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                None,
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            kwargs.set_item("record_byte_offset", *record_byte_offset)?;
             kwargs.set_item("expected_length", *expected_length)?;
             kwargs.set_item("actual_length", *actual_length)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "TruncatedRecord"
         },
-        MarcError::EndOfRecordNotFound {
-            record_index,
-            byte_offset,
-            record_byte_offset,
-            source_name,
-            record_control_number,
-            bytes_near,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                None,
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            kwargs.set_item("record_byte_offset", *record_byte_offset)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
-            "EndOfRecordNotFound"
-        },
-        MarcError::InvalidIndicator {
-            record_index,
-            byte_offset,
-            record_byte_offset,
-            source_name,
-            record_control_number,
-            field_tag,
-            indicator_position,
-            found,
-            expected,
-            bytes_near,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                field_tag.as_deref(),
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            kwargs.set_item("record_byte_offset", *record_byte_offset)?;
-            kwargs.set_item("indicator_position", *indicator_position)?;
-            set_found(py, &kwargs, found.as_deref())?;
-            kwargs.set_item("expected", expected)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
-            "InvalidIndicator"
-        },
-        MarcError::BadSubfieldCode {
-            record_index,
-            byte_offset,
-            record_byte_offset,
-            source_name,
-            record_control_number,
-            field_tag,
-            subfield_code,
-            bytes_near,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                field_tag.as_deref(),
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            kwargs.set_item("record_byte_offset", *record_byte_offset)?;
-            kwargs.set_item("subfield_code", *subfield_code)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
-            "BadSubfieldCode"
-        },
-        MarcError::InvalidField {
-            record_index,
-            byte_offset,
-            record_byte_offset,
-            source_name,
-            record_control_number,
-            field_tag,
-            message,
-            bytes_near,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                field_tag.as_deref(),
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
-            kwargs.set_item("record_byte_offset", *record_byte_offset)?;
+        MarcError::EndOfRecordNotFound { .. } => "EndOfRecordNotFound",
+        MarcError::InvalidIndicator { .. } => "InvalidIndicator",
+        MarcError::BadSubfieldCode { .. } => "BadSubfieldCode",
+        MarcError::InvalidField { message, .. } => {
             kwargs.set_item("message", message)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "InvalidField"
         },
-        MarcError::EncodingError {
-            record_index,
-            byte_offset,
-            source_name,
-            record_control_number,
-            field_tag,
-            message,
-            bytes_near,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                field_tag.as_deref(),
-                source_name,
-            )?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
+        MarcError::EncodingError { message, .. } => {
             kwargs.set_item("message", message)?;
-            set_bytes_near(py, &kwargs, bytes_near.as_ref())?;
             "EncodingError"
         },
-        MarcError::FieldNotFound {
-            record_index,
-            record_control_number,
-            field_tag,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                Some(field_tag.as_str()),
-                &None,
-            )?;
-            "FieldNotFound"
-        },
-        MarcError::XmlError {
-            cause,
-            record_index,
-            byte_offset,
-            source_name,
-        } => {
-            populate_common(py, &kwargs, *record_index, None, None, source_name)?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
+        MarcError::FieldNotFound { .. } => "FieldNotFound",
+        MarcError::XmlError { cause, .. } => {
             kwargs.set_item("message", cause.to_string())?;
             "XmlError"
         },
-        MarcError::JsonError {
-            cause,
-            record_index,
-            byte_offset,
-            source_name,
-        } => {
-            populate_common(py, &kwargs, *record_index, None, None, source_name)?;
-            kwargs.set_item("byte_offset", *byte_offset)?;
+        MarcError::JsonError { cause, .. } => {
             kwargs.set_item("message", cause.to_string())?;
             "JsonError"
         },
-        MarcError::WriterError {
-            record_index,
-            record_control_number,
-            message,
-        } => {
-            populate_common(
-                py,
-                &kwargs,
-                *record_index,
-                record_control_number.as_deref(),
-                None,
-                &None,
-            )?;
+        MarcError::WriterError { message, .. } => {
             kwargs.set_item("message", message)?;
             "WriterError"
         },
         MarcError::FatalReaderError {
-            cap,
-            errors_seen,
-            record_index,
-            source_name,
+            cap, errors_seen, ..
         } => {
-            populate_common(py, &kwargs, *record_index, None, None, source_name)?;
             kwargs.set_item("cap", *cap)?;
             kwargs.set_item("errors_seen", *errors_seen)?;
             "FatalReaderError"
@@ -385,48 +160,4 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
         },
     };
     Ok((class_name, kwargs))
-}
-
-fn populate_common<'py>(
-    _py: Python<'py>,
-    kwargs: &Bound<'py, PyDict>,
-    record_index: Option<usize>,
-    record_control_number: Option<&str>,
-    field_tag: Option<&str>,
-    source_name: &Option<String>,
-) -> PyResult<()> {
-    kwargs.set_item("record_index", record_index)?;
-    kwargs.set_item("record_control_number", record_control_number)?;
-    kwargs.set_item("field_tag", field_tag)?;
-    kwargs.set_item("source", source_name.as_deref())?;
-    Ok(())
-}
-
-fn set_found<'py>(
-    py: Python<'py>,
-    kwargs: &Bound<'py, PyDict>,
-    found: Option<&[u8]>,
-) -> PyResult<()> {
-    match found {
-        Some(bytes) => kwargs.set_item("found", PyBytes::new(py, bytes)),
-        None => kwargs.set_item("found", py.None()),
-    }
-}
-
-fn set_bytes_near<'py>(
-    py: Python<'py>,
-    kwargs: &Bound<'py, PyDict>,
-    bytes_near: Option<&BytesNear>,
-) -> PyResult<()> {
-    match bytes_near {
-        Some(window) => {
-            kwargs.set_item("bytes_near", PyBytes::new(py, &window.bytes))?;
-            kwargs.set_item("bytes_near_offset", window.start_offset)?;
-        },
-        None => {
-            kwargs.set_item("bytes_near", py.None())?;
-            kwargs.set_item("bytes_near_offset", py.None())?;
-        },
-    }
-    Ok(())
 }

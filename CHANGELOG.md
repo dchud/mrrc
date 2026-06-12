@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a new `oracle` extra pins pymarc in uv.lock (Dependabot adjudicates behavior changes on
   bump PRs), and the oracle extends beyond iteration shape to value-level comparisons —
   title, `format_field()`, `value()`, and `as_marc()` byte-equality over the 1k corpus.
+- `MarcError::metadata()` returns an `ErrorMetadata` snapshot of every structured field an
+  error carries. The per-field accessors, `Display`/`detailed()` rendering, JSON output, and
+  the Python exception mapping all read from this single per-variant table now; rendered and
+  serialized output is unchanged.
 
 ### Changed
 

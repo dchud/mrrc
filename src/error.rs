@@ -75,6 +75,72 @@ impl BytesNear {
     }
 }
 
+/// Borrowed snapshot of the structured metadata carried by a [`MarcError`].
+///
+/// Produced by [`MarcError::metadata`] from a single `match` over all
+/// variants. Fields a variant does not carry are `None`; [`Self::code`],
+/// [`Self::slug`], and [`Self::kind`] are always populated. The per-field
+/// accessors on `MarcError` are one-line reads of this struct, so adding an
+/// enum variant only requires a new arm in [`MarcError::metadata`] (plus the
+/// crate-private mutable counterpart) rather than one arm per accessor.
+#[derive(Debug, Clone, Copy, Default)]
+#[non_exhaustive]
+pub struct ErrorMetadata<'a> {
+    /// Stable error code (`E001`–`E4xx`); see [`MarcError::code`].
+    pub code: &'static str,
+    /// Human-friendly slug; see [`MarcError::slug`].
+    pub slug: &'static str,
+    /// Short `PascalCase` variant name (e.g. `"InvalidIndicator"`).
+    pub kind: &'static str,
+    /// 1-based record index in the stream, when known.
+    pub record_index: Option<usize>,
+    /// Absolute byte offset within the stream, when known.
+    pub byte_offset: Option<usize>,
+    /// Byte offset within the current record, when known.
+    pub record_byte_offset: Option<usize>,
+    /// Source filename or stream identifier, when known.
+    pub source_name: Option<&'a str>,
+    /// 001 control number, when known.
+    pub record_control_number: Option<&'a str>,
+    /// Field tag involved, when known.
+    pub field_tag: Option<&'a str>,
+    /// Variant-specific human-readable message, when the variant exposes one
+    /// (`InvalidField`, `EncodingError`, `WriterError`).
+    pub message: Option<&'a str>,
+    /// Indicator position (0 or 1); `InvalidIndicator` only.
+    pub indicator_position: Option<u8>,
+    /// Offending subfield code byte; `BadSubfieldCode` only.
+    pub subfield_code: Option<u8>,
+    /// The bytes that triggered the error, capped at [`FOUND_BYTES_CAP`].
+    pub found: Option<&'a [u8]>,
+    /// Human-readable description of what was expected.
+    pub expected: Option<&'a str>,
+    /// Byte window captured near the error offset, when available.
+    pub bytes_near: Option<&'a BytesNear>,
+    /// Expected total record length per the leader; `TruncatedRecord` only.
+    pub expected_length: Option<usize>,
+    /// Actual bytes available before truncation; `TruncatedRecord` only.
+    pub actual_length: Option<usize>,
+    /// Configured recovered-error cap; `FatalReaderError` only.
+    pub cap: Option<usize>,
+    /// Recovered errors counted when the cap was hit; `FatalReaderError` only.
+    pub errors_seen: Option<usize>,
+}
+
+/// Mutable counterpart to [`ErrorMetadata`]: borrows the writable positional
+/// slots of a [`MarcError`] so enrichment helpers (`with_position`,
+/// `with_bytes_near`) need no per-variant `match` of their own.
+///
+/// `record_index` exists on every variant, so it is unconditional; the other
+/// slots are `None` for variants that do not carry the field.
+struct ErrorFieldsMut<'a> {
+    record_index: &'a mut Option<usize>,
+    byte_offset: Option<&'a mut Option<usize>>,
+    record_byte_offset: Option<&'a mut Option<usize>>,
+    source_name: Option<&'a mut Option<String>>,
+    bytes_near: Option<&'a mut Option<BytesNear>>,
+}
+
 /// Error type for all MARC library operations.
 ///
 /// Each variant carries structured positional metadata: the record index in
@@ -721,6 +787,489 @@ impl MarcError {
         out
     }
 
+    /// Borrowed snapshot of every piece of structured metadata this error
+    /// carries, plus its stable identifiers ([`ErrorMetadata::code`],
+    /// [`ErrorMetadata::slug`], [`ErrorMetadata::kind`]).
+    ///
+    /// This is the single per-variant `match` behind all of the per-field
+    /// accessors; fields the variant does not carry are `None`.
+    #[must_use]
+    #[allow(clippy::too_many_lines)] // one arm per variant, each bound explicitly
+    pub fn metadata(&self) -> ErrorMetadata<'_> {
+        match self {
+            MarcError::InvalidLeader {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                // The leader message renders through `body_text` only; it is
+                // deliberately absent from `metadata().message` so the
+                // `detailed()` and `to_json_value` shapes stay unchanged.
+                message: _,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E002",
+                slug: "leader_invalid",
+                kind: "InvalidLeader",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.as_deref(),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::RecordLengthInvalid {
+                record_index,
+                byte_offset,
+                source_name,
+                found,
+                expected,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E001",
+                slug: "record_length_invalid",
+                kind: "RecordLengthInvalid",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.as_deref(),
+                found: found.as_deref(),
+                expected: expected.as_deref(),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::BaseAddressInvalid {
+                record_index,
+                byte_offset,
+                source_name,
+                record_control_number,
+                found,
+                expected,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E003",
+                slug: "base_address_invalid",
+                kind: "BaseAddressInvalid",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                found: found.as_deref(),
+                expected: expected.as_deref(),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::BaseAddressNotFound {
+                record_index,
+                byte_offset,
+                source_name,
+                record_control_number,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E004",
+                slug: "base_address_not_found",
+                kind: "BaseAddressNotFound",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::DirectoryInvalid {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                found,
+                expected,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E101",
+                slug: "directory_invalid",
+                kind: "DirectoryInvalid",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                field_tag: field_tag.as_deref(),
+                found: found.as_deref(),
+                expected: expected.as_deref(),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::TruncatedRecord {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                expected_length,
+                actual_length,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E005",
+                slug: "truncated_record",
+                kind: "TruncatedRecord",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                expected_length: *expected_length,
+                actual_length: *actual_length,
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::EndOfRecordNotFound {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E006",
+                slug: "end_of_record_not_found",
+                kind: "EndOfRecordNotFound",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::InvalidIndicator {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                indicator_position,
+                found,
+                expected,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E201",
+                slug: "invalid_indicator",
+                kind: "InvalidIndicator",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                field_tag: field_tag.as_deref(),
+                indicator_position: *indicator_position,
+                found: found.as_deref(),
+                expected: expected.as_deref(),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::BadSubfieldCode {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                subfield_code,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E202",
+                slug: "bad_subfield_code",
+                kind: "BadSubfieldCode",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                field_tag: field_tag.as_deref(),
+                subfield_code: Some(*subfield_code),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::InvalidField {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                message,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E106",
+                slug: "invalid_field",
+                kind: "InvalidField",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                record_byte_offset: *record_byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                field_tag: field_tag.as_deref(),
+                message: Some(message),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::EncodingError {
+                record_index,
+                byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                message,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E301",
+                slug: "utf8_invalid",
+                kind: "EncodingError",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                field_tag: field_tag.as_deref(),
+                message: Some(message),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::FieldNotFound {
+                record_index,
+                record_control_number,
+                field_tag,
+            } => ErrorMetadata {
+                code: "E105",
+                slug: "field_not_found",
+                kind: "FieldNotFound",
+                record_index: *record_index,
+                record_control_number: record_control_number.as_deref(),
+                field_tag: Some(field_tag.as_str()),
+                ..ErrorMetadata::default()
+            },
+            MarcError::IoError {
+                cause: _,
+                record_index,
+                byte_offset,
+                source_name,
+            } => ErrorMetadata {
+                code: "E007",
+                slug: "io_error",
+                kind: "IoError",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.as_deref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::XmlError {
+                cause: _,
+                record_index,
+                byte_offset,
+                source_name,
+            } => ErrorMetadata {
+                code: "E401",
+                slug: "marcxml_invalid",
+                kind: "XmlError",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.as_deref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::JsonError {
+                cause: _,
+                record_index,
+                byte_offset,
+                source_name,
+            } => ErrorMetadata {
+                code: "E402",
+                slug: "marcjson_invalid",
+                kind: "JsonError",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.as_deref(),
+                ..ErrorMetadata::default()
+            },
+            MarcError::WriterError {
+                record_index,
+                record_control_number,
+                message,
+            } => ErrorMetadata {
+                code: "E404",
+                slug: "record_too_large_for_iso2709",
+                kind: "WriterError",
+                record_index: *record_index,
+                record_control_number: record_control_number.as_deref(),
+                message: Some(message),
+                ..ErrorMetadata::default()
+            },
+            MarcError::FatalReaderError {
+                cap,
+                errors_seen,
+                record_index,
+                source_name,
+            } => ErrorMetadata {
+                code: "E099",
+                slug: "fatal_reader_error",
+                kind: "FatalReaderError",
+                record_index: *record_index,
+                source_name: source_name.as_deref(),
+                cap: Some(*cap),
+                errors_seen: Some(*errors_seen),
+                ..ErrorMetadata::default()
+            },
+        }
+    }
+
+    /// Mutable view of the writable positional slots; the single per-variant
+    /// `match` behind [`MarcError::with_position`] and
+    /// [`MarcError::with_bytes_near`].
+    #[allow(clippy::too_many_lines)] // one arm group per variant field-shape
+    fn fields_mut(&mut self) -> ErrorFieldsMut<'_> {
+        match self {
+            MarcError::InvalidLeader {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::DirectoryInvalid {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::TruncatedRecord {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::EndOfRecordNotFound {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::InvalidIndicator {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::BadSubfieldCode {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::InvalidField {
+                record_index,
+                byte_offset,
+                record_byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            } => ErrorFieldsMut {
+                record_index,
+                byte_offset: Some(byte_offset),
+                record_byte_offset: Some(record_byte_offset),
+                source_name: Some(source_name),
+                bytes_near: Some(bytes_near),
+            },
+            MarcError::RecordLengthInvalid {
+                record_index,
+                byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::BaseAddressInvalid {
+                record_index,
+                byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::BaseAddressNotFound {
+                record_index,
+                byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::EncodingError {
+                record_index,
+                byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            } => ErrorFieldsMut {
+                record_index,
+                byte_offset: Some(byte_offset),
+                record_byte_offset: None,
+                source_name: Some(source_name),
+                bytes_near: Some(bytes_near),
+            },
+            MarcError::IoError {
+                record_index,
+                byte_offset,
+                source_name,
+                ..
+            }
+            | MarcError::XmlError {
+                record_index,
+                byte_offset,
+                source_name,
+                ..
+            }
+            | MarcError::JsonError {
+                record_index,
+                byte_offset,
+                source_name,
+                ..
+            } => ErrorFieldsMut {
+                record_index,
+                byte_offset: Some(byte_offset),
+                record_byte_offset: None,
+                source_name: Some(source_name),
+                bytes_near: None,
+            },
+            MarcError::FieldNotFound { record_index, .. }
+            | MarcError::WriterError { record_index, .. } => ErrorFieldsMut {
+                record_index,
+                byte_offset: None,
+                record_byte_offset: None,
+                source_name: None,
+                bytes_near: None,
+            },
+            MarcError::FatalReaderError {
+                record_index,
+                source_name,
+                ..
+            } => ErrorFieldsMut {
+                record_index,
+                byte_offset: None,
+                record_byte_offset: None,
+                source_name: Some(source_name),
+                bytes_near: None,
+            },
+        }
+    }
+
     /// Stable error code for this variant (`E001`–`E4xx`). Forms the
     /// canonical programmatic identifier — callers can match on this rather
     /// than on the variant name to keep handlers stable across enum
@@ -732,25 +1281,7 @@ impl MarcError {
     /// full stability policy.
     #[must_use]
     pub fn code(&self) -> &'static str {
-        match self {
-            MarcError::RecordLengthInvalid { .. } => "E001",
-            MarcError::InvalidLeader { .. } => "E002",
-            MarcError::BaseAddressInvalid { .. } => "E003",
-            MarcError::BaseAddressNotFound { .. } => "E004",
-            MarcError::TruncatedRecord { .. } => "E005",
-            MarcError::EndOfRecordNotFound { .. } => "E006",
-            MarcError::IoError { .. } => "E007",
-            MarcError::DirectoryInvalid { .. } => "E101",
-            MarcError::FieldNotFound { .. } => "E105",
-            MarcError::InvalidField { .. } => "E106",
-            MarcError::InvalidIndicator { .. } => "E201",
-            MarcError::BadSubfieldCode { .. } => "E202",
-            MarcError::EncodingError { .. } => "E301",
-            MarcError::XmlError { .. } => "E401",
-            MarcError::JsonError { .. } => "E402",
-            MarcError::WriterError { .. } => "E404",
-            MarcError::FatalReaderError { .. } => "E099",
-        }
+        self.metadata().code
     }
 
     /// Human-friendly slug for this variant (e.g., `"invalid_indicator"`).
@@ -758,25 +1289,7 @@ impl MarcError {
     /// to change for an existing variant.
     #[must_use]
     pub fn slug(&self) -> &'static str {
-        match self {
-            MarcError::RecordLengthInvalid { .. } => "record_length_invalid",
-            MarcError::InvalidLeader { .. } => "leader_invalid",
-            MarcError::BaseAddressInvalid { .. } => "base_address_invalid",
-            MarcError::BaseAddressNotFound { .. } => "base_address_not_found",
-            MarcError::TruncatedRecord { .. } => "truncated_record",
-            MarcError::EndOfRecordNotFound { .. } => "end_of_record_not_found",
-            MarcError::IoError { .. } => "io_error",
-            MarcError::DirectoryInvalid { .. } => "directory_invalid",
-            MarcError::FieldNotFound { .. } => "field_not_found",
-            MarcError::InvalidField { .. } => "invalid_field",
-            MarcError::InvalidIndicator { .. } => "invalid_indicator",
-            MarcError::BadSubfieldCode { .. } => "bad_subfield_code",
-            MarcError::EncodingError { .. } => "utf8_invalid",
-            MarcError::XmlError { .. } => "marcxml_invalid",
-            MarcError::JsonError { .. } => "marcjson_invalid",
-            MarcError::WriterError { .. } => "record_too_large_for_iso2709",
-            MarcError::FatalReaderError { .. } => "fatal_reader_error",
-        }
+        self.metadata().slug
     }
 
     /// Serialize this error as a JSON-ready `serde_json::Value` suitable
@@ -793,66 +1306,63 @@ impl MarcError {
     #[must_use]
     pub fn to_json_value(&self) -> serde_json::Value {
         use serde_json::{Map, Value, json};
+        let md = self.metadata();
         let mut m: Map<String, Value> = Map::new();
         m.insert("schema_version".into(), json!(SCHEMA_VERSION));
-        m.insert("class".into(), json!(self.kind_name()));
-        m.insert("code".into(), json!(self.code()));
-        m.insert("slug".into(), json!(self.slug()));
+        m.insert("class".into(), json!(md.kind));
+        m.insert("code".into(), json!(md.code));
+        m.insert("slug".into(), json!(md.slug));
         m.insert("severity".into(), json!("error"));
         m.insert("help_url".into(), json!(self.help_url()));
 
         // Positional fields, mirroring the Python _POSITIONAL_FIELDS list.
         // Fields the variant doesn't carry surface as null.
-        m.insert("record_index".into(), opt_json(self.record_index()));
+        m.insert("record_index".into(), opt_json(md.record_index));
         m.insert(
             "record_control_number".into(),
-            self.record_control_number()
-                .map_or(Value::Null, Value::from),
+            md.record_control_number.map_or(Value::Null, Value::from),
         );
         m.insert(
             "field_tag".into(),
-            self.field_tag().map_or(Value::Null, Value::from),
+            md.field_tag.map_or(Value::Null, Value::from),
         );
-        m.insert(
-            "indicator_position".into(),
-            opt_json(self.indicator_position_field()),
-        );
-        m.insert("subfield_code".into(), opt_json(self.subfield_code_field()));
+        m.insert("indicator_position".into(), opt_json(md.indicator_position));
+        m.insert("subfield_code".into(), opt_json(md.subfield_code));
         m.insert("found".into(), Value::Null);
-        if let Some(bytes) = self.found_field() {
+        if let Some(bytes) = md.found {
             m.insert("found_hex".into(), json!(hex_encode(bytes)));
         }
         m.insert(
             "expected".into(),
-            self.expected_field().map_or(Value::Null, Value::from),
+            md.expected.map_or(Value::Null, Value::from),
         );
-        m.insert("byte_offset".into(), opt_json(self.byte_offset()));
-        m.insert(
-            "record_byte_offset".into(),
-            opt_json(self.record_byte_offset()),
-        );
+        m.insert("byte_offset".into(), opt_json(md.byte_offset));
+        m.insert("record_byte_offset".into(), opt_json(md.record_byte_offset));
         m.insert(
             "source".into(),
-            self.source_name().map_or(Value::Null, Value::from),
+            md.source_name.map_or(Value::Null, Value::from),
         );
         // bytes_near is a byte-window surfaced via the `_hex` suffix
         // convention: `bytes_near` always None in the dict, `bytes_near_hex`
         // present only when bytes were captured. `bytes_near_offset` is the
         // absolute stream offset of the window's first byte.
         m.insert("bytes_near".into(), Value::Null);
-        if let Some(window) = self.bytes_near() {
+        if let Some(window) = md.bytes_near {
             m.insert("bytes_near_hex".into(), json!(hex_encode(&window.bytes)));
             m.insert("bytes_near_offset".into(), json!(window.start_offset));
         } else {
             m.insert("bytes_near_offset".into(), Value::Null);
         }
 
-        // Variant-specific extra fields (mirrors Python's
-        // _diagnostic_extra_fields). Surface the message / length pair
+        // Variant-specific extra fields (mirrors the Python classes'
+        // _extra_fields declarations). Surface the message / length pair
         // when applicable so downstream consumers don't lose them.
-        if let Some(msg) = self.message_text() {
+        if let Some(msg) = md.message {
             m.insert("message".into(), json!(msg));
         }
+        // Variant-matched (rather than metadata-driven) so the keys are
+        // emitted as nulls — not omitted — when a truncated record carries
+        // no length information, matching the Python to_dict() shape.
         if let MarcError::TruncatedRecord {
             expected_length,
             actual_length,
@@ -862,12 +1372,11 @@ impl MarcError {
             m.insert("expected_length".into(), opt_json(*expected_length));
             m.insert("actual_length".into(), opt_json(*actual_length));
         }
-        if let MarcError::FatalReaderError {
-            cap, errors_seen, ..
-        } = self
-        {
-            m.insert("cap".into(), json!(*cap));
-            m.insert("errors_seen".into(), json!(*errors_seen));
+        if let Some(cap) = md.cap {
+            m.insert("cap".into(), json!(cap));
+        }
+        if let Some(errors_seen) = md.errors_seen {
+            m.insert("errors_seen".into(), json!(errors_seen));
         }
 
         // Cause chain: stringified single value, never nested. Walks
@@ -891,45 +1400,6 @@ impl MarcError {
         serde_json::to_string(&self.to_json_value())
     }
 
-    /// Helper accessors for variants that carry the shared fields. These
-    /// abstract over per-variant field-set differences so `to_json_value`
-    /// can be written once.
-    fn indicator_position_field(&self) -> Option<u8> {
-        match self {
-            MarcError::InvalidIndicator {
-                indicator_position, ..
-            } => *indicator_position,
-            _ => None,
-        }
-    }
-
-    fn subfield_code_field(&self) -> Option<u8> {
-        match self {
-            MarcError::BadSubfieldCode { subfield_code, .. } => Some(*subfield_code),
-            _ => None,
-        }
-    }
-
-    fn found_field(&self) -> Option<&[u8]> {
-        match self {
-            MarcError::RecordLengthInvalid { found, .. }
-            | MarcError::BaseAddressInvalid { found, .. }
-            | MarcError::DirectoryInvalid { found, .. }
-            | MarcError::InvalidIndicator { found, .. } => found.as_deref(),
-            _ => None,
-        }
-    }
-
-    fn expected_field(&self) -> Option<&str> {
-        match self {
-            MarcError::RecordLengthInvalid { expected, .. }
-            | MarcError::BaseAddressInvalid { expected, .. }
-            | MarcError::DirectoryInvalid { expected, .. }
-            | MarcError::InvalidIndicator { expected, .. } => expected.as_deref(),
-            _ => None,
-        }
-    }
-
     /// Byte window captured near the error offset, when available.
     ///
     /// Returned for the parse-path variants that carry it; returns `None`
@@ -937,20 +1407,7 @@ impl MarcError {
     /// when the parser did not have access to a buffer at error time.
     #[must_use]
     pub fn bytes_near(&self) -> Option<&BytesNear> {
-        match self {
-            MarcError::InvalidLeader { bytes_near, .. }
-            | MarcError::RecordLengthInvalid { bytes_near, .. }
-            | MarcError::BaseAddressInvalid { bytes_near, .. }
-            | MarcError::BaseAddressNotFound { bytes_near, .. }
-            | MarcError::DirectoryInvalid { bytes_near, .. }
-            | MarcError::TruncatedRecord { bytes_near, .. }
-            | MarcError::EndOfRecordNotFound { bytes_near, .. }
-            | MarcError::InvalidIndicator { bytes_near, .. }
-            | MarcError::BadSubfieldCode { bytes_near, .. }
-            | MarcError::InvalidField { bytes_near, .. }
-            | MarcError::EncodingError { bytes_near, .. } => bytes_near.as_ref(),
-            _ => None,
-        }
+        self.metadata().bytes_near
     }
 
     /// Attach a byte-window to this error after the fact, enriching it for
@@ -979,68 +1436,16 @@ impl MarcError {
         let Some(window) = BytesNear::capture(buffer, buffer_start_offset, anchor) else {
             return self;
         };
-        match &mut self {
-            MarcError::InvalidLeader {
-                bytes_near,
-                byte_offset,
-                ..
+        let fields = self.fields_mut();
+        if let Some(bytes_near) = fields.bytes_near {
+            // Every variant that carries `bytes_near` also carries
+            // `byte_offset`, so the anchor backfill below always has a slot.
+            if let Some(byte_offset) = fields.byte_offset
+                && byte_offset.is_none()
+            {
+                *byte_offset = Some(buffer_start_offset);
             }
-            | MarcError::RecordLengthInvalid {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::BaseAddressInvalid {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::BaseAddressNotFound {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::DirectoryInvalid {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::TruncatedRecord {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::EndOfRecordNotFound {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::InvalidIndicator {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::BadSubfieldCode {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::InvalidField {
-                bytes_near,
-                byte_offset,
-                ..
-            }
-            | MarcError::EncodingError {
-                bytes_near,
-                byte_offset,
-                ..
-            } => {
-                if byte_offset.is_none() {
-                    *byte_offset = Some(buffer_start_offset);
-                }
-                *bytes_near = Some(window);
-            },
-            _ => {},
+            *bytes_near = Some(window);
         }
         self
     }
@@ -1063,121 +1468,18 @@ impl MarcError {
         } else {
             Some(ctx.record_index)
         };
-        *self.record_index_mut() = ridx;
-        if let Some(slot) = self.byte_offset_mut() {
+        let fields = self.fields_mut();
+        *fields.record_index = ridx;
+        if let Some(slot) = fields.byte_offset {
             *slot = Some(ctx.stream_byte_offset);
         }
-        if let Some(slot) = self.record_byte_offset_mut() {
+        if let Some(slot) = fields.record_byte_offset {
             *slot = Some(ctx.record_byte_offset());
         }
-        if let Some(slot) = self.source_name_mut() {
+        if let Some(slot) = fields.source_name {
             slot.clone_from(&ctx.source_name);
         }
         self
-    }
-
-    /// Mutable reference to the `record_index` field. Every variant
-    /// carries this field, so the return type is unconditional.
-    fn record_index_mut(&mut self) -> &mut Option<usize> {
-        match self {
-            MarcError::InvalidLeader { record_index, .. }
-            | MarcError::RecordLengthInvalid { record_index, .. }
-            | MarcError::BaseAddressInvalid { record_index, .. }
-            | MarcError::BaseAddressNotFound { record_index, .. }
-            | MarcError::DirectoryInvalid { record_index, .. }
-            | MarcError::TruncatedRecord { record_index, .. }
-            | MarcError::EndOfRecordNotFound { record_index, .. }
-            | MarcError::InvalidIndicator { record_index, .. }
-            | MarcError::BadSubfieldCode { record_index, .. }
-            | MarcError::InvalidField { record_index, .. }
-            | MarcError::EncodingError { record_index, .. }
-            | MarcError::FieldNotFound { record_index, .. }
-            | MarcError::IoError { record_index, .. }
-            | MarcError::XmlError { record_index, .. }
-            | MarcError::JsonError { record_index, .. }
-            | MarcError::WriterError { record_index, .. }
-            | MarcError::FatalReaderError { record_index, .. } => record_index,
-        }
-    }
-
-    /// Mutable reference to the `byte_offset` field, or `None` for
-    /// variants that don't carry one (`FieldNotFound`, `WriterError`,
-    /// `FatalReaderError`).
-    fn byte_offset_mut(&mut self) -> Option<&mut Option<usize>> {
-        match self {
-            MarcError::InvalidLeader { byte_offset, .. }
-            | MarcError::RecordLengthInvalid { byte_offset, .. }
-            | MarcError::BaseAddressInvalid { byte_offset, .. }
-            | MarcError::BaseAddressNotFound { byte_offset, .. }
-            | MarcError::DirectoryInvalid { byte_offset, .. }
-            | MarcError::TruncatedRecord { byte_offset, .. }
-            | MarcError::EndOfRecordNotFound { byte_offset, .. }
-            | MarcError::InvalidIndicator { byte_offset, .. }
-            | MarcError::BadSubfieldCode { byte_offset, .. }
-            | MarcError::InvalidField { byte_offset, .. }
-            | MarcError::EncodingError { byte_offset, .. }
-            | MarcError::IoError { byte_offset, .. }
-            | MarcError::XmlError { byte_offset, .. }
-            | MarcError::JsonError { byte_offset, .. } => Some(byte_offset),
-            MarcError::FieldNotFound { .. }
-            | MarcError::WriterError { .. }
-            | MarcError::FatalReaderError { .. } => None,
-        }
-    }
-
-    /// Mutable reference to the `record_byte_offset` field, or `None`
-    /// for variants whose failure precedes per-record offset semantics
-    /// (the leader-shape variants) or have no record context
-    /// (accessor / writer / format / I/O variants).
-    fn record_byte_offset_mut(&mut self) -> Option<&mut Option<usize>> {
-        match self {
-            MarcError::InvalidLeader {
-                record_byte_offset, ..
-            }
-            | MarcError::DirectoryInvalid {
-                record_byte_offset, ..
-            }
-            | MarcError::TruncatedRecord {
-                record_byte_offset, ..
-            }
-            | MarcError::EndOfRecordNotFound {
-                record_byte_offset, ..
-            }
-            | MarcError::InvalidIndicator {
-                record_byte_offset, ..
-            }
-            | MarcError::BadSubfieldCode {
-                record_byte_offset, ..
-            }
-            | MarcError::InvalidField {
-                record_byte_offset, ..
-            } => Some(record_byte_offset),
-            _ => None,
-        }
-    }
-
-    /// Mutable reference to the `source_name` field, or `None` for
-    /// variants that don't carry one.
-    fn source_name_mut(&mut self) -> Option<&mut Option<String>> {
-        match self {
-            MarcError::InvalidLeader { source_name, .. }
-            | MarcError::RecordLengthInvalid { source_name, .. }
-            | MarcError::BaseAddressInvalid { source_name, .. }
-            | MarcError::BaseAddressNotFound { source_name, .. }
-            | MarcError::DirectoryInvalid { source_name, .. }
-            | MarcError::TruncatedRecord { source_name, .. }
-            | MarcError::EndOfRecordNotFound { source_name, .. }
-            | MarcError::InvalidIndicator { source_name, .. }
-            | MarcError::BadSubfieldCode { source_name, .. }
-            | MarcError::InvalidField { source_name, .. }
-            | MarcError::EncodingError { source_name, .. }
-            | MarcError::IoError { source_name, .. }
-            | MarcError::XmlError { source_name, .. }
-            | MarcError::JsonError { source_name, .. } => Some(source_name),
-            MarcError::FieldNotFound { .. }
-            | MarcError::WriterError { .. }
-            | MarcError::FatalReaderError { .. } => None,
-        }
     }
 
     /// Canonical docs URL for this error code, pointing at the `#Exxx`
@@ -1193,25 +1495,7 @@ impl MarcError {
     /// Short `PascalCase` name for the variant, used in `detailed()` headers
     /// and as the leading token of the underlying-cause-less default `Display`.
     fn kind_name(&self) -> &'static str {
-        match self {
-            MarcError::InvalidLeader { .. } => "InvalidLeader",
-            MarcError::RecordLengthInvalid { .. } => "RecordLengthInvalid",
-            MarcError::BaseAddressInvalid { .. } => "BaseAddressInvalid",
-            MarcError::BaseAddressNotFound { .. } => "BaseAddressNotFound",
-            MarcError::DirectoryInvalid { .. } => "DirectoryInvalid",
-            MarcError::TruncatedRecord { .. } => "TruncatedRecord",
-            MarcError::EndOfRecordNotFound { .. } => "EndOfRecordNotFound",
-            MarcError::InvalidIndicator { .. } => "InvalidIndicator",
-            MarcError::BadSubfieldCode { .. } => "BadSubfieldCode",
-            MarcError::InvalidField { .. } => "InvalidField",
-            MarcError::EncodingError { .. } => "EncodingError",
-            MarcError::FieldNotFound { .. } => "FieldNotFound",
-            MarcError::IoError { .. } => "IoError",
-            MarcError::XmlError { .. } => "XmlError",
-            MarcError::JsonError { .. } => "JsonError",
-            MarcError::WriterError { .. } => "WriterError",
-            MarcError::FatalReaderError { .. } => "FatalReaderError",
-        }
+        self.metadata().kind
     }
 
     /// Build a "record N, field T" style context summary if those fields are
@@ -1228,69 +1512,51 @@ impl MarcError {
     }
 
     /// Produce the (label, value) detail lines for `detailed()` output, in
-    /// display order. Skips lines whose value is unavailable.
+    /// display order. Skips lines whose value is unavailable. At most one of
+    /// the variant-specific rows (indicator / subfield / length / cap) can
+    /// apply, since each is carried by exactly one variant.
     fn detail_lines(&self) -> Vec<(&'static str, String)> {
+        let md = self.metadata();
         let mut lines: Vec<(&'static str, String)> = Vec::new();
-        if let Some(s) = self.source_name() {
+        if let Some(s) = md.source_name {
             lines.push(("source:", s.to_string()));
         }
-        if let Some(cn) = self.record_control_number() {
+        if let Some(cn) = md.record_control_number {
             lines.push(("001:", cn.to_string()));
         }
-        match self {
-            MarcError::InvalidIndicator {
-                indicator_position,
-                found,
-                expected,
-                ..
-            } => {
-                if let (Some(pos), Some(exp)) = (indicator_position, expected) {
-                    let found_repr = found
-                        .as_deref()
-                        .map_or_else(|| "?".to_string(), format_found_bytes_python_repr);
-                    // Label carries the indicator number + colon; value is
-                    // just the found/expected so column alignment in
-                    // detailed() matches the Python side byte-for-byte.
-                    let label = if *pos == 0 {
-                        "indicator 0:"
-                    } else {
-                        "indicator 1:"
-                    };
-                    lines.push((label, format!("found {found_repr}, expected {exp}")));
-                }
-            },
-            MarcError::BadSubfieldCode { subfield_code, .. } => {
-                lines.push((
-                    "subfield:",
-                    format!(
-                        "invalid code byte 0x{subfield_code:02X} ({:?})",
-                        *subfield_code as char
-                    ),
-                ));
-            },
-            MarcError::TruncatedRecord {
-                expected_length,
-                actual_length,
-                ..
-            } => {
-                if let (Some(exp), Some(act)) = (expected_length, actual_length) {
-                    lines.push(("length:", format!("expected {exp} bytes, found {act}")));
-                }
-            },
-            MarcError::FatalReaderError {
-                cap, errors_seen, ..
-            } => {
-                lines.push(("cap:", format!("{errors_seen} errors seen, cap {cap}")));
-            },
-            _ => {},
+        if let (Some(pos), Some(exp)) = (md.indicator_position, md.expected) {
+            let found_repr = md
+                .found
+                .map_or_else(|| "?".to_string(), format_found_bytes_python_repr);
+            // Label carries the indicator number + colon; value is just the
+            // found/expected so column alignment in detailed() matches the
+            // Python side byte-for-byte.
+            let label = if pos == 0 {
+                "indicator 0:"
+            } else {
+                "indicator 1:"
+            };
+            lines.push((label, format!("found {found_repr}, expected {exp}")));
         }
-        if let Some(off) = self.byte_offset() {
+        if let Some(code) = md.subfield_code {
+            lines.push((
+                "subfield:",
+                format!("invalid code byte 0x{code:02X} ({:?})", code as char),
+            ));
+        }
+        if let (Some(exp), Some(act)) = (md.expected_length, md.actual_length) {
+            lines.push(("length:", format!("expected {exp} bytes, found {act}")));
+        }
+        if let (Some(cap), Some(errors_seen)) = (md.cap, md.errors_seen) {
+            lines.push(("cap:", format!("{errors_seen} errors seen, cap {cap}")));
+        }
+        if let Some(off) = md.byte_offset {
             lines.push(("byte offset:", format!("0x{off:X} ({off}) in stream")));
         }
-        if let Some(off) = self.record_byte_offset() {
+        if let Some(off) = md.record_byte_offset {
             lines.push(("record-relative:", format!("byte {off}")));
         }
-        if let Some(msg) = self.message_text() {
+        if let Some(msg) = md.message {
             lines.push(("message:", msg.to_string()));
         }
         lines
@@ -1300,32 +1566,29 @@ impl MarcError {
     /// (when available) and the problem description; appends the byte offset
     /// in hex/decimal as a visually subordinate trailer.
     fn render_oneline(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let md = self.metadata();
         let mut header_parts: Vec<String> = Vec::new();
-        if let Some(idx) = self.record_index() {
+        if let Some(idx) = md.record_index {
             header_parts.push(format!("record {idx}"));
         }
-        if let Some(cn) = self.record_control_number() {
+        if let Some(cn) = md.record_control_number {
             header_parts.push(format!("001 '{cn}'"));
         }
-        if let Some(tag) = self.field_tag() {
+        if let Some(tag) = md.field_tag {
             header_parts.push(format!("field {tag}"));
         }
-        if let MarcError::InvalidIndicator {
-            indicator_position: Some(pos),
-            ..
-        } = self
-        {
+        if let Some(pos) = md.indicator_position {
             header_parts.push(format!("ind{pos}"));
         }
         if header_parts.is_empty() {
             // No positional context available — lead with the variant name so
             // the message at least identifies what kind of error it is.
-            write!(f, "{}: ", self.kind_name())?;
+            write!(f, "{}: ", md.kind)?;
         } else {
             write!(f, "[{}] ", header_parts.join(" · "))?;
         }
         write!(f, "{}", self.body_text())?;
-        if let Some(off) = self.byte_offset() {
+        if let Some(off) = md.byte_offset {
             write!(f, "  (byte 0x{off:X} / {off})")?;
         }
         Ok(())
@@ -1403,164 +1666,15 @@ impl MarcError {
     }
 
     fn record_index(&self) -> Option<usize> {
-        match self {
-            MarcError::InvalidLeader { record_index, .. }
-            | MarcError::RecordLengthInvalid { record_index, .. }
-            | MarcError::BaseAddressInvalid { record_index, .. }
-            | MarcError::BaseAddressNotFound { record_index, .. }
-            | MarcError::DirectoryInvalid { record_index, .. }
-            | MarcError::TruncatedRecord { record_index, .. }
-            | MarcError::EndOfRecordNotFound { record_index, .. }
-            | MarcError::InvalidIndicator { record_index, .. }
-            | MarcError::BadSubfieldCode { record_index, .. }
-            | MarcError::InvalidField { record_index, .. }
-            | MarcError::EncodingError { record_index, .. }
-            | MarcError::FieldNotFound { record_index, .. }
-            | MarcError::IoError { record_index, .. }
-            | MarcError::XmlError { record_index, .. }
-            | MarcError::JsonError { record_index, .. }
-            | MarcError::WriterError { record_index, .. }
-            | MarcError::FatalReaderError { record_index, .. } => *record_index,
-        }
-    }
-
-    fn record_control_number(&self) -> Option<&str> {
-        match self {
-            MarcError::BaseAddressInvalid {
-                record_control_number,
-                ..
-            }
-            | MarcError::BaseAddressNotFound {
-                record_control_number,
-                ..
-            }
-            | MarcError::DirectoryInvalid {
-                record_control_number,
-                ..
-            }
-            | MarcError::TruncatedRecord {
-                record_control_number,
-                ..
-            }
-            | MarcError::EndOfRecordNotFound {
-                record_control_number,
-                ..
-            }
-            | MarcError::InvalidIndicator {
-                record_control_number,
-                ..
-            }
-            | MarcError::BadSubfieldCode {
-                record_control_number,
-                ..
-            }
-            | MarcError::InvalidField {
-                record_control_number,
-                ..
-            }
-            | MarcError::EncodingError {
-                record_control_number,
-                ..
-            }
-            | MarcError::FieldNotFound {
-                record_control_number,
-                ..
-            }
-            | MarcError::WriterError {
-                record_control_number,
-                ..
-            } => record_control_number.as_deref(),
-            _ => None,
-        }
+        self.metadata().record_index
     }
 
     fn field_tag(&self) -> Option<&str> {
-        match self {
-            MarcError::DirectoryInvalid { field_tag, .. }
-            | MarcError::InvalidIndicator { field_tag, .. }
-            | MarcError::BadSubfieldCode { field_tag, .. }
-            | MarcError::InvalidField { field_tag, .. }
-            | MarcError::EncodingError { field_tag, .. } => field_tag.as_deref(),
-            MarcError::FieldNotFound { field_tag, .. } => Some(field_tag.as_str()),
-            _ => None,
-        }
+        self.metadata().field_tag
     }
 
     fn byte_offset(&self) -> Option<usize> {
-        match self {
-            MarcError::InvalidLeader { byte_offset, .. }
-            | MarcError::RecordLengthInvalid { byte_offset, .. }
-            | MarcError::BaseAddressInvalid { byte_offset, .. }
-            | MarcError::BaseAddressNotFound { byte_offset, .. }
-            | MarcError::DirectoryInvalid { byte_offset, .. }
-            | MarcError::TruncatedRecord { byte_offset, .. }
-            | MarcError::EndOfRecordNotFound { byte_offset, .. }
-            | MarcError::InvalidIndicator { byte_offset, .. }
-            | MarcError::BadSubfieldCode { byte_offset, .. }
-            | MarcError::InvalidField { byte_offset, .. }
-            | MarcError::EncodingError { byte_offset, .. }
-            | MarcError::IoError { byte_offset, .. }
-            | MarcError::XmlError { byte_offset, .. }
-            | MarcError::JsonError { byte_offset, .. } => *byte_offset,
-            _ => None,
-        }
-    }
-
-    fn record_byte_offset(&self) -> Option<usize> {
-        match self {
-            MarcError::InvalidLeader {
-                record_byte_offset, ..
-            }
-            | MarcError::DirectoryInvalid {
-                record_byte_offset, ..
-            }
-            | MarcError::TruncatedRecord {
-                record_byte_offset, ..
-            }
-            | MarcError::EndOfRecordNotFound {
-                record_byte_offset, ..
-            }
-            | MarcError::InvalidIndicator {
-                record_byte_offset, ..
-            }
-            | MarcError::BadSubfieldCode {
-                record_byte_offset, ..
-            }
-            | MarcError::InvalidField {
-                record_byte_offset, ..
-            } => *record_byte_offset,
-            _ => None,
-        }
-    }
-
-    fn source_name(&self) -> Option<&str> {
-        match self {
-            MarcError::InvalidLeader { source_name, .. }
-            | MarcError::RecordLengthInvalid { source_name, .. }
-            | MarcError::BaseAddressInvalid { source_name, .. }
-            | MarcError::BaseAddressNotFound { source_name, .. }
-            | MarcError::DirectoryInvalid { source_name, .. }
-            | MarcError::TruncatedRecord { source_name, .. }
-            | MarcError::EndOfRecordNotFound { source_name, .. }
-            | MarcError::InvalidIndicator { source_name, .. }
-            | MarcError::BadSubfieldCode { source_name, .. }
-            | MarcError::InvalidField { source_name, .. }
-            | MarcError::EncodingError { source_name, .. }
-            | MarcError::IoError { source_name, .. }
-            | MarcError::XmlError { source_name, .. }
-            | MarcError::JsonError { source_name, .. }
-            | MarcError::FatalReaderError { source_name, .. } => source_name.as_deref(),
-            _ => None,
-        }
-    }
-
-    fn message_text(&self) -> Option<&str> {
-        match self {
-            MarcError::InvalidField { message, .. }
-            | MarcError::EncodingError { message, .. }
-            | MarcError::WriterError { message, .. } => Some(message.as_str()),
-            _ => None,
-        }
+        self.metadata().byte_offset
     }
 }
 
@@ -1998,6 +2112,32 @@ mod tests {
             err.help_url(),
             format!("{DOCS_BASE_URL}/reference/error-codes/#E105"),
         );
+    }
+
+    #[test]
+    fn metadata_snapshot_exposes_all_carried_fields() {
+        let err = invalid_indicator_full();
+        let md = err.metadata();
+        assert_eq!(md.code, "E201");
+        assert_eq!(md.slug, "invalid_indicator");
+        assert_eq!(md.kind, "InvalidIndicator");
+        assert_eq!(md.record_index, Some(847));
+        assert_eq!(md.byte_offset, Some(7217));
+        assert_eq!(md.record_byte_offset, Some(42));
+        assert_eq!(md.source_name, Some("harvest.mrc"));
+        assert_eq!(md.record_control_number, Some("ocm01234567"));
+        assert_eq!(md.field_tag, Some("245"));
+        assert_eq!(md.indicator_position, Some(1));
+        assert_eq!(md.found, Some(b":".as_slice()));
+        assert_eq!(md.expected, Some("digit or space"));
+        // Fields this variant does not carry stay None.
+        assert!(md.bytes_near.is_none());
+        assert!(md.message.is_none());
+        assert!(md.subfield_code.is_none());
+        assert!(md.expected_length.is_none());
+        assert!(md.actual_length.is_none());
+        assert!(md.cap.is_none());
+        assert!(md.errors_seen.is_none());
     }
 
     #[test]

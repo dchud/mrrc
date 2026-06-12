@@ -144,8 +144,18 @@ class _MrrcExceptionBase(_MixinBase):
     bytes_near: Optional[bytes]
     bytes_near_offset: Optional[int]
 
+    # Per-subclass extra keyword arguments beyond _POSITIONAL_FIELDS,
+    # declared once per class (e.g., ``("message",)`` or
+    # ``("expected_length", "actual_length")``). This single table drives
+    # __init__ kwarg handling, pickle round-trips, and to_dict() output, so
+    # a new exception class only declares its extras here — no per-class
+    # __init__ / pickle / serialization overrides.
+    _extra_fields: tuple = ()
+
     def __init__(self, *args, **kwargs) -> None:
         for field in _POSITIONAL_FIELDS:
+            setattr(self, field, kwargs.pop(field, None))
+        for field in self._extra_fields:
             setattr(self, field, kwargs.pop(field, None))
         if kwargs:
             unexpected = ", ".join(sorted(kwargs))
@@ -162,11 +172,6 @@ class _MrrcExceptionBase(_MixinBase):
     # tuple, dropping instance __dict__. Override __reduce__ so kwargs
     # survive a pickle round-trip.
 
-    # Per-subclass extra attributes that should be preserved across pickle
-    # round-trips in addition to _POSITIONAL_FIELDS. Subclasses with extra
-    # __init__ kwargs (e.g., InvalidField.message) override this.
-    _pickle_extra_fields: tuple = ()
-
     def __reduce__(self):
         return (self.__class__, (), self._pickle_state())
 
@@ -176,7 +181,7 @@ class _MrrcExceptionBase(_MixinBase):
         # (including __dict__ or method names) and shadow class methods on
         # the instance — pickle deserialization itself is the RCE primitive,
         # but blind setattr amplifies the blast radius unnecessarily.
-        allowed = set(_POSITIONAL_FIELDS) | set(self._pickle_extra_fields)
+        allowed = set(_POSITIONAL_FIELDS) | set(self._extra_fields)
         unexpected = set(state) - allowed
         if unexpected:
             raise TypeError(
@@ -188,7 +193,7 @@ class _MrrcExceptionBase(_MixinBase):
 
     def _pickle_state(self) -> dict:
         state = {f: getattr(self, f) for f in _POSITIONAL_FIELDS}
-        for f in self._pickle_extra_fields:
+        for f in self._extra_fields:
             state[f] = getattr(self, f, None)
         return state
 
@@ -323,11 +328,6 @@ class _MrrcExceptionBase(_MixinBase):
 
     SCHEMA_VERSION: int = 1
 
-    # Per-subclass extra fields to include in to_dict() output beyond the
-    # base _POSITIONAL_FIELDS. Subclasses with extras like `message` or
-    # `expected_length` declare them here.
-    _diagnostic_extra_fields: tuple = ()
-
     def to_dict(self, *, include_traceback: bool = False) -> dict:
         """Render this exception as a JSON-ready dict.
 
@@ -358,7 +358,7 @@ class _MrrcExceptionBase(_MixinBase):
                 result[field] = None
             else:
                 result[field] = value
-        for field in self._diagnostic_extra_fields:
+        for field in self._extra_fields:
             value = getattr(self, field, None)
             if isinstance(value, bytes):
                 result[f"{field}_hex"] = value.hex()
@@ -408,13 +408,8 @@ class RecordLeaderInvalid(MrrcException):
 
     code = "E002"
     slug = "leader_invalid"
-    _pickle_extra_fields = ("message",)
-    _diagnostic_extra_fields = ("message",)
+    _extra_fields = ("message",)
     message: Optional[str]
-
-    def __init__(self, *args, message=None, **kwargs) -> None:
-        self.message = message
-        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
         if self.message:
@@ -500,15 +495,9 @@ class FatalReaderError(MrrcException):
 
     code = "E099"
     slug = "fatal_reader_error"
-    _pickle_extra_fields = ("cap", "errors_seen")
-    _diagnostic_extra_fields = ("cap", "errors_seen")
+    _extra_fields = ("cap", "errors_seen")
     cap: Optional[int]
     errors_seen: Optional[int]
-
-    def __init__(self, *args, cap=None, errors_seen=None, **kwargs) -> None:
-        self.cap = cap
-        self.errors_seen = errors_seen
-        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
         if self.cap is not None and self.errors_seen is not None:
@@ -551,13 +540,8 @@ class InvalidField(RecordDirectoryInvalid):
 
     code = "E106"
     slug = "invalid_field"
-    _pickle_extra_fields = ("message",)
-    _diagnostic_extra_fields = ("message",)
+    _extra_fields = ("message",)
     message: Optional[str]
-
-    def __init__(self, *args, message=None, **kwargs) -> None:
-        self.message = message
-        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
         if self.message:
@@ -570,15 +554,9 @@ class TruncatedRecord(EndOfRecordNotFound):
 
     code = "E005"
     slug = "truncated_record"
-    _pickle_extra_fields = ("expected_length", "actual_length")
-    _diagnostic_extra_fields = ("expected_length", "actual_length")
+    _extra_fields = ("expected_length", "actual_length")
     expected_length: Optional[int]
     actual_length: Optional[int]
-
-    def __init__(self, *args, expected_length=None, actual_length=None, **kwargs) -> None:
-        self.expected_length = expected_length
-        self.actual_length = actual_length
-        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
         if self.expected_length is not None and self.actual_length is not None:
@@ -604,13 +582,8 @@ class EncodingError(MrrcException):
 
     code = "E301"
     slug = "utf8_invalid"
-    _pickle_extra_fields = ("message",)
-    _diagnostic_extra_fields = ("message",)
+    _extra_fields = ("message",)
     message: Optional[str]
-
-    def __init__(self, *args, message=None, **kwargs) -> None:
-        self.message = message
-        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
         if self.message:
@@ -623,13 +596,8 @@ class XmlError(MrrcException):
 
     code = "E401"
     slug = "marcxml_invalid"
-    _pickle_extra_fields = ("message",)
-    _diagnostic_extra_fields = ("message",)
+    _extra_fields = ("message",)
     message: Optional[str]
-
-    def __init__(self, *args, message=None, **kwargs) -> None:
-        self.message = message
-        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
         if self.message:
@@ -642,13 +610,8 @@ class JsonError(MrrcException):
 
     code = "E402"
     slug = "marcjson_invalid"
-    _pickle_extra_fields = ("message",)
-    _diagnostic_extra_fields = ("message",)
+    _extra_fields = ("message",)
     message: Optional[str]
-
-    def __init__(self, *args, message=None, **kwargs) -> None:
-        self.message = message
-        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
         if self.message:
@@ -661,13 +624,8 @@ class WriterError(MrrcException):
 
     code = "E404"
     slug = "record_too_large_for_iso2709"
-    _pickle_extra_fields = ("message",)
-    _diagnostic_extra_fields = ("message",)
+    _extra_fields = ("message",)
     message: Optional[str]
-
-    def __init__(self, *args, message=None, **kwargs) -> None:
-        self.message = message
-        super().__init__(*args, **kwargs)
 
     def _body_text(self) -> str:
         if self.message:
