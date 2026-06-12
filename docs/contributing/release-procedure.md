@@ -905,8 +905,12 @@ Look for the "Python Release to PyPI" workflow:
 2. **build-cross-linux-wheels** job - Cross-compiles aarch64 and i686 Linux wheels for Python 3.10-3.14 (10 wheels)
 3. **build-sdist** / **test-sdist** jobs - Build the source distribution and prove it compiles and
    imports in a clean environment (the fallback for platforms outside the wheel matrix)
-4. **test-release-wheels** / **validate-cross-wheels** jobs - Test native wheels; validate cross-compiled wheel tags
-5. **publish-pypi** job - Publishes all wheels plus the sdist to PyPI
+4. **test-release-wheels** / **validate-cross-wheels** / **smoke-test-cross-wheels** jobs - Test
+   native wheels; validate cross-compiled wheel tags; install and import one representative
+   cross-compiled wheel per target (aarch64 under QEMU, i686 in a 32-bit container)
+5. **publish-pypi** job - Publishes all wheels plus the sdist to PyPI (`skip-existing`, so a re-run
+   after a partial failure uploads only the missing files)
+6. **github-release** job - Creates the GitHub Release with artifacts and CHANGELOG notes
 
 Each job has multiple matrix runs (fail-fast: false means all run even if some fail).
 
@@ -1362,7 +1366,7 @@ twine upload dist/mrrc-*.whl
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `python-release.yml` | Tag push `v*` | Builds wheels, tests, publishes to PyPI |
+| `python-release.yml` | Tag push `v*`; manual dispatch | Builds wheels, tests, publishes to PyPI; dispatch is a dry run, or a TestPyPI rehearsal with `publish-target=testpypi` |
 | `lint.yml` | Push/PR | Rustfmt, clippy, doc checks |
 | `test.yml` | Push/PR | Cargo tests |
 | `python-build.yml` | Push/PR | Python wheel build test |
