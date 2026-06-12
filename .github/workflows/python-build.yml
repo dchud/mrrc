@@ -28,8 +28,82 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Smoke build+test on every pull request, including Dependabot PRs.
+  # The matrix jobs below skip Dependabot, so without this job a
+  # pyo3/maturin/cargo bump could merge without ever compiling the
+  # extension or running the Python tests.
+  build-wheel-smoke:
+    if: github.event_name == 'pull_request'
+    name: Build wheel (smoke) on ubuntu-latest py3.12
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          manylinux: off
+          args: --release --out dist -i python3.12
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheels-smoke-ubuntu-latest-3.12
+          path: dist
+
+  test-wheel-smoke:
+    if: github.event_name == 'pull_request'
+    name: Test wheel (smoke) on ubuntu-latest py3.12
+    needs: build-wheel-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheels-smoke-ubuntu-latest-3.12
+          path: dist
+
+      - name: Install wheel and test dependencies
+        shell: bash
+        run: |
+          # Install the wheel together with the [test] and [oracle] extras
+          # from pyproject.toml so test deps stay in sync with the package
+          # and the pymarc parity oracle executes instead of skipping.
+          WHEEL=$(ls dist/*.whl | head -1)
+          uv pip install --system "${WHEEL}[test,oracle]"
+
+      - name: Verify the pymarc oracle is installed
+        shell: bash
+        run: |
+          # The parity tests skip silently when pymarc is missing; fail
+          # the job here instead so oracle coverage cannot quietly vanish.
+          # pymarc has no __version__ attribute; read the dist metadata.
+          python -c "import pymarc, importlib.metadata as m; print('pymarc', m.version('pymarc'))"
+
+      - name: Run pytest (core tests, excludes benchmarks)
+        run: |
+          pytest tests/python/ -m "not benchmark" -v
+
   # Slim matrix on pull requests: oldest + newest Python on Linux, plus a
   # single sanity build on each alternate OS. 4 build + 4 test = 8 jobs.
+  # Skipped for Dependabot PRs; the smoke jobs above provide the gate there.
   build-wheels-pr:
     if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
     name: Build wheels (PR) on ${{ matrix.os }} py${{ matrix.python-version }}
