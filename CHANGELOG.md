@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Record parsing no longer copies every record's bytes into the error-diagnostics
+  buffer: the parse buffer is shared by refcount instead, deleting a per-record
+  alloc+memcpy that every read path paid so that the under-1% of records that error
+  could render hex dumps. Error `bytes_near` output is unchanged.
 - Tuned the release profile: fat LTO, `codegen-units = 1`, and debuginfo stripping.
   Wheels get ~2-3% higher read throughput and a 21% smaller extension binary, and
   cross-crate inlining is now deterministic, so instruction-count CI benchmarks stop

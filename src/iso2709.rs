@@ -95,10 +95,10 @@ pub struct ParseContext {
     /// Indicator position currently being parsed (0 or 1), when known.
     pub current_indicator_position: Option<u8>,
     /// Most recently captured parse buffer, used to populate `bytes_near`
-    /// on errors. Owned so the context has no lifetime parameters; callers
-    /// update it via [`ParseContext::set_parse_buffer`] as they take
-    /// ownership of new record/field bytes.
-    current_buffer: Option<Vec<u8>>,
+    /// on errors. Shared via `Arc` so the context has no lifetime
+    /// parameters and taking the buffer is a refcount bump, not a copy;
+    /// callers hand it over via [`ParseContext::set_parse_buffer`].
+    current_buffer: Option<std::sync::Arc<Vec<u8>>>,
     /// Absolute stream offset of `current_buffer[0]`.
     current_buffer_base_offset: Option<usize>,
 }
@@ -162,9 +162,16 @@ impl ParseContext {
     /// Hand the parser's current byte buffer to the context so subsequent
     /// `err_*` helpers can capture a hex-dump-ready window around the error
     /// offset. `buffer_start_offset` is the absolute stream offset of
-    /// `buffer[0]`. Cheap clone (typically a record's bytes, <1 KB).
-    pub fn set_parse_buffer(&mut self, buffer: &[u8], buffer_start_offset: usize) {
-        self.current_buffer = Some(buffer.to_vec());
+    /// `buffer[0]`. Takes a shared handle, so this is a refcount bump —
+    /// every record passes through here, and copying each record's bytes
+    /// just for the under-1% that error was the read path's largest
+    /// avoidable cost.
+    pub fn set_parse_buffer(
+        &mut self,
+        buffer: std::sync::Arc<Vec<u8>>,
+        buffer_start_offset: usize,
+    ) {
+        self.current_buffer = Some(buffer);
         self.current_buffer_base_offset = Some(buffer_start_offset);
     }
 
@@ -865,6 +872,36 @@ pub fn parse_subfields(
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn set_parse_buffer_shares_the_allocation() {
+        // The context must take the record bytes by refcount bump, not by
+        // copy — every record passes through set_parse_buffer, and the
+        // per-record alloc+memcpy this guards against was the read path's
+        // largest avoidable cost (PERF-2).
+        let data = std::sync::Arc::new(b"00100nam a2200049 i 4500".to_vec());
+        let mut ctx = ParseContext::new();
+        ctx.set_parse_buffer(std::sync::Arc::clone(&data), 0);
+        assert!(std::sync::Arc::ptr_eq(
+            ctx.current_buffer.as_ref().expect("buffer was set"),
+            &data
+        ));
+    }
+
+    #[test]
+    fn errors_capture_bytes_near_from_shared_buffer() {
+        let data = std::sync::Arc::new(b"00100nam a2200049 i 4500".to_vec());
+        let mut ctx = ParseContext::new();
+        ctx.set_parse_buffer(std::sync::Arc::clone(&data), 0);
+        ctx.stream_byte_offset = 5;
+        let err = ctx.err_invalid_field("test");
+        let window = err.bytes_near().expect("bytes_near captured");
+        assert!(
+            window.bytes.windows(3).any(|w| w == b"nam"),
+            "bytes_near window missing leader bytes: {:?}",
+            window.bytes
+        );
+    }
 
     #[test]
     fn read_leader_bytes_eof_returns_none() {
