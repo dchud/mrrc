@@ -81,6 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   MSRV unlocked clippy-driven cleanups: the MARC-8 tables now use `std::sync::LazyLock`
   (dropping the `lazy_static` dependency) and I/O error construction uses
   `std::io::Error::other`.
+- Truncated records no longer allocate or zero-pad a buffer of the leader's claimed
+  length: the reader grows the record buffer as bytes arrive (8 KiB steps) and lenient
+  salvage parses the short body directly, so allocation is bounded by actual input size
+  instead of a claimed maximum-length record on a small stub.
 
 ### Removed
 

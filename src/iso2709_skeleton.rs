@@ -227,10 +227,12 @@ where
     ctx.advance(LEADER_LEN);
 
     // Read the full record data. In non-Strict modes a short read returns
-    // a zero-padded buffer of `expected_len` plus the actual bytes_read;
-    // strict mode has already errored out via `?`. The truncated-record
-    // dispatch in `parse_record_body` is the lenient/permissive recovery
-    // point. Wrapping in Arc moves the Vec (no byte copy).
+    // just the bytes the stream delivered (`record_data.len()` equals
+    // `bytes_read`, bounded by input size — not by the leader's claimed
+    // length); strict mode has already errored out via `?`. The
+    // truncated-record dispatch in `parse_record_body` is the
+    // lenient/permissive recovery point. Wrapping in Arc moves the Vec
+    // (no byte copy).
     let (record_data, bytes_read) = read_record_data(reader, record_length, recovery_mode, ctx)?;
     let record_data = std::sync::Arc::new(record_data);
     let body_range = 0..record_data.len();
@@ -358,20 +360,22 @@ pub fn parse_iso2709_record_from_bytes<B: Iso2709Builder>(
 
     let body_len = record_bytes.len() - LEADER_LEN;
     if body_len < expected_data_len {
-        // Mirror read_record_data's short-read behavior: strict aborts with
-        // E005; lenient/permissive parse a zero-padded body so downstream
-        // recovery sees the same input shape as the reader path. The pad
-        // copy happens only on this truncated-record path.
+        // Mirror read_record_data's short-read behavior: strict aborts
+        // with E005; lenient/permissive hand the short body to the
+        // clamped directory walk. The buffer holds only the bytes the
+        // caller actually supplied — never one sized (or zero-padded) to
+        // the leader's claimed length — so allocation stays bounded by
+        // input size. The body-only copy keeps error hex-dump windows
+        // identical to the reader path's body-only buffer, and happens
+        // only on this truncated-record path.
         if recovery_mode == RecoveryMode::Strict {
             return Err(ctx.err_truncated_record(Some(expected_data_len), Some(body_len)));
         }
-        let mut padded = record_bytes[LEADER_LEN..].to_vec();
-        padded.resize(expected_data_len, 0);
-        let padded = std::sync::Arc::new(padded);
-        let range = 0..expected_data_len;
+        let body = std::sync::Arc::new(record_bytes[LEADER_LEN..].to_vec());
+        let range = 0..body_len;
         return parse_record_body::<B>(
             leader,
-            &padded,
+            &body,
             range,
             ctx.stream_byte_offset,
             body_len,
