@@ -4,6 +4,10 @@ mrrc has three permanent benchmark layers. Each catches a different class of
 regression and runs in a different place; the table at the bottom of this
 page summarizes when to reach for which.
 
+These layers measure *how fast* the code is. To find out *where* the time
+goes, see the [Profiling Guide](profiling.md), which covers local CPU
+profiling of the same bench targets with `cargo flamegraph`.
+
 ## Rust criterion benchmarks
 
 Located in `benches/`. Run with `cargo bench --bench <name>`. Output lands
