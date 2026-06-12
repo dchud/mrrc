@@ -158,6 +158,14 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
         MarcError::IoError { .. } => {
             return Err(PyValueError::new_err("io error: use fallback"));
         },
+        // MarcError is #[non_exhaustive]: a variant added in the core crate
+        // before this mapping learns about it routes through the fallback
+        // (PyValueError carrying the Display text) instead of being dropped.
+        _ => {
+            return Err(PyValueError::new_err(
+                "unmapped error variant: use fallback",
+            ));
+        },
     };
     Ok((class_name, kwargs))
 }

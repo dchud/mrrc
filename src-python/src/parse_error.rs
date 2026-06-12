@@ -218,56 +218,27 @@ impl ParseError {
     /// hierarchy as the synchronous reader path.
     pub fn to_py_err(&self) -> PyErr {
         let marc_err = match &self.kind {
-            ParseErrorKind::InvalidRecord(msg) => MarcError::InvalidField {
-                record_index: self.context.record_index,
-                byte_offset: self.context.byte_offset,
-                record_byte_offset: self.context.record_byte_offset,
-                source_name: self.context.source_name.clone(),
-                record_control_number: None,
-                field_tag: None,
-                message: msg.clone(),
-                bytes_near: self.context.bytes_near.clone(),
-            },
-            ParseErrorKind::RecordBoundaryError(msg) => MarcError::InvalidField {
-                record_index: self.context.record_index,
-                byte_offset: self.context.byte_offset,
-                record_byte_offset: self.context.record_byte_offset,
-                source_name: self.context.source_name.clone(),
-                record_control_number: None,
-                field_tag: None,
-                message: format!("record boundary error: {msg}"),
-                bytes_near: self.context.bytes_near.clone(),
+            ParseErrorKind::InvalidRecord(msg) => MarcError::invalid_field(msg.clone()),
+            ParseErrorKind::RecordBoundaryError(msg) => {
+                MarcError::invalid_field(format!("record boundary error: {msg}"))
             },
             ParseErrorKind::TruncatedRecord {
                 expected_length,
                 actual_length,
-            } => MarcError::TruncatedRecord {
-                record_index: self.context.record_index,
-                byte_offset: self.context.byte_offset,
-                record_byte_offset: self.context.record_byte_offset,
-                source_name: self.context.source_name.clone(),
-                record_control_number: None,
-                expected_length: *expected_length,
-                actual_length: *actual_length,
-                bytes_near: self.context.bytes_near.clone(),
-            },
+            } => MarcError::truncated_record(*expected_length, *actual_length),
             ParseErrorKind::RecordLengthInvalid { found, expected } => {
-                MarcError::RecordLengthInvalid {
-                    record_index: self.context.record_index,
-                    byte_offset: self.context.byte_offset,
-                    source_name: self.context.source_name.clone(),
-                    found: Some(found.clone()),
-                    expected: Some(expected.clone()),
-                    bytes_near: self.context.bytes_near.clone(),
-                }
+                MarcError::record_length_invalid(Some(found.clone()), Some(expected.clone()))
             },
-            ParseErrorKind::IoError(msg) => MarcError::IoError {
-                cause: std::io::Error::other(msg.clone()),
-                record_index: self.context.record_index,
-                byte_offset: self.context.byte_offset,
-                source_name: self.context.source_name.clone(),
-            },
+            ParseErrorKind::IoError(msg) => MarcError::from(std::io::Error::other(msg.clone())),
         };
+        // Attach the positional context uniformly; the setters are no-ops
+        // for slots a variant does not carry (e.g. bytes_near on IoError).
+        let marc_err = marc_err
+            .with_record_index(self.context.record_index)
+            .with_byte_offset(self.context.byte_offset)
+            .with_record_byte_offset(self.context.record_byte_offset)
+            .with_source_name(self.context.source_name.clone())
+            .with_bytes_near_window(self.context.bytes_near.clone());
         crate::error::marc_error_to_py_err(marc_err)
     }
 }

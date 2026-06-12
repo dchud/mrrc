@@ -20,6 +20,7 @@ pub struct IndicatorRules {
 }
 
 /// Validation rule for a single indicator
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum IndicatorValidation {
     /// Indicator is undefined; blank (#) is required

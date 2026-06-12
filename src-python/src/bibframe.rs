@@ -92,6 +92,10 @@ impl PyBibframeConfig {
             RdfFormat::JsonLd => "jsonld",
             RdfFormat::Turtle => "turtle",
             RdfFormat::NTriples => "ntriples",
+            // RdfFormat is #[non_exhaustive]: a format added in the core
+            // crate before this getter learns its token reports as unknown
+            // rather than failing to compile.
+            _ => "unknown",
         }
     }
 

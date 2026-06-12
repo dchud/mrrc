@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error carries. The per-field accessors, `Display`/`detailed()` rendering, JSON output, and
   the Python exception mapping all read from this single per-variant table now; rendered and
   serialized output is unchanged.
+- `MarcError` (enum and variants) and the grower enums (`PipelineError`, `RecoveryMode`,
+  `ValidationLevel`, `EncodingAnalysis`, `RdfFormat`, `IndicatorValidation`) are now
+  `#[non_exhaustive]`, so adding a variant or field is no longer a breaking change. Downstream
+  `match`es need a wildcard arm; `MarcError` construction outside the crate goes through new
+  public constructors (`invalid_field`, `truncated_record`, `record_length_invalid`,
+  `fatal_reader_error`) and `with_*` positional setters.
 
 ### Changed
 

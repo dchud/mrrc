@@ -153,9 +153,19 @@ struct ErrorFieldsMut<'a> {
 /// The default [`fmt::Display`] impl produces a one-line, actionable summary
 /// with byte offset visually subordinate. Use [`MarcError::detailed`] for the
 /// multi-line diagnostic format.
+///
+/// The enum and every variant are `#[non_exhaustive]`: variants and fields
+/// can be added without a breaking change, so downstream `match`es need a
+/// wildcard arm and downstream construction goes through the public
+/// constructors ([`MarcError::invalid_field`],
+/// [`MarcError::truncated_record`], [`MarcError::record_length_invalid`],
+/// [`MarcError::fatal_reader_error`], `From<std::io::Error>`) and the
+/// `with_*` positional setters.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum MarcError {
     /// The 24-byte leader is malformed or contains values that fail validation.
+    #[non_exhaustive]
     InvalidLeader {
         /// 1-based record index in the stream, when known.
         record_index: Option<usize>,
@@ -172,6 +182,7 @@ pub enum MarcError {
     },
 
     /// The leader's record-length field is invalid (non-numeric, too small, etc.).
+    #[non_exhaustive]
     RecordLengthInvalid {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -188,6 +199,7 @@ pub enum MarcError {
     },
 
     /// The leader's base-address-of-data field is invalid.
+    #[non_exhaustive]
     BaseAddressInvalid {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -206,6 +218,7 @@ pub enum MarcError {
     },
 
     /// The leader claims a base address of data that does not exist in the stream.
+    #[non_exhaustive]
     BaseAddressNotFound {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -220,6 +233,7 @@ pub enum MarcError {
     },
 
     /// A directory entry is structurally invalid (bad tag, length, or start position).
+    #[non_exhaustive]
     DirectoryInvalid {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -242,6 +256,7 @@ pub enum MarcError {
     },
 
     /// The record was truncated mid-stream.
+    #[non_exhaustive]
     TruncatedRecord {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -262,6 +277,7 @@ pub enum MarcError {
     },
 
     /// The end-of-record marker was not found where expected.
+    #[non_exhaustive]
     EndOfRecordNotFound {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -278,6 +294,7 @@ pub enum MarcError {
     },
 
     /// An indicator byte was invalid for its position.
+    #[non_exhaustive]
     InvalidIndicator {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -302,6 +319,7 @@ pub enum MarcError {
     },
 
     /// A subfield code byte was invalid.
+    #[non_exhaustive]
     BadSubfieldCode {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -323,6 +341,7 @@ pub enum MarcError {
 
     /// A data field is structurally invalid in some way not covered by the
     /// more specific variants above.
+    #[non_exhaustive]
     InvalidField {
         /// 1-based record index in the stream.
         record_index: Option<usize>,
@@ -343,6 +362,7 @@ pub enum MarcError {
     },
 
     /// A character encoding conversion failed.
+    #[non_exhaustive]
     EncodingError {
         /// 1-based record index in the stream, when known.
         record_index: Option<usize>,
@@ -364,6 +384,7 @@ pub enum MarcError {
     ///
     /// Unlike the parse-error variants this is not a structural failure, so it
     /// does not carry byte-offset metadata.
+    #[non_exhaustive]
     FieldNotFound {
         /// 1-based record index in the stream, when known.
         record_index: Option<usize>,
@@ -374,6 +395,7 @@ pub enum MarcError {
     },
 
     /// An I/O error occurred reading or writing the underlying source/sink.
+    #[non_exhaustive]
     IoError {
         /// Underlying I/O error.
         #[source]
@@ -387,6 +409,7 @@ pub enum MarcError {
     },
 
     /// An error occurred during MARCXML parsing.
+    #[non_exhaustive]
     XmlError {
         /// Underlying XML parser error. Boxed so any of `quick_xml`'s error
         /// types (`Error`, `DeError`, etc.) can be wrapped.
@@ -404,6 +427,7 @@ pub enum MarcError {
     },
 
     /// An error occurred during MARCJSON parsing.
+    #[non_exhaustive]
     JsonError {
         /// Underlying JSON parser error.
         #[source]
@@ -420,6 +444,7 @@ pub enum MarcError {
     },
 
     /// An error occurred while writing a MARC record.
+    #[non_exhaustive]
     WriterError {
         /// 1-based record index being written, when known.
         record_index: Option<usize>,
@@ -439,6 +464,7 @@ pub enum MarcError {
     /// the configured cap (see their respective `with_max_errors` builders)
     /// is exceeded. After raising this error the reader is exhausted —
     /// subsequent calls return `Ok(None)`.
+    #[non_exhaustive]
     FatalReaderError {
         /// The configured cap value.
         cap: usize,
@@ -1679,6 +1705,113 @@ impl MarcError {
 }
 
 impl MarcError {
+    /// Construct an [`MarcError::InvalidField`] from a message.
+    ///
+    /// All positional fields start as `None`; enrich them with the `with_*`
+    /// setters or [`MarcError::with_position`]. This is the construction
+    /// path for code outside the crate, since the `#[non_exhaustive]`
+    /// variants cannot be built by struct literal downstream.
+    #[must_use]
+    pub fn invalid_field(message: impl Into<String>) -> Self {
+        Self::invalid_field_msg(message)
+    }
+
+    /// Construct an [`MarcError::TruncatedRecord`] from the expected and
+    /// actual lengths. Positional fields start as `None`; see
+    /// [`MarcError::invalid_field`] for the enrichment path.
+    #[must_use]
+    pub fn truncated_record(expected_length: Option<usize>, actual_length: Option<usize>) -> Self {
+        MarcError::TruncatedRecord {
+            record_index: None,
+            byte_offset: None,
+            record_byte_offset: None,
+            source_name: None,
+            record_control_number: None,
+            expected_length,
+            actual_length,
+            bytes_near: None,
+        }
+    }
+
+    /// Construct an [`MarcError::RecordLengthInvalid`] from the offending
+    /// bytes and a description of what was expected. Positional fields start
+    /// as `None`; see [`MarcError::invalid_field`] for the enrichment path.
+    #[must_use]
+    pub fn record_length_invalid(found: Option<Vec<u8>>, expected: Option<String>) -> Self {
+        MarcError::RecordLengthInvalid {
+            record_index: None,
+            byte_offset: None,
+            source_name: None,
+            found,
+            expected,
+            bytes_near: None,
+        }
+    }
+
+    /// Construct an [`MarcError::FatalReaderError`] from the configured cap
+    /// and the recovered-error count that tripped it. Positional fields
+    /// start as `None`; see [`MarcError::invalid_field`] for the enrichment
+    /// path.
+    #[must_use]
+    pub fn fatal_reader_error(cap: usize, errors_seen: usize) -> Self {
+        MarcError::FatalReaderError {
+            cap,
+            errors_seen,
+            record_index: None,
+            source_name: None,
+        }
+    }
+
+    /// Set the 1-based record index. Every variant carries this field; an
+    /// existing value is overwritten.
+    #[must_use]
+    pub fn with_record_index(mut self, record_index: Option<usize>) -> Self {
+        *self.fields_mut().record_index = record_index;
+        self
+    }
+
+    /// Set the absolute stream byte offset. No-op for variants that do not
+    /// carry the field; an existing value is overwritten.
+    #[must_use]
+    pub fn with_byte_offset(mut self, byte_offset: Option<usize>) -> Self {
+        if let Some(slot) = self.fields_mut().byte_offset {
+            *slot = byte_offset;
+        }
+        self
+    }
+
+    /// Set the record-relative byte offset. No-op for variants that do not
+    /// carry the field; an existing value is overwritten.
+    #[must_use]
+    pub fn with_record_byte_offset(mut self, record_byte_offset: Option<usize>) -> Self {
+        if let Some(slot) = self.fields_mut().record_byte_offset {
+            *slot = record_byte_offset;
+        }
+        self
+    }
+
+    /// Set the source filename or stream identifier. No-op for variants
+    /// that do not carry the field; an existing value is overwritten.
+    #[must_use]
+    pub fn with_source_name(mut self, source_name: Option<String>) -> Self {
+        if let Some(slot) = self.fields_mut().source_name {
+            *slot = source_name;
+        }
+        self
+    }
+
+    /// Set an already-captured byte window. No-op for variants that do not
+    /// carry the field; an existing value is overwritten. Use
+    /// [`MarcError::with_bytes_near`] instead when the parse buffer is
+    /// still at hand and the window has not been captured yet.
+    #[must_use]
+    pub fn with_bytes_near_window(mut self, window: Option<BytesNear>) -> Self {
+        if let Some(slot) = self.fields_mut().bytes_near {
+            *slot = window;
+        }
+        self
+    }
+
     /// Construct an [`MarcError::InvalidField`] with only a message — used at
     /// call sites that have a textual error description but no positional
     /// metadata available. Subsequent enrichment work attaches positional
@@ -2138,6 +2271,51 @@ mod tests {
         assert!(md.actual_length.is_none());
         assert!(md.cap.is_none());
         assert!(md.errors_seen.is_none());
+    }
+
+    #[test]
+    fn public_constructors_and_setters_build_enriched_errors() {
+        let err = MarcError::truncated_record(Some(100), Some(80))
+            .with_record_index(Some(3))
+            .with_byte_offset(Some(0x40))
+            .with_record_byte_offset(Some(8))
+            .with_source_name(Some("a.mrc".into()))
+            .with_bytes_near_window(Some(BytesNear {
+                bytes: vec![1, 2],
+                start_offset: 0x3E,
+            }));
+        let md = err.metadata();
+        assert_eq!(md.code, "E005");
+        assert_eq!(md.record_index, Some(3));
+        assert_eq!(md.byte_offset, Some(0x40));
+        assert_eq!(md.record_byte_offset, Some(8));
+        assert_eq!(md.source_name, Some("a.mrc"));
+        assert_eq!(md.expected_length, Some(100));
+        assert_eq!(md.actual_length, Some(80));
+        assert!(md.bytes_near.is_some());
+
+        assert_eq!(MarcError::invalid_field("boom").code(), "E106");
+        assert_eq!(
+            MarcError::record_length_invalid(Some(b"00X42".to_vec()), Some("5 digits".into()))
+                .code(),
+            "E001"
+        );
+
+        // Setters are no-ops for slots the variant does not carry.
+        let err = MarcError::fatal_reader_error(10, 11)
+            .with_byte_offset(Some(5))
+            .with_record_byte_offset(Some(5))
+            .with_bytes_near_window(Some(BytesNear {
+                bytes: vec![0],
+                start_offset: 0,
+            }));
+        let md = err.metadata();
+        assert_eq!(md.code, "E099");
+        assert_eq!(md.cap, Some(10));
+        assert_eq!(md.errors_seen, Some(11));
+        assert_eq!(md.byte_offset, None);
+        assert_eq!(md.record_byte_offset, None);
+        assert!(md.bytes_near.is_none());
     }
 
     #[test]

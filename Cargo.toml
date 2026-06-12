@@ -58,6 +58,15 @@ pub_module_level_const_now_doc_hidden = "allow"
 auto_trait_impl_removed = "allow"
 constructible_struct_adds_field = "allow"
 function_parameter_count_changed = "allow"
+# Error-API hardening: MarcError (enum + variants) and the grower
+# policy/diagnostic enums (PipelineError, RecoveryMode, ValidationLevel,
+# EncodingAnalysis, RdfFormat, IndicatorValidation) are #[non_exhaustive]
+# so future variant and field additions stop being breaking changes. The
+# marking itself is the one-time break these allows cover; downstream
+# construction of MarcError goes through the public constructors and
+# `with_*` setters.
+enum_marked_non_exhaustive = "allow"
+enum_variant_marked_non_exhaustive = "allow"
 
 [features]
 default = []

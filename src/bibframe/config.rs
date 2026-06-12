@@ -6,6 +6,7 @@
 use std::fmt;
 
 /// Output format for RDF serialization.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RdfFormat {
     /// RDF/XML format (application/rdf+xml) - Most compatible with legacy systems

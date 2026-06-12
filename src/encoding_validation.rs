@@ -9,6 +9,7 @@ use crate::error::{MarcError, Result};
 use crate::record::Record;
 
 /// Result of encoding validation analysis
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EncodingAnalysis {
     /// Record uses a single consistent encoding
