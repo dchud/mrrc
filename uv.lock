@@ -599,7 +599,6 @@ wheels = [
 
 [[package]]
 name = "mrrc"
-version = "0.8.2"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -652,7 +651,7 @@ requires-dist = [
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'benchmark'", specifier = ">=2.0" },
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'test'", specifier = ">=2.0" },
 ]
-provides-extras = ["test", "dev", "benchmark", "docs", "oracle"]
+provides-extras = ["benchmark", "dev", "docs", "oracle", "test"]
 
 [[package]]
 name = "mypy"
