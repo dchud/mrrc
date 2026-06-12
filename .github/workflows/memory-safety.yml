@@ -36,7 +36,7 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-asan-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run ASAN on library tests
+      - name: Run ASAN on library and integration tests
         env:
           # Override rust-toolchain.toml pin so -Zbuild-std uses the nightly
           # toolchain installed above rather than the stable channel.
@@ -46,7 +46,7 @@ jobs:
           export LSAN_OPTIONS="suppressions=${{ github.workspace }}/.cargo/asan_suppressions.txt"
           # Use -Zbuild-std to rebuild std with ASAN and properly handle proc-macros
           # Proc-macros run on host at compile time, so they need special handling
-          cargo test --lib --package mrrc -q -Zbuild-std --target x86_64-unknown-linux-gnu
+          cargo test --lib --tests --package mrrc -q -Zbuild-std --target x86_64-unknown-linux-gnu
 
       - name: Report results
         if: always()
