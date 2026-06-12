@@ -86,7 +86,7 @@ def _assert_record_values_match(mrrc_record, pymarc_record, where: str) -> None:
     assert [f.tag for f in mrrc_fields] == [f.tag for f in pymarc_fields], (
         f"{where}: field tag sequence"
     )
-    for mrrc_field, pymarc_field in zip(mrrc_fields, pymarc_fields):
+    for mrrc_field, pymarc_field in zip(mrrc_fields, pymarc_fields, strict=False):
         tag = mrrc_field.tag
         assert mrrc_field.format_field() == pymarc_field.format_field(), (
             f"{where} field {tag}: format_field()"
@@ -109,7 +109,9 @@ def test_value_level_parity_1k_corpus() -> None:
     if not _FIXTURE_1K.exists():
         pytest.skip(f"Fixture not found: {_FIXTURE_1K}")
     mrrc_records, pymarc_records = _read_both(_FIXTURE_1K.read_bytes())
-    for i, (mrrc_record, pymarc_record) in enumerate(zip(mrrc_records, pymarc_records)):
+    for i, (mrrc_record, pymarc_record) in enumerate(
+        zip(mrrc_records, pymarc_records, strict=False)
+    ):
         _assert_record_values_match(mrrc_record, pymarc_record, f"record {i}")
 
 

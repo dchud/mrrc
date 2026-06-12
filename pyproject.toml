@@ -96,6 +96,30 @@ exclude = [
     { path = "tmp/**", format = "sdist" },
 ]
 
+[tool.ruff]
+target-version = "py310"
+# Match the repository-wide 100-column convention (CHANGELOG lint).
+line-length = 100
+
+[tool.ruff.lint]
+# Defaults cover only E4/E7/E9 + F; select the broader set so the
+# linter actually exercises the code. Both lint.yml and check.sh run
+# bare `ruff check`, which picks this configuration up automatically.
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort import ordering
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+# Characters that look like ASCII but are legitimate content in a
+# bibliographic library: en dash and multiplication sign in prose, and
+# the ALA-LC romanization modifier letter (ʻ) in MARC test data.
+allowed-confusables = ["–", "×", "ʻ"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 python_files = ["test_*.py"]

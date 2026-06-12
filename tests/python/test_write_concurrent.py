@@ -7,12 +7,14 @@ Demonstrates GIL release on the write-side and validates:
 3. Data integrity (no corruption or loss)
 """
 
-import pytest
 import io
-import tempfile
 import os
-from pathlib import Path
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+import pytest
+
 from mrrc import MARCReader, MARCWriter
 
 
@@ -189,7 +191,7 @@ class TestRoundTrip:
          assert len(records_roundtrip) == len(records_original)
 
          # Verify each record matches
-         for orig, roundtrip in zip(records_original, records_roundtrip):
+         for orig, roundtrip in zip(records_original, records_roundtrip, strict=False):
              assert orig == roundtrip
 
      def test_round_trip_preserves_fields(self, fixture_1k):
@@ -209,7 +211,7 @@ class TestRoundTrip:
          records_roundtrip = list(reader2)
 
          # Spot check some fields
-         for orig, rt in zip(records_original, records_roundtrip):
+         for orig, rt in zip(records_original, records_roundtrip, strict=False):
              # Leader should match
              assert orig.leader.record_type == rt.leader.record_type
              assert orig.leader.bibliographic_level == rt.leader.bibliographic_level
@@ -228,7 +230,7 @@ class TestRoundTrip:
 
      def test_round_trip_with_modification(self, fixture_1k):
          """Round-trip with record modification.
-         
+
          Tests that leader properties can be modified and persist through
          a write/read cycle. This validates the leader mutation API.
          """
@@ -236,9 +238,9 @@ class TestRoundTrip:
          reader = MARCReader(io.BytesIO(fixture_1k))
          records_original = list(reader)
          assert len(records_original) > 0
-         
+
          # Modify leader properties on first few records
-         for i, record in enumerate(records_original[:3]):
+         for _i, record in enumerate(records_original[:3]):
              leader = record.leader
              # Change record status to 'c' (corrected)
              leader.record_status = 'c'
@@ -246,39 +248,43 @@ class TestRoundTrip:
              leader.encoding_level = 'I'
              # Change cataloging form to 'a' (AACR2)
              leader.cataloging_form = 'a'
-         
+
          # Write modified records
          output = io.BytesIO()
          writer = MARCWriter(output)
          for record in records_original:
              writer.write_record(record)
          writer.close()
-         
+
          # Read them back
          output.seek(0)
          reader2 = MARCReader(output)
          records_roundtrip = list(reader2)
-         
+
          # Verify count matches
          assert len(records_roundtrip) == len(records_original)
-         
+
          # Verify modifications persisted
-         for i, (orig, roundtrip) in enumerate(zip(records_original[:3], records_roundtrip[:3])):
+         for _i, (orig, roundtrip) in enumerate(
+            zip(records_original[:3], records_roundtrip[:3], strict=False)
+        ):
              orig_leader = orig.leader
              rt_leader = roundtrip.leader
-             
+
              # These should have been modified
              assert rt_leader.record_status == 'c'
              assert rt_leader.encoding_level == 'I'
              assert rt_leader.cataloging_form == 'a'
-             
+
              # Verify they match what we expect
              assert rt_leader.record_status == orig_leader.record_status
              assert rt_leader.encoding_level == orig_leader.encoding_level
              assert rt_leader.cataloging_form == orig_leader.cataloging_form
-         
+
          # Verify remaining records unchanged
-         for i, (orig, roundtrip) in enumerate(zip(records_original[3:], records_roundtrip[3:]), start=3):
+         for _i, (orig, roundtrip) in enumerate(
+            zip(records_original[3:], records_roundtrip[3:], strict=False), start=3
+        ):
              assert orig.leader == roundtrip.leader
 
      def test_round_trip_large_file(self, fixture_10k):
@@ -386,7 +392,7 @@ class TestRustFileBackend:
 
              # Verify round-trip
              assert len(records_roundtrip) == len(records_original)
-             for orig, roundtrip in zip(records_original, records_roundtrip):
+             for orig, roundtrip in zip(records_original, records_roundtrip, strict=False):
                  assert orig == roundtrip
 
          finally:
@@ -418,7 +424,7 @@ class TestRustFileBackend:
 
              # Verify round-trip
              assert len(records_roundtrip) == len(records_original)
-             for orig, roundtrip in zip(records_original, records_roundtrip):
+             for orig, roundtrip in zip(records_original, records_roundtrip, strict=False):
                  assert orig == roundtrip
 
          finally:

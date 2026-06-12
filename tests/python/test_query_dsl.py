@@ -11,16 +11,16 @@ simple get_fields(*tags) method. It supports:
 """
 
 import pytest
+
 from mrrc import (
-    Record,
     Field,
-    Leader,
     FieldQuery,
-    TagRangeQuery,
+    Leader,
+    Record,
     SubfieldPatternQuery,
     SubfieldValueQuery,
+    TagRangeQuery,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -50,7 +50,9 @@ def create_test_record():
     record.add_field(create_field("020", a="979-10-12-345678-7"))
 
     # Title field
-    record.add_field(create_field("245", "1", "0", a="The Great Book", b="a subtitle", c="Author Name"))
+    record.add_field(
+        create_field("245", "1", "0", a="The Great Book", b="a subtitle", c="Author Name")
+    )
 
     # Authors with dates
     record.add_field(create_field("100", "1", " ", a="Smith, John", d="1900-1980"))

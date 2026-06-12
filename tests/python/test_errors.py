@@ -12,7 +12,6 @@ import pytest
 
 import mrrc
 
-
 # ---------------------------------------------------------------------------
 # Hierarchy assertions
 # ---------------------------------------------------------------------------
@@ -630,6 +629,7 @@ class TestFfiTypedExceptions:
         `slug`, and `help_url()` values as a Python-constructed instance.
         """
         import io
+
         from mrrc.exceptions import DOCS_BASE_URL
 
         leader = b"00010nam a2200025 i 4500"
@@ -873,14 +873,23 @@ class TestNonBinaryReaderLeaderErrorPositionalContext:
     """
 
     def test_xml_to_record_bad_leader_carries_record_index(self):
-        xml = f'<record><leader>{_BAD_LEADER}</leader><controlfield tag="001">bad</controlfield></record>'
+        xml = (
+            f'<record><leader>{_BAD_LEADER}</leader>'
+            '<controlfield tag="001">bad</controlfield></record>'
+        )
         with pytest.raises(mrrc.RecordLeaderInvalid) as excinfo:
             mrrc.xml_to_record(xml)
         assert excinfo.value.record_index == 1
 
     def test_xml_to_records_bad_leader_identifies_failing_record(self):
-        good = f'<record><leader>{_OK_LEADER}</leader><controlfield tag="001">ok</controlfield></record>'
-        bad = f'<record><leader>{_BAD_LEADER}</leader><controlfield tag="001">bad</controlfield></record>'
+        good = (
+            f'<record><leader>{_OK_LEADER}</leader>'
+            '<controlfield tag="001">ok</controlfield></record>'
+        )
+        bad = (
+            f'<record><leader>{_BAD_LEADER}</leader>'
+            '<controlfield tag="001">bad</controlfield></record>'
+        )
         xml = f"<collection>{good}{good}{bad}</collection>"
         with pytest.raises(mrrc.RecordLeaderInvalid) as excinfo:
             mrrc.xml_to_records(xml)

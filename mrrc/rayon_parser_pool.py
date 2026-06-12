@@ -40,18 +40,20 @@ RAYON_NUM_THREADS=4 python my_script.py
 By default, Rayon will use all available CPU cores.
 """
 
+
 from ._mrrc import (
     parse_batch_parallel as _parse_batch_parallel,
+)
+from ._mrrc import (
     parse_batch_parallel_limited as _parse_batch_parallel_limited,
 )
-from typing import List, Tuple, Union
 
 __all__ = ["parse_batch_parallel", "parse_batch_parallel_limited"]
 
 
 def parse_batch_parallel(
-    boundaries: List[Tuple[int, int]], buffer: Union[bytes, bytearray]
-) -> List:
+    boundaries: list[tuple[int, int]], buffer: bytes | bytearray
+) -> list:
     """Parse a batch of MARC record boundaries in parallel using Rayon.
 
     Given a buffer and a list of record boundaries (offset, length pairs),
@@ -110,8 +112,8 @@ def parse_batch_parallel(
 
 
 def parse_batch_parallel_limited(
-    boundaries: List[Tuple[int, int]], buffer: Union[bytes, bytearray], limit: int
-) -> List:
+    boundaries: list[tuple[int, int]], buffer: bytes | bytearray, limit: int
+) -> list:
     """Parse a limited batch of MARC records in parallel.
 
     Like parse_batch_parallel(), but limits the number of records to parse.

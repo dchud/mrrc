@@ -285,7 +285,7 @@ class TestLeaderValueValidationIntegration:
         """Test that all values in the valid_values dict are describable."""
         valid_values = Leader.get_valid_values(5)
 
-        for value in valid_values.keys():
+        for value in valid_values:
             desc = Leader.describe_value(5, value)
             assert desc is not None
             assert desc == valid_values[value]
@@ -294,7 +294,7 @@ class TestLeaderValueValidationIntegration:
         """Test that all values in the valid_values dict are describable."""
         valid_values = Leader.get_valid_values(6)
 
-        for value in valid_values.keys():
+        for value in valid_values:
             desc = Leader.describe_value(6, value)
             assert desc is not None
             assert desc == valid_values[value]

@@ -10,11 +10,13 @@ the mrrc wrapper is a drop-in replacement for pymarc. It includes:
 - Edge cases and error handling
 """
 
-import pytest
-from mrrc import Record, Field, Leader, MARCReader, MARCWriter, Subfield, ControlField, Indicators
 import io
 import json
 from pathlib import Path
+
+import pytest
+
+from mrrc import ControlField, Field, Indicators, Leader, MARCReader, MARCWriter, Record, Subfield
 
 # Test data directory relative to this file
 TEST_DATA_DIR = Path(__file__).parent.parent / 'data'
@@ -88,7 +90,7 @@ class TestRecordFieldOperations:
          record = Record(Leader())
          record.add_control_field('001', '12345')
          record.add_control_field('003', 'ABC')
-    
+
          assert record.control_field('001') == '12345'
          assert record.control_field('003') == 'ABC'
 
@@ -152,7 +154,7 @@ class TestRecordFieldOperations:
 
         # Verify field exists
         assert record.get_field('245') is not None
-        
+
         # Remove the field
         record.remove_field('245')
 
@@ -214,9 +216,11 @@ class TestFieldSubfieldOperations:
         assert field['a'] == '256 pages'
 
     def test_field_indicators_tuple_access(self):
-       """Test Field.indicators property returns Indicators tuple-like object (pymarc compatibility)."""
+       """Test Field.indicators property returns Indicators tuple-like
+       object (pymarc compatibility).
+       """
        field = Field('245', '1', '0')
-       
+
        # Access via indicators property
        indicators = field.indicators
        assert isinstance(indicators, Indicators)
@@ -226,7 +230,7 @@ class TestFieldSubfieldOperations:
     def test_field_indicators_unpacking(self):
        """Test Field.indicators can be unpacked like a tuple (pymarc compatibility)."""
        field = Field('245', '1', '0')
-       
+
        # Unpacking
        ind1, ind2 = field.indicators
        assert ind1 == '1'
@@ -235,7 +239,7 @@ class TestFieldSubfieldOperations:
     def test_field_indicators_backward_compat(self):
        """Test that field.indicator1/indicator2 still work alongside indicators property."""
        field = Field('245', '1', '0')
-       
+
        # Both patterns should work
        assert field.indicator1 == field.indicators[0]
        assert field.indicator2 == field.indicators[1]
@@ -243,12 +247,12 @@ class TestFieldSubfieldOperations:
     def test_field_indicators_setter(self):
        """Test Field.indicators setter (pymarc compatibility)."""
        field = Field('245', '0', '0')
-       
+
        # Set via Indicators object
        field.indicators = Indicators('1', '4')
        assert field.indicator1 == '1'
        assert field.indicator2 == '4'
-       
+
        # Set via tuple
        field.indicators = ('1', '0')
        assert field.indicator1 == '1'
@@ -767,11 +771,11 @@ class TestLeader:
     def test_leader_position_and_property_stay_in_sync(self):
         """Test that position-based and property-based access stay synchronized."""
         leader = Leader()
-        
+
         # Set via property
         leader.record_status = 'd'
         assert leader[5] == 'd'
-        
+
         # Set via position
         leader[6] = 'a'
         assert leader.record_type == 'a'
@@ -786,30 +790,30 @@ class TestLeader:
         assert 'd' in values
         assert 'n' in values
         assert 'p' in values
-        
+
         # Position 6: Type of record
         values = Leader.get_valid_values(6)
         assert values is not None
         assert 'a' in values
         assert 'm' in values
-        
+
         # Position 7: Bibliographic level
         values = Leader.get_valid_values(7)
         assert values is not None
         assert 'm' in values
         assert 's' in values
-        
+
         # Position 17: Encoding level
         values = Leader.get_valid_values(17)
         assert values is not None
         assert ' ' in values
         assert '1' in values
-        
+
         # Position 18: Cataloging form
         values = Leader.get_valid_values(18)
         assert values is not None
         assert 'a' in values
-        
+
         # Position 0: No defined values
         values = Leader.get_valid_values(0)
         assert values is None
@@ -820,12 +824,12 @@ class TestLeader:
         assert Leader.is_valid_value(5, 'a') is True
         assert Leader.is_valid_value(5, 'c') is True
         assert Leader.is_valid_value(5, 'x') is False
-        
+
         # Position 6: Type of record
         assert Leader.is_valid_value(6, 'a') is True
         assert Leader.is_valid_value(6, 'm') is True
         assert Leader.is_valid_value(6, 'z') is False
-        
+
         # Position 0: No validation (any value accepted)
         assert Leader.is_valid_value(0, '0') is True
         assert Leader.is_valid_value(0, 'x') is True
@@ -836,20 +840,20 @@ class TestLeader:
         desc = Leader.get_value_description(5, 'a')
         assert desc is not None
         assert 'Increase in encoding level' in desc
-        
+
         desc = Leader.get_value_description(5, 'c')
         assert desc is not None
         assert 'Corrected or revised' in desc
-        
+
         # Invalid value
         desc = Leader.get_value_description(5, 'x')
         assert desc is None
-        
+
         # Position 6: Type of record
         desc = Leader.get_value_description(6, 'a')
         assert desc is not None
         assert 'Language material' in desc
-        
+
         # Position 0: No descriptions
         desc = Leader.get_value_description(0, '5')
         assert desc is None
@@ -1612,8 +1616,11 @@ class TestConvenienceFunctions:
 class TestMarcConstants:
     def test_constants_importable(self):
         from mrrc import (
-            LEADER_LEN, DIRECTORY_ENTRY_LEN,
-            END_OF_FIELD, END_OF_RECORD, SUBFIELD_INDICATOR,
+            DIRECTORY_ENTRY_LEN,
+            END_OF_FIELD,
+            END_OF_RECORD,
+            LEADER_LEN,
+            SUBFIELD_INDICATOR,
         )
         assert LEADER_LEN == 24
         assert DIRECTORY_ENTRY_LEN == 12
@@ -1630,15 +1637,15 @@ class TestMarcConstants:
 class TestExceptionHierarchy:
     def test_exception_classes_importable(self):
         from mrrc import (
-            MrrcException,
-            RecordLengthInvalid,
-            RecordLeaderInvalid,
             BaseAddressInvalid,
             BaseAddressNotFound,
-            RecordDirectoryInvalid,
             EndOfRecordNotFound,
-            FieldNotFound,
             FatalReaderError,
+            FieldNotFound,
+            MrrcException,
+            RecordDirectoryInvalid,
+            RecordLeaderInvalid,
+            RecordLengthInvalid,
         )
         assert issubclass(RecordLengthInvalid, MrrcException)
         assert issubclass(RecordLeaderInvalid, MrrcException)

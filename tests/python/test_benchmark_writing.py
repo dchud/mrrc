@@ -2,18 +2,20 @@
 Benchmark tests for MARC record writing performance.
 """
 
-import pytest
 import io
-import tempfile
 import os
+import tempfile
 import time
 from pathlib import Path
+
+import pytest
+
 from mrrc import MARCReader, MARCWriter
 
 
 class TestWritingBenchmarks:
      """Benchmarks for writing operations."""
-     
+
      @pytest.mark.benchmark
      def test_roundtrip_1k_records(self, benchmark, fixture_1k):
          """Benchmark reading and writing 1,000 records."""
@@ -24,20 +26,20 @@ class TestWritingBenchmarks:
              records = []
              while record := reader.read_record():
                  records.append(record)
-             
+
              # Write all records
              output = io.BytesIO()
              writer = MARCWriter(output)
              for record in records:
                  writer.write_record(record)
-             
+
              return output.getvalue()
-         
+
          result = benchmark(roundtrip)
          # Check that we got some data back
          assert len(result) > 0
          assert len(result) > len(fixture_1k) * 0.9  # Should be similar size
-     
+
      @pytest.mark.benchmark
      def test_write_only_1k_records(self, benchmark, fixture_1k):
          """Benchmark writing 1,000 pre-loaded records."""
@@ -47,17 +49,17 @@ class TestWritingBenchmarks:
          records = []
          while record := reader.read_record():
              records.append(record)
-         
+
          def write_all():
              output = io.BytesIO()
              writer = MARCWriter(output)
              for record in records:
                  writer.write_record(record)
              return output.getvalue()
-         
+
          result = benchmark(write_all)
          assert len(result) > 0
-     
+
      @pytest.mark.benchmark
      def test_write_only_10k_records(self, benchmark, fixture_10k):
          """Benchmark writing 10,000 pre-loaded records."""
@@ -67,22 +69,22 @@ class TestWritingBenchmarks:
          records = []
          while record := reader.read_record():
              records.append(record)
-         
+
          def write_all():
              output = io.BytesIO()
              writer = MARCWriter(output)
              for record in records:
                  writer.write_record(record)
              return output.getvalue()
-         
+
          result = benchmark(write_all)
          assert len(result) > 0
-     
+
 
 
 class TestIncrementalWriting:
      """Benchmarks for incremental/streaming write patterns."""
-     
+
      @pytest.mark.benchmark
      def test_stream_write_1k(self, benchmark, fixture_1k):
          """Benchmark streaming write pattern (read, modify, write)."""
@@ -91,16 +93,16 @@ class TestIncrementalWriting:
              input_reader = MARCReader(data)
              output = io.BytesIO()
              writer = MARCWriter(output)
-             
+
              count = 0
              while record := input_reader.read_record():
                  # Simulate a simple modification
                  # (in real use, you might add fields, update data, etc.)
                  writer.write_record(record)
                  count += 1
-             
+
              return output.getvalue(), count
-         
+
          result, count = benchmark(stream_and_write)
          assert count == 1000
          assert len(result) > 0
@@ -108,7 +110,7 @@ class TestIncrementalWriting:
 
 class TestRustFileBackendBenchmarks:
      """Benchmarks for RustFile backend (direct file I/O via Rust)."""
-     
+
      @pytest.mark.benchmark
      def test_write_only_1k_rustfile(self, benchmark, fixture_1k):
          """Benchmark writing 1,000 records via RustFile backend (file path)."""
@@ -118,28 +120,28 @@ class TestRustFileBackendBenchmarks:
          records = []
          while record := reader.read_record():
              records.append(record)
-         
+
          def write_all():
              with tempfile.NamedTemporaryFile(delete=False, suffix='.mrc') as tmp:
                  temp_path = tmp.name
-             
+
              try:
                  # Write using RustFile backend (string path)
                  writer = MARCWriter(temp_path)
                  for record in records:
                      writer.write_record(record)
                  writer.close()
-                 
+
                  # Read the file size
                  file_size = os.path.getsize(temp_path)
                  return file_size
              finally:
                  if os.path.exists(temp_path):
                      os.unlink(temp_path)
-         
+
          result = benchmark(write_all)
          assert result > 0
-     
+
      @pytest.mark.benchmark
      def test_write_only_10k_rustfile(self, benchmark, fixture_10k):
          """Benchmark writing 10,000 records via RustFile backend."""
@@ -149,28 +151,28 @@ class TestRustFileBackendBenchmarks:
          records = []
          while record := reader.read_record():
              records.append(record)
-         
+
          def write_all():
              with tempfile.NamedTemporaryFile(delete=False, suffix='.mrc') as tmp:
                  temp_path = tmp.name
-             
+
              try:
                  # Write using RustFile backend
                  writer = MARCWriter(temp_path)
                  for record in records:
                      writer.write_record(record)
                  writer.close()
-                 
+
                  # Read the file size
                  file_size = os.path.getsize(temp_path)
                  return file_size
              finally:
                  if os.path.exists(temp_path):
                      os.unlink(temp_path)
-         
+
          result = benchmark(write_all)
          assert result > 0
-     
+
      @pytest.mark.benchmark
      def test_write_pathlib_1k_rustfile(self, benchmark, fixture_1k):
          """Benchmark writing 1,000 records via RustFile backend with pathlib.Path."""
@@ -180,25 +182,25 @@ class TestRustFileBackendBenchmarks:
          records = []
          while record := reader.read_record():
              records.append(record)
-         
+
          def write_all():
              with tempfile.NamedTemporaryFile(delete=False, suffix='.mrc') as tmp:
                  temp_path = Path(tmp.name)
-             
+
              try:
                  # Write using RustFile backend with Path object
                  writer = MARCWriter(temp_path)
                  for record in records:
                      writer.write_record(record)
                  writer.close()
-                 
+
                  # Get file size
                  file_size = temp_path.stat().st_size
                  return file_size
              finally:
                  if temp_path.exists():
                      temp_path.unlink()
-         
+
          result = benchmark(write_all)
          assert result > 0
 
@@ -215,7 +217,7 @@ class TestBackendComparison:
          records = []
          while record := reader.read_record():
              records.append(record)
-         
+
          # Benchmark PythonFile backend (BytesIO)
          # Use 5 iterations and median to drop outliers from CI runner noise
          pythonfile_times = []

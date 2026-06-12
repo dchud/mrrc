@@ -146,9 +146,8 @@ class TestAuthorityIteration:
             assert reader.read_record() is None
 
     def test_context_manager(self):
-        with open(AUTHORITY_FIXTURE, "rb") as fh:
-            with mrrc.AuthorityMARCReader(fh) as reader:
-                record = next(reader)
+        with open(AUTHORITY_FIXTURE, "rb") as fh, mrrc.AuthorityMARCReader(fh) as reader:
+            record = next(reader)
         assert record.heading_text() == "Smith, John"
 
     def test_reads_from_bytesio(self):
@@ -299,9 +298,8 @@ class TestHoldingsIteration:
             assert reader.read_record() is None
 
     def test_context_manager(self):
-        with open(HOLDINGS_FIXTURE, "rb") as fh:
-            with mrrc.HoldingsMARCReader(fh) as reader:
-                record = next(reader)
+        with open(HOLDINGS_FIXTURE, "rb") as fh, mrrc.HoldingsMARCReader(fh) as reader:
+            record = next(reader)
         assert record.record_type() == "x"
 
     def test_reads_from_bytesio(self):

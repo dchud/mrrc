@@ -5,10 +5,12 @@ Measures peak memory consumption during various operations to track
 memory efficiency of the Python wrapper.
 """
 
-import pytest
 import io
 import tracemalloc
-from mrrc import MARCReader, Record, Field
+
+import pytest
+
+from mrrc import Field, MARCReader, Record
 
 
 class TestMemoryBenchmarks:
@@ -19,7 +21,7 @@ class TestMemoryBenchmarks:
         tracemalloc.start()
         try:
             result = func()
-            current, peak = tracemalloc.get_traced_memory()
+            _current, peak = tracemalloc.get_traced_memory()
             return result, peak
         finally:
             tracemalloc.stop()
@@ -34,13 +36,15 @@ class TestMemoryBenchmarks:
             while record := reader.read_record():
                 records.append(record)
             return records
-        
+
         records, peak_memory = self.measure_peak_memory(read_all)
-        
+
         assert len(records) == 1000
         # Rough estimate: ~1KB per record in memory
         # 1000 records should use less than 10MB
-        assert peak_memory < 10 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for 1k records"
+        assert peak_memory < 10 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for 1k records"
+        )
 
     @pytest.mark.benchmark
     def test_memory_read_10k_records(self, fixture_10k):
@@ -52,12 +56,14 @@ class TestMemoryBenchmarks:
             while record := reader.read_record():
                 records.append(record)
             return records
-        
+
         records, peak_memory = self.measure_peak_memory(read_all)
-        
+
         assert len(records) == 10000
         # 10k records should use less than 100MB
-        assert peak_memory < 100 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 100MB for 10k records"
+        assert peak_memory < 100 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 100MB for 10k records"
+        )
 
     @pytest.mark.benchmark
     def test_memory_streaming_read_10k(self, fixture_10k):
@@ -77,7 +83,9 @@ class TestMemoryBenchmarks:
         assert count == 10000
         # Streaming should use minimal memory (just one record at a time)
         # Allow up to 10MB for FFI overhead, internal buffers, and Python objects
-        assert peak_memory < 10 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for streaming"
+        assert peak_memory < 10 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for streaming"
+        )
 
     @pytest.mark.benchmark
     def test_memory_field_creation_bulk(self):
@@ -89,12 +97,14 @@ class TestMemoryBenchmarks:
                 field.add_subfield('a', f'Subject {i}')
                 fields.append(field)
             return fields
-        
+
         fields, peak_memory = self.measure_peak_memory(create_many_fields)
-        
+
         assert len(fields) == 10000
         # 10k fields should use less than 10MB
-        assert peak_memory < 10 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for 10k fields"
+        assert peak_memory < 10 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for 10k fields"
+        )
 
     @pytest.mark.benchmark
     def test_memory_record_creation_bulk(self):
@@ -109,12 +119,14 @@ class TestMemoryBenchmarks:
                 record.add_field(field)
                 records.append(record)
             return records
-        
+
         records, peak_memory = self.measure_peak_memory(create_many_records)
-        
+
         assert len(records) == 1000
         # 1000 records should use less than 10MB
-        assert peak_memory < 10 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for 1k records"
+        assert peak_memory < 10 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for 1k records"
+        )
 
     @pytest.mark.benchmark
     def test_memory_serialization_1k(self, fixture_1k):
@@ -127,12 +139,14 @@ class TestMemoryBenchmarks:
                 marc_bytes = record.to_marc21()
                 marc_outputs.append(marc_bytes)
             return marc_outputs
-        
+
         outputs, peak_memory = self.measure_peak_memory(serialize_all)
-        
+
         assert len(outputs) == 1000
         # Serializing 1k records should use less than 20MB
-        assert peak_memory < 20 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 20MB for serialization"
+        assert peak_memory < 20 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 20MB for serialization"
+        )
 
     @pytest.mark.benchmark
     def test_memory_json_serialization_1k(self, fixture_1k):
@@ -145,12 +159,14 @@ class TestMemoryBenchmarks:
                 json_str = record.to_json()
                 json_outputs.append(json_str)
             return json_outputs
-        
+
         outputs, peak_memory = self.measure_peak_memory(json_serialize_all)
-        
+
         assert len(outputs) == 1000
         # JSON serialization of 1k records should use less than 50MB
-        assert peak_memory < 50 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 50MB for JSON serialization"
+        assert peak_memory < 50 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 50MB for JSON serialization"
+        )
 
     @pytest.mark.benchmark
     def test_memory_roundtrip_serialize_deserialize_1k(self, fixture_1k):
@@ -159,25 +175,27 @@ class TestMemoryBenchmarks:
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             roundtrip_records = []
-            
+
             for record in reader:
                 # Serialize to MARC21
                 marc_bytes = record.to_marc21()
-                
+
                 # Deserialize back
                 restored_reader = MARCReader(io.BytesIO(marc_bytes))
                 restored_record = restored_reader.read_record()
-                
+
                 if restored_record:
                     roundtrip_records.append(restored_record)
-            
+
             return roundtrip_records
-        
+
         records, peak_memory = self.measure_peak_memory(roundtrip_all)
-        
+
         assert len(records) == 1000
         # Round-trip should use less than 30MB for 1k records
-        assert peak_memory < 30 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 30MB for round-trip"
+        assert peak_memory < 30 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 30MB for round-trip"
+        )
 
     @pytest.mark.benchmark
     def test_memory_multiple_format_conversions_1k(self, fixture_1k):
@@ -186,7 +204,7 @@ class TestMemoryBenchmarks:
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             conversions = []
-            
+
             while record := reader.read_record():
                 formats = {
                     'json': record.to_json(),
@@ -194,14 +212,16 @@ class TestMemoryBenchmarks:
                     'marcjson': record.to_marcjson(),
                 }
                 conversions.append(formats)
-            
+
             return conversions
-        
+
         conversions, peak_memory = self.measure_peak_memory(multi_format_convert)
-        
+
         assert len(conversions) == 1000
         # Multiple format conversions should use less than 100MB
-        assert peak_memory < 100 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 100MB for format conversions"
+        assert peak_memory < 100 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 100MB for format conversions"
+        )
 
     @pytest.mark.benchmark
     def test_memory_field_access_patterns_1k(self, fixture_1k):
@@ -210,23 +230,25 @@ class TestMemoryBenchmarks:
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             results = []
-            
+
             while record := reader.read_record():
                 # Various access patterns
                 title = record.title
                 author = record.author
                 subjects = record.subjects
                 fields_245 = record.get_fields('245')
-                
+
                 results.append((title, author, len(subjects), len(fields_245)))
-            
+
             return results
-        
+
         results, peak_memory = self.measure_peak_memory(access_patterns)
-        
+
         assert len(results) == 1000
         # Field access patterns should have minimal overhead
-        assert peak_memory < 10 * 1024 * 1024, f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for field access"
+        assert peak_memory < 10 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for field access"
+        )
 
 
 class TestMemoryLeaks:
@@ -236,22 +258,22 @@ class TestMemoryLeaks:
     def test_repeated_record_creation_no_leak(self):
         """Verify no memory leak in repeated record creation."""
         tracemalloc.start()
-        
+
         # Create records in batches and check memory doesn't grow unbounded
         measurements = []
-        
-        for batch in range(10):
+
+        for _batch in range(10):
             for i in range(100):
                 record = Record()
                 field = Field('245', '1', '0')
                 field.add_subfield('a', f'Title {i}')
                 record.add_field(field)
-            
-            current, peak = tracemalloc.get_traced_memory()
+
+            _current, peak = tracemalloc.get_traced_memory()
             measurements.append(peak)
-        
+
         tracemalloc.stop()
-        
+
         # Memory should not grow significantly between batches
         # Allow up to 2x growth (due to Python overhead)
         assert measurements[-1] < measurements[0] * 2, \
@@ -271,7 +293,7 @@ class TestMemoryLeaks:
         for _ in range(5):
             tracemalloc.start()
             serialize_once()
-            current, peak = tracemalloc.get_traced_memory()
+            _current, peak = tracemalloc.get_traced_memory()
             tracemalloc.stop()
             measurements.append(peak)
 

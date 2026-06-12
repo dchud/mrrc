@@ -9,12 +9,13 @@ See: src-python/src/backend.rs for the __fspath__() detection logic.
 """
 
 import io
-import tempfile
 import shutil
-from pathlib import Path
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import pytest
+
 from mrrc import MARCReader
 
 

@@ -5,6 +5,7 @@ Extracted from src-python/tests/test_producer_consumer_pipeline.py.
 """
 
 import pytest
+
 from mrrc import ProducerConsumerPipeline
 
 

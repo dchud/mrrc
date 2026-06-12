@@ -3,10 +3,12 @@ Advanced unit tests for mrrc Python wrapper.
 Tests for edge cases, format conversions, and comprehensive API coverage.
 """
 
-import pytest
-import mrrc
-from mrrc import MARCReader, MARCWriter, Record, Field, Leader
 import io
+
+import pytest
+
+import mrrc
+from mrrc import Field, Leader, MARCReader, MARCWriter, Record
 
 
 def create_field(tag, ind1='0', ind2='0', **subfields):
@@ -23,14 +25,14 @@ class TestRecordEdgeCases:
     def test_empty_record_serialization(self):
         """Test serializing an empty record."""
         record = Record()
-        
+
         # Should serialize without error
         json_str = record.to_json()
         assert json_str is not None
-        
+
         xml_str = record.to_xml()
         assert xml_str is not None
-        
+
         marc_bytes = record.to_marc21()
         assert isinstance(marc_bytes, bytes)
         assert len(marc_bytes) >= 24  # At least leader
@@ -42,12 +44,12 @@ class TestRecordMultipleFields:
     def test_add_multiple_fields_same_tag(self):
         """Test adding multiple fields with the same tag."""
         record = Record()
-        
+
         for i in range(5):
             field = Field('650', ' ', '0')
             field.add_subfield('a', f'Subject {i}')
             record.add_field(field)
-        
+
         subjects = record.subjects
         assert len(subjects) >= 5
 
@@ -61,10 +63,10 @@ class TestFieldOperations:
         field.add_subfield('a', 'Main title')
         field.add_subfield('b', 'Subtitle')
         field.add_subfield('c', 'Responsibility')
-        
+
         subfields = field.subfields()
         assert len(subfields) == 3
-        
+
         codes = [sf.code for sf in subfields]
         assert 'a' in codes
         assert 'b' in codes
@@ -76,11 +78,11 @@ class TestFieldOperations:
         field = Field('300', ' ', ' ')
         field.add_subfield('a', 'Pages')
         field.add_subfield('c', 'Height')
-        
+
         a_values = field.subfields_by_code('a')
         assert len(a_values) == 1
         assert a_values[0] == 'Pages'
-        
+
         c_values = field.subfields_by_code('c')
         assert len(c_values) == 1
         assert c_values[0] == 'Height'
@@ -91,16 +93,16 @@ class TestFieldOperations:
         field = Field('245', '1', '0')
         field.add_subfield('a', 'Title Value')
         field.add_subfield('b', 'Subtitle Value')
-        
+
         # Test __getitem__
         assert field['a'] == 'Title Value'
         assert field['b'] == 'Subtitle Value'
-        
+
         # Test __contains__
         assert 'a' in field
         assert 'b' in field
         assert 'z' not in field
-        
+
         # Test get with default
         assert field.get('a') == 'Title Value'
         assert field.get('missing', 'default') == 'default'
@@ -113,7 +115,7 @@ class TestFieldOperations:
         field.add_subfield('b', 'Publisher')
         field.add_subfield('c', '2023')
         field.add_subfield('d', 'Distributor')
-        
+
         # Get multiple codes at once
         values = field.get_subfields('a', 'b')
         assert 'New York' in values
@@ -125,11 +127,11 @@ class TestFieldOperations:
         field = Field('245', '0', '0')
         assert field.indicator1 == '0'
         assert field.indicator2 == '0'
-        
+
         # Modify indicators
         field.indicator1 = '1'
         field.indicator2 = '4'
-        
+
         assert field.indicator1 == '1'
         assert field.indicator2 == '4'
 
@@ -143,14 +145,14 @@ class TestRecordRoundTrip:
         original.add_control_field('001', 'control-123')
         original.add_control_field('003', 'ABC')
         original.add_control_field('005', '20231231120000.0')
-        
+
         # Serialize
         marc_bytes = original.to_marc21()
-        
+
         # Deserialize
         reader = MARCReader(io.BytesIO(marc_bytes))
         restored = reader.read_record()
-        
+
         assert restored is not None
         assert restored.control_field('001') == 'control-123'
         assert restored.control_field('003') == 'ABC'
@@ -160,20 +162,20 @@ class TestRecordRoundTrip:
         """Test round-trip with multiple data fields."""
         original = Record()
         original.add_control_field('001', 'id-456')
-        
+
         # Add various fields
-        original.add_field(create_field('245', '1', '0', 
+        original.add_field(create_field('245', '1', '0',
                                         a='Title', b='Subtitle'))
         original.add_field(create_field('100', '1', ' ', a='Author'))
         original.add_field(create_field('020', ' ', ' ', a='ISBN123'))
         original.add_field(create_field('650', ' ', '0', a='Subject 1'))
         original.add_field(create_field('650', ' ', '0', a='Subject 2'))
-        
+
         # Serialize and deserialize
         marc_bytes = original.to_marc21()
         reader = MARCReader(io.BytesIO(marc_bytes))
         restored = reader.read_record()
-        
+
         assert restored is not None
         assert restored.title is not None
         assert restored.author is not None
@@ -184,17 +186,17 @@ class TestRecordRoundTrip:
     def test_roundtrip_preserves_indicators(self):
         """Test that round-trip preserves field indicators."""
         original = Record()
-        
+
         # Add field with specific indicators
         field = Field('245', '1', '4')
         field.add_subfield('a', 'The title')
         original.add_field(field)
-        
+
         # Serialize and deserialize
         marc_bytes = original.to_marc21()
         reader = MARCReader(io.BytesIO(marc_bytes))
         restored = reader.read_record()
-        
+
         restored_field = restored['245']
         assert restored_field is not None
         assert restored_field.indicator1 == '1'
@@ -208,11 +210,11 @@ class TestFormatConversions:
         """Test JSON serialization produces valid output."""
         record = Record()
         record.add_field(create_field('245', '1', '0', a='Test Title'))
-        
+
         json_str = record.to_json()
         assert isinstance(json_str, str)
         assert len(json_str) > 0
-        
+
         # Should contain field data
         assert '245' in json_str or 'Test Title' in json_str
 
@@ -221,7 +223,7 @@ class TestFormatConversions:
         """Test XML serialization produces valid output."""
         record = Record()
         record.add_field(create_field('245', '1', '0', a='Test Title'))
-        
+
         xml_str = record.to_xml()
         assert isinstance(xml_str, str)
         assert len(xml_str) > 0
@@ -233,7 +235,7 @@ class TestFormatConversions:
         record = Record()
         record.add_control_field('001', 'test-id')
         record.add_field(create_field('245', '1', '0', a='Title'))
-        
+
         marcjson_str = record.to_marcjson()
         assert isinstance(marcjson_str, str)
         assert len(marcjson_str) > 0
@@ -244,11 +246,11 @@ class TestFormatConversions:
         record = Record()
         record.add_field(create_field('245', '1', '0', a='Test Title'))
         record.add_field(create_field('100', '1', ' ', a='Test Author'))
-        record.add_field(create_field('260', ' ', ' ', 
+        record.add_field(create_field('260', ' ', ' ',
                                       b='Test Publisher', c='2023'))
-        
+
         dc = record.to_dublin_core()
-        
+
         assert isinstance(dc, dict)
         assert 'title' in dc
         assert 'creator' in dc
@@ -438,9 +440,10 @@ class TestMarcxmlConformance:
     def test_parse_loc_collection_fixture(self):
         """Parse the LOC collection.xml fixture (marc: prefix, 2 records)."""
         import os
+
         from mrrc import xml_to_records
         fixture = os.path.join(os.path.dirname(__file__), '..', 'data', 'loc_collection.marcxml')
-        with open(fixture, 'r', encoding='utf-8') as f:
+        with open(fixture, encoding='utf-8') as f:
             xml = f.read()
         records = xml_to_records(xml)
         assert len(records) == 2
@@ -526,7 +529,7 @@ class TestControlFields:
     def test_control_field_roundtrip(self):
         """Test control field preservation in round-trip."""
         record = Record()
-        
+
         test_fields = {
             '001': '12345',
             '003': 'DLC',
@@ -535,10 +538,10 @@ class TestControlFields:
             '007': 'fixed007value',
             '008': '230601s2023    xxu||||||||||||eng d'
         }
-        
+
         for tag, value in test_fields.items():
             record.add_control_field(tag, value)
-        
+
         # Verify they're there
         for tag, expected_value in test_fields.items():
             actual = record.control_field(tag)
@@ -550,7 +553,7 @@ class TestControlFields:
         record = Record()
         record.add_control_field('001', 'id1')
         record.add_control_field('003', 'source1')
-        
+
         cfs = record.control_fields()
         assert len(cfs) >= 2
 
@@ -564,7 +567,7 @@ class TestRecordTypeDetection:
         leader.record_type = 'a'
         leader.bibliographic_level = 'm'
         record = Record(leader)
-        
+
         assert record.is_book() is True
 
 
@@ -574,7 +577,7 @@ class TestRecordTypeDetection:
         leader.record_type = 'a'
         leader.bibliographic_level = 's'
         record = Record(leader)
-        
+
         assert record.is_serial() is True
 
 
@@ -583,7 +586,7 @@ class TestRecordTypeDetection:
         leader = Leader()
         leader.record_type = 'c'
         record = Record(leader)
-        
+
         assert record.is_music() is True
 
 
@@ -592,7 +595,7 @@ class TestRecordTypeDetection:
         leader = Leader()
         leader.record_type = 'g'
         record = Record(leader)
-        
+
         assert record.is_audiovisual() is True
 
 
@@ -605,12 +608,12 @@ class TestRecordRemoval:
         field = Field('245', '1', '0')
         field.add_subfield('a', 'Test')
         record.add_field(field)
-        
+
         assert record['245'] is not None
-        
+
         # Remove the field
         record.remove_field('245')
-        
+
         # Verify it's gone (pymarc raises KeyError for missing tags)
         with pytest.raises(KeyError):
             record['245']
@@ -625,7 +628,7 @@ class TestFieldSerialization:
         field.add_subfield('a', 'Part 1')
         field.add_subfield('a', 'Part 2')
         field.add_subfield('c', 'Size')
-        
+
         # Get all 'a' values
         a_values = field.subfields_by_code('a')
         assert len(a_values) == 2
@@ -639,7 +642,7 @@ class TestLeaderProperties:
     def test_leader_defaults(self):
         """Test default leader values."""
         leader = Leader()
-        
+
         assert leader.record_type == 'a'
         assert leader.bibliographic_level == 'm'
         assert leader.record_status == 'n'
@@ -649,13 +652,13 @@ class TestLeaderProperties:
     def test_leader_modification(self):
         """Test modifying leader properties."""
         leader = Leader()
-        
+
         leader.record_type = 'c'
         assert leader.record_type == 'c'
-        
+
         leader.bibliographic_level = 'd'
         assert leader.bibliographic_level == 'd'
-        
+
         leader.record_status = 'a'
         assert leader.record_status == 'a'
 
@@ -670,7 +673,7 @@ class TestLeaderProperties:
     def test_leader_cataloging_form(self):
         """Test leader cataloging form (descriptor_cataloging_form)."""
         leader = Leader()
-        
+
         # Test via descriptor_cataloging_form property
         leader.descriptive_cataloging_form = 'a'
         assert leader.descriptive_cataloging_form == 'a'
@@ -683,7 +686,7 @@ class TestUnicodeAndEncoding:
         """Test fields with unicode characters."""
         field = Field('245', '1', '0')
         field.add_subfield('a', 'Tïtlé wíth üñíçödé')
-        
+
         subfields = field.subfields_by_code('a')
         assert 'üñíçödé' in subfields[0]
 
@@ -691,11 +694,11 @@ class TestUnicodeAndEncoding:
     def test_record_with_unicode_fields(self):
         """Test record with unicode content."""
         record = Record()
-        
+
         field = Field('245', '1', '0')
         field.add_subfield('a', '日本語タイトル')
         record.add_field(field)
-        
+
         title = record.title
         assert title is not None
         assert '日本語' in title
@@ -704,16 +707,16 @@ class TestUnicodeAndEncoding:
     def test_roundtrip_preserves_unicode(self):
         """Test that round-trip preserves unicode characters."""
         original = Record()
-        
+
         field = Field('245', '1', '0')
         field.add_subfield('a', 'Titel in Français')
         original.add_field(field)
-        
+
         # Serialize and deserialize
         marc_bytes = original.to_marc21()
         reader = MARCReader(io.BytesIO(marc_bytes))
         restored = reader.read_record()
-        
+
         restored_field = restored['245']
         assert restored_field is not None
         a_values = restored_field.subfields_by_code('a')
@@ -727,7 +730,7 @@ class TestMARCWriterIntegration:
         """Test writing multiple records to a stream."""
         buffer = io.BytesIO()
         writer = MARCWriter(buffer)
-        
+
         # Write 3 records
         for i in range(3):
             record = Record()
@@ -736,16 +739,16 @@ class TestMARCWriterIntegration:
             field.add_subfield('a', f'Title {i}')
             record.add_field(field)
             writer.write(record)
-        
+
         # Read them back
         buffer.seek(0)
         reader = MARCReader(buffer)
-        
+
         count = 0
         for record in reader:
             assert record is not None
             count += 1
-        
+
         assert count == 3
 
 
@@ -755,12 +758,12 @@ class TestFieldConveniences:
     def test_get_multiple_fields_by_tags(self):
         """Test getting multiple fields by multiple tags."""
         record = Record()
-        
+
         record.add_field(create_field('245', '1', '0', a='Title'))
         record.add_field(create_field('100', '1', ' ', a='Author'))
         record.add_field(create_field('260', ' ', ' ', b='Publisher'))
         record.add_field(create_field('300', ' ', ' ', a='Pages'))
-        
+
         # Get multiple tags at once
         fields = record.get_fields('245', '100', '260')
         assert len(fields) >= 3
@@ -769,11 +772,11 @@ class TestFieldConveniences:
     def test_all_fields_access(self):
         """Test getting all fields at once."""
         record = Record()
-        
+
         record.add_field(create_field('245', '1', '0', a='Title'))
         record.add_field(create_field('100', '1', ' ', a='Author'))
         record.add_field(create_field('650', ' ', '0', a='Subject'))
-        
+
         all_fields = record.get_fields()
         assert len(all_fields) >= 3
 
@@ -799,10 +802,7 @@ class TestLinkedFields:
 
         # Build $6 values
         orig_6 = f'880-{occurrence}'
-        if script_code:
-            linked_6 = f'{tag}-{occurrence}/{script_code}'
-        else:
-            linked_6 = f'{tag}-{occurrence}'
+        linked_6 = f'{tag}-{occurrence}/{script_code}' if script_code else f'{tag}-{occurrence}'
 
         # Original field with $6 linkage
         orig = Field(tag, ind1, ind2)
@@ -1168,6 +1168,7 @@ class TestLinkedFieldMARCJSON:
     def test_soncino_mishneh_torah(self):
         """Full Soncino Mishneh Torah example."""
         import json
+
         from mrrc import marcjson_to_record
 
         marcjson = json.dumps([
@@ -1305,7 +1306,8 @@ class TestSerializationRoundTrip:
 
     def test_raw_record_still_works(self):
         """Direct _mrrc.Record (unwrapped) still works with serialization."""
-        from mrrc._mrrc import Record as _Record, Leader as _Leader
+        from mrrc._mrrc import Leader as _Leader
+        from mrrc._mrrc import Record as _Record
         raw = _Record(_Leader())
         # Should not raise
         mrrc.record_to_json(raw)

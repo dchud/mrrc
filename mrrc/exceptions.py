@@ -23,8 +23,7 @@ defense-in-depth measure — unpickling untrusted data remains the relevant
 attack surface regardless.
 """
 
-from typing import Optional, TYPE_CHECKING
-
+from typing import TYPE_CHECKING
 
 # Type-only base for `_MrrcExceptionBase`. At runtime this resolves to
 # ``object`` so the mixin design (separate from the Exception inheritance
@@ -69,7 +68,7 @@ DOCS_BASE_URL = "https://dchud.github.io/mrrc"
 def _render_hex_dump(
     window: bytes,
     window_start_offset: int,
-    byte_offset: Optional[int],
+    byte_offset: int | None,
 ) -> str:
     """Render a byte window as a hex + ASCII dump with an optional caret.
 
@@ -79,7 +78,7 @@ def _render_hex_dump(
     anchor = byte_offset if byte_offset is not None else window_start_offset
     lines: list[str] = [f"bytes near offset 0x{anchor:X}:"]
     row_width = _HEX_DUMP_ROW_WIDTH
-    caret_line: Optional[str] = None
+    caret_line: str | None = None
     for row_idx in range(0, len(window), row_width):
         chunk = window[row_idx:row_idx + row_width]
         row_start = window_start_offset + row_idx
@@ -131,18 +130,18 @@ class _MrrcExceptionBase(_MixinBase):
 
     # Class-level attribute annotations so mypy/pyright see the typed
     # positional context fields populated by __init__ via setattr.
-    record_index: Optional[int]
-    record_control_number: Optional[str]
-    field_tag: Optional[str]
-    indicator_position: Optional[int]
-    subfield_code: Optional[int]
-    found: Optional[bytes]
-    expected: Optional[str]
-    byte_offset: Optional[int]
-    record_byte_offset: Optional[int]
-    source: Optional[str]
-    bytes_near: Optional[bytes]
-    bytes_near_offset: Optional[int]
+    record_index: int | None
+    record_control_number: str | None
+    field_tag: str | None
+    indicator_position: int | None
+    subfield_code: int | None
+    found: bytes | None
+    expected: str | None
+    byte_offset: int | None
+    record_byte_offset: int | None
+    source: str | None
+    bytes_near: bytes | None
+    bytes_near_offset: int | None
 
     # Per-subclass extra keyword arguments beyond _POSITIONAL_FIELDS,
     # declared once per class (e.g., ``("message",)`` or
@@ -409,7 +408,7 @@ class RecordLeaderInvalid(MrrcException):
     code = "E002"
     slug = "leader_invalid"
     _extra_fields = ("message",)
-    message: Optional[str]
+    message: str | None
 
     def _body_text(self) -> str:
         if self.message:
@@ -496,8 +495,8 @@ class FatalReaderError(MrrcException):
     code = "E099"
     slug = "fatal_reader_error"
     _extra_fields = ("cap", "errors_seen")
-    cap: Optional[int]
-    errors_seen: Optional[int]
+    cap: int | None
+    errors_seen: int | None
 
     def _body_text(self) -> str:
         if self.cap is not None and self.errors_seen is not None:
@@ -536,12 +535,12 @@ class BadSubfieldCode(RecordDirectoryInvalid):
 
 
 class InvalidField(RecordDirectoryInvalid):
-    """A data field is structurally invalid in some way not covered by the more specific subclasses."""
+    """A data field is structurally invalid in a way not covered by the specific subclasses."""
 
     code = "E106"
     slug = "invalid_field"
     _extra_fields = ("message",)
-    message: Optional[str]
+    message: str | None
 
     def _body_text(self) -> str:
         if self.message:
@@ -555,8 +554,8 @@ class TruncatedRecord(EndOfRecordNotFound):
     code = "E005"
     slug = "truncated_record"
     _extra_fields = ("expected_length", "actual_length")
-    expected_length: Optional[int]
-    actual_length: Optional[int]
+    expected_length: int | None
+    actual_length: int | None
 
     def _body_text(self) -> str:
         if self.expected_length is not None and self.actual_length is not None:
@@ -583,7 +582,7 @@ class EncodingError(MrrcException):
     code = "E301"
     slug = "utf8_invalid"
     _extra_fields = ("message",)
-    message: Optional[str]
+    message: str | None
 
     def _body_text(self) -> str:
         if self.message:
@@ -597,7 +596,7 @@ class XmlError(MrrcException):
     code = "E401"
     slug = "marcxml_invalid"
     _extra_fields = ("message",)
-    message: Optional[str]
+    message: str | None
 
     def _body_text(self) -> str:
         if self.message:
@@ -611,7 +610,7 @@ class JsonError(MrrcException):
     code = "E402"
     slug = "marcjson_invalid"
     _extra_fields = ("message",)
-    message: Optional[str]
+    message: str | None
 
     def _body_text(self) -> str:
         if self.message:
@@ -625,7 +624,7 @@ class WriterError(MrrcException):
     code = "E404"
     slug = "record_too_large_for_iso2709"
     _extra_fields = ("message",)
-    message: Optional[str]
+    message: str | None
 
     def _body_text(self) -> str:
         if self.message:
