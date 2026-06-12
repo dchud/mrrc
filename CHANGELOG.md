@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Tuned the release profile: fat LTO, `codegen-units = 1`, and debuginfo stripping.
+  Wheels get ~2-3% higher read throughput and a 21% smaller extension binary, and
+  cross-crate inlining is now deterministic, so instruction-count CI benchmarks stop
+  producing phantom swings when unrelated code moves between codegen units.
 - The Python leader surface now matches pymarc: `record.leader` is a property (was a
   method) and assignable from a `Leader` or 24-character string; `Leader` renders and
   compares as its 24-character MARC 21 string (`str()`, `len()`, `==` with str, `repr`)
