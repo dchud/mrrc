@@ -576,14 +576,14 @@ expected_context = ["record_index", "byte_offset", "field_tag"]
 recovery_modes = ["strict"]
 wired = true
 
-# E106 recovery path: when a truncated record drops into try_recover_record
-# in lenient mode, the recovery directory walker calls parse_4digits /
-# parse_5digits directly. A non-digit length/start byte there fires E106
-# InvalidField (via MarcError::invalid_field_msg) — distinct from the
-# main parser path's E101 DirectoryInvalid for the same kind of malformed
-# directory byte. The fixture combines truncation (so the recovery path
-# runs) with a malformed length field (so parse_4digits errors). Both
-# E005 and E106 land on record.errors; the harness picks the E106 one.
+# E106 salvage path: when the bibliographic reader walks a truncated
+# record's directory in lenient mode, a non-digit length/start byte
+# keeps the numeric parser's E106 InvalidField shape — distinct from
+# the E101 DirectoryInvalid the walker records for the same kind of
+# malformed directory byte on a complete record. The fixture combines
+# truncation (so the salvage walk runs) with a malformed length field
+# (so parse_4digits errors). Both E005 and E106 land on record.errors;
+# the harness picks the E106 one.
 [[case]]
 id = "e106_recovery_invalid_field"
 code = "E106"
@@ -591,7 +591,7 @@ variant = "InvalidField"
 slug = "invalid_field"
 trigger_kind = "parse_iso2709_lenient"
 trigger_fixture = "tests/data/error_fixtures/e106_recovery_invalid_field.bin"
-description = "Leader claims 999-byte record; only the directory (with a non-digit length field 'ABCD') is provided. Truncation routes through try_recover_record, which calls parse_4digits and pushes InvalidField."
+description = "Leader claims 999-byte record; only the directory (with a non-digit length field 'ABCD') is provided. The truncated-record salvage walk pushes the numeric parser's InvalidField for the non-digit length."
 expected_context = []
 recovery_modes = ["lenient"]
 wired = true

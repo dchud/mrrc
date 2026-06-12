@@ -92,6 +92,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/create_sample_data.py` (fixtures come from `scripts/generate_benchmark_fixtures.py`).
 - The docs.rs front page no longer embeds the README (whose CI badges and repo-relative
   links 404 off GitHub); it now renders the curated crate-level docs instead.
+- `recovery::try_recover_record`: truncated-record salvage now runs through the shared
+  ISO 2709 skeleton's clamped directory walk, which slices fields at their data-area
+  offsets — intact fields ahead of the truncation point are now recovered instead of
+  dropped. Non-digit directory bytes on the salvage walk keep their `InvalidField` (E106)
+  shape but now also count against the reader's recovered-error cap.
 
 ### Fixed
 

@@ -6,7 +6,7 @@
 //! which `record_type` byte the leader is allowed to carry, which
 //! [`DataFieldParseConfig`] governs subfield parsing, how a parsed [`Field`]
 //! is filed into the per-type record output, and (for the bibliographic
-//! reader) what to do when a record is truncated mid-stream.
+//! reader) which error shape the truncated-record directory walk records.
 //!
 //! [`Iso2709Builder`] captures those per-type policies as a single trait;
 //! [`parse_iso2709_record`] is the generic skeleton that drives one record's
@@ -46,8 +46,8 @@ use std::io::Read;
 ///
 /// Default-method bodies match the bibliographic reader's permissive shape:
 /// lossy UTF-8 for tags and control-field values, no minimum data-field
-/// length, no truncated-record salvage. Authority and holdings override
-/// only the methods where their behavior actually differs.
+/// length. Authority and holdings override only the methods where their
+/// behavior actually differs.
 pub trait Iso2709Builder: Sized {
     /// The fully-parsed per-record output type (bib `Record`,
     /// authority `AuthorityRecord`, holdings `HoldingsRecord`).
@@ -155,26 +155,16 @@ pub trait Iso2709Builder: Sized {
         Ok(())
     }
 
-    /// Per-reader truncated-record salvage. The skeleton calls this only
-    /// in lenient/permissive mode after recording the truncation against
-    /// the cap. `None` (the default) means "no per-type salvage path —
-    /// fall through to best-effort directory parsing". The bibliographic
-    /// reader overrides this to invoke
-    /// [`crate::recovery::try_recover_record`]. The `errors` accumulator
-    /// is the reader's per-record diagnostic list; the salvage path
-    /// pushes into it for any non-fatal recoveries it performs.
-    #[must_use]
-    fn try_recover_truncated(
-        leader: Leader,
-        partial_data: &[u8],
-        base_address: usize,
-        mode: RecoveryMode,
-        ctx: &ParseContext,
-        errors: &mut Vec<MarcError>,
-    ) -> Option<Result<Self::Output>> {
-        let _ = (leader, partial_data, base_address, mode, ctx, errors);
-        None
-    }
+    /// Error shape for non-digit directory length/start bytes while
+    /// walking a truncated record's directory in lenient/permissive
+    /// mode. `false` (the default) keeps the walker's usual
+    /// [`MarcError::DirectoryInvalid`] (E101) recharacterization on
+    /// every walk; the bibliographic reader sets `true` so the
+    /// truncated-record walk records the numeric parser's
+    /// [`MarcError::InvalidField`] (E106) error instead — the shape
+    /// bibliographic salvage diagnostics carry. Non-truncated records
+    /// use E101 regardless of this setting.
+    const TRUNCATED_WALK_DIGIT_ERRORS_AS_INVALID_FIELD: bool = false;
 
     /// Finalize the in-progress builder into the per-reader output.
     fn finalize(self) -> Self::Output;
@@ -445,23 +435,15 @@ fn parse_record_body<B: Iso2709Builder>(
     ctx.set_parse_buffer(std::sync::Arc::clone(ctx_buffer), ctx_buffer_base_offset);
     let record_data: &[u8] = &ctx_buffer[body_range];
 
-    if bytes_read < expected_data_len {
+    let truncated = bytes_read < expected_data_len;
+    if truncated {
         // recovery_mode is Lenient or Permissive (Strict already returned).
+        // Record the truncation and fall through to the clamped directory
+        // walk below, which salvages whatever fields the buffer still
+        // covers.
         let err = ctx.err_truncated_record(Some(expected_data_len), Some(bytes_read));
         errors.push(err);
         cap.note(ctx)?;
-        // Per-type recovery hook (bibliographic uses try_recover_record;
-        // authority + holdings fall through to best-effort directory parsing).
-        if let Some(result) = B::try_recover_truncated(
-            leader.clone(),
-            record_data,
-            base_address,
-            recovery_mode,
-            ctx,
-            errors,
-        ) {
-            return result.map(Some);
-        }
     }
 
     // The byte at the leader's claimed end-of-record position must be
@@ -547,39 +529,56 @@ fn parse_record_body<B: Iso2709Builder>(
         // offending bytes describe a structurally invalid directory entry,
         // not a malformed data field — recharacterize as DirectoryInvalid
         // (E101) so the variant matches the docs. The InvalidField shape is
-        // preserved for the data-field call sites (parse_directory_entry,
-        // recovery::*) that share these helpers.
-        let Ok(field_length) = parse_4digits(&entry_chunk[3..7]) else {
-            ctx.current_field_tag = tag.as_bytes().try_into().ok();
-            ctx.stream_byte_offset = record_data_offset + pos + 3;
-            let err = ctx.err_directory_invalid(
-                Some(&entry_chunk[3..7]),
-                "4 ASCII digits (directory entry length)",
-            );
-            ctx.current_field_tag = None;
-            if recovery_mode == RecoveryMode::Strict {
-                return Err(err);
-            }
-            errors.push(err);
-            cap.note(ctx)?;
-            pos += 12;
-            continue;
+        // preserved for the data-field call sites (parse_directory_entry)
+        // that share these helpers, and — per the builder's
+        // `TRUNCATED_WALK_DIGIT_ERRORS_AS_INVALID_FIELD` — for the
+        // bibliographic reader's truncated-record salvage walk.
+        let keep_invalid_field = truncated && B::TRUNCATED_WALK_DIGIT_ERRORS_AS_INVALID_FIELD;
+        let field_length = match parse_4digits(&entry_chunk[3..7]) {
+            Ok(n) => n,
+            Err(parse_err) => {
+                ctx.current_field_tag = tag.as_bytes().try_into().ok();
+                ctx.stream_byte_offset = record_data_offset + pos + 3;
+                let err = if keep_invalid_field {
+                    parse_err
+                } else {
+                    ctx.err_directory_invalid(
+                        Some(&entry_chunk[3..7]),
+                        "4 ASCII digits (directory entry length)",
+                    )
+                };
+                ctx.current_field_tag = None;
+                if recovery_mode == RecoveryMode::Strict {
+                    return Err(err);
+                }
+                errors.push(err);
+                cap.note(ctx)?;
+                pos += 12;
+                continue;
+            },
         };
-        let Ok(start_position) = parse_5digits(&entry_chunk[7..12]) else {
-            ctx.current_field_tag = tag.as_bytes().try_into().ok();
-            ctx.stream_byte_offset = record_data_offset + pos + 7;
-            let err = ctx.err_directory_invalid(
-                Some(&entry_chunk[7..12]),
-                "5 ASCII digits (directory entry start position)",
-            );
-            ctx.current_field_tag = None;
-            if recovery_mode == RecoveryMode::Strict {
-                return Err(err);
-            }
-            errors.push(err);
-            cap.note(ctx)?;
-            pos += 12;
-            continue;
+        let start_position = match parse_5digits(&entry_chunk[7..12]) {
+            Ok(n) => n,
+            Err(parse_err) => {
+                ctx.current_field_tag = tag.as_bytes().try_into().ok();
+                ctx.stream_byte_offset = record_data_offset + pos + 7;
+                let err = if keep_invalid_field {
+                    parse_err
+                } else {
+                    ctx.err_directory_invalid(
+                        Some(&entry_chunk[7..12]),
+                        "5 ASCII digits (directory entry start position)",
+                    )
+                };
+                ctx.current_field_tag = None;
+                if recovery_mode == RecoveryMode::Strict {
+                    return Err(err);
+                }
+                errors.push(err);
+                cap.note(ctx)?;
+                pos += 12;
+                continue;
+            },
         };
         pos += 12;
 
