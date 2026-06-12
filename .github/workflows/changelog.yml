@@ -15,6 +15,9 @@ on:
       - 'CHANGELOG.md'
       - 'scripts/lint-changelog.sh'
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
