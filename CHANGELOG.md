@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Releases now publish a source distribution and macOS universal2 wheels, so Intel Macs
+  and platforms outside the wheel matrix can install mrrc (previously "no matching
+  distribution"). PyPI metadata completed: real author, PEP 639 license expression,
+  `Typing :: Typed` classifier, and project URLs (homepage, docs, changelog, issues).
 - File-path readers now buffer their reads (64 KiB): Python `MARCReader(path)` (and the
   authority/holdings readers) and Rust `from_path` previously issued two-plus `read(2)`
   syscalls per record. Rust `from_path` constructors now return

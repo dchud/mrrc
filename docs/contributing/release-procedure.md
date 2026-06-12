@@ -900,10 +900,13 @@ Look for the "Python Release to PyPI" workflow:
 ### 8.2 Monitor Build Process
 
 **Wait for**:
-1. **build-release-wheels** job - Builds native wheels for Python 3.10-3.14 on macOS/Ubuntu/Windows (15 wheels)
+1. **build-release-wheels** job - Builds native wheels for Python 3.10-3.14 on macOS/Ubuntu/Windows (15
+   wheels; the macOS wheels are universal2, covering arm64 and Intel)
 2. **build-cross-linux-wheels** job - Cross-compiles aarch64 and i686 Linux wheels for Python 3.10-3.14 (10 wheels)
-3. **test-release-wheels** / **validate-cross-wheels** jobs - Test native wheels; validate cross-compiled wheel tags
-4. **publish-pypi** job - Publishes all wheels to PyPI
+3. **build-sdist** / **test-sdist** jobs - Build the source distribution and prove it compiles and
+   imports in a clean environment (the fallback for platforms outside the wheel matrix)
+4. **test-release-wheels** / **validate-cross-wheels** jobs - Test native wheels; validate cross-compiled wheel tags
+5. **publish-pypi** job - Publishes all wheels plus the sdist to PyPI
 
 Each job has multiple matrix runs (fail-fast: false means all run even if some fail).
 
@@ -946,14 +949,17 @@ Should list your new version within 1-2 minutes.
 
 https://pypi.org/project/mrrc/
 
-Should show your new version with wheels for Python 3.10, 3.11, 3.12, 3.13, 3.14 across macOS, Ubuntu, and Windows, plus cross-compiled aarch64 and i686 Linux wheels.
+Should show your new version with wheels for Python 3.10, 3.11, 3.12, 3.13, 3.14 across macOS
+(universal2: arm64 + Intel), Ubuntu, and Windows, plus cross-compiled aarch64 and i686 Linux
+wheels, plus the source distribution.
 
-**Expected**: 25 wheels total (5 Python versions × 3 native platforms + 5 × 2 cross-compiled Linux targets)
+**Expected**: 26 files total (25 wheels: 5 Python versions × 3 native platforms + 5 × 2
+cross-compiled Linux targets; plus 1 sdist)
 
 **Checklist**:
 
 - [ ] Version appears on PyPI
-- [ ] All wheels are present (25 total)
+- [ ] All files are present (25 wheels + 1 sdist)
 - [ ] Documentation is correct
 
 ### 8.5 Verify GitHub Release Created
@@ -1321,7 +1327,7 @@ twine upload dist/mrrc-*.whl
 - [ ] build-release-wheels job passed
 - [ ] test-release-wheels job passed
 - [ ] publish-pypi job completed
-- [ ] PyPI publication verified (15 wheels present)
+- [ ] PyPI publication verified (25 wheels + 1 sdist present)
 - [ ] crates.io publication verified (manual or CI)
 - [ ] GitHub release created with changelog notes
 - [ ] docs.rs documentation available

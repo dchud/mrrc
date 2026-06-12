@@ -7,16 +7,16 @@ name = "mrrc"
 version = "0.8.2"
 description = "MRRC: A fast MARC library written in Rust with Python bindings"
 readme = "README.md"
-license = {text = "MIT"}
+# PEP 639 license expression; the license classifier is omitted per PEP 639.
+license = "MIT"
 authors = [
-    {name = "MRRC Contributors", email = "contact@example.com"}
+    {name = "Daniel Chudnov"}
 ]
 requires-python = ">=3.10"
 keywords = ["marc", "bibliographic", "data", "rust"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -24,7 +24,15 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
 ]
+
+[project.urls]
+Homepage = "https://dchud.github.io/mrrc/"
+Documentation = "https://dchud.github.io/mrrc/"
+Repository = "https://github.com/dchud/mrrc"
+Changelog = "https://github.com/dchud/mrrc/blob/main/CHANGELOG.md"
+Issues = "https://github.com/dchud/mrrc/issues"
 
 [project.optional-dependencies]
 # Runtime test dependencies — used by the wheel-test CI workflows via
@@ -73,6 +81,17 @@ oracle = [
 python-packages = ["mrrc"]
 module-name = "mrrc._mrrc"
 manifest-path = "src-python/Cargo.toml"
+# Keep repo-operational files (issue tracker, CI config, docs site,
+# scratch space) out of the sdist; they are not needed to build or test
+# the package from source.
+exclude = [
+    { path = ".beads/**", format = "sdist" },
+    { path = ".github/**", format = "sdist" },
+    { path = ".githooks/**", format = "sdist" },
+    { path = "docs/**", format = "sdist" },
+    { path = "site/**", format = "sdist" },
+    { path = "tmp/**", format = "sdist" },
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
