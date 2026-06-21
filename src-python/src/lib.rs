@@ -8,6 +8,7 @@ mod batched_unified_reader;
 mod bibframe;
 mod boundary_scanner_wrapper;
 mod buffered_reader;
+mod chunked_py_reader;
 mod error;
 mod formats;
 mod holdings_readers;

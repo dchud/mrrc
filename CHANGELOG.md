@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Reading from a Python file-like object (`MARCReader(open(path, "rb"))`, `BytesIO`, etc.)
+  now reads the source in 256 KiB chunks and slices records out in Rust, instead of two
+  `file.read()` calls plus a `getattr("read")` per record. The `read` method is bound once
+  and each chunk is borrowed via `PyBytes` rather than copied. Output is unchanged; file-path
+  and bytes inputs were already chunked and are unaffected.
 - `Cargo.lock` is now committed, so CI, wheel builds, and local checkouts resolve the
   same dependency versions; Dependabot manages version bumps as reviewable diffs.
 - Removed unused dependencies (`bytes`, `nom`, `encoding_rs`, `csv`, bindings-crate

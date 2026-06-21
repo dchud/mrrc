@@ -5,6 +5,7 @@
 //! - `CursorBackend`: In-memory reads from bytes via std::io::Cursor
 //! - `PythonFile`: Python file-like objects (calls .read() method)
 
+use crate::chunked_py_reader::ChunkedPyFileReader;
 use crate::parse_error::ParseError;
 use mrrc::RecoveryMode;
 use pyo3::prelude::*;
@@ -48,8 +49,9 @@ enum BackendKind {
 
     /// Python file-like object (fallback for custom types)
     /// Input: Any object with .read() method
-    /// Requires GIL for each read operation
-    PythonFile(Py<PyAny>),
+    /// Reads in large chunks and slices records out in Rust; the GIL is
+    /// held only while a chunk is being read, not per record.
+    PythonFile(ChunkedPyFileReader),
 }
 
 impl ReaderBackend {
@@ -75,14 +77,17 @@ impl ReaderBackend {
         _py: Python,
         recovery_mode: RecoveryMode,
     ) -> PyResult<Self> {
-        let kind = Self::kind_from_python(source)?;
+        let kind = Self::kind_from_python(source, recovery_mode)?;
         Ok(ReaderBackend {
             kind,
             recovery_mode,
         })
     }
 
-    fn kind_from_python(source: &Bound<'_, PyAny>) -> PyResult<BackendKind> {
+    fn kind_from_python(
+        source: &Bound<'_, PyAny>,
+        recovery_mode: RecoveryMode,
+    ) -> PyResult<BackendKind> {
         // 1. Try str path
         if let Ok(path_str) = source.extract::<String>() {
             return match File::open(&path_str) {
@@ -150,8 +155,11 @@ impl ReaderBackend {
         if let Ok(method) = read_method
             && method.is_callable()
         {
-            // Store as PythonFile backend
-            return Ok(BackendKind::PythonFile(source.clone().unbind()));
+            // Store as PythonFile backend, reading in large chunks.
+            return Ok(BackendKind::PythonFile(ChunkedPyFileReader::new(
+                source,
+                recovery_mode,
+            )?));
         }
 
         // 5. Unknown type - fail fast with descriptive error
@@ -193,10 +201,10 @@ impl ReaderBackend {
             BackendKind::CursorBackend(cursor) => {
                 Self::read_record_bytes_from_reader(cursor, recovery_mode)
             },
-            BackendKind::PythonFile(py_obj) => {
-                // Need GIL to call Python .read() method
-                let obj = py_obj.bind(py);
-                Self::read_record_bytes_from_python(obj, recovery_mode)
+            BackendKind::PythonFile(chunked) => {
+                // GIL is held only while a chunk is read; the chunked reader
+                // serves most records straight from its buffer.
+                chunked.read_next_record_bytes(py)
             },
         }
     }
@@ -281,84 +289,6 @@ impl ReaderBackend {
 
         // Assemble record bytes (full record in Strict; leader +
         // whatever body was read in Lenient/Permissive on short reads).
-        let mut complete_record = Vec::with_capacity(24 + record_data.len());
-        complete_record.extend_from_slice(&leader);
-        complete_record.extend_from_slice(&record_data);
-
-        Ok(Some(complete_record))
-    }
-
-    /// Internal helper: Read record bytes from Python file-like object
-    fn read_record_bytes_from_python(
-        py_obj: &Bound<'_, PyAny>,
-        recovery_mode: RecoveryMode,
-    ) -> Result<Option<Vec<u8>>, ParseError> {
-        // Read leader (24 bytes)
-        let read_method = py_obj
-            .getattr("read")
-            .map_err(|e| ParseError::io_error(format!("Object missing .read() method: {}", e)))?;
-
-        let leader_result = read_method.call1((24usize,)).map_err(|e| {
-            ParseError::io_error(format!("Failed to read leader from Python file: {}", e))
-        })?;
-
-        let leader: Vec<u8> = leader_result
-            .extract()
-            .map_err(|_| ParseError::invalid_record("Leader must be bytes".to_string()))?;
-
-        if leader.len() != 24 {
-            // EOF or partial read
-            if leader.is_empty() {
-                return Ok(None); // EOF
-            }
-            return Err(ParseError::invalid_record(format!(
-                "Incomplete leader: expected 24 bytes, got {}",
-                leader.len()
-            ))
-            .with_bytes_near(&leader, 0));
-        }
-
-        // Parse record length from leader
-        let record_length: usize = std::str::from_utf8(&leader[0..5])
-            .ok()
-            .and_then(|s| s.parse::<usize>().ok())
-            .ok_or_else(|| {
-                ParseError::record_length_invalid(&leader[0..5], "5 ASCII digits")
-                    .with_bytes_near(&leader, 0)
-            })?;
-
-        if record_length < 24 {
-            return Err(
-                ParseError::record_length_invalid(&leader[0..5], "at least 24")
-                    .with_bytes_near(&leader, 0),
-            );
-        }
-
-        // Read remainder of record
-        let record_data_bytes = read_method.call1((record_length - 24,)).map_err(|e| {
-            ParseError::io_error(format!(
-                "Failed to read record data from Python file: {}",
-                e
-            ))
-        })?;
-
-        let record_data: Vec<u8> = record_data_bytes
-            .extract()
-            .map_err(|_| ParseError::invalid_record("Record data must be bytes".to_string()))?;
-
-        if record_data.len() != record_length - 24 {
-            // Strict: fatal E005. Lenient/Permissive: hand the
-            // partial body through to the parser's recovery cap.
-            if recovery_mode == RecoveryMode::Strict {
-                return Err(
-                    ParseError::truncated_record(record_length - 24, record_data.len())
-                        .with_record_byte_offset(24),
-                );
-            }
-        }
-
-        // Assemble record bytes (full record in Strict; leader +
-        // whatever body was returned in Lenient/Permissive on short reads).
         let mut complete_record = Vec::with_capacity(24 + record_data.len());
         complete_record.extend_from_slice(&leader);
         complete_record.extend_from_slice(&record_data);
