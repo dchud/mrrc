@@ -800,7 +800,7 @@ impl DataFieldParseConfig {
 #[inline(always)]
 pub fn parse_data_field(
     field_data: &[u8],
-    tag: &str,
+    tag: String,
     config: DataFieldParseConfig,
     ctx: &ParseContext,
 ) -> Result<Field> {
@@ -822,7 +822,7 @@ pub fn parse_data_field(
         }
         // Per-tag MARC 21 indicator semantics (e.g., 245 ind1 must be 0/1).
         // Tags without rules are accepted as-is.
-        if let Some(rules) = marc21_indicator_validator().get_rules(tag) {
+        if let Some(rules) = marc21_indicator_validator().get_rules(&tag) {
             if !rules.indicator1.is_valid(i1 as char) {
                 return Err(ctx.err_invalid_indicator(0, &[i1], rules.indicator1.expected_human()));
             }
@@ -831,7 +831,10 @@ pub fn parse_data_field(
             }
         }
     }
-    let mut field = Field::new(tag.to_string(), i1 as char, i2 as char);
+    // Move the already-owned tag into the field instead of re-allocating; the
+    // skeleton's directory-walk tag is no longer needed after this call (data
+    // builders read the tag from `field.tag`).
+    let mut field = Field::new(tag, i1 as char, i2 as char);
     let subfields = parse_subfields(&field_data[2..], config, ctx)?;
     field.subfields = subfields;
     Ok(field)

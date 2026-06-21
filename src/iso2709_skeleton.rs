@@ -95,9 +95,10 @@ pub trait Iso2709Builder: Sized {
     fn add_control_field(&mut self, tag: String, value: String);
 
     /// File a parsed data field (non-00X tag) into the in-progress output.
-    /// Authority and holdings dispatch by tag here to organize fields by
-    /// their functional role (heading, tracings, locations, captions, etc.).
-    fn add_data_field(&mut self, tag: String, field: Field);
+    /// Authority and holdings dispatch by tag here (read from `field.tag`) to
+    /// organize fields by their functional role (heading, tracings, locations,
+    /// captions, etc.).
+    fn add_data_field(&mut self, field: Field);
 
     /// Decode a control field's bytes into its string value. The
     /// default strips the trailing `FIELD_TERMINATOR` byte and dispatches
@@ -619,11 +620,11 @@ fn parse_record_body<B: Iso2709Builder>(
                         ctx.stream_byte_offset = record_data_offset + data_start + start_position;
                         if let Ok(field) = parse_data_field(
                             field_data,
-                            &tag,
+                            tag,
                             B::parse_config(validation_level),
                             ctx,
                         ) {
-                            builder.add_data_field(tag, field);
+                            builder.add_data_field(field);
                         }
                         ctx.current_field_tag = None;
                     }
@@ -680,11 +681,12 @@ fn parse_record_body<B: Iso2709Builder>(
             continue;
         }
 
-        // Data field.
-        let parsed = parse_data_field(field_data, &tag, B::parse_config(validation_level), ctx);
+        // Data field. Move the owned tag into the parser (and thence the
+        // field) rather than re-allocating it there.
+        let parsed = parse_data_field(field_data, tag, B::parse_config(validation_level), ctx);
         ctx.current_field_tag = None;
         match parsed {
-            Ok(field) => builder.add_data_field(tag, field),
+            Ok(field) => builder.add_data_field(field),
             Err(e) => {
                 if recovery_mode == RecoveryMode::Strict {
                     return Err(e);

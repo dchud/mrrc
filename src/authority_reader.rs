@@ -274,8 +274,8 @@ impl Iso2709Builder for AuthorityBuilder {
         self.record.add_control_field(tag, value);
     }
 
-    fn add_data_field(&mut self, tag: String, field: Field) {
-        match tag.as_str() {
+    fn add_data_field(&mut self, field: Field) {
+        match field.tag.as_str() {
             // 1XX — the main heading
             "100" | "110" | "111" | "130" | "148" | "150" | "151" | "155" => {
                 self.record.set_heading(field);
