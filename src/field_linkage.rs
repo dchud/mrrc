@@ -24,6 +24,20 @@
 //! The occurrence numbers match to link the fields together.
 
 use regex::Regex;
+use std::sync::LazyLock;
+
+/// Subfield-6 linkage pattern: `TAG-OCC[/SCRIPT][/r]`.
+///
+/// - `TAG` = 3-digit field tag (e.g. 880, 100, 245)
+/// - `OCC` = 2-3 digit occurrence number
+/// - `SCRIPT` = optional MARC script code, parenthesized (`(2`, `(3`, `(B`,
+///   `(N`, `(S`, …) or dollar-sign (`$1` for CJK)
+/// - `/r` = optional right-to-left field orientation
+///
+/// Compiled once: [`LinkageInfo::parse`] runs per field during 880-linkage
+/// scans, so the pattern must not recompile on every call.
+static LINKAGE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\d{3})-(\d{2,3})(?:/([\(\$][A-Za-z0-9]))?(?:/r)?$").unwrap());
 
 /// Information extracted from MARC subfield 6 (Linkage).
 ///
@@ -87,17 +101,7 @@ impl LinkageInfo {
     /// `None` if the format is invalid.
     #[must_use]
     pub fn parse(value: &str) -> Option<Self> {
-        // Pattern: TAG-OCC[/SCRIPT][/r]
-        // TAG = 3-digit field tag (e.g., 880, 100, 245)
-        // OCC = 2-3 digit occurrence number (e.g., 01, 02, 001)
-        // SCRIPT = optional MARC script identification code:
-        //   - Parenthesized: (2 (Hebrew), (3 (Arabic), (B (Latin),
-        //     (N (Cyrillic), (S (Greek), (4 (Devanagari), etc.
-        //   - Dollar-sign: $1 (CJK)
-        // /r = optional field orientation (right-to-left)
-        let pattern = Regex::new(r"^(\d{3})-(\d{2,3})(?:/([\(\$][A-Za-z0-9]))?(?:/r)?$").ok()?;
-
-        let caps = pattern.captures(value)?;
+        let caps = LINKAGE_RE.captures(value)?;
 
         let tag = caps.get(1)?.as_str().to_string();
         let occurrence = caps.get(2)?.as_str().to_string();

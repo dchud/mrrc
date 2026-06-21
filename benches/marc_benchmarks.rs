@@ -5,7 +5,7 @@
 //! MARC records using Criterion.rs for statistical analysis.
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
-use mrrc::{MarcReader, MarcWriter, RecordHelpers, json, marcxml};
+use mrrc::{LinkageInfo, MarcReader, MarcWriter, RecordHelpers, json, marcxml};
 use std::io::Cursor;
 
 /// Load test fixtures from the test data directory.
@@ -155,6 +155,45 @@ fn benchmark_serialization_to_xml_1k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark MARCXML deserialization of a single record.
+///
+/// Exercises `strip_marcxml_ns` once per iteration — the per-call path PERF-7
+/// made compile-free by hoisting its namespace regexes to statics. A
+/// whole-document parse amortizes that cost over the whole collection and
+/// hides it; this single-record form is the regression sensor for it (the
+/// `serialize_1k_to_xml` bench only covers the write path).
+fn benchmark_deserialize_marcxml_record(c: &mut Criterion) {
+    let fixture = load_fixture("1k_records.mrc");
+    let mut reader = MarcReader::new(Cursor::new(fixture));
+    let record = reader
+        .read_record()
+        .expect("read fixture record")
+        .expect("fixture has at least one record");
+    let xml = black_box(marcxml::record_to_marcxml(&record).expect("serialize to MARCXML"));
+
+    c.bench_function("deserialize_marcxml_record", |b| {
+        b.iter(|| {
+            let _ = black_box(marcxml::marcxml_to_record(black_box(&xml)));
+        });
+    });
+}
+
+/// Benchmark MARC subfield-6 (880 linkage) parsing.
+///
+/// `LinkageInfo::parse` runs per field during 880-linkage scans; PERF-7
+/// hoisted its regex to a static. Regression sensor for that path.
+fn benchmark_parse_linkage(c: &mut Criterion) {
+    let values = black_box(["880-01", "100-02/(3/r", "245-01/(2/r", "650-03"]);
+
+    c.bench_function("parse_linkage_subfield6", |b| {
+        b.iter(|| {
+            for v in values {
+                black_box(LinkageInfo::parse(black_box(v)));
+            }
+        });
+    });
+}
+
 /// Benchmark read + write roundtrip of 1,000 MARC records.
 fn benchmark_roundtrip_1k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("1k_records.mrc"));
@@ -215,6 +254,8 @@ criterion_group!(
     benchmark_read_with_field_access_10k,
     benchmark_serialization_to_json_1k,
     benchmark_serialization_to_xml_1k,
+    benchmark_deserialize_marcxml_record,
+    benchmark_parse_linkage,
     benchmark_roundtrip_1k,
     benchmark_roundtrip_10k,
 );

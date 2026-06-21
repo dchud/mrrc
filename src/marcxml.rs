@@ -34,7 +34,9 @@ use crate::record::{Field, Record};
 use quick_xml::events::Event;
 use quick_xml::se::to_string as xml_to_string;
 use quick_xml::{Decoder, XmlVersion};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 
 /// The MARCXML namespace URI.
 const MARCXML_NS: &str = "http://www.loc.gov/MARC21/slim";
@@ -105,21 +107,23 @@ pub struct MarcxmlCollection {
 // Namespace stripping
 // ---------------------------------------------------------------------------
 
+/// `xmlns="..."` / `xmlns:prefix="..."` namespace declarations.
+static RE_XMLNS_DECL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"\s+xmlns(?::\w+)?="[^"]*""#).unwrap());
+
+/// A namespace prefix on an element name, e.g. `<marc:record>` /
+/// `</marc:record>`.
+static RE_NS_PREFIX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<(/?)(\w+):").unwrap());
+
 /// Strip XML namespace prefixes and declarations from MARCXML input.
 ///
 /// Handles both `marc:record` → `record` (prefixed namespace) and
-/// `xmlns="..."` / `xmlns:marc="..."` (namespace declarations).
+/// `xmlns="..."` / `xmlns:marc="..."` (namespace declarations). The two
+/// patterns are compiled once: this runs per record on the MARCXML
+/// deserialization path.
 fn strip_marcxml_ns(xml: &str) -> String {
-    use regex::Regex;
-
-    // Strip xmlns declarations (both default and prefixed)
-    let re_xmlns = Regex::new(r#"\s+xmlns(?::\w+)?="[^"]*""#).unwrap();
-    let stripped = re_xmlns.replace_all(xml, "");
-
-    // Strip namespace prefixes on element names: <marc:record> → <record>,
-    // </marc:record> → </record>
-    let re_prefix = Regex::new(r"<(/?)(\w+):").unwrap();
-    re_prefix.replace_all(&stripped, "<$1").to_string()
+    let stripped = RE_XMLNS_DECL.replace_all(xml, "");
+    RE_NS_PREFIX.replace_all(&stripped, "<$1").to_string()
 }
 
 // ---------------------------------------------------------------------------
