@@ -90,8 +90,11 @@ pub struct PyMARCReader {
     /// of whether the parse subsequently succeeds or fails). The
     /// `mrrc.MARCReader` Python wrapper exposes this as the
     /// pymarc-compatible `current_chunk` accessor used to diagnose
-    /// records swallowed by `permissive=True`.
-    last_chunk: Option<Vec<u8>>,
+    /// records swallowed by `permissive=True`. Held behind a shared
+    /// `Arc` so stashing the most recent chunk costs a refcount bump,
+    /// not a byte copy: the same allocation is borrowed by the parser
+    /// (via `parse_record_from_shared_bytes`) and retained here.
+    last_chunk: Option<std::sync::Arc<Vec<u8>>>,
 }
 
 #[pymethods]
@@ -177,7 +180,7 @@ impl PyMARCReader {
     /// `current_chunk` semantics.
     #[getter]
     fn last_chunk(&self) -> Option<&[u8]> {
-        self.last_chunk.as_deref()
+        self.last_chunk.as_ref().map(|chunk| chunk.as_slice())
     }
 
     /// Read the next record from the file (legacy interface)
@@ -208,9 +211,10 @@ impl PyMARCReader {
                     // Stash the chunk for pymarc-compat `current_chunk`. Set
                     // unconditionally — success and failure callers both want
                     // it (success readers can compare; failure readers can
-                    // diagnose). The one remaining per-record copy on this
-                    // path; the owned bytes move into the parse below.
-                    self.last_chunk = Some(bytes.clone());
+                    // diagnose). Sharing the `Arc` with the parser below means
+                    // this stash is a refcount bump, not a byte copy.
+                    let shared = std::sync::Arc::new(bytes);
+                    self.last_chunk = Some(std::sync::Arc::clone(&shared));
 
                     // Step 2: Parse bytes (GIL released). Return the raw
                     // MarcError across the GIL boundary so the typed variant
@@ -221,7 +225,7 @@ impl PyMARCReader {
                     let val_level = self.validation_level;
                     let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py
                         .detach(|| {
-                            mrrc::parse_record_from_bytes(bytes, rec_mode, val_level)
+                            mrrc::parse_record_from_shared_bytes(&shared, rec_mode, val_level)
                                 .map_err(Box::new)
                         });
                     let record =
@@ -282,12 +286,14 @@ impl PyMARCReader {
     /// - Python files use same batching and GIL management
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
         // ===== STEP 1: Read record bytes (GIL held if needed) =====
-        // Must get Python handle while GIL is held by PyRefMut
-        // CRITICAL: Use assume_attached() to get an unbound Python handle that
-        // properly releases the GIL in Phase 2. A bound handle (slf.py()) does not.
-        // SAFETY: PyRefMut guarantees the GIL is held; this is the idiomatic way to get
-        // an unbound Python handle without re-acquiring (which would panic if already held).
-        // See GIL_RELEASE_IMPLEMENTATION_PLAN.md Part 2 Fix 2 (lines 149-235).
+        // Must get a Python handle while the GIL is held by PyRefMut.
+        // assume_attached() yields an unbound handle whose py.detach() in
+        // Phase 2 actually releases the GIL; a bound handle (slf.py()) would
+        // not.
+        // SAFETY: PyRefMut guarantees the GIL is held for the duration of
+        // this call, so the attachment assumption holds. This is the
+        // idiomatic way to obtain an unbound handle without re-acquiring,
+        // which would panic when the GIL is already held.
         let py = unsafe { Python::assume_attached() };
 
         // Get mutable reference to reader backend
@@ -319,11 +325,12 @@ impl PyMARCReader {
             },
         };
 
-        // Stash the chunk for pymarc-compat `current_chunk` — the one
-        // remaining per-record copy on this path (making it lazy is
-        // tracked separately). The owned Vec from read_next_record_bytes
-        // moves into the parse below without further copies.
-        slf.last_chunk = Some(record_bytes.clone());
+        // Stash the chunk for pymarc-compat `current_chunk`. The owned Vec
+        // from read_next_record_bytes is moved into a shared `Arc` that both
+        // the parser (below) and this stash borrow, so retaining the most
+        // recent chunk costs only a refcount bump — no per-record byte copy.
+        let shared = std::sync::Arc::new(record_bytes);
+        slf.last_chunk = Some(std::sync::Arc::clone(&shared));
 
         // ===== STEP 2: Parse bytes (GIL released) =====
         // Parse the record while GIL is released to allow other threads to execute.
@@ -337,7 +344,7 @@ impl PyMARCReader {
         let rec_mode = slf.recovery_mode;
         let val_level = slf.validation_level;
         let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py.detach(|| {
-            mrrc::parse_record_from_bytes(record_bytes, rec_mode, val_level).map_err(Box::new)
+            mrrc::parse_record_from_shared_bytes(&shared, rec_mode, val_level).map_err(Box::new)
         });
 
         // ===== STEP 3: Convert to PyRecord (GIL re-acquired) =====

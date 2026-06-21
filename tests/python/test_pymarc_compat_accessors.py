@@ -184,6 +184,26 @@ def test_accessors_retain_last_values_after_stop_iteration() -> None:
     assert reader.current_exception is None
 
 
+def test_current_chunk_is_lazy_and_idempotent() -> None:
+    """``current_chunk`` is a lazy property: repeated access returns equal
+    bytes and does not advance the iterator, and it tracks each new read."""
+    bytes_ = (_REPO_ROOT / "tests" / "data" / "multi_records.mrc").read_bytes()
+    reader = mrrc.MARCReader(bytes_, permissive=True)
+
+    first_record = next(reader)
+    assert first_record is not None
+    chunk_a = reader.current_chunk
+    chunk_b = reader.current_chunk
+    assert chunk_a is not None
+    assert chunk_a == chunk_b  # stable across repeated access
+
+    # Reading current_chunk did not consume the next record.
+    second_record = next(reader)
+    assert second_record is not None
+    # After advancing, current_chunk reflects the new record's bytes.
+    assert reader.current_chunk != chunk_a
+
+
 def test_current_chunk_tracks_in_default_strict_mode() -> None:
     """``current_chunk`` is populated on every successful chunk read
     regardless of ``permissive``. Strict-mode iteration over a clean
