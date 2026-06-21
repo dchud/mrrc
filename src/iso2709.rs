@@ -537,6 +537,34 @@ pub fn is_control_field_tag(tag: &str) -> bool {
     tag.len() == 3 && tag.starts_with('0') && tag.chars().all(|c| c.is_ascii_digit()) && tag < "010"
 }
 
+/// Append `value` to `buf` as a zero-padded ASCII decimal of at least
+/// `width` digits, written directly without a heap `format!` allocation.
+///
+/// Used for the ISO 2709 directory's field-length (width 4) and
+/// starting-position (width 5) entries — written once per field by all three
+/// writers. Matches `format!("{value:0width$}")`: a value needing more than
+/// `width` digits is written in full (the directory entry is then malformed,
+/// exactly as the `format!` path was).
+pub(crate) fn push_zero_padded(buf: &mut Vec<u8>, value: usize, width: usize) {
+    const DIGITS: &[u8; 10] = b"0123456789";
+    let mut digits = 1;
+    let mut n = value;
+    while n >= 10 {
+        n /= 10;
+        digits += 1;
+    }
+    let total = digits.max(width);
+    let start = buf.len();
+    buf.resize(start + total, b'0');
+    let mut n = value;
+    let mut i = start + total;
+    while n > 0 {
+        i -= 1;
+        buf[i] = DIGITS[n % 10];
+        n /= 10;
+    }
+}
+
 /// Validate that a field tag fits the ISO 2709 directory's fixed-width
 /// 3-byte tag field. Tags must be exactly 3 ASCII bytes; non-ASCII
 /// characters re-encode to multiple UTF-8 bytes when written and

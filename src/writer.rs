@@ -44,7 +44,7 @@
 
 use crate::error::{MarcError, Result};
 use crate::formats::FormatWriter;
-use crate::iso2709::validate_directory_tag;
+use crate::iso2709::{push_zero_padded, validate_directory_tag};
 use crate::record::Record;
 use std::io::Write;
 
@@ -164,8 +164,8 @@ impl<W: Write> MarcWriter<W> {
 
                     // Add directory entry
                     directory.extend_from_slice(tag.as_bytes());
-                    directory.extend_from_slice(format!("{field_length:04}").as_bytes());
-                    directory.extend_from_slice(format!("{current_position:05}").as_bytes());
+                    push_zero_padded(&mut directory, field_length, 4);
+                    push_zero_padded(&mut directory, current_position, 5);
 
                     // Add data
                     data_area.extend_from_slice(field_data);
@@ -194,8 +194,8 @@ impl<W: Write> MarcWriter<W> {
 
                 // Add directory entry
                 directory.extend_from_slice(tag.as_bytes());
-                directory.extend_from_slice(format!("{field_length:04}").as_bytes());
-                directory.extend_from_slice(format!("{current_position:05}").as_bytes());
+                push_zero_padded(&mut directory, field_length, 4);
+                push_zero_padded(&mut directory, current_position, 5);
 
                 // Add data
                 data_area.extend_from_slice(&field_data);
