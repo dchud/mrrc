@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- MARCXML deserialization and 880-linkage parsing no longer recompile their regexes on
+  every call (hoisted to `LazyLock` statics). Parsing MARCXML records one at a time — e.g.
+  `parse_xml_to_array` in a loop — is substantially faster; batch/whole-document parsing
+  already amortized the cost and is unchanged.
 - Reading from a Python file-like object (`MARCReader(open(path, "rb"))`, `BytesIO`, etc.)
   now reads the source in 256 KiB chunks and slices records out in Rust, instead of two
   `file.read()` calls plus a `getattr("read")` per record. The `read` method is bound once
