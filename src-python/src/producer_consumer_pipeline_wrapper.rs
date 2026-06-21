@@ -151,14 +151,17 @@ impl PyProducerConsumerPipeline {
     ///
     /// print(f"Processed {record_count} records")
     /// ```
-    pub fn next(&mut self) -> PyResult<Option<PyRecord>> {
+    pub fn next(&mut self, py: Python<'_>) -> PyResult<Option<PyRecord>> {
         let pipeline = self
             .inner
             .as_ref()
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Pipeline closed"))?;
 
-        let record = pipeline
-            .next()
+        // Release the GIL while blocked on the channel recv — the producer runs
+        // in a background OS thread, so holding the GIL here would starve every
+        // other Python thread for the duration of the wait.
+        let record = py
+            .detach(|| pipeline.next())
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
         Ok(record.map(PyRecord::from))
@@ -189,13 +192,14 @@ impl PyProducerConsumerPipeline {
     /// Get the next record in iteration.
     ///
     /// Implements the iterator protocol for use with `for` loops.
-    pub fn __next__(slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
-        let pipeline = slf
+    pub fn __next__(&mut self, py: Python<'_>) -> PyResult<PyRecord> {
+        let pipeline = self
             .inner
             .as_ref()
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Pipeline closed"))?;
 
-        match pipeline.next() {
+        // Release the GIL while blocked on the recv (see `next`).
+        match py.detach(|| pipeline.next()) {
             Ok(Some(record)) => Ok(PyRecord::from(record)),
             Ok(None) => Err(PyErr::new::<PyStopIteration, _>("EOF")),
             Err(e) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
