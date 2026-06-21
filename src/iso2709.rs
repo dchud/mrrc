@@ -390,14 +390,25 @@ pub fn read_leader_bytes<R: Read>(reader: &mut R) -> Result<Option<[u8; LEADER_L
     }
 }
 
+/// Growth step for [`read_record_data`]'s record buffer. The buffer is
+/// extended one chunk at a time as bytes actually arrive, so its capacity
+/// never exceeds the smaller of the leader's claimed length and the bytes
+/// the stream delivered plus one chunk — a stub record claiming the ISO
+/// 2709 maximum cannot force a maximum-length allocation.
+pub const READ_CHUNK_LEN: usize = 8192;
+
 /// Read the remaining `record_length - 24` bytes of a MARC record after the
 /// leader has already been consumed.
 ///
-/// Returns `(data, was_truncated)` where `was_truncated` is `true` when the
-/// read hit EOF before filling the buffer. In [`RecoveryMode::Strict`] a short
-/// read returns a [`MarcError::TruncatedRecord`] enriched with the current
-/// positional context (record index, byte offset, source filename, 001 if
-/// already extracted) plus the expected/actual byte counts.
+/// Returns `(data, bytes_read)` where `data` holds exactly the bytes the
+/// stream delivered (`data.len() == bytes_read`); a count short of
+/// `record_length - 24` means the read hit EOF mid-record. The buffer grows
+/// in [`READ_CHUNK_LEN`] steps, so its capacity is bounded by
+/// `min(record_length - 24, bytes_read + READ_CHUNK_LEN)` rather than by
+/// the leader's claim. In [`RecoveryMode::Strict`] a short read returns a
+/// [`MarcError::TruncatedRecord`] enriched with the current positional
+/// context (record index, byte offset, source filename, 001 if already
+/// extracted) plus the expected/actual byte counts.
 ///
 /// # Errors
 ///
@@ -411,9 +422,17 @@ pub fn read_record_data<R: Read>(
     ctx: &ParseContext,
 ) -> Result<(Vec<u8>, usize)> {
     let expected_len = record_length.saturating_sub(LEADER_LEN);
-    let mut data = vec![0u8; expected_len];
+    let mut data: Vec<u8> = Vec::new();
     let mut bytes_read = 0;
     while bytes_read < expected_len {
+        if bytes_read == data.len() {
+            let target = expected_len.min(bytes_read + READ_CHUNK_LEN);
+            // reserve_exact (not resize's amortized reserve) keeps the
+            // capacity bound exact; at most ceil(99975 / 8192) = 13
+            // reallocations for a maximum-length record.
+            data.reserve_exact(target - data.len());
+            data.resize(target, 0);
+        }
         match reader.read(&mut data[bytes_read..]) {
             Ok(0) => break,
             Ok(n) => bytes_read += n,
@@ -421,6 +440,7 @@ pub fn read_record_data<R: Read>(
             Err(e) => return Err(ctx.err_io(e)),
         }
     }
+    data.truncate(bytes_read);
     if bytes_read < expected_len && recovery_mode == RecoveryMode::Strict {
         return Err(ctx.err_truncated_record(Some(expected_len), Some(bytes_read)));
     }
@@ -967,10 +987,31 @@ mod tests {
             read_record_data(&mut reader, 100, RecoveryMode::Lenient, &ctx).unwrap();
         assert_eq!(
             data.len(),
-            76,
-            "buffer is sized to expected_len, zero-padded"
+            50,
+            "buffer holds exactly the bytes the stream delivered"
         );
         assert_eq!(bytes_read, 50, "actual bytes read short of expected_len");
+    }
+
+    #[test]
+    fn read_record_data_allocation_bounded_by_available_bytes() {
+        // A 25-byte stub whose leader claims the ISO 2709 maximum must not
+        // allocate the claimed 99975-byte body; the buffer is bounded by
+        // the bytes actually available plus one growth chunk.
+        let available = 1usize;
+        let mut reader = Cursor::new(vec![b'x'; available]);
+        let ctx = ParseContext::new();
+        let (data, bytes_read) =
+            read_record_data(&mut reader, 99_999, RecoveryMode::Lenient, &ctx).unwrap();
+        assert_eq!(bytes_read, available);
+        assert_eq!(data.len(), available);
+        assert!(
+            data.capacity() <= available + READ_CHUNK_LEN,
+            "capacity {} exceeds available {} + chunk {}",
+            data.capacity(),
+            available,
+            READ_CHUNK_LEN
+        );
     }
 
     #[test]

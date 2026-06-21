@@ -1068,6 +1068,41 @@ proptest! {
         while let Ok(Some(_)) = reader.read_record() {}
     }
 
+    /// On the lenient path, the record-body buffer's allocation is bounded
+    /// by the bytes the stream actually delivers (plus one growth chunk),
+    /// never by the leader's claimed record length: a tiny stub claiming
+    /// the ISO 2709 maximum must not force a maximum-length allocation.
+    #[test]
+    fn lenient_read_allocation_bounded_by_input_size(
+        record_length in (LEADER_LEN + 1)..=99_999usize,
+        available_seed in any::<u32>(),
+    ) {
+        let expected_body = record_length - LEADER_LEN;
+        // Strictly fewer bytes than claimed, so the lenient short-read
+        // path runs (0 up to expected_body - 1 bytes available).
+        let available = (available_seed as usize) % expected_body;
+        let body = vec![b'x'; available];
+
+        let mut cursor = Cursor::new(&body[..]);
+        let ctx = mrrc::iso2709::ParseContext::new();
+        let (data, bytes_read) = mrrc::iso2709::read_record_data(
+            &mut cursor,
+            record_length,
+            RecoveryMode::Lenient,
+            &ctx,
+        ).expect("lenient short read must not error");
+
+        prop_assert_eq!(bytes_read, available);
+        prop_assert_eq!(data.len(), available, "no padding to the claimed length");
+        prop_assert!(
+            data.capacity() <= available + mrrc::iso2709::READ_CHUNK_LEN,
+            "capacity {} exceeds available {} + chunk {}",
+            data.capacity(),
+            available,
+            mrrc::iso2709::READ_CHUNK_LEN
+        );
+    }
+
     /// Permissive mode must swallow record-internal malformations: when
     /// the leader parses cleanly (so the reader can advance to the next
     /// record boundary) but the field area is malformed, no error
