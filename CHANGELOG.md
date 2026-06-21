@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `Record.get_fields()` with no arguments is faster: it made one PyO3 call per control tag
+  (nine) plus one per data field, and now fetches all control fields in a single call.
+  Control fields come back in record order rather than fixed ascending-tag order (a
+  difference only for records whose control fields are stored out of order; record order
+  matches pymarc).
+- Writing ISO 2709 records (`MARCWriter` and the authority/holdings writers) allocates less:
+  each directory entry's length and start-position digits are written straight into the
+  output buffer instead of through a per-field `format!`.
 - MARCXML deserialization and 880-linkage parsing no longer recompile their regexes on
   every call (hoisted to `LazyLock` statics). Parsing MARCXML records one at a time — e.g.
   `parse_xml_to_array` in a loop — is substantially faster; batch/whole-document parsing

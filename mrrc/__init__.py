@@ -1021,10 +1021,14 @@ class Record:
         result = []
 
         if not tags:
-            # Return all control fields, then all data fields
-            for tag in _CONTROL_TAGS:
-                for i, value in enumerate(self._inner.control_field_values(tag)):
-                    result.append(_wrap_control_field(self, tag, i, value))
+            # All control fields (one Rust call, not one per control tag),
+            # then all data fields. Repeated control tags yield one field per
+            # value; the per-tag occurrence index is tracked here.
+            control_occ: dict[str, int] = {}
+            for tag, value in self._inner.control_fields():
+                i = control_occ.get(tag, 0)
+                control_occ[tag] = i + 1
+                result.append(_wrap_control_field(self, tag, i, value))
             occurrences: dict[str, int] = {}
             for field in self._inner.fields():
                 i = occurrences.get(field.tag, 0)

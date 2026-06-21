@@ -10,7 +10,7 @@ use crate::parse_error::ParseError;
 use mrrc::RecoveryMode;
 use pyo3::prelude::*;
 use std::fs::File;
-use std::io::{BufReader, Cursor, ErrorKind, Read};
+use std::io::{BufReader, Cursor, Read};
 
 /// Buffer capacity for file-path backends. Matches the core readers'
 /// `from_path` buffering: the per-record read loop issues at least two
@@ -269,33 +269,17 @@ impl ReaderBackend {
             );
         }
 
-        // Read remainder of record (record_length - 24 bytes). Use a
-        // manual loop rather than `read_exact` so we can report the
-        // actual bytes-read count when the stream ends short — same
-        // pattern the Rust core uses in `read_record_data`. `read_exact`
-        // doesn't expose partial-read state on EOF, which produced
-        // wrong `actual_length` values on the typed Python exception.
+        // Read remainder of record (record_length - 24 bytes). `take` +
+        // `read_to_end` grows the buffer as bytes arrive — no zero-init
+        // memset per record — retries on `Interrupted` internally, and
+        // reports the actual count when the stream ends short (so the typed
+        // truncation error below carries the right `actual_length`).
         let expected_body_len = record_length - 24;
-        let mut record_data = vec![0u8; expected_body_len];
-        let mut bytes_read = 0usize;
-        loop {
-            match reader.read(&mut record_data[bytes_read..]) {
-                Ok(0) => break,
-                Ok(n) => {
-                    bytes_read += n;
-                    if bytes_read == expected_body_len {
-                        break;
-                    }
-                },
-                Err(e) if e.kind() == ErrorKind::Interrupted => continue,
-                Err(e) => {
-                    return Err(ParseError::io_error(format!(
-                        "Failed to read record data: {}",
-                        e
-                    )));
-                },
-            }
-        }
+        let mut record_data = Vec::with_capacity(expected_body_len);
+        let bytes_read = reader
+            .take(expected_body_len as u64)
+            .read_to_end(&mut record_data)
+            .map_err(|e| ParseError::io_error(format!("Failed to read record data: {}", e)))?;
         if bytes_read != expected_body_len {
             // Truncation: the leader (24 bytes) was read, then the
             // body fell short. In Strict mode this surfaces as a

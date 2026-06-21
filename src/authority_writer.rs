@@ -6,7 +6,7 @@
 
 use crate::authority_record::AuthorityRecord;
 use crate::error::{MarcError, Result};
-use crate::iso2709::validate_directory_tag;
+use crate::iso2709::{push_zero_padded, validate_directory_tag};
 use std::io::Write;
 
 const FIELD_TERMINATOR: u8 = 0x1E;
@@ -82,8 +82,8 @@ impl<W: Write> AuthorityMarcWriter<W> {
             // Write directory entry (tag + length + start position)
             let length = data.len() - start_pos;
             directory.extend_from_slice(tag.as_bytes());
-            directory.extend_from_slice(format!("{length:04}").as_bytes());
-            directory.extend_from_slice(format!("{start_pos:05}").as_bytes());
+            push_zero_padded(directory, length, 4);
+            push_zero_padded(directory, start_pos, 5);
 
             Ok(())
         };
