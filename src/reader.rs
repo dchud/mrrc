@@ -424,7 +424,7 @@ impl Iso2709Builder for BibBuilder {
     }
 
     #[inline]
-    fn add_data_field(&mut self, _tag: String, field: Field) {
+    fn add_data_field(&mut self, field: Field) {
         self.record.add_field(field);
     }
 

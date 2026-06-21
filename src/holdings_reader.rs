@@ -258,8 +258,8 @@ impl Iso2709Builder for HoldingsBuilder {
         self.record.add_control_field(tag, value);
     }
 
-    fn add_data_field(&mut self, tag: String, field: Field) {
-        match tag.as_str() {
+    fn add_data_field(&mut self, field: Field) {
+        match field.tag.as_str() {
             "852" => self.record.add_location(field),
             "853" => self.record.add_captions_basic(field),
             "854" => self.record.add_captions_supplements(field),
