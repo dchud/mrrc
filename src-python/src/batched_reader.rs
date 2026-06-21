@@ -1,348 +1,183 @@
-// Batched MARC reader with queue-based state machine for efficient GIL management
-//
-// This module implements batch reading to reduce GIL acquire/release overhead.
-// It reads multiple MARC records in a single Python GIL acquisition, then serves
-// them to the caller from an internal queue. This dramatically reduces GIL
-// overhead (from N per-record acquisitions to N/100 batch acquisitions).
-//
-// Key design:
-// - VecDeque<SmallVec> for O(1) front-pop during iteration
-// - Hard limits: 200 records or 300KB per batch (prevents unbounded allocation)
-// - EOF state machine ensures idempotent behavior
-// - Single GIL acquire/release cycle per batch (100x reduction vs per-record)
+//! Batched MARC reader: one queue/parse state machine over any record-byte
+//! source.
+//!
+//! [`BatchedReader`] reads a bounded batch of record byte-slices from a
+//! [`RecordByteSource`] while the GIL is held, parses the **whole batch in a
+//! single `py.detach`** (one GIL release per batch, not per record), and
+//! serves the parsed outcomes from an internal queue. Each queue element is
+//! a parsed [`mrrc::Record`] (or its typed error) paired with the source
+//! bytes for the pymarc-compatible `current_chunk` accessor — never a copied
+//! byte buffer.
+//!
+//! This replaces two near-identical queue state machines (the former
+//! `batched_reader.rs` over a Python-file wrapper and `batched_unified_reader.rs`
+//! over a unified backend) with one generic implementation. Record-reading is
+//! delegated to the [`RecordByteSource`]; everything here — batching, the
+//! 200-record / 300 KB bounds, offset tracking, and parsing — is shared.
 
-use crate::buffered_reader::BufferedMarcReader;
+use crate::backend::RecordByteSource;
 use crate::parse_error::ParseError;
-use mrrc::RecoveryMode;
-use pyo3::prelude::*;
+use mrrc::{MarcError, Record, RecoveryMode, ValidationLevel};
 use std::collections::VecDeque;
+use std::sync::Arc;
 
-/// State machine for batched MARC reading with GIL management
+use pyo3::Python;
+
+/// Maximum records buffered in one batch (bounds queue allocation).
+const MAX_RECORDS_PER_BATCH: usize = 200;
+/// Maximum bytes read into one batch (bounds memory on large records).
+const MAX_BYTES_PER_BATCH: usize = 300_000;
+/// Target records per batch before the hard limits apply.
+const TARGET_BATCH_SIZE: usize = 100;
+
+/// One record's outcome, queued in source order.
 ///
-/// Implements the queue-based state machine defined in GIL_RELEASE_HYBRID_IMPLEMENTATION_PLAN_REVISIONS.md:
-/// INITIAL → CHECK_QUEUE_NON_EMPTY → CHECK_EOF_STATE → READ_BATCH → (repeat)
-///
-/// Design:
-/// - record_queue: VecDeque for O(1) front-pop (serves buffered records)
-/// - buffered_reader: Underlying file reader (for read_batch calls)
-/// - eof_reached: Idempotent EOF flag (prevents redundant I/O after EOF)
-/// - batch_size: Fixed at 100 (subject to validation in C.Gate task)
+/// `Parsed` and `ParseFailed` both carry the source bytes behind an `Arc`
+/// so the caller can expose them as `current_chunk` (the parser shares the
+/// same allocation — no copy). `SourceError` carries no bytes: the source
+/// could not produce a complete record.
 #[derive(Debug)]
-pub struct BatchedMarcReader {
-    /// Underlying buffered reader for reading from Python file object
-    buffered_reader: BufferedMarcReader,
-
-    /// Queue of record bytes, ready for parsing
-    /// Using VecDeque for O(1) pop_front() performance
-    record_queue: VecDeque<Vec<u8>>,
-
-    /// Cumulative capacity tracking (bytes in queue)
-    queue_capacity_bytes: usize,
-
-    /// EOF flag - once set, reading stops and __next__ returns None idempotently
-    eof_reached: bool,
-
-    /// Target batch size for read_batch() calls
-    /// Fixed at 100 for initial implementation (validated in C.Gate)
-    batch_size: usize,
+pub enum RecordOutcome {
+    /// A successfully parsed record and the bytes it parsed from.
+    Parsed { bytes: Arc<Vec<u8>>, record: Record },
+    /// The parser rejected otherwise-readable bytes (strict-mode structural
+    /// defect, or an unrecoverable error in lenient/permissive).
+    ParseFailed {
+        bytes: Arc<Vec<u8>>,
+        error: Box<MarcError>,
+    },
+    /// The parser returned no record for a complete byte-slice. Defensive:
+    /// the byte reader never yields empty record bytes, so this is
+    /// unreachable in practice; preserved so each caller keeps its prior
+    /// handling (EOF for `read_record`, a runtime error for `__next__`).
+    ParseReturnedNone { bytes: Arc<Vec<u8>> },
+    /// The source failed to read the next record's bytes (I/O, boundary, or
+    /// a strict-mode truncation), already annotated with stream position.
+    SourceError(ParseError),
 }
 
-impl BatchedMarcReader {
-    /// Create a new BatchedMarcReader from a Python file-like object
-    ///
-    /// # Arguments
-    /// * `file_obj` - A Python file-like object supporting .read(n)
-    /// * `recovery_mode` - Active recovery mode; forwarded to the
-    ///   underlying buffered reader so short body reads route to either
-    ///   a fatal `TruncatedRecord` (strict) or a pass-through to the
-    ///   parser's `record.errors` dispatch (lenient/permissive).
-    pub fn new(file_obj: Py<PyAny>, recovery_mode: RecoveryMode) -> Self {
-        BatchedMarcReader {
-            buffered_reader: BufferedMarcReader::new(file_obj, recovery_mode),
-            record_queue: VecDeque::new(),
-            queue_capacity_bytes: 0,
-            eof_reached: false,
-            batch_size: 100,
+/// Batched, parse-on-read state machine over a [`RecordByteSource`].
+#[derive(Debug)]
+pub struct BatchedReader<S: RecordByteSource> {
+    /// Underlying source of one record's bytes at a time.
+    source: S,
+    /// Parsed outcomes ready to serve, in source order.
+    queue: VecDeque<RecordOutcome>,
+    /// Once set, the source is exhausted and no further reads are issued.
+    eof: bool,
+    recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
+    /// Count of records successfully read from the source so far. Used to
+    /// stamp `record_index` (1-based) onto a source error.
+    records_read: usize,
+    /// Absolute byte offset of the next record to read — the total bytes of
+    /// all records read so far. Used to stamp `byte_offset` onto a source
+    /// error whose leaf reader knows only its record-relative offset.
+    bytes_consumed: usize,
+}
+
+impl<S: RecordByteSource> BatchedReader<S> {
+    /// Wrap a record-byte source with batching and parsing.
+    pub fn new(source: S, recovery_mode: RecoveryMode, validation_level: ValidationLevel) -> Self {
+        BatchedReader {
+            source,
+            queue: VecDeque::new(),
+            eof: false,
+            recovery_mode,
+            validation_level,
+            records_read: 0,
+            bytes_consumed: 0,
         }
     }
 
-    /// Read the next record bytes from the queue or file
-    ///
-    /// Implements state machine:
-    /// 1. If queue not empty: pop and return
-    /// 2. If EOF reached: return None (idempotent)
-    /// 3. Otherwise: read_batch() and process
-    ///
-    /// Returns:
-    /// - Ok(Some(bytes)) - A complete MARC record as owned bytes
-    /// - Ok(None) - End of file reached (subsequent calls also return None)
-    /// - Err(ParseError) - I/O or parsing boundary error
-    pub fn read_next_record_bytes(
-        &mut self,
-        py: Python<'_>,
-    ) -> Result<Option<Vec<u8>>, ParseError> {
-        // === STATE: CHECK_QUEUE_NON_EMPTY ===
-        if !self.record_queue.is_empty()
-            && let Some(record) = self.record_queue.pop_front()
-        {
-            self.queue_capacity_bytes = self.queue_capacity_bytes.saturating_sub(record.len());
-            return Ok(Some(record));
-        }
-
-        // === STATE: CHECK_EOF_STATE ===
-        if self.eof_reached {
-            // Idempotent: subsequent calls return None without I/O
-            return Ok(None);
-        }
-
-        // === STATE: READ_BATCH ===
-        let batch = self.read_batch(py)?;
-
-        if batch.is_empty() {
-            // EOF reached during batch read
-            self.eof_reached = true;
-            return Ok(None);
-        }
-
-        // Non-empty batch: extend queue and pop first record
-        for record in batch {
-            self.queue_capacity_bytes = self.queue_capacity_bytes.saturating_add(record.len());
-            self.record_queue.push_back(record);
-        }
-
-        // Re-check queue (should not be empty now)
-        if let Some(record) = self.record_queue.pop_front() {
-            self.queue_capacity_bytes = self.queue_capacity_bytes.saturating_sub(record.len());
-            Ok(Some(record))
-        } else {
-            // Defensive: should never happen if batch was non-empty
-            Ok(None)
-        }
+    /// Backend kind for diagnostics ("rust_file" | "cursor" | "python_file").
+    pub fn backend_kind(&self) -> &'static str {
+        self.source.backend_kind()
     }
 
-    /// Read a batch of records with a single GIL acquire/release cycle
+    /// Serve the next parsed record outcome.
     ///
-    /// # GIL Contract
-    /// - Entry: py parameter guarantees GIL is held
-    /// - Exit: GIL is released when this function returns
-    /// - The closure returns Rust errors only; PyErr conversion deferred to caller
-    ///
-    /// # Batch Size Semantics
-    /// - Target: 100 records per batch
-    /// - Hard limits:
-    ///   - 200 records maximum (prevents unbounded allocation)
-    ///   - 300 KB maximum (prevents memory spikes on large records)
-    /// - If limits are hit, returns partial batch (variable size)
-    /// - Caller continues with next read_batch() call
-    ///
-    /// # Returns
-    /// Vec<SmallVec<[u8; 4096]>> - Records read in this batch (may be < batch_size)
-    /// Empty vec indicates EOF (no more records available)
-    fn read_batch(&mut self, py: Python<'_>) -> Result<Vec<Vec<u8>>, ParseError> {
-        let mut batch = Vec::with_capacity(self.batch_size);
-        let mut bytes_read = 0usize;
+    /// Pops from the queue; when the queue is empty and the source is not
+    /// yet exhausted, reads and parses one batch first. Returns `None` only
+    /// at a clean end of stream.
+    pub fn next_record(&mut self, py: Python<'_>) -> Option<RecordOutcome> {
+        if let Some(outcome) = self.queue.pop_front() {
+            return Some(outcome);
+        }
+        if self.eof {
+            return None;
+        }
+        self.fill_batch(py);
+        self.queue.pop_front()
+    }
 
-        // Read up to batch_size records, respecting hard limits
-        while batch.len() < self.batch_size {
-            // Hard limit: 200 records or 300KB
-            if batch.len() >= 200 || bytes_read > 300_000 {
-                break;
-            }
+    /// Read up to one batch of record bytes (GIL held), parse them all in a
+    /// single `py.detach`, and enqueue the outcomes in source order.
+    fn fill_batch(&mut self, py: Python<'_>) {
+        // === Phase 1: read record bytes (GIL held) ===
+        let mut batch_bytes: Vec<Arc<Vec<u8>>> = Vec::with_capacity(TARGET_BATCH_SIZE);
+        let mut batch_byte_total = 0usize;
+        let mut source_error: Option<ParseError> = None;
 
-            match self.buffered_reader.read_next_record_bytes(py) {
-                Ok(Some(record_bytes)) => {
-                    bytes_read = bytes_read.saturating_add(record_bytes.len());
-                    batch.push(record_bytes);
+        while batch_bytes.len() < MAX_RECORDS_PER_BATCH && batch_byte_total <= MAX_BYTES_PER_BATCH {
+            match self.source.next_record_bytes(py) {
+                Ok(Some(bytes)) => {
+                    self.records_read = self.records_read.saturating_add(1);
+                    self.bytes_consumed = self.bytes_consumed.saturating_add(bytes.len());
+                    batch_byte_total = batch_byte_total.saturating_add(bytes.len());
+                    batch_bytes.push(Arc::new(bytes));
                 },
                 Ok(None) => {
-                    // EOF reached during batch read
+                    self.eof = true;
                     break;
                 },
                 Err(e) => {
-                    // I/O or boundary error
-                    return Err(e);
+                    // Annotate with the inter-record position the leaf reader
+                    // can't see: which record (1-based) failed and the
+                    // absolute stream offset of that record's start, plus any
+                    // record-relative offset the leaf set.
+                    let next_record_index = self.records_read.saturating_add(1);
+                    let absolute_offset = match e.context.record_byte_offset {
+                        Some(intra) => self.bytes_consumed.saturating_add(intra),
+                        None => self.bytes_consumed,
+                    };
+                    source_error = Some(
+                        e.with_record_index(next_record_index)
+                            .with_byte_offset(absolute_offset),
+                    );
+                    break;
                 },
             }
         }
 
-        Ok(batch)
-    }
-
-    /// Check if the reader has reached EOF
-    ///
-    /// Returns true after EOF is set (idempotent).
-    #[allow(dead_code)]
-    pub fn is_eof(&self) -> bool {
-        self.eof_reached
-    }
-
-    /// Get current queue size (for diagnostics/testing)
-    #[allow(dead_code)]
-    pub fn queue_len(&self) -> usize {
-        self.record_queue.len()
-    }
-
-    /// Get current queue capacity in bytes (for diagnostics/testing)
-    #[allow(dead_code)]
-    pub fn queue_capacity_bytes(&self) -> usize {
-        self.queue_capacity_bytes
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use smallvec::SmallVec;
-
-    #[test]
-    fn test_batched_reader_queue_operations() {
-        // Create minimal records for testing
-        let r1: SmallVec<[u8; 4096]> = SmallVec::from_slice(b"record1");
-        let r2: SmallVec<[u8; 4096]> = SmallVec::from_slice(b"record2");
-
-        let mut queue = VecDeque::new();
-        queue.push_back(r1);
-        queue.push_back(r2);
-
-        assert_eq!(queue.len(), 2);
-
-        let popped = queue.pop_front();
-        assert!(popped.is_some());
-        assert_eq!(popped.unwrap().as_slice(), b"record1");
-        assert_eq!(queue.len(), 1);
-    }
-
-    #[test]
-    fn test_queue_capacity_tracking() {
-        let r1: SmallVec<[u8; 4096]> = SmallVec::from_slice(b"record1");
-        let r2: SmallVec<[u8; 4096]> = SmallVec::from_slice(b"record2222");
-
-        let mut capacity = 0usize;
-
-        capacity = capacity.saturating_add(r1.len());
-        assert_eq!(capacity, 7);
-
-        capacity = capacity.saturating_add(r2.len());
-        assert_eq!(capacity, 17);
-
-        capacity = capacity.saturating_sub(r1.len());
-        assert_eq!(capacity, 10);
-    }
-
-    #[test]
-    fn test_eof_idempotence() {
-        let mut eof_reached = false;
-
-        // Simulate EOF check
-        if eof_reached {
-            // Would return None without I/O
+        // === Phase 2: parse the whole batch in one GIL release ===
+        let recovery_mode = self.recovery_mode;
+        let validation_level = self.validation_level;
+        let parsed: Vec<Result<Option<Record>, Box<MarcError>>> = if batch_bytes.is_empty() {
+            Vec::new()
         } else {
-            eof_reached = true;
+            py.detach(|| {
+                batch_bytes
+                    .iter()
+                    .map(|bytes| {
+                        mrrc::parse_record_from_shared_bytes(bytes, recovery_mode, validation_level)
+                            .map_err(Box::new)
+                    })
+                    .collect()
+            })
+        };
+
+        // === Phase 3: enqueue outcomes in source order (GIL re-acquired) ===
+        for (bytes, result) in batch_bytes.into_iter().zip(parsed) {
+            let outcome = match result {
+                Ok(Some(record)) => RecordOutcome::Parsed { bytes, record },
+                Ok(None) => RecordOutcome::ParseReturnedNone { bytes },
+                Err(error) => RecordOutcome::ParseFailed { bytes, error },
+            };
+            self.queue.push_back(outcome);
         }
-
-        // Second check
-        if eof_reached {
-            // Returns None without I/O (idempotent)
-        } else {
-            panic!("EOF should remain set");
+        if let Some(error) = source_error {
+            self.queue.push_back(RecordOutcome::SourceError(error));
         }
-
-        // Third check
-        if eof_reached {
-            // Still returns None (idempotent)
-        } else {
-            panic!("EOF should remain set");
-        }
-    }
-
-    #[test]
-    fn test_hard_limits_constants() {
-        const MAX_RECORDS_PER_BATCH: usize = 200;
-        const MAX_BYTES_PER_BATCH: usize = 300_000;
-
-        // Verify constants match spec
-        assert_eq!(MAX_RECORDS_PER_BATCH, 200);
-        assert_eq!(MAX_BYTES_PER_BATCH, 300_000);
-
-        // Verify 100 records at 1.5KB avg fits comfortably
-        let avg_record_size = 1500;
-        let default_batch_size = 100;
-        let est_memory = default_batch_size * avg_record_size;
-
-        assert!(est_memory < MAX_BYTES_PER_BATCH);
-        assert_eq!(est_memory, 150_000); // Well under 300KB limit
-    }
-
-    #[test]
-    fn test_batch_reader_initialization() {
-        // This test verifies the struct is properly initialized
-        // (actual read_batch testing requires Python runtime, see test_batch_reading_c1.py)
-        let mut queue: VecDeque<SmallVec<[u8; 4096]>> = VecDeque::new();
-        assert_eq!(queue.len(), 0);
-
-        let mut capacity_bytes = 0usize;
-        let record: SmallVec<[u8; 4096]> = SmallVec::from_slice(b"test");
-        capacity_bytes = capacity_bytes.saturating_add(record.len());
-        assert_eq!(capacity_bytes, 4);
-
-        let _ = queue.pop_front();
-        assert_eq!(queue.len(), 0);
-    }
-
-    #[test]
-    fn test_batch_reader_state_machine_states() {
-        // Test the three main state machine states
-        let mut eof_reached = false;
-        let mut queue: VecDeque<SmallVec<[u8; 4096]>> = VecDeque::new();
-
-        // STATE 1: CHECK_QUEUE_NON_EMPTY
-        assert!(queue.is_empty());
-        assert_eq!(queue.pop_front(), None);
-
-        // STATE 2: CHECK_EOF_STATE
-        assert!(!eof_reached);
-        eof_reached = true;
-        assert!(eof_reached);
-
-        // STATE 3: After EOF, should not attempt READ_BATCH
-        // eof_reached is already asserted above; this is the expected state
-        assert!(eof_reached);
-    }
-
-    #[test]
-    fn test_smallvec_capacity_tracking_large_record() {
-        // Test SmallVec behavior with records larger than 4KB inline buffer
-        let large_record = vec![0u8; 5000]; // 5KB > 4KB inline buffer
-        let sv: SmallVec<[u8; 4096]> = SmallVec::from_slice(&large_record);
-
-        assert_eq!(sv.len(), 5000);
-        // SmallVec transparently heap-allocates for oversized records
-        // (this verifies it doesn't panic)
-
-        // Test capacity tracking with this larger record
-        let mut capacity = 0usize;
-        capacity = capacity.saturating_add(sv.len());
-        assert_eq!(capacity, 5000);
-    }
-
-    #[test]
-    fn test_batch_size_constant_matches_spec() {
-        // The batch_size constant should match the spec (100 records)
-        // This is validated during actual reading in Python tests
-        let batch_size = 100;
-        assert_eq!(batch_size, 100);
-
-        // Verify this batch size is well below hard limits
-        let avg_record_size_bytes = 1500;
-        let estimated_total = batch_size * avg_record_size_bytes;
-
-        assert!(
-            estimated_total < 300_000,
-            "100 records at 1.5KB should be < 300KB"
-        );
-        assert!(
-            batch_size <= 200,
-            "batch_size should be <= 200 records hard limit"
-        );
     }
 }

@@ -18,6 +18,30 @@ use std::io::{BufReader, Cursor, ErrorKind, Read};
 /// syscall per buffer fill.
 pub(crate) const FILE_READ_BUF_CAPACITY: usize = 64 * 1024;
 
+/// A source of complete ISO 2709 record byte-slices, read one record at a
+/// time. Abstracts over the concrete input backends so the batching and
+/// parsing layer ([`crate::batched_reader::BatchedReader`]) is generic and
+/// unit-testable against a mock source.
+pub trait RecordByteSource: std::fmt::Debug {
+    /// Read the next record's raw bytes. `Ok(None)` signals a clean end of
+    /// stream; `Err` is an I/O or boundary failure.
+    fn next_record_bytes(&mut self, py: Python<'_>) -> Result<Option<Vec<u8>>, ParseError>;
+
+    /// Backend kind for diagnostics: `"rust_file"`, `"cursor"`, or
+    /// `"python_file"`.
+    fn backend_kind(&self) -> &'static str;
+}
+
+impl RecordByteSource for ReaderBackend {
+    fn next_record_bytes(&mut self, py: Python<'_>) -> Result<Option<Vec<u8>>, ParseError> {
+        self.read_next_bytes(py)
+    }
+
+    fn backend_kind(&self) -> &'static str {
+        self.backend_type()
+    }
+}
+
 /// Unified backend interface for reading MARC records from different sources
 ///
 /// Supports 8 input types:
@@ -174,7 +198,7 @@ impl ReaderBackend {
     }
 
     /// Return the backend type as a string for diagnostics
-    pub fn backend_type(&self) -> &str {
+    pub fn backend_type(&self) -> &'static str {
         match &self.kind {
             BackendKind::RustFile(_) => "rust_file",
             BackendKind::CursorBackend(_) => "cursor",
