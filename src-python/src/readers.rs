@@ -1,24 +1,14 @@
 // Python wrapper for MARCReader with GIL release support
 //
-// This module implements efficient GIL management for concurrent file I/O:
-// 1. Read record bytes from source (GIL held if Python file)
-// 2. Parse bytes into MARC record structure (GIL released)
-// 3. Convert result to Python object and handle errors (GIL re-acquired)
+// This module implements efficient GIL management for file I/O:
+// 1. Read a batch of record bytes from the source (GIL held)
+// 2. Parse the whole batch in a single GIL release (py.detach)
+// 3. Serve parsed records from a queue, one per __next__ (GIL held)
 
-use crate::batched_reader::BatchedMarcReader;
-use crate::batched_unified_reader::BatchedUnifiedReader;
+use crate::backend::ReaderBackend;
+use crate::batched_reader::{BatchedReader, RecordOutcome};
 use crate::wrappers::PyRecord;
-use mrrc::{RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
-
-/// Internal enum for different reader backends
-#[allow(clippy::large_enum_variant)]
-enum ReaderType {
-    /// Python file-based reader with batch optimization
-    Python(BatchedMarcReader),
-    /// Unified reader supporting Rust files, bytes, and Python objects
-    Unified(BatchedUnifiedReader),
-}
 
 /// Python wrapper for MarcReader with efficient GIL management
 ///
@@ -51,17 +41,16 @@ enum ReaderType {
 ///
 /// ## Optimization Strategies
 ///
-/// - Batch reading: Reduces GIL acquire/release overhead from N to N/100 (for N records)
-/// - Multiple input types: File paths via pure Rust I/O (zero GIL overhead), bytes via in-memory cursor, Python file objects via GIL management
+/// - Batch parsing: one `py.detach` per batch (up to 200 records / 300 KB)
+///   releases the GIL once for the whole batch, not once per record.
+/// - Multiple input types: file paths and bytes parse without touching the
+///   GIL; Python file objects read in chunks under a single GIL hold per batch.
 #[pyclass(name = "MARCReader")]
 pub struct PyMARCReader {
-    /// Reader backend (Python-based or unified multi-backend)
-    reader: Option<ReaderType>,
-    /// Recovery mode for handling malformed records
-    recovery_mode: RecoveryMode,
-    /// What counts as an error during parsing (orthogonal to
-    /// `recovery_mode`).
-    validation_level: ValidationLevel,
+    /// Batched reader over the unified record-byte backend. `None` once the
+    /// stream is exhausted or a fatal cap error has consumed the reader.
+    /// The reader owns the recovery mode and validation level.
+    reader: Option<BatchedReader<ReaderBackend>>,
     /// Optional cap on accumulated recovered errors per stream
     /// (lenient/permissive only). `None` (default) disables the
     /// Python-side cap; `Some(0)` matches the Rust API's
@@ -105,7 +94,7 @@ impl PyMARCReader {
     /// - str path (e.g., 'records.mrc') → RustFile backend (no GIL)
     /// - pathlib.Path → RustFile backend (no GIL)
     /// - bytes/bytearray → CursorBackend (no GIL)
-    /// - Python file object → BatchedMarcReader (GIL managed)
+    /// - Python file object → chunked Python-file backend (GIL managed)
     ///
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, bytes/bytearray, or file-like object
@@ -141,33 +130,18 @@ impl PyMARCReader {
         let rec_mode = crate::reader_helpers::parse_recovery_mode(recovery_mode)?;
         let val_level = crate::reader_helpers::parse_validation_level(validation_level)?;
 
-        // Try unified reader first (handles file paths and bytes)
-        match BatchedUnifiedReader::new(source, rec_mode) {
-            Ok(unified_reader) => Ok(PyMARCReader {
-                reader: Some(ReaderType::Unified(unified_reader)),
-                recovery_mode: rec_mode,
-                validation_level: val_level,
-                max_errors,
-                accumulated_errors: 0,
-                records_yielded: 0,
-                last_chunk: None,
-            }),
-            Err(_) => {
-                // Fall back to legacy Python file wrapper
-                // This handles custom file-like objects that aren't supported by UnifiedReader
-                let file_obj = source.clone().unbind();
-                let batched_reader = BatchedMarcReader::new(file_obj, rec_mode);
-                Ok(PyMARCReader {
-                    reader: Some(ReaderType::Python(batched_reader)),
-                    recovery_mode: rec_mode,
-                    validation_level: val_level,
-                    max_errors,
-                    accumulated_errors: 0,
-                    records_yielded: 0,
-                    last_chunk: None,
-                })
-            },
-        }
+        // One backend handles every source: str/path → RustFile, bytes →
+        // Cursor, any .read() object → chunked Python-file. A bad path or
+        // unsupported type surfaces its error (FileNotFoundError, TypeError,
+        // …) here at construction.
+        let backend = ReaderBackend::from_python(source, source.py(), rec_mode)?;
+        Ok(PyMARCReader {
+            reader: Some(BatchedReader::new(backend, rec_mode, val_level)),
+            max_errors,
+            accumulated_errors: 0,
+            records_yielded: 0,
+            last_chunk: None,
+        })
     }
 
     /// Bytes of the most recent record chunk read from the source.
@@ -188,67 +162,20 @@ impl PyMARCReader {
     /// This method holds the GIL during both reading and parsing.
     /// New code should use iteration (__next__) which supports GIL release.
     ///
-    /// Note: Uses BatchedMarcReader's queue state machine for efficient batching.
-    /// Also supports file paths and bytes via BatchedUnifiedReader.
-    #[allow(deprecated)]
+    /// Note: serves from the batched reader's parsed-record queue; a parse
+    /// that yields no record returns `None` here (EOF-equivalent).
     pub fn read_record(&mut self) -> PyResult<Option<PyRecord>> {
         Python::attach(|py| {
-            // Step 1: Read record bytes (GIL held)
-            // Uses queue-based state machine: CHECK_QUEUE → CHECK_EOF → READ_BATCH
-            let record_bytes = match self.reader.as_mut() {
-                Some(ReaderType::Python(reader)) => reader
-                    .read_next_record_bytes(py)
-                    .map_err(|e| e.to_py_err())?,
-                Some(ReaderType::Unified(reader)) => reader
-                    .read_next_record_bytes(py)
-                    .map_err(|e| e.to_py_err())?,
-                None => return Err(pyo3::exceptions::PyRuntimeError::new_err("Reader consumed")),
+            let outcome = {
+                let reader = self
+                    .reader
+                    .as_mut()
+                    .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("Reader consumed"))?;
+                reader.next_record(py)
             };
-
-            match record_bytes {
+            match outcome {
                 None => Ok(None),
-                Some(bytes) => {
-                    // Stash the chunk for pymarc-compat `current_chunk`. Set
-                    // unconditionally — success and failure callers both want
-                    // it (success readers can compare; failure readers can
-                    // diagnose). Sharing the `Arc` with the parser below means
-                    // this stash is a refcount bump, not a byte copy.
-                    let shared = std::sync::Arc::new(bytes);
-                    self.last_chunk = Some(std::sync::Arc::clone(&shared));
-
-                    // Step 2: Parse bytes (GIL released). Return the raw
-                    // MarcError across the GIL boundary so the typed variant
-                    // and all positional context (byte_offset, bytes_near,
-                    // etc.) survive to the Python exception. Boxed to keep
-                    // the Result small (clippy::result_large_err).
-                    let rec_mode = self.recovery_mode;
-                    let val_level = self.validation_level;
-                    let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py
-                        .detach(|| {
-                            mrrc::parse_record_from_shared_bytes(&shared, rec_mode, val_level)
-                                .map_err(Box::new)
-                        });
-                    let record =
-                        parse_result.map_err(|e| crate::error::marc_error_to_py_err(*e))?;
-
-                    // Step 3: Convert to PyRecord (GIL re-acquired)
-                    match record {
-                        Some(r) => {
-                            // Apply the wrapper-level recovery cap before
-                            // handing the record back: if max_errors was
-                            // configured and this record's accumulated
-                            // count exceeds it, surface FatalReaderError
-                            // instead of yielding.
-                            if let Err(e) = self.note_record_errors(&r) {
-                                self.reader = None;
-                                return Err(crate::error::marc_error_to_py_err(*e));
-                            }
-                            self.records_yielded = self.records_yielded.saturating_add(1);
-                            Ok(Some(PyRecord::from(r)))
-                        },
-                        None => Ok(None),
-                    }
-                },
+                Some(outcome) => self.apply_outcome(outcome),
             }
         })
     }
@@ -277,99 +204,43 @@ impl PyMARCReader {
     /// - See ThreadPoolExecutor example in MARCReader struct docs
     ///
     /// **Optimization Strategies:**
-    /// - Batch reading: Reads up to 100 records per GIL acquire/release cycle
-    /// - Records are buffered in an internal queue (VecDeque)
-    /// - Subsequent calls return from queue without GIL overhead
-    /// - Reduces GIL contention from N acquire/release to N/100
-    ///
-    /// - Multi-backend support: File paths and bytes use native I/O (zero GIL overhead)
-    /// - Python files use same batching and GIL management
+    /// - Batch parsing: a whole batch (up to 200 records / 300 KB) is parsed
+    ///   in one `py.detach`, releasing the GIL once per batch rather than per
+    ///   record. Parsed records are served from an internal queue.
+    /// - Multi-backend support: file paths and bytes parse with zero GIL
+    ///   overhead; Python files read in chunks under a single GIL hold.
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRecord> {
-        // ===== STEP 1: Read record bytes (GIL held if needed) =====
-        // Must get a Python handle while the GIL is held by PyRefMut.
-        // assume_attached() yields an unbound handle whose py.detach() in
-        // Phase 2 actually releases the GIL; a bound handle (slf.py()) would
-        // not.
+        // Obtain a Python handle while the GIL is held by PyRefMut. The
+        // batched reader releases the GIL internally (py.detach) to parse a
+        // batch, so an unbound handle is required.
         // SAFETY: PyRefMut guarantees the GIL is held for the duration of
         // this call, so the attachment assumption holds. This is the
         // idiomatic way to obtain an unbound handle without re-acquiring,
         // which would panic when the GIL is already held.
         let py = unsafe { Python::assume_attached() };
 
-        // Get mutable reference to reader backend
-        let reader = slf
-            .reader
-            .as_mut()
-            .ok_or_else(|| pyo3::exceptions::PyStopIteration::new_err(()))?;
+        let outcome = {
+            let reader = slf
+                .reader
+                .as_mut()
+                .ok_or_else(|| pyo3::exceptions::PyStopIteration::new_err(()))?;
+            reader.next_record(py)
+        };
 
-        // Call read_next_record_bytes() while holding GIL
-        // State machine: if queue non-empty, pop; else if EOF, return None; else read_batch()
-        let record_bytes = match reader {
-            ReaderType::Python(reader) => match reader.read_next_record_bytes(py) {
-                Ok(Some(bytes)) => bytes,
-                Ok(None) => {
-                    // EOF reached - mark reader as consumed
-                    slf.reader = None;
-                    return Err(pyo3::exceptions::PyStopIteration::new_err(()));
-                },
-                Err(e) => return Err(e.to_py_err()),
-            },
-            ReaderType::Unified(reader) => match reader.read_next_record_bytes(py) {
-                Ok(Some(bytes)) => bytes,
-                Ok(None) => {
-                    // EOF reached - mark reader as consumed
-                    slf.reader = None;
-                    return Err(pyo3::exceptions::PyStopIteration::new_err(()));
-                },
-                Err(e) => return Err(e.to_py_err()),
+        let outcome = match outcome {
+            Some(outcome) => outcome,
+            None => {
+                // Clean end of stream — mark the reader consumed.
+                slf.reader = None;
+                return Err(pyo3::exceptions::PyStopIteration::new_err(()));
             },
         };
 
-        // Stash the chunk for pymarc-compat `current_chunk`. The owned Vec
-        // from read_next_record_bytes is moved into a shared `Arc` that both
-        // the parser (below) and this stash borrow, so retaining the most
-        // recent chunk costs only a refcount bump — no per-record byte copy.
-        let shared = std::sync::Arc::new(record_bytes);
-        slf.last_chunk = Some(std::sync::Arc::clone(&shared));
-
-        // ===== STEP 2: Parse bytes (GIL released) =====
-        // Parse the record while GIL is released to allow other threads to execute.
-        // CRITICAL: The closure returns Result<Option<mrrc::Record>, MarcError>
-        // (NOT PyResult). We defer conversion to PyErr until AFTER detach()
-        // returns (GIL re-acquired) because PyErr construction needs the GIL.
-        // Returning the raw MarcError preserves the typed variant and all
-        // positional context (byte_offset, bytes_near, etc.) through to the
-        // Python exception — collapsing to a generic ParseError::invalid_record
-        // here would lose the typed shape and drop `bytes_near`.
-        let rec_mode = slf.recovery_mode;
-        let val_level = slf.validation_level;
-        let parse_result: Result<Option<mrrc::Record>, Box<mrrc::MarcError>> = py.detach(|| {
-            mrrc::parse_record_from_shared_bytes(&shared, rec_mode, val_level).map_err(Box::new)
-        });
-
-        // ===== STEP 3: Convert to PyRecord (GIL re-acquired) =====
-        // GIL is automatically re-acquired when exiting detach() block.
-        // NOW we can safely construct PyErr from MarcError.
-        match parse_result {
-            Ok(Some(record)) => {
-                // Apply the wrapper-level recovery cap before yielding;
-                // if exceeded, swap in FatalReaderError and mark the
-                // reader consumed so the iterator terminates on the
-                // next call.
-                if let Err(e) = slf.note_record_errors(&record) {
-                    slf.reader = None;
-                    return Err(crate::error::marc_error_to_py_err(*e));
-                }
-                slf.records_yielded = slf.records_yielded.saturating_add(1);
-                Ok(PyRecord::from(record))
-            },
-            Ok(None) => {
-                // Parser returned None (shouldn't happen in middle of record)
-                Err(pyo3::exceptions::PyRuntimeError::new_err(
-                    "Parser returned None for complete record",
-                ))
-            },
-            Err(marc_error) => Err(crate::error::marc_error_to_py_err(*marc_error)),
+        match slf.apply_outcome(outcome)? {
+            Some(record) => Ok(record),
+            None => Err(pyo3::exceptions::PyRuntimeError::new_err(
+                "Parser returned None for complete record",
+            )),
         }
     }
 
@@ -377,8 +248,7 @@ impl PyMARCReader {
     #[getter]
     fn backend_type(&self) -> PyResult<String> {
         match &self.reader {
-            Some(ReaderType::Unified(reader)) => Ok(reader.backend_type().to_string()),
-            Some(ReaderType::Python(_)) => Ok("python_file".to_string()),
+            Some(reader) => Ok(reader.backend_kind().to_string()),
             None => Err(pyo3::exceptions::PyRuntimeError::new_err("Reader consumed")),
         }
     }
@@ -393,6 +263,39 @@ impl PyMARCReader {
 }
 
 impl PyMARCReader {
+    /// Turn a queued [`RecordOutcome`] into the value `__next__` /
+    /// `read_record` return. `Ok(Some(record))` yields a record;
+    /// `Ok(None)` means the parser produced no record for a complete slice
+    /// (callers diverge: EOF for `read_record`, a runtime error for
+    /// `__next__`); `Err` raises. `current_chunk` is updated for every
+    /// outcome that carries bytes (success or failure), matching the prior
+    /// per-record stash; a source-read error leaves it unchanged.
+    fn apply_outcome(&mut self, outcome: RecordOutcome) -> PyResult<Option<PyRecord>> {
+        match outcome {
+            RecordOutcome::Parsed { bytes, record } => {
+                self.last_chunk = Some(bytes);
+                // Apply the wrapper-level recovery cap before yielding; if
+                // exceeded, surface FatalReaderError and consume the reader
+                // so iteration terminates on the next call.
+                if let Err(e) = self.note_record_errors(&record) {
+                    self.reader = None;
+                    return Err(crate::error::marc_error_to_py_err(*e));
+                }
+                self.records_yielded = self.records_yielded.saturating_add(1);
+                Ok(Some(PyRecord::from(record)))
+            },
+            RecordOutcome::ParseFailed { bytes, error } => {
+                self.last_chunk = Some(bytes);
+                Err(crate::error::marc_error_to_py_err(*error))
+            },
+            RecordOutcome::ParseReturnedNone { bytes } => {
+                self.last_chunk = Some(bytes);
+                Ok(None)
+            },
+            RecordOutcome::SourceError(e) => Err(e.to_py_err()),
+        }
+    }
+
     /// Account for a newly-parsed record against the wrapper-level
     /// recovery cap. Adds the record's recovered errors to the
     /// running count and, if the cap has been exceeded, builds the

@@ -2,15 +2,17 @@
 Queue-Based State Machine for __next__() Method
 
 Tests verify that PyMARCReader.__next__() correctly uses the queue-based
-state machine from BatchedMarcReader:
-- STATE 1 (CHECK_QUEUE_NON_EMPTY): If queue has records, pop and return
+state machine in BatchedReader:
+- STATE 1 (CHECK_QUEUE_NON_EMPTY): If the queue has records, pop and return
 - STATE 2 (CHECK_EOF_STATE): If EOF reached, return None idempotently
-- STATE 3 (READ_BATCH): Otherwise, read batch of 100 records
+- STATE 3 (FILL_BATCH): Otherwise, read and parse a batch (up to 200
+  records / 300 KB)
 
 This test suite confirms:
 1. Queue is consulted before I/O (O(1) operation on subsequent calls)
 2. EOF is idempotent (repeated calls return None without I/O)
-3. Batch reading reduces GIL acquire/release from N to N/100
+3. A batch is read under one GIL hold and parsed in a single GIL release,
+   so the GIL is cycled once per batch rather than once per record
 """
 
 import io

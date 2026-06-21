@@ -4,10 +4,8 @@
 mod authority_readers;
 mod backend;
 mod batched_reader;
-mod batched_unified_reader;
 mod bibframe;
 mod boundary_scanner_wrapper;
-mod buffered_reader;
 mod chunked_py_reader;
 mod error;
 mod formats;
@@ -18,7 +16,6 @@ mod query;
 mod rayon_parser_pool_wrapper;
 mod reader_helpers;
 mod readers;
-mod unified_reader;
 mod wrappers;
 mod writers;
 
