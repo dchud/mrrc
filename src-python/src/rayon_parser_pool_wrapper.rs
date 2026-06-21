@@ -45,16 +45,22 @@ use pyo3::prelude::*;
 /// ```
 #[pyfunction]
 pub fn parse_batch_parallel(
-    _py: Python<'_>,
+    py: Python<'_>,
     boundaries: Vec<(usize, usize)>,
-    buffer: &[u8],
+    buffer: Vec<u8>,
 ) -> PyResult<Vec<PyRecord>> {
-    // Call the Rust implementation
-    let records = rayon_parser_pool::parse_batch_parallel(&boundaries, buffer).map_err(|e| {
-        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Parse error: {}", e))
-    })?;
+    // Release the GIL for the Rayon parallel parse so other Python threads can
+    // run — otherwise the whole point (parallelism) is defeated. `buffer` is an
+    // owned `Vec<u8>` (copied at extraction), not a borrow into Python memory:
+    // a borrowed `&[u8]` into a `bytearray` could be mutated or freed by another
+    // thread while the GIL is released, which would be unsound here.
+    let records = py
+        .detach(|| rayon_parser_pool::parse_batch_parallel(&boundaries, &buffer).map_err(Box::new))
+        .map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Parse error: {}", e))
+        })?;
 
-    // Convert Rust records to PyRecord wrappers (GIL already held)
+    // Convert Rust records to PyRecord wrappers (GIL re-acquired after detach)
     Ok(records.into_iter().map(PyRecord::from).collect())
 }
 
@@ -89,17 +95,22 @@ pub fn parse_batch_parallel(
 /// ```
 #[pyfunction]
 pub fn parse_batch_parallel_limited(
-    _py: Python<'_>,
+    py: Python<'_>,
     boundaries: Vec<(usize, usize)>,
-    buffer: &[u8],
+    buffer: Vec<u8>,
     limit: usize,
 ) -> PyResult<Vec<PyRecord>> {
-    // Call the Rust implementation
-    let records = rayon_parser_pool::parse_batch_parallel_limited(&boundaries, buffer, limit)
+    // Release the GIL for the parallel parse (see `parse_batch_parallel` for
+    // why `buffer` must be owned, not a borrow into Python memory).
+    let records = py
+        .detach(|| {
+            rayon_parser_pool::parse_batch_parallel_limited(&boundaries, &buffer, limit)
+                .map_err(Box::new)
+        })
         .map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Parse error: {}", e))
         })?;
 
-    // Convert to PyRecord (GIL already held)
+    // Convert to PyRecord (GIL re-acquired after detach)
     Ok(records.into_iter().map(PyRecord::from).collect())
 }

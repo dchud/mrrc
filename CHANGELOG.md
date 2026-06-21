@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The parallel parse helpers (`parse_batch_parallel` / `parse_batch_parallel_limited`) and the
+  blocking `ProducerConsumerPipeline` reads now release the GIL during the parallel parse and the
+  channel wait, so other Python threads keep running instead of being blocked for the duration.
+  (The parallel helpers now take ownership of the buffer, required for sound GIL release.)
 - `Record.get_fields()` with no arguments is faster: it made one PyO3 call per control tag
   (nine) plus one per data field, and now fetches all control fields in a single call.
   Control fields come back in record order rather than fixed ascending-tag order (a
