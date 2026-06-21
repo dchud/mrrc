@@ -112,6 +112,12 @@ Version 0.8.2 is suitable for testing but remains experimental. Before a 1.0 rel
 2. **Code review** — Thorough review of the codebase, particularly the Rust core and `PyO3` bindings
 3. **Performance analysis** — Profile with production workloads, optimize bottlenecks, and update benchmark documentation
 
+## Contributing
+
+Contributions are welcome — see the [contributing guide](CONTRIBUTING.md) for
+setup, testing, and pull request instructions. To report a security
+vulnerability, see the [security policy](SECURITY.md).
+
 ## License
 
 MIT

@@ -4,7 +4,9 @@ Thank you for your interest in contributing to MRRC! This document provides guid
 
 ## Code of Conduct
 
-Be respectful, inclusive, and professional in all interactions. We're building a library for librarians and information professionals—let's maintain that spirit of collaboration.
+Please be respectful and inclusive in all interactions.
+
+To report a security vulnerability, see the [security policy](SECURITY.md) instead of opening a public issue.
 
 ## Getting Started
 
