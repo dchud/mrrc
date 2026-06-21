@@ -6,8 +6,12 @@
 //! yields exactly what `MarcReader` yields for the same bytes — including
 //! error behavior on truncated input.
 
-use mrrc::{MarcReader, RecoveryMode, ValidationLevel, parse_record_from_bytes};
+use mrrc::{
+    MarcReader, RecoveryMode, ValidationLevel, parse_record_from_bytes,
+    parse_record_from_shared_bytes,
+};
 use std::io::Cursor;
+use std::sync::Arc;
 
 fn fixture_1k() -> Vec<u8> {
     let path = concat!(
@@ -57,6 +61,43 @@ fn slice_parse_matches_reader_parse_over_the_corpus() {
             format!("{from_slice:?}"),
             "record {count} diverged between reader and slice parse"
         );
+        count += 1;
+    }
+    assert_eq!(count, 1000);
+}
+
+#[test]
+fn shared_bytes_parse_matches_owned_bytes_parse_over_the_corpus() {
+    // `parse_record_from_shared_bytes` is the zero-copy entry point the
+    // Python bindings use so the `current_chunk` stash can share one
+    // allocation with the parser. It must yield exactly what the owned-bytes
+    // entry point yields for the same bytes.
+    let stream = fixture_1k();
+    let mut count = 0;
+    for record_bytes in split_records(&stream) {
+        let shared = Arc::new(record_bytes.clone());
+        let from_owned = parse_record_from_bytes(
+            record_bytes,
+            RecoveryMode::Strict,
+            ValidationLevel::Structural,
+        )
+        .expect("owned parse")
+        .expect("owned record");
+        let from_shared = parse_record_from_shared_bytes(
+            &shared,
+            RecoveryMode::Strict,
+            ValidationLevel::Structural,
+        )
+        .expect("shared parse")
+        .expect("shared record");
+        assert_eq!(
+            format!("{from_owned:?}"),
+            format!("{from_shared:?}"),
+            "record {count} diverged between owned and shared parse"
+        );
+        // The caller still holds the buffer after parsing — the whole point
+        // of the shared entry point.
+        assert!(!shared.is_empty());
         count += 1;
     }
     assert_eq!(count, 1000);

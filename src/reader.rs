@@ -344,11 +344,37 @@ pub fn parse_record_from_bytes(
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
 ) -> Result<Option<Record>> {
+    parse_record_from_shared_bytes(
+        &std::sync::Arc::new(record_bytes),
+        recovery_mode,
+        validation_level,
+    )
+}
+
+/// Parse one complete MARC record from a buffer the caller already holds
+/// behind a shared [`Arc`](std::sync::Arc), without taking ownership of the bytes.
+///
+/// Identical in behavior to [`parse_record_from_bytes`], but lets a caller
+/// that must retain the record bytes after parsing — for example to expose
+/// pymarc's `current_chunk` — share a single allocation between the parser
+/// and its own state instead of cloning. The parser borrows the buffer; the
+/// caller keeps its `Arc` handle alive for as long as it needs the bytes.
+///
+/// # Errors
+///
+/// Same as [`parse_record_from_bytes`]: malformed bytes yield an error (in
+/// `Strict` mode the first structural defect; in recovery modes only
+/// unrecoverable ones).
+pub fn parse_record_from_shared_bytes(
+    record_bytes: &std::sync::Arc<Vec<u8>>,
+    recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
+) -> Result<Option<Record>> {
     let mut ctx = ParseContext::new();
     let mut cap = RecoveryCap::new();
     let mut errors = Vec::new();
     let result = crate::iso2709_skeleton::parse_iso2709_record_from_bytes::<BibBuilder>(
-        &std::sync::Arc::new(record_bytes),
+        record_bytes,
         &mut ctx,
         &mut cap,
         recovery_mode,

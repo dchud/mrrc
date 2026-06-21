@@ -1762,16 +1762,17 @@ class MARCReader:
             validation_level=validation_level,
             max_errors=max_errors,
         )
-        # pymarc-compat accessors populated by __next__. `current_chunk`
-        # tracks the bytes of the most recent record chunk read from the
-        # source (regardless of whether the parse succeeded);
-        # `current_exception` is the typed mrrc exception caught from
-        # the most recent parse attempt, or None on a clean read. Both
-        # mirror pymarc.MARCReader semantics so existing pymarc-shape
-        # error-diagnosis code (``if reader.current_exception: ...``)
-        # works against mrrc unchanged.
+        # pymarc-compat accessors fed by __next__. `current_exception` is
+        # the typed mrrc exception caught from the most recent parse attempt,
+        # or None on a clean read. `current_chunk` (see the property below)
+        # is read lazily from the inner reader so iterating without inspecting
+        # it copies no record bytes into Python. `_chunk_live` records whether
+        # __next__ has read a chunk yet; iter_with_errors deliberately leaves
+        # it False so it never feeds these accessors. Both mirror
+        # pymarc.MARCReader semantics so existing pymarc-shape error-diagnosis
+        # code (``if reader.current_exception: ...``) works unchanged.
         self.current_exception: Exception | None = None
-        self.current_chunk: bytes | None = None
+        self._chunk_live = False
 
     def __iter__(self):
         """Iterate over records."""
@@ -1793,13 +1794,28 @@ class MARCReader:
             raise
         except Exception as e:
             if self._permissive:
-                self.current_chunk = self._inner.last_chunk
+                self._chunk_live = True
                 self.current_exception = e
                 return None
             raise
-        self.current_chunk = self._inner.last_chunk
+        self._chunk_live = True
         self.current_exception = None
         return _wrap_record(record)
+
+    @property
+    def current_chunk(self) -> bytes | None:
+        """Bytes of the most recent record read by ``__next__``.
+
+        Fetched lazily from the inner reader on access, so iterating without
+        inspecting ``current_chunk`` copies no record bytes into Python.
+        Mirrors pymarc: holds the most recent read's chunk whether the parse
+        succeeded or was swallowed under ``permissive=True``, and retains its
+        value after the iterator is exhausted. Stays ``None`` until the first
+        ``__next__``; ``iter_with_errors`` does not feed it.
+        """
+        if not self._chunk_live:
+            return None
+        return self._inner.last_chunk
 
     @property
     def backend_type(self) -> str:

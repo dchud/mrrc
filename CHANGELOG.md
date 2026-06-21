@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no reader I/O and no per-record copies. The Python `MARCReader` read path now uses it,
   collapsing the former chain of per-record buffer copies between the source and the
   parser to a single pymarc-compatibility stash (`current_chunk`).
+- `parse_record_from_shared_bytes`: parse from a buffer the caller already holds behind an
+  `Arc`, without taking ownership. The Python `MARCReader` uses it so the `current_chunk`
+  stash shares one allocation with the parser instead of cloning, and `current_chunk` is now
+  read lazily — iterating without inspecting it copies no record bytes into Python.
 - Criterion benches for the serialization formats that had no CI perf signal — CSV, MODS,
   Dublin Core, BIBFRAME (Turtle), and MARC-in-JSON (both directions for MODS and
   MARC-in-JSON) — plus a single-thread parser-pool bench that tracks the
