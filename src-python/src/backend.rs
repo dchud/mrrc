@@ -1,9 +1,9 @@
-//! Backend abstraction for ReaderBackend enum
+//! Backend abstraction for `ReaderBackend` enum
 //!
 //! This module provides a unified interface for different input sources:
-//! - `RustFile`: Direct file I/O via std::fs::File
-//! - `CursorBackend`: In-memory reads from bytes via std::io::Cursor
-//! - `PythonFile`: Python file-like objects (calls .read() method)
+//! - `RustFile`: Direct file I/O via `std::fs::File`
+//! - `CursorBackend`: In-memory reads from bytes via `std::io::Cursor`
+//! - `PythonFile`: Python file-like objects (calls .`read()` method)
 
 use crate::chunked_py_reader::ChunkedPyFileReader;
 use crate::parse_error::ParseError;
@@ -45,9 +45,9 @@ impl RecordByteSource for ReaderBackend {
 /// Unified backend interface for reading MARC records from different sources
 ///
 /// Supports 8 input types:
-/// - str, pathlib.Path → RustFile
-/// - bytes, bytearray → CursorBackend
-/// - file object, BytesIO, socket.socket → PythonFile
+/// - str, pathlib.Path → `RustFile`
+/// - bytes, bytearray → `CursorBackend`
+/// - file object, `BytesIO`, socket.socket → `PythonFile`
 ///
 /// The backend carries the active [`RecoveryMode`] so that short body
 /// reads can route to either a fatal `TruncatedRecord` (strict) or a
@@ -62,31 +62,31 @@ pub struct ReaderBackend {
 
 #[derive(Debug)]
 enum BackendKind {
-    /// Buffered file I/O via std::fs::File
+    /// Buffered file I/O via `std::fs::File`
     /// Input: str path or pathlib.Path
     RustFile(BufReader<File>),
 
-    /// In-memory reads from bytes via std::io::Cursor
+    /// In-memory reads from bytes via `std::io::Cursor`
     /// Input: bytes or bytearray
     /// Enables thread-safe parallel parsing without Python interaction
     CursorBackend(Cursor<Vec<u8>>),
 
     /// Python file-like object (fallback for custom types)
-    /// Input: Any object with .read() method
+    /// Input: Any object with .`read()` method
     /// Reads in large chunks and slices records out in Rust; the GIL is
     /// held only while a chunk is being read, not per record.
     PythonFile(ChunkedPyFileReader),
 }
 
 impl ReaderBackend {
-    /// Create a ReaderBackend from a Python object
+    /// Create a `ReaderBackend` from a Python object
     ///
     /// Type detection order:
-    /// 1. str → RustFile
-    /// 2. pathlib.Path → RustFile
-    /// 3. bytes/bytearray → CursorBackend
-    /// 4. Object with .read() method → PythonFile
-    /// 5. Unknown type → TypeError
+    /// 1. str → `RustFile`
+    /// 2. pathlib.Path → `RustFile`
+    /// 3. bytes/bytearray → `CursorBackend`
+    /// 4. Object with .`read()` method → `PythonFile`
+    /// 5. Unknown type → `TypeError`
     ///
     /// # Arguments
     /// * `source` - Python object (str, Path, bytes, bytearray, or file-like)
@@ -94,8 +94,8 @@ impl ReaderBackend {
     ///
     /// # Errors
     /// - `TypeError` if input type is not supported
-    /// - `FileNotFoundError` if file path doesn't exist (RustFile)
-    /// - `IOError` if file cannot be opened (RustFile)
+    /// - `FileNotFoundError` if file path doesn't exist (`RustFile`)
+    /// - `IOError` if file cannot be opened (`RustFile`)
     pub fn from_python(
         source: &Bound<'_, PyAny>,
         _py: Python,
@@ -121,19 +121,16 @@ impl ReaderBackend {
                 ))),
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                     Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
-                        "No such file or directory: '{}'",
-                        path_str
+                        "No such file or directory: '{path_str}'"
                     )))
                 },
                 Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                     Err(pyo3::exceptions::PyPermissionError::new_err(format!(
-                        "Permission denied: '{}'",
-                        path_str
+                        "Permission denied: '{path_str}'"
                     )))
                 },
                 Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
-                    "Failed to open file '{}': {}",
-                    path_str, e
+                    "Failed to open file '{path_str}': {e}"
                 ))),
             };
         }
@@ -152,19 +149,16 @@ impl ReaderBackend {
                 ))),
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                     Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
-                        "No such file or directory: '{}'",
-                        path_str
+                        "No such file or directory: '{path_str}'"
                     )))
                 },
                 Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                     Err(pyo3::exceptions::PyPermissionError::new_err(format!(
-                        "Permission denied: '{}'",
-                        path_str
+                        "Permission denied: '{path_str}'"
                     )))
                 },
                 Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
-                    "Failed to open file '{}': {}",
-                    path_str, e
+                    "Failed to open file '{path_str}': {e}"
                 ))),
             };
         }
@@ -189,11 +183,10 @@ impl ReaderBackend {
         // 5. Unknown type - fail fast with descriptive error
         let type_name = source.get_type().name()?;
         Err(pyo3::exceptions::PyTypeError::new_err(format!(
-            "Unsupported input type: {}. Supported types: str (file path), pathlib.Path, \
+            "Unsupported input type: {type_name}. Supported types: str (file path), pathlib.Path, \
              bytes, bytearray, or file-like object (with .read() method). \
              Examples: 'records.mrc', Path('records.mrc'), b'binary data', \
-             open('records.mrc', 'rb'), io.BytesIO(data), socket.socket(...)",
-            type_name
+             open('records.mrc', 'rb'), io.BytesIO(data), socket.socket(...)"
         )))
     }
 
@@ -208,11 +201,11 @@ impl ReaderBackend {
 
     /// Read the next MARC record from this backend
     ///
-    /// For RustFile and CursorBackend: reads directly without GIL
-    /// For PythonFile: requires GIL to call .read()
+    /// For `RustFile` and `CursorBackend`: reads directly without GIL
+    /// For `PythonFile`: requires GIL to call .`read()`
     ///
     /// # Arguments
-    /// * `py` - Python interpreter handle (required for PythonFile)
+    /// * `py` - Python interpreter handle (required for `PythonFile`)
     ///
     /// # Returns
     /// - `Ok(Some(bytes))` - Successfully read record bytes
@@ -233,7 +226,7 @@ impl ReaderBackend {
         }
     }
 
-    /// Internal helper: Read record bytes from any std::io::Read implementation
+    /// Internal helper: Read record bytes from any `std::io::Read` implementation
     fn read_record_bytes_from_reader<R: Read>(
         reader: &mut R,
         recovery_mode: RecoveryMode,
@@ -247,8 +240,7 @@ impl ReaderBackend {
             },
             Err(e) => {
                 return Err(ParseError::io_error(format!(
-                    "Failed to read record leader: {}",
-                    e
+                    "Failed to read record leader: {e}"
                 )));
             },
         }
@@ -279,7 +271,7 @@ impl ReaderBackend {
         let bytes_read = reader
             .take(expected_body_len as u64)
             .read_to_end(&mut record_data)
-            .map_err(|e| ParseError::io_error(format!("Failed to read record data: {}", e)))?;
+            .map_err(|e| ParseError::io_error(format!("Failed to read record data: {e}")))?;
         if bytes_read != expected_body_len {
             // Truncation: the leader (24 bytes) was read, then the
             // body fell short. In Strict mode this surfaces as a

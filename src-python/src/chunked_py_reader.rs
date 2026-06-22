@@ -77,30 +77,27 @@ impl ChunkedPyFileReader {
                 .read_method
                 .bind(py)
                 .call1((CHUNK_SIZE,))
-                .map_err(|e| ParseError::io_error(format!("Python read() failed: {}", e)))?;
+                .map_err(|e| ParseError::io_error(format!("Python read() failed: {e}")))?;
 
             // Fast path: a `bytes` return is borrowed and copied once into
             // the buffer. `bytearray`/other buffer types fall back to an
             // owned extract so custom file-likes keep working.
-            match result.cast::<PyBytes>() {
-                Ok(py_bytes) => {
-                    let slice = py_bytes.as_bytes();
-                    if slice.is_empty() {
-                        self.eof = true;
-                        break;
-                    }
-                    self.buffer.extend_from_slice(slice);
-                },
-                Err(_) => {
-                    let owned: Vec<u8> = result.extract().map_err(|_| {
-                        ParseError::invalid_record("read() must return bytes".to_string())
-                    })?;
-                    if owned.is_empty() {
-                        self.eof = true;
-                        break;
-                    }
-                    self.buffer.extend_from_slice(&owned);
-                },
+            if let Ok(py_bytes) = result.cast::<PyBytes>() {
+                let slice = py_bytes.as_bytes();
+                if slice.is_empty() {
+                    self.eof = true;
+                    break;
+                }
+                self.buffer.extend_from_slice(slice);
+            } else {
+                let owned: Vec<u8> = result.extract().map_err(|_| {
+                    ParseError::invalid_record("read() must return bytes".to_string())
+                })?;
+                if owned.is_empty() {
+                    self.eof = true;
+                    break;
+                }
+                self.buffer.extend_from_slice(&owned);
             }
         }
         Ok(())
@@ -129,8 +126,7 @@ impl ChunkedPyFileReader {
             // backend.rs Python path's "Incomplete leader" error.
             let near = &self.buffer[self.pos..];
             return Err(ParseError::invalid_record(format!(
-                "Incomplete leader: expected 24 bytes, got {}",
-                avail
+                "Incomplete leader: expected 24 bytes, got {avail}"
             ))
             .with_bytes_near(near, 0));
         }

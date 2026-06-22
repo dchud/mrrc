@@ -14,35 +14,37 @@ use std::io::BufWriter;
 /// Internal enum for different writer backends
 #[allow(clippy::large_enum_variant)]
 enum WriterBackend {
-    /// Python file-like object (e.g., BytesIO, open file in 'wb' mode)
+    /// Python file-like object (e.g., `BytesIO`, open file in 'wb' mode)
     /// Requires GIL for I/O operations
     PythonFile { file_obj: Py<PyAny> },
-    /// Pure Rust file I/O via std::fs::File (no GIL overhead)
+    /// Pure Rust file I/O via `std::fs::File` (no GIL overhead)
     /// Used when writer initialized with file path string
     RustFile { writer: BufWriter<File> },
 }
 
-/// Python wrapper for MarcWriter with efficient GIL release pattern
+/// Python wrapper for `MarcWriter` with efficient GIL release pattern
 ///
 /// Enables GIL release during CPU-intensive serialization:
-/// - Extract record data from Python PyRecord (GIL held)
+/// - Extract record data from Python `PyRecord` (GIL held)
 /// - Serialize record to bytes (GIL released)
 /// - Write bytes to backend (GIL management varies by backend)
 ///
 /// ## Backends
 ///
-/// **PythonFile:** File-like Python objects (BytesIO, file handles from open())
-/// - Phase 3 uses GIL (calls Python .write() method)
+/// **`PythonFile`:** File-like Python objects (`BytesIO`, file handles from `open()`)
+/// - Phase 3 uses GIL (calls Python .`write()` method)
 /// - Allows concurrent writes to different file objects
 /// - Limited concurrency due to GIL contention
 ///
-/// **RustFile:** Rust file paths (str, pathlib.Path)
+/// **`RustFile`:** Rust file paths (str, pathlib.Path)
 /// - Phase 3 uses no GIL (pure Rust I/O)
 /// - Enables near-native concurrent performance
 /// - Ideal for write-heavy workloads
 ///
 /// This allows multiple threads to write different files concurrently.
 #[pyclass(name = "MARCWriter")]
+// wraps WriterBackend which does not implement Debug
+#[allow(missing_debug_implementations)]
 pub struct PyMARCWriter {
     backend: Option<WriterBackend>,
     closed: bool,
@@ -50,12 +52,12 @@ pub struct PyMARCWriter {
 
 #[pymethods]
 impl PyMARCWriter {
-    /// Create a new MARCWriter from any supported source
+    /// Create a new `MARCWriter` from any supported source
     ///
     /// Accepts:
-    /// - str path (e.g., 'output.mrc') → RustFile backend (no GIL)
-    /// - pathlib.Path → RustFile backend (no GIL)
-    /// - Python file object → PythonFile backend (GIL managed)
+    /// - str path (e.g., 'output.mrc') → `RustFile` backend (no GIL)
+    /// - pathlib.Path → `RustFile` backend (no GIL)
+    /// - Python file object → `PythonFile` backend (GIL managed)
     ///
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, or file-like object
@@ -66,8 +68,7 @@ impl PyMARCWriter {
             // String path → open with Rust for zero-GIL I/O
             let file = File::create(&path_str).map_err(|e| {
                 pyo3::exceptions::PyIOError::new_err(format!(
-                    "Failed to open file '{}' for writing: {}",
-                    path_str, e
+                    "Failed to open file '{path_str}' for writing: {e}"
                 ))
             })?;
 
@@ -87,8 +88,7 @@ impl PyMARCWriter {
         {
             let file = File::create(&path_str).map_err(|e| {
                 pyo3::exceptions::PyIOError::new_err(format!(
-                    "Failed to open file '{}' for writing: {}",
-                    path_str, e
+                    "Failed to open file '{path_str}' for writing: {e}"
                 ))
             })?;
 
@@ -120,15 +120,15 @@ impl PyMARCWriter {
     /// Write a record to the file with efficient GIL management
     ///
     /// Implements efficient GIL release for concurrent performance:
-    /// - **Phase 1 (GIL held):** Extract record data from Python PyRecord object
+    /// - **Phase 1 (GIL held):** Extract record data from Python `PyRecord` object
     /// - **Phase 2 (GIL released):** Serialize record to MARC bytes (CPU-intensive)
     /// - **Phase 3 (GIL held):** Write serialized bytes to backend
     ///
     /// This pattern allows multiple threads to write different files concurrently:
     /// - Each thread releases the GIL during Phase 2 (serialization)
     /// - Only acquires GIL for Phase 1 (data extraction) and Phase 3 (I/O)
-    /// - RustFile backend (Phase 3) doesn't need GIL, enabling near-native performance
-    /// - PythonFile backend (Phase 3) requires GIL for calling Python .write() method
+    /// - `RustFile` backend (Phase 3) doesn't need GIL, enabling near-native performance
+    /// - `PythonFile` backend (Phase 3) requires GIL for calling Python .`write()` method
     ///
     /// # Errors
     /// - Returns error if writer has been closed
@@ -187,15 +187,13 @@ impl PyMARCWriter {
                 let file_ref = file_obj.bind(py);
                 let write_method = file_ref.getattr("write").map_err(|e| {
                     pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "File object has no write method: {}",
-                        e
+                        "File object has no write method: {e}"
                     ))
                 })?;
 
                 write_method.call1((record_bytes,)).map_err(|e| {
                     pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "Failed to write record bytes: {}",
-                        e
+                        "Failed to write record bytes: {e}"
                     ))
                 })?;
             },
@@ -205,8 +203,7 @@ impl PyMARCWriter {
                 use std::io::Write;
                 writer.write_all(&record_bytes).map_err(|e| {
                     pyo3::exceptions::PyIOError::new_err(format!(
-                        "Failed to write record bytes: {}",
-                        e
+                        "Failed to write record bytes: {e}"
                     ))
                 })?;
             },
@@ -220,7 +217,7 @@ impl PyMARCWriter {
         Ok(())
     }
 
-    /// Alias for write_record (for pymarc compatibility)
+    /// Alias for `write_record` (for pymarc compatibility)
     pub fn write(&mut self, record: &PyRecord) -> PyResult<()> {
         self.write_record(record)
     }
@@ -231,8 +228,8 @@ impl PyMARCWriter {
     /// Safe to call multiple times (idempotent).
     ///
     /// ## GIL Management
-    /// - **PythonFile:** GIL is held while calling Python flush() method
-    /// - **RustFile:** No GIL needed (pure Rust I/O)
+    /// - **`PythonFile`:** GIL is held while calling Python `flush()` method
+    /// - **`RustFile`:** No GIL needed (pure Rust I/O)
     pub fn close(&mut self) -> PyResult<()> {
         if !self.closed {
             match &mut self.backend {

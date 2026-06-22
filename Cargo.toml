@@ -122,13 +122,15 @@ toml = "1.1"
 anyhow = "1.0"
 flate2 = "1.0"
 
-# Lint configuration following Rust API Guidelines
-[lints.rust]
+# Lint configuration following Rust API Guidelines. Defined at the workspace
+# level so both the core crate and the mrrc-python bindings crate inherit one
+# regime — each opts in with `[lints]\nworkspace = true`.
+[workspace.lints.rust]
 unsafe_code = "deny"
 missing_docs = "warn"
 missing_debug_implementations = "warn"
 
-[lints.clippy]
+[workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
 # Restrict to reasonable cognitive complexity
@@ -139,6 +141,10 @@ module_name_repetitions = "allow"
 similar_names = "allow"
 # Type complexity is managed separately
 type_complexity = "allow"
+
+# The mrrc core crate inherits the workspace lints.
+[lints]
+workspace = true
 
 # Targets that exercise the BIBFRAME module are skipped when the
 # `bibframe` feature is off (e.g. the --no-default-features check).

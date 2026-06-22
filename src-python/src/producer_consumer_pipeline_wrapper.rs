@@ -1,4 +1,4 @@
-//! PyO3 bindings for the Producer-Consumer Pipeline
+//! `PyO3` bindings for the Producer-Consumer Pipeline
 //!
 //! Exposes [`ProducerConsumerPipeline`] as a Python class, enabling high-performance
 //! batch reading with backpressure management from Python code.
@@ -35,6 +35,7 @@ use pyo3::prelude::*;
 /// print(f"Processed {record_count} records")
 /// ```
 #[pyclass(name = "ProducerConsumerPipeline")]
+#[derive(Debug)]
 pub struct PyProducerConsumerPipeline {
     inner: Option<ProducerConsumerPipeline>,
 }

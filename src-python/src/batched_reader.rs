@@ -90,7 +90,7 @@ impl<S: RecordByteSource> BatchedReader<S> {
         }
     }
 
-    /// Backend kind for diagnostics ("rust_file" | "cursor" | "python_file").
+    /// Backend kind for diagnostics ("`rust_file`" | "cursor" | "`python_file`").
     pub fn backend_kind(&self) -> &'static str {
         self.source.backend_kind()
     }

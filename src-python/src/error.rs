@@ -93,15 +93,12 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
         Some(bytes) => kwargs.set_item("found", PyBytes::new(py, bytes))?,
         None => kwargs.set_item("found", py.None())?,
     }
-    match md.bytes_near {
-        Some(window) => {
-            kwargs.set_item("bytes_near", PyBytes::new(py, &window.bytes))?;
-            kwargs.set_item("bytes_near_offset", window.start_offset)?;
-        },
-        None => {
-            kwargs.set_item("bytes_near", py.None())?;
-            kwargs.set_item("bytes_near_offset", py.None())?;
-        },
+    if let Some(window) = md.bytes_near {
+        kwargs.set_item("bytes_near", PyBytes::new(py, &window.bytes))?;
+        kwargs.set_item("bytes_near_offset", window.start_offset)?;
+    } else {
+        kwargs.set_item("bytes_near", py.None())?;
+        kwargs.set_item("bytes_near_offset", py.None())?;
     }
 
     let class_name: &'static str = match err {

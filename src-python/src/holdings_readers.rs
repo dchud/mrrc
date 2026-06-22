@@ -20,14 +20,16 @@ enum HoldingsReaderBackend {
     PythonFile(Py<PyAny>),
 }
 
-/// Python wrapper for HoldingsMarcReader
+/// Python wrapper for `HoldingsMarcReader`
 ///
 /// Reads MARC Holdings records from different sources with automatic
 /// backend selection:
-/// - File paths → RustFile (parallel-safe)
-/// - Bytes/BytesIO → CursorBackend (parallel-safe)
-/// - Python file objects → PythonFile (requires GIL)
+/// - File paths → `RustFile` (parallel-safe)
+/// - Bytes/BytesIO → `CursorBackend` (parallel-safe)
+/// - Python file objects → `PythonFile` (requires GIL)
 #[pyclass(name = "HoldingsMARCReader")]
+// wraps HoldingsReaderBackend which does not implement Debug
+#[allow(missing_debug_implementations)]
 pub struct PyHoldingsMARCReader {
     backend: Option<HoldingsReaderBackend>,
     recovery_mode: RecoveryMode,
@@ -36,7 +38,7 @@ pub struct PyHoldingsMARCReader {
 
 #[pymethods]
 impl PyHoldingsMARCReader {
-    /// Create a new HoldingsMARCReader
+    /// Create a new `HoldingsMARCReader`
     ///
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, bytes, or file-like object
@@ -45,7 +47,7 @@ impl PyHoldingsMARCReader {
     ///   permissive for pymarc-shape parity; the Rust core defaults
     ///   to strict for explicit-error-handling parity with Rust idiom.
     /// * `validation_level` - What counts as an error during parsing:
-    ///   'structural' (default) or 'strict_marc'.
+    ///   'structural' (default) or '`strict_marc`'.
     #[new]
     #[pyo3(signature = (source, *, recovery_mode = "permissive", validation_level = "structural"))]
     pub fn new(
