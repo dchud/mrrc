@@ -53,7 +53,7 @@ jobs:
   notify-failure:
     name: File failure issue
     needs: asan-library-tests
-    if: failure() && github.event_name == 'schedule'
+    if: (failure() || cancelled()) && github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

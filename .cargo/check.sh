@@ -2,6 +2,10 @@
 
 # Local CI-equivalent checks
 # Run before pushing to match GitHub Actions lint.yml
+#
+# Note: cargo-semver-checks runs in CI only (it needs a published crate
+# baseline and is heavier than the other gates here). It is deliberately
+# omitted from this script.
 
 set -e
 
