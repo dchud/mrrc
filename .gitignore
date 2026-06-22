@@ -65,6 +65,10 @@ venv/
 env/
 .env
 
+# Local interpreter selection — pyproject's requires-python and the CI
+# matrix are the authoritative version sources, so this stays per-developer.
+.python-version
+
 # Python build artifacts
 *.egg-info/
 __pycache__/
