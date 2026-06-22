@@ -10,16 +10,16 @@ use crate::batched_reader::{BatchedReader, RecordOutcome};
 use crate::wrappers::PyRecord;
 use pyo3::prelude::*;
 
-/// Python wrapper for MarcReader with efficient GIL management
+/// Python wrapper for `MarcReader` with efficient GIL management
 ///
 /// Implements batch-based GIL optimization for CPU-intensive parsing:
 /// - Read bytes from source efficiently (GIL held only if Python file)
 /// - Parse bytes to MARC records (GIL released, allowing parallelism)
-/// - Convert to PyRecord (GIL re-acquired)
+/// - Convert to `PyRecord` (GIL re-acquired)
 ///
 /// ## Thread Safety
 ///
-/// **IMPORTANT**: MARCReader is NOT thread-safe. Each thread must create its own reader instance.
+/// **IMPORTANT**: `MARCReader` is NOT thread-safe. Each thread must create its own reader instance.
 /// Sharing a single reader across threads causes undefined behavior.
 ///
 /// Correct pattern:
@@ -46,6 +46,7 @@ use pyo3::prelude::*;
 /// - Multiple input types: file paths and bytes parse without touching the
 ///   GIL; Python file objects read in chunks under a single GIL hold per batch.
 #[pyclass(name = "MARCReader")]
+#[derive(Debug)]
 pub struct PyMARCReader {
     /// Batched reader over the unified record-byte backend. `None` once the
     /// stream is exhausted or a fatal cap error has consumed the reader.
@@ -88,12 +89,12 @@ pub struct PyMARCReader {
 
 #[pymethods]
 impl PyMARCReader {
-    /// Create a new MARCReader from any supported source
+    /// Create a new `MARCReader` from any supported source
     ///
     /// Accepts:
-    /// - str path (e.g., 'records.mrc') → RustFile backend (no GIL)
-    /// - pathlib.Path → RustFile backend (no GIL)
-    /// - bytes/bytearray → CursorBackend (no GIL)
+    /// - str path (e.g., 'records.mrc') → `RustFile` backend (no GIL)
+    /// - pathlib.Path → `RustFile` backend (no GIL)
+    /// - bytes/bytearray → `CursorBackend` (no GIL)
     /// - Python file object → chunked Python-file backend (GIL managed)
     ///
     /// # Arguments
@@ -103,7 +104,7 @@ impl PyMARCReader {
     ///   permissive for pymarc-shape parity; the Rust core defaults
     ///   to strict for explicit-error-handling parity with Rust idiom.
     /// * `validation_level` - What counts as an error during parsing:
-    ///   'structural' (default) or 'strict_marc'. Orthogonal to
+    ///   'structural' (default) or '`strict_marc`'. Orthogonal to
     ///   `recovery_mode`.
     /// * `max_errors` - Optional cap on accumulated recovered errors
     ///   per stream in lenient/permissive mode. `None` (default)
@@ -191,17 +192,17 @@ impl PyMARCReader {
     ///
     /// This implements efficient GIL release pattern:
     /// - Step 1: Read record bytes from source (GIL held if Python file)
-    ///   - Uses queue-based state machine (CHECK_QUEUE → CHECK_EOF → READ_BATCH)
+    ///   - Uses queue-based state machine (`CHECK_QUEUE` → `CHECK_EOF` → `READ_BATCH`)
     /// - Step 2: Parse bytes to MARC record (GIL released)
     ///   - This step releases the GIL, allowing other threads to execute
-    /// - Step 3: Convert to PyRecord (GIL re-acquired)
+    /// - Step 3: Convert to `PyRecord` (GIL re-acquired)
     ///
     /// **Concurrency Benefits:**
     /// Using separate readers in multiple threads achieves:
     /// - 2 threads: ~2.0x speedup vs sequential
     /// - 4 threads: ~3.2x speedup vs sequential
     /// - GIL is released during parsing for each record
-    /// - See ThreadPoolExecutor example in MARCReader struct docs
+    /// - See `ThreadPoolExecutor` example in `MARCReader` struct docs
     ///
     /// **Optimization Strategies:**
     /// - Batch parsing: a whole batch (up to 200 records / 300 KB) is parsed
@@ -227,13 +228,10 @@ impl PyMARCReader {
             reader.next_record(py)
         };
 
-        let outcome = match outcome {
-            Some(outcome) => outcome,
-            None => {
-                // Clean end of stream — mark the reader consumed.
-                slf.reader = None;
-                return Err(pyo3::exceptions::PyStopIteration::new_err(()));
-            },
+        let Some(outcome) = outcome else {
+            // Clean end of stream — mark the reader consumed.
+            slf.reader = None;
+            return Err(pyo3::exceptions::PyStopIteration::new_err(()));
         };
 
         match slf.apply_outcome(outcome)? {
@@ -244,7 +242,7 @@ impl PyMARCReader {
         }
     }
 
-    /// Return the backend type: "rust_file", "cursor", or "python_file"
+    /// Return the backend type: "`rust_file`", "cursor", or "`python_file`"
     #[getter]
     fn backend_type(&self) -> PyResult<String> {
         match &self.reader {
@@ -307,7 +305,7 @@ impl PyMARCReader {
     /// Returns `Ok(())` when the cap is disabled (`max_errors=None`
     /// or `Some(0)`) or still under the configured limit.
     ///
-    /// Lives in a non-`#[pymethods]` impl block so PyO3 does not try
+    /// Lives in a non-`#[pymethods]` impl block so `PyO3` does not try
     /// to expose it as a Python method (the `&mrrc::Record` argument
     /// is not a Python-extractable type).
     fn note_record_errors(&mut self, record: &mrrc::Record) -> Result<(), Box<mrrc::MarcError>> {

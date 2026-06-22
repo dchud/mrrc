@@ -1,4 +1,4 @@
-//! Python wrapper for the Rust RecordBoundaryScanner.
+//! Python wrapper for the Rust `RecordBoundaryScanner`.
 //!
 //! This module provides Python bindings to the Rust `RecordBoundaryScanner` for
 //! efficient MARC record boundary detection using SIMD-accelerated memchr.
@@ -6,7 +6,7 @@
 use mrrc::boundary_scanner::RecordBoundaryScanner as RustBoundaryScanner;
 use pyo3::prelude::*;
 
-/// Python wrapper for RecordBoundaryScanner.
+/// Python wrapper for `RecordBoundaryScanner`.
 ///
 /// Scans MARC record boundaries by detecting 0x1E delimiters in binary data.
 /// Returns (offset, length) tuples for each complete record found.
@@ -25,13 +25,14 @@ use pyo3::prelude::*;
 ///     # Process record_bytes...
 /// ```
 #[pyclass(name = "RecordBoundaryScanner")]
+#[derive(Debug)]
 pub struct PyRecordBoundaryScanner {
     inner: RustBoundaryScanner,
 }
 
 #[pymethods]
 impl PyRecordBoundaryScanner {
-    /// Create a new RecordBoundaryScanner.
+    /// Create a new `RecordBoundaryScanner`.
     ///
     /// The scanner uses SIMD-accelerated memchr for efficient boundary detection.
     #[new]

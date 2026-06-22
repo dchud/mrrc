@@ -1,5 +1,20 @@
-// MRRC Python wrapper using PyO3
-// This module provides Python bindings to the Rust MARC library
+//! Python bindings for the `mrrc` MARC library, exposed as the `_mrrc`
+//! extension module via `PyO3`.
+
+// PyO3 extension code legitimately uses `unsafe` to cross the GIL boundary and
+// hand buffers to Python; allow it crate-wide here (the shared workspace lints
+// deny `unsafe_code` by default for the safe-Rust core).
+#![allow(unsafe_code)]
+// `unnecessary_wraps` and `needless_pass_by_value` are allowed crate-wide
+// because they fire pervasively on the binding surface for sound reasons:
+// Python protocol methods (`__iter__`, `__exit__`, `close`, the `to_json`
+// converters) return `PyResult` for protocol conformance and forward
+// compatibility even where a given impl is currently infallible; and
+// `#[pyfunction]` arguments are extracted by value by PyO3 — for the parallel
+// parsers the owned `Vec<u8>` buffer is load-bearing, since a borrow into
+// Python memory could be freed or mutated across the GIL release.
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::needless_pass_by_value)]
 
 mod authority_readers;
 mod backend;

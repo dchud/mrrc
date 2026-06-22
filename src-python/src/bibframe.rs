@@ -34,14 +34,14 @@ use pyo3::prelude::*;
 /// config.set_authority_linking(True)
 /// ```
 #[pyclass(name = "BibframeConfig", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyBibframeConfig {
     pub(crate) inner: BibframeConfig,
 }
 
 #[pymethods]
 impl PyBibframeConfig {
-    /// Create a new BibframeConfig with default settings.
+    /// Create a new `BibframeConfig` with default settings.
     #[new]
     fn new() -> Self {
         Self {
@@ -75,7 +75,7 @@ impl PyBibframeConfig {
     /// * `format` - One of: "rdf-xml", "jsonld", "turtle", "ntriples"
     ///
     /// # Raises
-    /// ValueError: If format is not recognized
+    /// `ValueError`: If format is not recognized
     fn set_output_format(&mut self, format: &str) -> PyResult<()> {
         self.inner.output_format = parse_rdf_format(format)?;
         Ok(())
@@ -200,6 +200,7 @@ impl PyBibframeConfig {
 /// ntriples = graph.serialize("ntriples")
 /// ```
 #[pyclass(name = "RdfGraph")]
+#[derive(Debug)]
 pub struct PyRdfGraph {
     pub(crate) inner: RdfGraph,
 }
@@ -233,7 +234,7 @@ impl PyRdfGraph {
     /// The serialized RDF as a string
     ///
     /// # Raises
-    /// ValueError: If format is not recognized or serialization fails
+    /// `ValueError`: If format is not recognized or serialization fails
     fn serialize(&self, format: &str) -> PyResult<String> {
         let rdf_format = parse_rdf_format(format)?;
         self.inner
@@ -248,10 +249,10 @@ impl PyRdfGraph {
     /// * `format` - One of: "rdf-xml", "jsonld", "turtle", "ntriples"
     ///
     /// # Returns
-    /// A new RdfGraph instance
+    /// A new `RdfGraph` instance
     ///
     /// # Raises
-    /// ValueError: If format is not recognized or parsing fails
+    /// `ValueError`: If format is not recognized or parsing fails
     #[staticmethod]
     fn parse(data: &str, format: &str) -> PyResult<PyRdfGraph> {
         let rdf_format = parse_rdf_format(format)?;
@@ -262,7 +263,7 @@ impl PyRdfGraph {
     /// Get all triples as a list of (subject, predicate, object) tuples.
     ///
     /// # Returns
-    /// A list of tuples where each tuple is (subject_str, predicate_str, object_str)
+    /// A list of tuples where each tuple is (`subject_str`, `predicate_str`, `object_str`)
     fn triples(&self) -> Vec<(String, String, String)> {
         self.inner
             .triples()
@@ -291,7 +292,7 @@ impl PyRdfGraph {
 /// * `config` - Configuration options for the conversion
 ///
 /// # Returns
-/// An RdfGraph containing the BIBFRAME representation
+/// An `RdfGraph` containing the BIBFRAME representation
 ///
 /// # Example
 ///
@@ -328,7 +329,7 @@ pub fn py_marc_to_bibframe(record: &PyRecord, config: &PyBibframeConfig) -> PyRd
 /// A MARC Record representing the BIBFRAME data
 ///
 /// # Raises
-/// ValueError: If the graph cannot be converted
+/// `ValueError`: If the graph cannot be converted
 ///
 /// # Example
 ///
@@ -356,28 +357,27 @@ fn parse_rdf_format(format: &str) -> PyResult<RdfFormat> {
         "turtle" | "ttl" | "text/turtle" => Ok(RdfFormat::Turtle),
         "ntriples" | "nt" | "n-triples" | "application/n-triples" => Ok(RdfFormat::NTriples),
         _ => Err(PyValueError::new_err(format!(
-            "Unknown RDF format: '{}'. Use one of: rdf-xml, jsonld, turtle, ntriples",
-            format
+            "Unknown RDF format: '{format}'. Use one of: rdf-xml, jsonld, turtle, ntriples"
         ))),
     }
 }
 
-/// Convert an RdfNode to a string representation.
+/// Convert an `RdfNode` to a string representation.
 fn node_to_string(node: &RdfNode) -> String {
     match node {
-        RdfNode::Uri(uri) => format!("<{}>", uri),
-        RdfNode::BlankNode(id) => format!("_:{}", id),
+        RdfNode::Uri(uri) => format!("<{uri}>"),
+        RdfNode::BlankNode(id) => format!("_:{id}"),
         RdfNode::Literal {
             value,
             language,
             datatype,
         } => {
             if let Some(lang) = language {
-                format!("\"{}\"@{}", value, lang)
+                format!("\"{value}\"@{lang}")
             } else if let Some(dt) = datatype {
-                format!("\"{}\"^^<{}>", value, dt)
+                format!("\"{value}\"^^<{dt}>")
             } else {
-                format!("\"{}\"", value)
+                format!("\"{value}\"")
             }
         },
     }

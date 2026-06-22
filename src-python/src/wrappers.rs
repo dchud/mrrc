@@ -17,7 +17,7 @@ use pyo3::prelude::*;
 /// leader.bibliographic_level = 'm'  # Monograph
 /// ```
 #[pyclass(name = "Leader", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyLeader {
     pub inner: Leader,
 }
@@ -282,7 +282,7 @@ impl PyLeader {
     /// ```
     #[staticmethod]
     pub fn describe_value(position: usize, value: &str) -> Option<String> {
-        Leader::describe_value(position, value).map(|s| s.to_string())
+        Leader::describe_value(position, value).map(std::string::ToString::to_string)
     }
 
     /// Check if a value is valid for a specific leader position.
@@ -310,7 +310,7 @@ impl PyLeader {
         Leader::is_valid_value(position, value)
     }
 
-    /// Get description for a specific value at a leader position (alias for describe_value).
+    /// Get description for a specific value at a leader position (alias for `describe_value`).
     ///
     /// # Arguments
     ///
@@ -322,7 +322,7 @@ impl PyLeader {
     /// The description if found, or None if the value is invalid for the position
     #[staticmethod]
     pub fn get_value_description(position: usize, value: &str) -> Option<String> {
-        Leader::describe_value(position, value).map(|s| s.to_string())
+        Leader::describe_value(position, value).map(std::string::ToString::to_string)
     }
 }
 
@@ -346,7 +346,7 @@ impl Default for PyLeader {
 /// print(f"Code: {sf.code}, Value: {sf.value}")
 /// ```
 #[pyclass(name = "Subfield", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PySubfield {
     pub inner: Subfield,
 }
@@ -417,7 +417,7 @@ impl PySubfield {
 /// field.add_subfield('c', 'F. Scott Fitzgerald')
 /// ```
 #[pyclass(name = "Field", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyField {
     pub inner: Field,
 }
@@ -638,6 +638,7 @@ impl PyField {
 /// print(f"Title: {record.title()}")
 /// ```
 #[pyclass(name = "Record")]
+#[derive(Debug)]
 pub struct PyRecord {
     pub inner: Record,
     /// Bumped by every field removal. Python-side field handles capture
@@ -702,7 +703,9 @@ impl PyRecord {
 
     /// Get a control field value
     pub fn control_field(&self, tag: &str) -> Option<String> {
-        self.inner.get_control_field(tag).map(|s| s.to_string())
+        self.inner
+            .get_control_field(tag)
+            .map(std::string::ToString::to_string)
     }
 
     /// Add a data field
@@ -912,17 +915,17 @@ impl PyRecord {
 
     /// Get title from 245 field (first subfield $a)
     pub fn title(&self) -> Option<String> {
-        self.inner.title().map(|s| s.to_string())
+        self.inner.title().map(std::string::ToString::to_string)
     }
 
     /// Get author from 100/110/111 field
     pub fn author(&self) -> Option<String> {
-        self.inner.author().map(|s| s.to_string())
+        self.inner.author().map(std::string::ToString::to_string)
     }
 
     /// Get ISBN from 020 field
     pub fn isbn(&self) -> Option<String> {
-        self.inner.isbn().map(|s| s.to_string())
+        self.inner.isbn().map(std::string::ToString::to_string)
     }
 
     /// Get all subject headings from 6XX subject fields
@@ -930,7 +933,7 @@ impl PyRecord {
         self.inner
             .subjects()
             .iter()
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .collect()
     }
 
@@ -939,58 +942,68 @@ impl PyRecord {
         self.inner
             .location()
             .iter()
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .collect()
     }
 
     /// Get all notes from 5xx fields
     pub fn notes(&self) -> Vec<String> {
-        self.inner.notes().iter().map(|s| s.to_string()).collect()
+        self.inner
+            .notes()
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect()
     }
 
     /// Get publisher from 260 or 264 (RDA) field
     pub fn publisher(&self) -> Option<String> {
-        self.inner.publisher().map(|s| s.to_string())
+        self.inner.publisher().map(std::string::ToString::to_string)
     }
 
     /// Get uniform title from 130 field
     pub fn uniform_title(&self) -> Option<String> {
-        self.inner.uniform_title().map(|s| s.to_string())
+        self.inner
+            .uniform_title()
+            .map(std::string::ToString::to_string)
     }
 
-    /// Get SuDoc (government document classification) from 086 field
+    /// Get `SuDoc` (government document classification) from 086 field
     pub fn sudoc(&self) -> Option<String> {
-        self.inner.sudoc().map(|s| s.to_string())
+        self.inner.sudoc().map(std::string::ToString::to_string)
     }
 
     /// Get ISSN title from 222 field
     pub fn issn_title(&self) -> Option<String> {
-        self.inner.issn_title().map(|s| s.to_string())
+        self.inner
+            .issn_title()
+            .map(std::string::ToString::to_string)
     }
 
     /// Get ISSN-L from 024 field
     pub fn issnl(&self) -> Option<String> {
-        self.inner.issnl().map(|s| s.to_string())
+        self.inner.issnl().map(std::string::ToString::to_string)
     }
 
-    /// Get publication year (alias for publication_year)
+    /// Get publication year (alias for `publication_year`)
     pub fn pubyear(&self) -> Option<u32> {
         self.inner.pubyear()
     }
 
     /// Get ISSN from 022 field
     pub fn issn(&self) -> Option<String> {
-        self.inner.issn().map(|s| s.to_string())
+        self.inner.issn().map(std::string::ToString::to_string)
     }
 
     /// Get series from 490 field
     pub fn series(&self) -> Option<String> {
-        self.inner.series().map(|s| s.to_string())
+        self.inner.series().map(std::string::ToString::to_string)
     }
 
     /// Get physical description from 300 field
     pub fn physical_description(&self) -> Option<String> {
-        self.inner.physical_description().map(|s| s.to_string())
+        self.inner
+            .physical_description()
+            .map(std::string::ToString::to_string)
     }
 
     /// Check if this record is a book (record type 'a' + bibliographic level 'm')
@@ -1032,9 +1045,9 @@ impl PyRecord {
     ///
     /// Example:
     ///     >>> # Find all 650 fields with indicator2='0' (Library of Congress Subject Headings)
-    ///     >>> lcsh_subjects = record.fields_by_indicator("650", indicator2="0")
-    ///     >>> for field in lcsh_subjects:
-    ///     ...     print(field.get_subfield("a"))
+    ///     >>> `lcsh_subjects` = `record.fields_by_indicator("650`", indicator2="0")
+    ///     >>> for field in `lcsh_subjects`:
+    ///     ...     `print(field.get_subfield("a`"))
     #[pyo3(signature = (tag, *, indicator1=None, indicator2=None))]
     pub fn fields_by_indicator(
         &self,
@@ -1056,17 +1069,17 @@ impl PyRecord {
     /// (600-699) or all added entry fields (700-799).
     ///
     /// Args:
-    ///     start_tag: Start of range (inclusive), e.g., "600".
-    ///     end_tag: End of range (inclusive), e.g., "699".
+    ///     `start_tag`: Start of range (inclusive), e.g., "600".
+    ///     `end_tag`: End of range (inclusive), e.g., "699".
     ///
     /// Returns:
     ///     List of Field objects within the tag range.
     ///
     /// Example:
     ///     >>> # Find all subject fields (600-699)
-    ///     >>> subjects = record.fields_in_range("600", "699")
+    ///     >>> subjects = `record.fields_in_range("600`", "699")
     ///     >>> for field in subjects:
-    ///     ...     print(f"{field.tag}: {field.get_subfield('a')}")
+    ///     ...     print(f"{field.tag}: {`field.get_subfield`('a')}")
     pub fn fields_in_range(&self, start_tag: &str, end_tag: &str) -> Vec<PyField> {
         self.inner
             .fields_in_range(start_tag, end_tag)
@@ -1092,8 +1105,8 @@ impl PyRecord {
     ///     List of linked 880 Field objects (empty if no linkage or no match).
     ///
     /// Example:
-    ///     >>> f245 = record.get_fields('245')\[0\]
-    ///     >>> linked = record.get_linked_fields(f245)
+    ///     >>> f245 = `record.get_fields`('245')\[0\]
+    ///     >>> linked = `record.get_linked_fields(f245)`
     ///     >>> if linked:
     ///     ...     print(linked\[0\]\['a'\])
     pub fn get_linked_fields(&self, field: &PyField) -> Vec<PyField> {
@@ -1106,7 +1119,7 @@ impl PyRecord {
 
     /// Find the single 880 field linked to a given field via subfield $6.
     ///
-    /// Like get_linked_fields() but returns only the first match. Use this
+    /// Like `get_linked_fields()` but returns only the first match. Use this
     /// when you expect exactly one linked 880 (the common case).
     ///
     /// Args:
@@ -1126,7 +1139,7 @@ impl PyRecord {
     /// tag and occurrence from its $6 subfield.
     ///
     /// Args:
-    ///     field_880: An 880 Field object.
+    ///     `field_880`: An 880 Field object.
     ///
     /// Returns:
     ///     The linked original Field, or None.
@@ -1138,7 +1151,7 @@ impl PyRecord {
 
     /// Get field pairs of original fields with their linked 880 counterparts.
     ///
-    /// For a given tag, returns tuples of (original_field, linked_880_or_None).
+    /// For a given tag, returns tuples of (`original_field`, `linked_880_or_None`).
     ///
     /// Args:
     ///     tag: The field tag to pair (e.g., '245', '100').
@@ -1147,7 +1160,7 @@ impl PyRecord {
     ///     List of (Field, Optional[Field]) tuples.
     ///
     /// Example:
-    ///     >>> for orig, linked in record.get_field_pairs('245'):
+    ///     >>> for orig, linked in `record.get_field_pairs`('245'):
     ///     ...     print(orig\['a'\])
     ///     ...     if linked:
     ///     ...         print(linked\['a'\])
@@ -1166,22 +1179,22 @@ impl PyRecord {
             .collect()
     }
 
-    /// Get fields matching a FieldQuery.
+    /// Get fields matching a `FieldQuery`.
     ///
     /// This method enables complex field matching using the Query DSL.
-    /// A FieldQuery can combine tag, indicator, and subfield requirements.
+    /// A `FieldQuery` can combine tag, indicator, and subfield requirements.
     ///
     /// Args:
-    ///     query: A FieldQuery object with the matching criteria.
+    ///     query: A `FieldQuery` object with the matching criteria.
     ///
     /// Returns:
     ///     List of Field objects matching all query criteria.
     ///
     /// Example:
-    ///     >>> query = mrrc.FieldQuery().tag("650").indicator2("0").has_subfield("a")
-    ///     >>> lcsh = record.fields_matching(query)
+    ///     >>> query = `mrrc.FieldQuery().tag("650").indicator2("0").has_subfield("a`")
+    ///     >>> lcsh = `record.fields_matching(query)`
     ///     >>> for field in lcsh:
-    ///     ...     print(field.get_subfield("a"))
+    ///     ...     `print(field.get_subfield("a`"))
     pub fn fields_matching(&self, query: &crate::query::PyFieldQuery) -> Vec<PyField> {
         self.inner
             .fields_matching(&query.inner)
@@ -1189,21 +1202,21 @@ impl PyRecord {
             .collect()
     }
 
-    /// Get fields matching a TagRangeQuery.
+    /// Get fields matching a `TagRangeQuery`.
     ///
     /// This method finds fields within a tag range that also match indicator
     /// and subfield requirements.
     ///
     /// Args:
-    ///     query: A TagRangeQuery object with range and filter criteria.
+    ///     query: A `TagRangeQuery` object with range and filter criteria.
     ///
     /// Returns:
     ///     List of Field objects matching all query criteria.
     ///
     /// Example:
     ///     >>> # Find all 6XX subjects with indicator2='0' (LCSH) that have subfield 'a'
-    ///     >>> query = mrrc.TagRangeQuery("600", "699", indicator2="0", required_subfields=["a"])
-    ///     >>> subjects = record.fields_matching_range(query)
+    ///     >>> query = `mrrc.TagRangeQuery("600", "699", indicator2="0", required_subfields=["a"])`
+    ///     >>> subjects = `record.fields_matching_range(query)`
     pub fn fields_matching_range(&self, query: &crate::query::PyTagRangeQuery) -> Vec<PyField> {
         self.inner
             .fields_matching_range(&query.inner)
@@ -1211,13 +1224,13 @@ impl PyRecord {
             .collect()
     }
 
-    /// Get fields matching a SubfieldPatternQuery (regex matching).
+    /// Get fields matching a `SubfieldPatternQuery` (regex matching).
     ///
     /// This method finds fields where a specific subfield's value matches
     /// a regular expression pattern.
     ///
     /// Args:
-    ///     query: A SubfieldPatternQuery object with tag, subfield, and regex.
+    ///     query: A `SubfieldPatternQuery` object with tag, subfield, and regex.
     ///
     /// Returns:
     ///     List of Field objects where the subfield matches the pattern.
@@ -1225,7 +1238,7 @@ impl PyRecord {
     /// Example:
     ///     >>> # Find all ISBN-13s (start with 978 or 979)
     ///     >>> query = mrrc.SubfieldPatternQuery("020", "a", r"^97\[89\]-")
-    ///     >>> isbn13_fields = record.fields_matching_pattern(query)
+    ///     >>> `isbn13_fields` = `record.fields_matching_pattern(query)`
     pub fn fields_matching_pattern(
         &self,
         query: &crate::query::PySubfieldPatternQuery,
@@ -1236,13 +1249,13 @@ impl PyRecord {
             .collect()
     }
 
-    /// Get fields matching a SubfieldValueQuery (exact or partial string matching).
+    /// Get fields matching a `SubfieldValueQuery` (exact or partial string matching).
     ///
     /// This method finds fields where a specific subfield's value matches
     /// a string exactly or as a substring.
     ///
     /// Args:
-    ///     query: A SubfieldValueQuery object with tag, subfield, value, and match type.
+    ///     query: A `SubfieldValueQuery` object with tag, subfield, value, and match type.
     ///
     /// Returns:
     ///     List of Field objects where the subfield matches the value.
@@ -1250,7 +1263,7 @@ impl PyRecord {
     /// Example:
     ///     >>> # Find exact subject heading "History"
     ///     >>> query = mrrc.SubfieldValueQuery("650", "a", "History")
-    ///     >>> history_fields = record.fields_matching_value(query)
+    ///     >>> `history_fields` = `record.fields_matching_value(query)`
     ///
     ///     >>> # Find subjects containing "History" anywhere
     ///     >>> query = mrrc.SubfieldValueQuery("650", "a", "History", partial=True)
@@ -1411,7 +1424,7 @@ impl PyRecord {
 /// They use the same ISO 2709 binary format as bibliographic records but are organized
 /// by functional role (heading, tracings, notes, etc.).
 #[pyclass(name = "AuthorityRecord", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyAuthorityRecord {
     pub inner: AuthorityRecord,
 }
@@ -1453,7 +1466,7 @@ impl PyAuthorityRecord {
         self.inner
             .heading()
             .and_then(|f| f.get_subfield('a'))
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
     }
 
     /// Get all see-from tracings (4XX fields)
@@ -1520,7 +1533,9 @@ impl PyAuthorityRecord {
 
     /// Get control field by tag
     pub fn get_control_field(&self, tag: &str) -> Option<String> {
-        self.inner.get_control_field(tag).map(|s| s.to_string())
+        self.inner
+            .get_control_field(tag)
+            .map(std::string::ToString::to_string)
     }
 
     /// Convert to JSON string
@@ -1528,10 +1543,10 @@ impl PyAuthorityRecord {
         // Authority records can be serialized like bibliographic records
         // by wrapping them in a Record structure
         // For now, convert the heading field to JSON
-        let heading_json = self
-            .heading()
-            .map(|f| format!("{{\"heading\": {}}}", f.inner.tag))
-            .unwrap_or_else(|| "{}".to_string());
+        let heading_json = self.heading().map_or_else(
+            || "{}".to_string(),
+            |f| format!("{{\"heading\": {}}}", f.inner.tag),
+        );
         Ok(heading_json)
     }
 
@@ -1557,7 +1572,7 @@ impl PyAuthorityRecord {
 /// They use the same ISO 2709 binary format as bibliographic records but organize
 /// fields by functional role (locations, enumeration, notes, etc.).
 #[pyclass(name = "HoldingsRecord", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyHoldingsRecord {
     pub inner: HoldingsRecord,
 }
@@ -1707,14 +1722,16 @@ impl PyHoldingsRecord {
 
     /// Get control field by tag
     pub fn get_control_field(&self, tag: &str) -> Option<String> {
-        self.inner.get_control_field(tag).map(|s| s.to_string())
+        self.inner
+            .get_control_field(tag)
+            .map(std::string::ToString::to_string)
     }
 
     /// Convert to JSON string
     pub fn to_json(&self) -> PyResult<String> {
         // Holdings records can include location and enumeration information
         let loc_count = self.locations().len();
-        Ok(format!("{{\"locations\": {}}}", loc_count))
+        Ok(format!("{{\"locations\": {loc_count}}}"))
     }
 
     fn __repr__(&self) -> String {

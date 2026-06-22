@@ -7,7 +7,7 @@
 use mrrc::field_query::{FieldQuery, SubfieldPatternQuery, SubfieldValueQuery, TagRangeQuery};
 use pyo3::prelude::*;
 
-/// Python wrapper for FieldQuery - a builder for complex field matching.
+/// Python wrapper for `FieldQuery` - a builder for complex field matching.
 ///
 /// `FieldQuery` uses the builder pattern to construct queries that can match
 /// on tags, indicators, and subfield presence. This provides functionality
@@ -27,7 +27,7 @@ use pyo3::prelude::*;
 /// query = mrrc.FieldQuery().indicator1("1").indicator2("0")
 /// ```
 #[pyclass(name = "FieldQuery", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyFieldQuery {
     pub inner: FieldQuery,
 }
@@ -37,10 +37,10 @@ impl PyFieldQuery {
     /// Create a new query that matches all fields.
     ///
     /// Returns:
-    ///     FieldQuery: A new query builder with no restrictions.
+    ///     `FieldQuery`: A new query builder with no restrictions.
     ///
     /// Example:
-    ///     >>> query = mrrc.FieldQuery()  # matches all fields
+    ///     >>> query = `mrrc.FieldQuery()`  # matches all fields
     #[new]
     pub fn new() -> Self {
         PyFieldQuery {
@@ -54,7 +54,7 @@ impl PyFieldQuery {
     ///     tag: The 3-character field tag (e.g., "650", "245").
     ///
     /// Returns:
-    ///     FieldQuery: Self, for method chaining.
+    ///     `FieldQuery`: Self, for method chaining.
     ///
     /// Example:
     ///     >>> query = mrrc.FieldQuery().tag("650")
@@ -70,7 +70,7 @@ impl PyFieldQuery {
     ///     indicator: Single character indicator value, or None to match any.
     ///
     /// Returns:
-    ///     FieldQuery: Self, for method chaining.
+    ///     `FieldQuery`: Self, for method chaining.
     ///
     /// Example:
     ///     >>> query = mrrc.FieldQuery().indicator1("1")  # match ind1='1'
@@ -89,7 +89,7 @@ impl PyFieldQuery {
     ///     indicator: Single character indicator value, or None to match any.
     ///
     /// Returns:
-    ///     FieldQuery: Self, for method chaining.
+    ///     `FieldQuery`: Self, for method chaining.
     ///
     /// Example:
     ///     >>> query = mrrc.FieldQuery().indicator2("0")  # match ind2='0' (LCSH)
@@ -110,11 +110,11 @@ impl PyFieldQuery {
     ///     code: Single character subfield code (e.g., "a", "x").
     ///
     /// Returns:
-    ///     FieldQuery: Self, for method chaining.
+    ///     `FieldQuery`: Self, for method chaining.
     ///
     /// Example:
-    ///     >>> query = mrrc.FieldQuery().tag("650").has_subfield("a")
-    ///     >>> query = query.has_subfield("x")  # must have both 'a' AND 'x'
+    ///     >>> query = `mrrc.FieldQuery().tag("650").has_subfield("a`")
+    ///     >>> query = `query.has_subfield("x`")  # must have both 'a' AND 'x'
     pub fn has_subfield(&self, code: &str) -> PyResult<Self> {
         if code.is_empty() {
             return Err(pyo3::exceptions::PyValueError::new_err(
@@ -133,10 +133,10 @@ impl PyFieldQuery {
     ///     codes: List of single-character subfield codes.
     ///
     /// Returns:
-    ///     FieldQuery: Self, for method chaining.
+    ///     `FieldQuery`: Self, for method chaining.
     ///
     /// Example:
-    ///     >>> query = mrrc.FieldQuery().tag("650").has_subfields(["a", "x", "v"])
+    ///     >>> query = `mrrc.FieldQuery().tag("650").has_subfields(["a", "x", "v"])`
     pub fn has_subfields(&self, codes: Vec<String>) -> PyResult<Self> {
         let chars: Vec<char> = codes.into_iter().filter_map(|s| s.chars().next()).collect();
         if chars.is_empty() {
@@ -155,14 +155,14 @@ impl PyFieldQuery {
     /// any indicator and subfield requirements already set.
     ///
     /// Args:
-    ///     start_tag: Start of tag range (inclusive), e.g., "600".
-    ///     end_tag: End of tag range (inclusive), e.g., "699".
+    ///     `start_tag`: Start of tag range (inclusive), e.g., "600".
+    ///     `end_tag`: End of tag range (inclusive), e.g., "699".
     ///
     /// Returns:
-    ///     TagRangeQuery: A new range-based query.
+    ///     `TagRangeQuery`: A new range-based query.
     ///
     /// Example:
-    ///     >>> query = mrrc.FieldQuery().indicator2("0").tag_range("600", "699")
+    ///     >>> query = `mrrc.FieldQuery().indicator2("0").tag_range("600`", "699")
     ///     >>> # Matches all 6XX fields with ind2='0'
     pub fn tag_range(&self, start_tag: &str, end_tag: &str) -> PyTagRangeQuery {
         PyTagRangeQuery {
@@ -175,7 +175,7 @@ impl PyFieldQuery {
             .inner
             .tag
             .as_ref()
-            .map_or("*".to_string(), |t| t.clone());
+            .map_or("*".to_string(), std::clone::Clone::clone);
         let ind1 = self
             .inner
             .indicator1
@@ -195,7 +195,7 @@ impl PyFieldQuery {
     }
 }
 
-/// Python wrapper for TagRangeQuery - query fields within a tag range.
+/// Python wrapper for `TagRangeQuery` - query fields within a tag range.
 ///
 /// This query type matches fields whose tags fall within a specified range,
 /// useful for querying groups of related fields (e.g., all 6XX subject fields).
@@ -211,7 +211,7 @@ impl PyFieldQuery {
 ///     print(f"Subject: {field}")
 /// ```
 #[pyclass(name = "TagRangeQuery", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyTagRangeQuery {
     pub inner: TagRangeQuery,
 }
@@ -221,11 +221,11 @@ impl PyTagRangeQuery {
     /// Create a new tag range query.
     ///
     /// Args:
-    ///     start_tag: Start of tag range (inclusive), e.g., "600".
-    ///     end_tag: End of tag range (inclusive), e.g., "699".
+    ///     `start_tag`: Start of tag range (inclusive), e.g., "600".
+    ///     `end_tag`: End of tag range (inclusive), e.g., "699".
     ///     indicator1: Optional first indicator filter (None = match any).
     ///     indicator2: Optional second indicator filter (None = match any).
-    ///     required_subfields: Optional list of required subfield codes.
+    ///     `required_subfields`: Optional list of required subfield codes.
     ///
     /// Example:
     ///     >>> query = mrrc.TagRangeQuery("600", "699", indicator2="0")
@@ -313,7 +313,7 @@ impl PyTagRangeQuery {
     }
 }
 
-/// Python wrapper for SubfieldPatternQuery - regex matching on subfield values.
+/// Python wrapper for `SubfieldPatternQuery` - regex matching on subfield values.
 ///
 /// This query type finds fields where a specific subfield's value matches
 /// a regular expression pattern.
@@ -333,7 +333,7 @@ impl PyTagRangeQuery {
 /// query = mrrc.SubfieldPatternQuery("100", "d", r"\d{4}-\d{4}")
 /// ```
 #[pyclass(name = "SubfieldPatternQuery", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PySubfieldPatternQuery {
     pub inner: SubfieldPatternQuery,
 }
@@ -344,11 +344,11 @@ impl PySubfieldPatternQuery {
     ///
     /// Args:
     ///     tag: The 3-character field tag to search in.
-    ///     subfield_code: The subfield code to match against.
+    ///     `subfield_code`: The subfield code to match against.
     ///     pattern: A regex pattern string.
     ///
     /// Raises:
-    ///     ValueError: If the pattern is not a valid regular expression.
+    ///     `ValueError`: If the pattern is not a valid regular expression.
     ///
     /// Example:
     ///     >>> query = mrrc.SubfieldPatternQuery("020", "a", r"^978-")
@@ -373,8 +373,7 @@ impl PySubfieldPatternQuery {
         match inner {
             Ok(query) => Ok(PySubfieldPatternQuery { inner: query }),
             Err(e) => Err(pyo3::exceptions::PyValueError::new_err(format!(
-                "Invalid regex pattern: {}",
-                e
+                "Invalid regex pattern: {e}"
             ))),
         }
     }
@@ -428,7 +427,7 @@ impl PySubfieldPatternQuery {
     }
 }
 
-/// Python wrapper for SubfieldValueQuery - exact or partial string matching.
+/// Python wrapper for `SubfieldValueQuery` - exact or partial string matching.
 ///
 /// This query type finds fields where a specific subfield's value matches
 /// a string, either exactly or as a substring.
@@ -445,7 +444,7 @@ impl PySubfieldPatternQuery {
 /// query = mrrc.SubfieldValueQuery("650", "a", "History", partial=True)
 /// ```
 #[pyclass(name = "SubfieldValueQuery", from_py_object)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PySubfieldValueQuery {
     pub inner: SubfieldValueQuery,
 }
@@ -456,7 +455,7 @@ impl PySubfieldValueQuery {
     ///
     /// Args:
     ///     tag: The 3-character field tag to search in.
-    ///     subfield_code: The subfield code to match against.
+    ///     `subfield_code`: The subfield code to match against.
     ///     value: The value to match.
     ///     partial: If True, match substrings. If False (default), exact match.
     ///

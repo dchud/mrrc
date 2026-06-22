@@ -7,6 +7,8 @@ authors.workspace = true
 description = "PyO3 bindings for the mrrc MARC library"
 license.workspace = true
 repository.workspace = true
+# Bindings crate: built only as the `_mrrc` extension, never published to crates.io.
+publish = false
 
 [dependencies]
 pyo3 = { version = "0.29", features = ["extension-module"] }
@@ -22,3 +24,7 @@ smallvec = { workspace = true }
 [lib]
 name = "_mrrc"
 crate-type = ["cdylib"]
+
+# Inherit the shared workspace lint regime (see the root Cargo.toml).
+[lints]
+workspace = true

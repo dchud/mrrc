@@ -20,14 +20,16 @@ enum AuthorityReaderBackend {
     PythonFile(Py<PyAny>),
 }
 
-/// Python wrapper for AuthorityMarcReader
+/// Python wrapper for `AuthorityMarcReader`
 ///
 /// Reads MARC Authority records (Type Z) from different sources with automatic
 /// backend selection:
-/// - File paths → RustFile (parallel-safe)
-/// - Bytes/BytesIO → CursorBackend (parallel-safe)
-/// - Python file objects → PythonFile (requires GIL)
+/// - File paths → `RustFile` (parallel-safe)
+/// - Bytes/BytesIO → `CursorBackend` (parallel-safe)
+/// - Python file objects → `PythonFile` (requires GIL)
 #[pyclass(name = "AuthorityMARCReader")]
+// wraps AuthorityReaderBackend which does not implement Debug
+#[allow(missing_debug_implementations)]
 pub struct PyAuthorityMARCReader {
     backend: Option<AuthorityReaderBackend>,
     recovery_mode: RecoveryMode,
@@ -36,7 +38,7 @@ pub struct PyAuthorityMARCReader {
 
 #[pymethods]
 impl PyAuthorityMARCReader {
-    /// Create a new AuthorityMARCReader
+    /// Create a new `AuthorityMARCReader`
     ///
     /// # Arguments
     /// * `source` - File path (str), pathlib.Path, bytes, or file-like object
@@ -45,7 +47,7 @@ impl PyAuthorityMARCReader {
     ///   permissive for pymarc-shape parity; the Rust core defaults
     ///   to strict for explicit-error-handling parity with Rust idiom.
     /// * `validation_level` - What counts as an error during parsing:
-    ///   'structural' (default) or 'strict_marc'.
+    ///   'structural' (default) or '`strict_marc`'.
     #[new]
     #[pyo3(signature = (source, *, recovery_mode = "permissive", validation_level = "structural"))]
     pub fn new(

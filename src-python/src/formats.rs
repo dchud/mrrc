@@ -39,7 +39,7 @@ use serde_json::Value;
 /// Convert a MARC record to JSON.
 ///
 /// # Arguments
-/// * `record` - A PyRecord instance
+/// * `record` - A `PyRecord` instance
 ///
 /// # Returns
 /// A JSON string representation of the record
@@ -64,7 +64,7 @@ pub fn record_to_json(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String>
 /// * `json_str` - A JSON string representing a MARC record
 ///
 /// # Returns
-/// A PyRecord instance
+/// A `PyRecord` instance
 ///
 /// # Example
 /// ```python
@@ -85,7 +85,7 @@ pub fn json_to_record(json_str: &str) -> PyResult<PyRecord> {
 /// Convert a MARC record to MARCXML.
 ///
 /// # Arguments
-/// * `record` - A PyRecord instance
+/// * `record` - A `PyRecord` instance
 ///
 /// # Returns
 /// A MARCXML string representation of the record
@@ -108,7 +108,7 @@ pub fn record_to_xml(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> 
 /// * `xml_str` - A MARCXML string representing a MARC record
 ///
 /// # Returns
-/// A PyRecord instance
+/// A `PyRecord` instance
 ///
 /// # Example
 /// ```python
@@ -129,7 +129,7 @@ pub fn xml_to_record(xml_str: &str) -> PyResult<PyRecord> {
 /// * `xml_str` - A MARCXML string containing a `<collection>` element
 ///
 /// # Returns
-/// A list of PyRecord instances
+/// A list of `PyRecord` instances
 ///
 /// # Example
 /// ```python
@@ -146,7 +146,7 @@ pub fn xml_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
 /// Convert a MARC record to MARCJSON (JSON-LD format).
 ///
 /// # Arguments
-/// * `record` - A PyRecord instance
+/// * `record` - A `PyRecord` instance
 ///
 /// # Returns
 /// A JSON string in MARCJSON format
@@ -171,7 +171,7 @@ pub fn record_to_marcjson(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<Str
 /// * `marcjson_str` - A JSON string in MARCJSON format
 ///
 /// # Returns
-/// A PyRecord instance
+/// A `PyRecord` instance
 ///
 /// # Example
 /// ```python
@@ -194,7 +194,7 @@ pub fn marcjson_to_record(marcjson_str: &str) -> PyResult<PyRecord> {
 /// Returns a dictionary with Dublin Core elements extracted from the record.
 ///
 /// # Arguments
-/// * `record` - A PyRecord instance
+/// * `record` - A `PyRecord` instance
 ///
 /// # Returns
 /// A dictionary mapping Dublin Core field names to values
@@ -240,7 +240,7 @@ pub fn record_to_dublin_core(
 /// XML representation than Dublin Core.
 ///
 /// # Arguments
-/// * `record` - A PyRecord instance
+/// * `record` - A `PyRecord` instance
 ///
 /// # Returns
 /// An XML string in MODS format
@@ -263,7 +263,7 @@ pub fn record_to_mods(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String>
 /// * `xml_str` - A MODS XML string
 ///
 /// # Returns
-/// A PyRecord instance
+/// A `PyRecord` instance
 ///
 /// # Example
 /// ```python
@@ -283,7 +283,7 @@ pub fn mods_to_record(xml_str: &str) -> PyResult<PyRecord> {
 /// * `xml_str` - A MODS collection XML string containing `<modsCollection>`
 ///
 /// # Returns
-/// A list of PyRecord instances
+/// A list of `PyRecord` instances
 ///
 /// # Example
 /// ```python
@@ -299,11 +299,11 @@ pub fn mods_collection_to_records(xml_str: &str) -> PyResult<Vec<PyRecord>> {
 
 /// Convert a MARC record directly to Dublin Core XML format.
 ///
-/// Convenience function that combines record_to_dublin_core() and dublin_core_to_xml()
+/// Convenience function that combines `record_to_dublin_core()` and `dublin_core_to_xml()`
 /// in a single call.
 ///
 /// # Arguments
-/// * `record` - A PyRecord instance
+/// * `record` - A `PyRecord` instance
 ///
 /// # Returns
 /// An XML string in Dublin Core RDF/XML format
@@ -374,7 +374,7 @@ pub fn dublin_core_to_xml(
 /// - `value`: The field or subfield value
 ///
 /// # Arguments
-/// * `record` - A PyRecord instance (can be the internal _mrrc.Record or wrapped Record)
+/// * `record` - A `PyRecord` instance (can be the internal _mrrc.Record or wrapped Record)
 ///
 /// # Returns
 /// A CSV string representation of the record
@@ -401,7 +401,7 @@ pub fn record_to_csv(record: &pyo3::Bound<'_, pyo3::PyAny>) -> PyResult<String> 
 /// - `value`: The field or subfield value
 ///
 /// # Arguments
-/// * `records` - A list of PyRecord instances
+/// * `records` - A list of `PyRecord` instances
 ///
 /// # Returns
 /// A CSV string representation of all records
@@ -443,7 +443,7 @@ pub fn records_to_csv(records: &pyo3::Bound<'_, pyo3::types::PyList>) -> PyResul
 /// provided filter function will be included.
 ///
 /// # Arguments
-/// * `records` - A list of PyRecord instances
+/// * `records` - A list of `PyRecord` instances
 /// * `filter_fn` - A callable that takes a field tag (str) and returns True to include it
 ///
 /// # Returns

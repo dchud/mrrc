@@ -1,4 +1,4 @@
-//! PyO3 bindings for the Rayon parser pool.
+//! `PyO3` bindings for the Rayon parser pool.
 //!
 //! Exposes [`parse_batch_parallel`] as a Python function, allowing
 //! parallel MARC record parsing from Python code.
@@ -16,7 +16,7 @@ use pyo3::prelude::*;
 ///
 /// # Returns
 ///
-/// A list of PyRecord instances, one for each boundary.
+/// A list of `PyRecord` instances, one for each boundary.
 ///
 /// # Raises
 ///
@@ -57,7 +57,7 @@ pub fn parse_batch_parallel(
     let records = py
         .detach(|| rayon_parser_pool::parse_batch_parallel(&boundaries, &buffer).map_err(Box::new))
         .map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Parse error: {}", e))
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Parse error: {e}"))
         })?;
 
     // Convert Rust records to PyRecord wrappers (GIL re-acquired after detach)
@@ -76,7 +76,7 @@ pub fn parse_batch_parallel(
 ///
 /// # Returns
 ///
-/// A list of up to `limit` PyRecord instances.
+/// A list of up to `limit` `PyRecord` instances.
 ///
 /// # Example
 ///
@@ -108,7 +108,7 @@ pub fn parse_batch_parallel_limited(
                 .map_err(Box::new)
         })
         .map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Parse error: {}", e))
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Parse error: {e}"))
         })?;
 
     // Convert to PyRecord (GIL re-acquired after detach)

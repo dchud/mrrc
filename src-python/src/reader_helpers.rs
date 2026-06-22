@@ -1,6 +1,6 @@
 //! Shared helpers for MARC reader backends (authority, holdings).
 //!
-//! Eliminates duplication between authority_readers.rs and holdings_readers.rs
+//! Eliminates duplication between `authority_readers.rs` and `holdings_readers.rs`
 //! for common operations: recovery mode parsing, source file opening, and
 //! reading raw record bytes from Python file objects.
 
@@ -8,7 +8,7 @@ use mrrc::recovery::{RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
 use std::fs::File;
 
-/// Parse a recovery_mode string into a RecoveryMode enum.
+/// Parse a `recovery_mode` string into a `RecoveryMode` enum.
 ///
 /// Returns `PyValueError` for invalid values.
 pub fn parse_recovery_mode(mode: &str) -> PyResult<RecoveryMode> {
@@ -17,13 +17,12 @@ pub fn parse_recovery_mode(mode: &str) -> PyResult<RecoveryMode> {
         "permissive" => Ok(RecoveryMode::Permissive),
         "strict" => Ok(RecoveryMode::Strict),
         _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
-            "Invalid recovery_mode '{}': must be 'strict', 'lenient', or 'permissive'",
-            mode
+            "Invalid recovery_mode '{mode}': must be 'strict', 'lenient', or 'permissive'"
         ))),
     }
 }
 
-/// Parse a validation_level string into a ValidationLevel enum.
+/// Parse a `validation_level` string into a `ValidationLevel` enum.
 ///
 /// Returns `PyValueError` for invalid values.
 pub fn parse_validation_level(level: &str) -> PyResult<ValidationLevel> {
@@ -31,8 +30,7 @@ pub fn parse_validation_level(level: &str) -> PyResult<ValidationLevel> {
         "structural" => Ok(ValidationLevel::Structural),
         "strict_marc" => Ok(ValidationLevel::StrictMarc),
         _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
-            "Invalid validation_level '{}': must be 'structural' or 'strict_marc'",
-            level
+            "Invalid validation_level '{level}': must be 'structural' or 'strict_marc'"
         ))),
     }
 }
@@ -65,16 +63,14 @@ fn open_file_path(path: &str) -> PyResult<File> {
         Ok(file) => Ok(file),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             Err(pyo3::exceptions::PyFileNotFoundError::new_err(format!(
-                "No such file or directory: '{}'",
-                path
+                "No such file or directory: '{path}'"
             )))
         },
         Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => Err(
-            pyo3::exceptions::PyPermissionError::new_err(format!("Permission denied: '{}'", path)),
+            pyo3::exceptions::PyPermissionError::new_err(format!("Permission denied: '{path}'")),
         ),
         Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!(
-            "Failed to open file '{}': {}",
-            path, e
+            "Failed to open file '{path}': {e}"
         ))),
     }
 }
@@ -89,9 +85,9 @@ pub fn try_extract_bytes(source: &Bound<'_, PyAny>) -> PyResult<Option<Vec<u8>>>
     }
 }
 
-/// Try to get a Python file-like object (has .read() method).
+/// Try to get a Python file-like object (has .`read()` method).
 ///
-/// Returns `Ok(Some(obj))` if the source has a callable .read(), `Ok(None)` otherwise.
+/// Returns `Ok(Some(obj))` if the source has a callable .`read()`, `Ok(None)` otherwise.
 pub fn try_as_python_file(source: &Bound<'_, PyAny>) -> PyResult<Option<Py<PyAny>>> {
     if let Ok(method) = source.getattr("read")
         && method.is_callable()
@@ -105,9 +101,8 @@ pub fn try_as_python_file(source: &Bound<'_, PyAny>) -> PyResult<Option<Py<PyAny
 pub fn unsupported_source_error(source: &Bound<'_, PyAny>) -> PyResult<()> {
     let type_name = source.get_type().name()?;
     Err(pyo3::exceptions::PyTypeError::new_err(format!(
-        "Unsupported input type: {}. Supported types: str (file path), pathlib.Path, \
-         bytes, bytearray, or file-like object (with .read() method)",
-        type_name
+        "Unsupported input type: {type_name}. Supported types: str (file path), pathlib.Path, \
+         bytes, bytearray, or file-like object (with .read() method)"
     )))
 }
 
@@ -117,13 +112,13 @@ pub fn unsupported_source_error(source: &Bound<'_, PyAny>) -> PyResult<()> {
 /// or `Err` for malformed/truncated data.
 pub fn read_record_bytes_from_python_file(py_obj: &Bound<'_, PyAny>) -> PyResult<Option<Vec<u8>>> {
     let read_method = py_obj.getattr("read").map_err(|e| {
-        pyo3::exceptions::PyIOError::new_err(format!("Object missing .read() method: {}", e))
+        pyo3::exceptions::PyIOError::new_err(format!("Object missing .read() method: {e}"))
     })?;
 
     // Read leader (24 bytes)
-    let leader_result = read_method.call1((24usize,)).map_err(|e| {
-        pyo3::exceptions::PyIOError::new_err(format!("Failed to read leader: {}", e))
-    })?;
+    let leader_result = read_method
+        .call1((24usize,))
+        .map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Failed to read leader: {e}")))?;
 
     let leader: Vec<u8> = leader_result
         .extract()
@@ -144,21 +139,19 @@ pub fn read_record_bytes_from_python_file(py_obj: &Bound<'_, PyAny>) -> PyResult
     let record_length_str = String::from_utf8_lossy(&leader[0..5]);
     let record_length: usize = record_length_str.trim().parse().map_err(|_| {
         pyo3::exceptions::PyValueError::new_err(format!(
-            "Invalid record length in leader: '{}'",
-            record_length_str
+            "Invalid record length in leader: '{record_length_str}'"
         ))
     })?;
 
     if record_length < 24 {
         return Err(pyo3::exceptions::PyValueError::new_err(format!(
-            "Record length too small: {} (minimum 24)",
-            record_length
+            "Record length too small: {record_length} (minimum 24)"
         )));
     }
 
     // Read remainder
     let record_data_bytes = read_method.call1((record_length - 24,)).map_err(|e| {
-        pyo3::exceptions::PyIOError::new_err(format!("Failed to read record data: {}", e))
+        pyo3::exceptions::PyIOError::new_err(format!("Failed to read record data: {e}"))
     })?;
 
     let record_data: Vec<u8> = record_data_bytes
