@@ -322,6 +322,25 @@ class Field:
             self._refresh()
         return getattr(self._inner, name)
 
+    def __deepcopy__(self, memo: dict) -> "Field":
+        """Return an independent, detached copy of this field.
+
+        ``copy.copy`` keeps shallow semantics (a handle stays a live handle;
+        a detached field shares its data). ``copy.deepcopy`` snapshots the
+        field's current data into a new detached field that owns its data
+        and writes through to no record, matching pymarc.
+        """
+        if self._parent is not None:
+            self._refresh()
+        new = Field.__new__(Field)
+        new._data = self._data
+        new._parent = None
+        new._occurrence = 0
+        new._generation = 0
+        new._inner = self._inner.__deepcopy__(memo)
+        memo[id(self)] = new
+        return new
+
     def __getitem__(self, code: str) -> str | None:
         """Get first subfield value by code (pymarc compatibility).
 
@@ -817,6 +836,14 @@ class Leader:
          # Delegate everything else
          return getattr(self._rust_leader, name)
 
+     def __deepcopy__(self, memo: dict) -> "Leader":
+         """Return an independent copy of this leader, detached from any record."""
+         new: Leader = Leader.__new__(Leader)
+         new._rust_leader = self._rust_leader.__deepcopy__(memo)
+         new._parent_record = None
+         memo[id(self)] = new
+         return new
+
      def __setattr__(self, name: str, value: Any) -> None:
          """Delegate attribute setting, handling aliases."""
          if name in ('_rust_leader', '_parent_record'):
@@ -979,7 +1006,22 @@ class Record:
 
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Record."""
+        if name in ('_inner', '_leader'):
+            raise AttributeError(name)
         return getattr(self._inner, name)
+
+    def __deepcopy__(self, memo: dict) -> "Record":
+        """Return a fully independent copy of this record.
+
+        ``copy.copy`` stays shallow (the wrapper shares ``_inner``);
+        ``copy.deepcopy`` clones the underlying Rust record so the two
+        records share no state, matching pymarc.
+        """
+        self._sync_leader()
+        new = Record.__new__(Record)
+        new._inner = self._inner.__deepcopy__(memo)
+        memo[id(self)] = new
+        return new
 
     def __repr__(self) -> str:
         return repr(self._inner)

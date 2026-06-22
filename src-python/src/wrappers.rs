@@ -219,6 +219,13 @@ impl PyLeader {
         self.inner == other.inner
     }
 
+    /// Return an independent deep copy (supports Python's ``copy.deepcopy``).
+    fn __deepcopy__(&self, _memo: Bound<'_, PyAny>) -> PyLeader {
+        PyLeader {
+            inner: self.inner.clone(),
+        }
+    }
+
     /// Get valid values for a specific leader position (MARC 21 spec reference).
     ///
     /// Returns a dictionary mapping valid character values to their descriptions
@@ -583,6 +590,13 @@ impl PyField {
 
     fn __eq__(&self, other: &PyField) -> bool {
         self.inner == other.inner
+    }
+
+    /// Return an independent deep copy (supports Python's ``copy.deepcopy``).
+    fn __deepcopy__(&self, _memo: Bound<'_, PyAny>) -> PyField {
+        PyField {
+            inner: self.inner.clone(),
+        }
     }
 
     /// Serialize field to ISO 2709 binary format.
@@ -1382,6 +1396,12 @@ impl PyRecord {
         self.inner.leader == other.inner.leader
             && self.inner.control_fields == other.inner.control_fields
             && self.inner.fields == other.inner.fields
+    }
+
+    /// Return an independent deep copy (supports Python's ``copy.deepcopy``).
+    /// Generation resets to 0; the clone owns its data with no live handles.
+    fn __deepcopy__(&self, _memo: Bound<'_, PyAny>) -> PyRecord {
+        PyRecord::from(self.inner.clone())
     }
 }
 

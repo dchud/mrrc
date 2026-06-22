@@ -277,11 +277,16 @@ def test_copy_of_handle_goes_stale_with_the_original() -> None:
         duplicate["a"]
 
 
-def test_deepcopy_of_handle_raises_type_error() -> None:
-    """Handles cannot be deep-copied; deepcopy raises TypeError."""
+def test_deepcopy_of_handle_returns_detached_snapshot() -> None:
+    """``copy.deepcopy`` of a handle yields a detached snapshot, not a handle."""
     record = _build_record()
-    with pytest.raises(TypeError):
-        copy.deepcopy(record["245"])
+    snapshot = copy.deepcopy(record["245"])
+    # A live handle goes stale when the field is removed; the snapshot,
+    # being detached, keeps the data it captured.
+    record.remove_fields("245")
+    assert snapshot["a"] == "Original title /"
+    snapshot.add_subfield("b", "copy only")
+    assert record.get_fields("245") == []
 
 
 def test_copy_of_detached_field_shares_state() -> None:
@@ -293,19 +298,45 @@ def test_copy_of_detached_field_shares_state() -> None:
     assert field.subfields_by_code("b") == ["Shared."]
 
 
-def test_deepcopy_of_detached_field_raises_type_error() -> None:
-    """Detached fields cannot be deep-copied either."""
+def test_deepcopy_of_detached_field_is_independent() -> None:
+    """``copy.deepcopy`` of a detached field yields an independent field."""
     field = mrrc.Field("500", " ", " ")
     field.add_subfield("a", "A general note.")
-    with pytest.raises(TypeError):
-        copy.deepcopy(field)
+    duplicate = copy.deepcopy(field)
+    duplicate.add_subfield("b", "Only on the copy.")
+    assert field.subfields_by_code("b") == []
+    assert duplicate.subfields_by_code("b") == ["Only on the copy."]
+    assert duplicate._parent is None
 
 
-def test_deepcopy_of_record_raises_type_error() -> None:
-    """Records do not support deepcopy; handles cannot cross copies."""
+def test_copy_of_record_shares_inner() -> None:
+    """``copy.copy`` of a record is shallow: it shares the underlying record."""
     record = _build_record()
-    with pytest.raises(TypeError):
-        copy.deepcopy(record)
+    duplicate = copy.copy(record)
+    note = mrrc.Field("500", " ", " ")
+    note.add_subfield("a", "Shared note.")
+    duplicate.add_field(note)
+    assert record["500"]["a"] == "Shared note."
+
+
+def test_deepcopy_of_record_is_independent() -> None:
+    """``copy.deepcopy`` of a record yields a fully independent record."""
+    record = _build_record()
+    duplicate = copy.deepcopy(record)
+    note = mrrc.Field("500", " ", " ")
+    note.add_subfield("a", "Only on the copy.")
+    duplicate.add_field(note)
+    assert len(record.get_fields("500")) == 0
+    assert len(duplicate.get_fields("500")) == 1
+
+
+def test_deepcopy_of_leader_is_independent() -> None:
+    """``copy.deepcopy`` of a leader yields an independent leader."""
+    leader = mrrc.Leader("00136nam a2200061   4500")
+    duplicate = copy.deepcopy(leader)
+    duplicate.record_status = "c"
+    assert leader.record_status == "n"
+    assert duplicate.record_status == "c"
 
 
 # ---------------------------------------------------------------------
