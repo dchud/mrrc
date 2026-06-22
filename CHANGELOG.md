@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `match`es need a wildcard arm; `MarcError` construction outside the crate goes through new
   public constructors (`invalid_field`, `truncated_record`, `record_length_invalid`,
   `fatal_reader_error`) and `with_*` positional setters.
+- `copy.deepcopy()` support for `Record`, `Field`, and `Leader`: deep copies are fully
+  independent of the original (and of any record), while `copy.copy()` stays shallow, matching
+  pymarc. Deep-copying a live field handle yields a detached snapshot of its current data.
 
 ### Changed
 
@@ -131,6 +134,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `copy.copy()` of a `Record` no longer raises `RecursionError`: the wrapper's attribute
+  delegation now stops cleanly when the inner record is absent during copy reconstruction.
 - Corrected Python documentation errors that broke copy-pasted code: the README and
   `mrrc.read()` examples called `record.title()` (it is a property); docs showed imports
   and reader constructors that do not exist in Python (`MarcError`,
