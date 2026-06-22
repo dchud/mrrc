@@ -21,7 +21,7 @@ Python bindings via PyO3/maturin.
 ## Build & Test
 
 ```bash
-# Full pre-push check (~30s) — always run this before pushing
+# Full pre-push check (~30s warm cache; cold builds take longer) — always run this before pushing
 .cargo/check.sh
 
 # Quick mode (skips docs, audit, maturin rebuild)
