@@ -82,6 +82,27 @@ Rust-side work per GIL crossing scale better; treat this curve as the floor,
 not the ceiling, and re-run it on the target deployment hardware for a
 representative number.
 
+**Free-threaded CPython lifts that ceiling.** The cap is the GIL, not the
+algorithm — re-run the same harness under a free-threaded interpreter and the
+scaling roughly doubles. Measured on the same M4, Python 3.14 with the GIL
+versus 3.14t without it (same version, so the GIL is the only variable):
+
+| threads | 3.14 GIL on | 3.14t GIL off |
+|--:|--:|--:|
+| 1 | 1.00x | 1.00x |
+| 2 | 1.41x | 1.71x |
+| 4 | 1.30x | 2.33x |
+| 8 | 1.21x | 2.39x |
+
+Removing the GIL raises the plateau from ~1.4x to ~2.4x and stops the decline
+past the performance-core count. It is not free, though: the no-GIL build
+starts ~22% slower single-threaded (304,766 vs 388,643 records/sec — the
+biased-reference-counting tax), so it only pulls ahead past ~3 threads.
+Free-threading is not built into the shipped wheels; to measure it, declare
+the module free-thread-safe with `#[pymodule(gil_used = false)]` and build
+against a free-threaded interpreter (`uv python install 3.14t`). PyO3 0.29
+supports free-threading only on Python 3.14+, so 3.13t will not build.
+
 To confirm the GIL is actually released — a yes/no detector, not a throughput
 number — run:
 
