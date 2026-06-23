@@ -339,6 +339,15 @@ def test_deepcopy_of_leader_is_independent() -> None:
     assert duplicate.record_status == "c"
 
 
+def test_remove_field_at_returns_wrapper() -> None:
+    """``remove_field_at`` returns the mrrc.Field wrapper, not the raw type."""
+    record = _build_record()
+    removed = record.remove_field_at("245", 0)
+    assert isinstance(removed, mrrc.Field)
+    # The wrapper conveniences work; the raw _mrrc.Field lacks __getitem__.
+    assert removed["a"] == "Original title /"
+
+
 # ---------------------------------------------------------------------
 # Same-tag remove plus re-add: no occurrence aliasing
 # ---------------------------------------------------------------------

@@ -134,6 +134,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `Record.remove_field_at()` now returns the `mrrc.Field` wrapper (with `__getitem__` and the
+  other pymarc conveniences) instead of the bare `_mrrc.Field` extension type.
 - `copy.copy()` of a `Record` no longer raises `RecursionError`: the wrapper's attribute
   delegation now stops cleanly when the inner record is absent during copy reconstruction.
 - Corrected Python documentation errors that broke copy-pasted code: the README and
