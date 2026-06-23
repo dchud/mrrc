@@ -1142,6 +1142,16 @@ class Record:
         for tag in tags:
             self._remove_tag(tag)
 
+    def remove_field_at(self, tag: str, occurrence: int = 0) -> Field:
+        """Remove the data field at ``(tag, occurrence)`` and return it.
+
+        The removed field is returned as a detached :class:`Field` wrapper —
+        it carries the pymarc conveniences (``__getitem__`` and the rest),
+        owns its data, and no longer writes through to the record — rather
+        than the bare ``_mrrc.Field`` extension type.
+        """
+        return _wrap_field(self._inner.remove_field_at(tag, occurrence))
+
     def _remove_tag(self, tag: str) -> None:
         """Remove all fields with the given tag, control tags included."""
         if _is_control_tag(tag):
