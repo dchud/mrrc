@@ -134,6 +134,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `Record` is now iterable: `for field in record` yields each field as a wrapped `mrrc.Field`
+  (control and data, in record order), matching pymarc. It previously raised `TypeError`.
 - `Record.remove_field_at()` now returns the `mrrc.Field` wrapper (with `__getitem__` and the
   other pymarc conveniences) instead of the bare `_mrrc.Field` extension type.
 - `copy.copy()` of a `Record` no longer raises `RecursionError`: the wrapper's attribute
