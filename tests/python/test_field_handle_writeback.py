@@ -348,6 +348,18 @@ def test_remove_field_at_returns_wrapper() -> None:
     assert removed["a"] == "Original title /"
 
 
+def test_record_is_iterable() -> None:
+    """``for field in record`` yields all fields as wrapped mrrc.Field handles."""
+    record = _build_record()  # 001, 005, 245, three 650s
+    fields = list(record)
+    assert len(fields) == 6
+    assert all(isinstance(f, mrrc.Field) for f in fields)
+    assert {f.tag for f in fields} == {"001", "005", "245", "650"}
+    # Yielded fields carry the pymarc conveniences (raw _mrrc.Field would not).
+    title = next(f for f in record if f.tag == "245")
+    assert title["a"] == "Original title /"
+
+
 # ---------------------------------------------------------------------
 # Same-tag remove plus re-add: no occurrence aliasing
 # ---------------------------------------------------------------------

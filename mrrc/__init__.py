@@ -1035,6 +1035,14 @@ class Record:
             return self._inner.control_field(tag) is not None
         return self.get_field(tag) is not None
 
+    def __iter__(self):
+        """Iterate over all fields (control and data) as live handles.
+
+        Matches pymarc's ``for field in record``: yields the same wrapped
+        :class:`Field` handles as :meth:`fields`, in record order.
+        """
+        return iter(self.fields())
+
     def __getitem__(self, tag: str) -> 'Field':
          """Get first field with given tag (pymarc compatibility).
 
