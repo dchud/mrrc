@@ -1,24 +1,13 @@
 name: Tests
 
 on:
+  # No paths-ignore here: these jobs are required status checks on the main
+  # ruleset. A workflow skipped by a path filter never reports its check, which
+  # leaves the required check pending forever and makes the PR unmergeable.
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'mkdocs.yml'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.beads/**'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'mkdocs.yml'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.beads/**'
 
 permissions:
   contents: read
