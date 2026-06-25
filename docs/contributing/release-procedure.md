@@ -19,13 +19,13 @@ export VERSION="0.5.0"
 
 **Terminology**:
 
-- **"Prepare"** (Sections 1-6): Version updates through git tag creation (ends with tag ready to push)
-- **"Publish"** (Sections 7-8): Publishing to registries (automated via GitHub Actions)
+- **"Prepare"** (Sections 1–6, 7.0–7.2): version and changelog updates committed on a `release/vX.Y.Z` branch, with the release PR opened and its required checks green
+- **"Publish"** (Sections 7.3–8): merge the release PR, tag the merged commit, and push the tag to trigger publication (registry steps automated via GitHub Actions)
 - **"Post-Release"** (Sections 9-10): Cleanup and next cycle setup
 
 ## Definition of Done: "Prepare Release X.Y.Z"
 
-When a coding agent receives a task "prepare release version X.Y.Z", it should follow sections 1-7.2 (Preflight through Create Git Tag). The release is **prepared and ready to publish** when:
+When a coding agent receives a task "prepare release version X.Y.Z", it should follow sections 1–7.2 (Preflight through opening the release PR). The release is **prepared and ready to publish** when:
 
 ### Machine-Checkable Success Criteria
 
@@ -42,19 +42,19 @@ bash scripts/lint-changelog.sh || exit 1
 # 3. All pre-release checks passed
 bash .cargo/check.sh || exit 1
 
-# 4. Git state correct
-[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || exit 1
+# 4. Git state correct (on the release branch, working tree clean after commit)
+[ "$(git rev-parse --abbrev-ref HEAD)" = "release/v$VERSION" ] || exit 1
 git diff --quiet || exit 1
 git diff --cached --quiet || exit 1
 
-# 5. Release commit exists locally
+# 5. Release commit exists on the branch
 git log --oneline -1 | grep -q "chore(release): v$VERSION" || exit 1
 
-# 6. Release tag exists locally (not pushed yet)
-git rev-parse "v$VERSION" >/dev/null || exit 1
+# 6. Release PR is open against main (the tag is created later, after merge)
+[ "$(gh pr view "release/v$VERSION" --json state -q .state 2>/dev/null)" = "OPEN" ] || exit 1
 
 # If all above succeed, preparation is complete
-echo "✓ Release v$VERSION prepared and ready to push"
+echo "✓ Release v$VERSION prepared — PR open and ready to merge"
 ```
 
 **Status Check Command** (agent can use to verify work):
@@ -77,18 +77,18 @@ WS=$(sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version' | se
 bash scripts/lint-changelog.sh && echo "✓ Changelog lint OK" || (echo "✗ Changelog lint failed" && exit 1)
 
 # Git state
-[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] && echo "✓ On main branch" || (echo "✗ Wrong branch" && exit 1)
+[ "$(git rev-parse --abbrev-ref HEAD)" = "release/v$VERSION" ] && echo "✓ On release branch" || (echo "✗ Wrong branch" && exit 1)
 git diff --quiet && echo "✓ No unstaged changes" || (echo "✗ Unstaged changes" && exit 1)
 
 # Commit exists
 git log --oneline -1 | grep -q "chore(release)" && echo "✓ Release commit exists" || (echo "✗ Release commit missing" && exit 1)
 
-# Tag exists
-git rev-parse "v$VERSION" >/dev/null && echo "✓ Release tag created locally" || (echo "✗ Tag missing" && exit 1)
+# Release PR open
+[ "$(gh pr view "release/v$VERSION" --json state -q .state 2>/dev/null)" = "OPEN" ] && echo "✓ Release PR open" || (echo "✗ Release PR not open" && exit 1)
 
 echo ""
-echo "✓ Release v$VERSION is READY TO PUSH"
-echo "  Next: git push origin main && git push origin v$VERSION"
+echo "✓ Release v$VERSION is PREPARED — PR open and ready to merge"
+echo "  Next (maintainer): merge the PR, then on an updated main: git tag -a v$VERSION -m 'Release version $VERSION' && git push origin v$VERSION"
 EOF
 ```
 
@@ -635,7 +635,7 @@ If you modified the release procedure in this session, add a note for future upd
 
 ## Final Sanity Check (Before Git Operations)
 
-Before committing version changes and creating the git tag, perform one final verification pass.
+Before committing the version changes and opening the release PR, perform one final verification pass.
 
 ### 6.0 Final Verification
 
@@ -686,39 +686,31 @@ rm -f Cargo.toml.bak CHANGELOG.md.bak
 
 ## Git Operations
 
-Before starting, ensure you are on the `main` branch with a clean working tree.
+`main` is protected by a branch ruleset with required status checks, so the release commit **cannot be pushed to `main` directly** — it lands through a pull request, and the tag is created on `main` only **after** that PR merges. (Tag pushes to `refs/tags/*` are not gated.) Split of responsibility: an agent preparing the release runs Sections 1–7.2, ending with the release PR open and its checks green; the maintainer runs 7.3 (merge, tag, push tag), which triggers publication.
 
-### 7.0 Validate Git State
+### 7.0 Create the Release Branch
+
+You reach this point on `main` with the version/changelog edits from Sections 3–5 in your working tree (not yet committed). Confirm the starting state, then move those edits onto a release branch.
 
 ```bash
-# Verify branch
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [ "$CURRENT_BRANCH" != "main" ]; then
-  echo "ERROR: Not on main branch (on: $CURRENT_BRANCH)"
-  exit 1
-fi
-
-# Ensure up to date with remote
+# Verify you started from main, up to date with the remote
 git fetch origin
+[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || { echo "ERROR: not on main"; exit 1; }
+# Local main must not be ahead of origin (the bump edits are unstaged, not committed)
+[ "$(git rev-list --count origin/main..HEAD)" = "0" ] || { echo "ERROR: local main is ahead of origin"; exit 1; }
 
-# Check for uncommitted changes
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "ERROR: Working tree is not clean"
-  git status
-  exit 1
-fi
+# Verify origin
+echo "Remote origin: $(git config --get remote.origin.url)"
 
-# Verify origin is set correctly
-ORIGIN_URL=$(git config --get remote.origin.url)
-echo "Remote origin: $ORIGIN_URL"
+# Move the version/changelog edits onto a release branch
+git checkout -b "release/v$VERSION"
 ```
 
 **Checklist**:
 
-- [ ] On `main` branch
-- [ ] Working tree is clean (no staged or unstaged changes)
+- [ ] Started from an up-to-date `main`
+- [ ] On `release/v$VERSION` with the Section 3–5 edits carried over
 - [ ] Remote origin is correct
-- [ ] Script exits with code 0
 
 ### 7.1 Commit Version and Changelog Updates
 
@@ -751,71 +743,56 @@ git log --oneline -1
 - [ ] `git log --oneline -1` shows the new commit
 - [ ] Git status shows nothing to commit
 
-### 7.2 Create Git Tag
+### 7.2 Open the Release PR
 
-Create an annotated tag for the release. **The `v` prefix is required** for GitHub Actions to trigger.
+The release commit reaches `main` through a pull request that passes the required status checks. **Do not tag yet** — the tag must point at the commit as it lands on `main` after merge.
 
 ```bash
-# Verify tag doesn't already exist
-if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-  echo "ERROR: Tag v$VERSION already exists"
-  exit 1
-fi
+# Push the release branch and open the PR
+git push -u origin "release/v$VERSION"
+gh pr create --base main --title "Release v$VERSION" \
+  --body "Workspace version bump to $VERSION and CHANGELOG finalization. Merging this, then tagging the merged commit, triggers publication."
 
-# Create annotated tag (signed optional, but not required for CI)
-git tag -a "v$VERSION" -m "Release version $VERSION"
-
-# Verify
-echo "=== New tag ==="
-git tag -l "v$VERSION" -n1
+# Watch the required checks
+gh pr checks --watch
 ```
+
+**This is the end of "prepare."** An agent stops here and hands off to the maintainer; the required checks must be green before the PR is merged.
 
 **Checklist**:
 
-- [ ] Tag does not already exist
-- [ ] Tag created with `v` prefix (e.g., `v0.5.0`)
-- [ ] Tag message is "Release version X.Y.Z"
-- [ ] `git tag -l v$VERSION -n1` shows the tag
+- [ ] Release branch pushed to origin
+- [ ] PR opened against `main`, titled `Release v$VERSION`
+- [ ] All required status checks pass on the PR
 
-### 7.3 Push Commit and Tag to Origin
+### 7.3 Merge, Tag, and Push the Tag (maintainer)
 
-Push the commit and tag in the correct order:
+After review, the maintainer merges the release PR and creates the tag on the merged commit. **Tagging triggers publication**, so it happens only once the bump is on `main`.
 
 ```bash
-# Push commit to main
-echo "Pushing commit to origin/main..."
-git push origin main
+# Merge the release PR (squash) and update local main
+gh pr merge "release/v$VERSION" --squash --delete-branch
+git checkout main
+git pull --ff-only
 
-# Verify commit pushed
-echo "=== Verifying commit pushed ==="
-git log --oneline -1
-git rev-list --left-right --count origin/main...HEAD
-# (should show: 0	0)
+# Confirm the release commit is on main
+git log --oneline -1            # expect: chore(release): v$VERSION
 
-# Push tag
-echo "Pushing tag v$VERSION to origin..."
+# Create the annotated tag on main's release commit. The `v` prefix is required
+# for GitHub Actions to trigger; tag pushes are not gated by the ruleset.
+git rev-parse "v$VERSION" >/dev/null 2>&1 && { echo "ERROR: tag v$VERSION already exists"; exit 1; }
+git tag -a "v$VERSION" -m "Release version $VERSION"
 git push origin "v$VERSION"
 
-# Verify tag pushed
-echo "=== Verifying tag pushed ==="
+# Verify the tag pushed
 git ls-remote origin | grep "refs/tags/v$VERSION"
-
-# Final status check
-echo "=== Final git status ==="
-git status
 ```
-
-**Expected output**:
-
-- Commit is up to date with origin/main
-- Tag appears in `git ls-remote origin`
-- `git status` shows nothing to commit
 
 **Checklist**:
 
-- [ ] Commit pushed to origin/main
+- [ ] Release PR merged; local `main` fast-forwarded to include `chore(release): v$VERSION`
+- [ ] Tag created on `main`'s release commit with the `v` prefix
 - [ ] Tag pushed to origin
-- [ ] `git status` shows "Your branch is up to date with 'origin/main'."
 - [ ] Tag is visible in GitHub: https://github.com/dchud/mrrc/tags
 
 ---
@@ -991,14 +968,13 @@ Docs should be built and available. If not, they build automatically within a fe
 
 ### 10.1 Verify Sync and Beads
 
-Sync any issue tracking changes:
+Beads changes ride into `main` inside PRs (the release PR carries any closures made during the release), so the DB and `main` are normally already in sync. Confirm:
 
 ```bash
-br sync --flush-only
-git status
+br sync --status
 ```
 
-No changes should be required unless you manually updated issue statuses.
+If it reports the DB is ahead, those pending changes will flush into your next PR's `.beads/issues.jsonl` — never a direct push to `main`.
 
 ### 10.2 Create Post-Release Issue (Optional)
 
@@ -1061,20 +1037,24 @@ Example workflow:
 
 ### 10.4 Commit Post-Release Changes (if any)
 
-Only commit if you made changelog changes:
+Only commit if you made changelog changes. Like every change to `main`, this lands through a PR (direct pushes are blocked).
 
 ```bash
 git status
 # If only CHANGELOG.md changed:
+git checkout -b "chore/post-v$VERSION-changelog"
 git add CHANGELOG.md
-git commit -m "docs: clear [Unreleased] section after vX.Y.Z release"
-git push origin main
+git commit -m "docs: clear [Unreleased] section after v$VERSION release"
+git push -u origin "chore/post-v$VERSION-changelog"
+gh pr create --base main --title "Clear [Unreleased] after v$VERSION" \
+  --body "Reset the CHANGELOG [Unreleased] section for the next cycle."
+# Merge after the required checks pass.
 ```
 
 **Checklist**:
 
 - [ ] No uncommitted changes
-- [ ] Post-release commit (if needed) pushed to main
+- [ ] Post-release changelog reset (if needed) landed on `main` via PR
 
 ---
 
@@ -1153,8 +1133,8 @@ For issues discovered immediately:
    - Python version not available on that platform
 3. Fix the issue in the workflow file (`.github/workflows/python-release.yml`)
 4. Delete the failed tag: `git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`
-5. Commit the workflow fix: `git commit -am "fix: python-release workflow"`
-6. Re-tag and push: `git tag -a vX.Y.Z -m "Release version X.Y.Z" && git push origin vX.Y.Z`
+5. Land the workflow fix on `main` through a PR (direct pushes are blocked; see Section 7)
+6. Once the fix is on `main`, re-tag and push: `git tag -a vX.Y.Z -m "Release version X.Y.Z" && git push origin vX.Y.Z`
 
 ### PyPI Publication Fails
 
@@ -1264,10 +1244,10 @@ twine upload dist/mrrc-*.whl
 
 **Phase 6: Git Operations**
 
-- [ ] Version update commit created with proper message
-- [ ] Commit pushed to origin/main
-- [ ] Git tag created with `v` prefix
-- [ ] Tag pushed to origin
+- [ ] Version update commit created on a `release/vX.Y.Z` branch
+- [ ] Release PR opened and required checks green
+- [ ] Release PR merged to `main` (maintainer)
+- [ ] Git tag created with `v` prefix on the merged commit and pushed
 
 **Phase 7: Publishing & Verification**
 
@@ -1337,10 +1317,12 @@ twine upload dist/mrrc-*.whl
 sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version'
 cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | "\(.name) \(.version)"'
 
-# Git operations
-git tag -a vX.Y.Z -m "Release version X.Y.Z"
-git push origin main
-git push origin vX.Y.Z
+# Git operations (main is PR-gated; tag after the release PR merges)
+git checkout -b release/vX.Y.Z          # carries the version/changelog edits
+git add Cargo.toml Cargo.lock CHANGELOG.md && git commit -m "chore(release): vX.Y.Z"
+git push -u origin release/vX.Y.Z && gh pr create --base main --title "Release vX.Y.Z"
+# after the PR merges and you are on an updated main:
+git tag -a vX.Y.Z -m "Release version X.Y.Z" && git push origin vX.Y.Z
 
 # Manual crates.io publish
 cargo publish --dry-run
