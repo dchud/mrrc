@@ -52,6 +52,7 @@ from pathlib import Path
 
 import mrrc
 from mrrc import MARCReader as MrrcReader
+from mrrc import RecordBoundaryScanner, parse_batch_parallel
 
 try:
     import pymarc
@@ -76,6 +77,19 @@ def mrrc_read(path: Path) -> tuple[int, float]:
     for _record in MrrcReader(str(path)):
         count += 1
     return count, time.perf_counter() - start
+
+
+def mrrc_read_bulk(path: Path) -> tuple[int, float]:
+    # mrrc's fastest read path: scan record boundaries and parse the whole
+    # file in one parallel Rust call (rayon), instead of one record per Python
+    # iteration. pymarc has no batch equivalent, so this is compared against
+    # pymarc's per-record read — each library at its best.
+    start = time.perf_counter()
+    with open(path, "rb") as handle:
+        buffer = handle.read()
+    boundaries = RecordBoundaryScanner().scan(buffer)
+    records = parse_batch_parallel(boundaries, buffer)
+    return len(records), time.perf_counter() - start
 
 
 def mrrc_extract(path: Path) -> tuple[int, float]:
@@ -144,6 +158,7 @@ def pymarc_roundtrip(path: Path) -> tuple[int, float]:
 
 OPERATIONS = {
     "read": (mrrc_read, pymarc_read),
+    "read_bulk": (mrrc_read_bulk, pymarc_read),
     "extract": (mrrc_extract, pymarc_extract),
     "roundtrip": (mrrc_roundtrip, pymarc_roundtrip),
 }
@@ -282,6 +297,9 @@ def render_markdown(context, fixtures, results, repeat) -> str:
         "- Comparison is Python-to-Python (mrrc wrapper vs pymarc). Absolute "
         "Rust throughput is measured separately via "
         "`cargo bench --bench marc_benchmarks`.",
+        "- `read` = per-record iteration (`for r in reader`), the pymarc-shaped "
+        "path. `read_bulk` = mrrc's parallel `parse_batch_parallel` vs pymarc's "
+        "per-record read — each library's fastest read path.",
         "",
     ]
     for fixture in fixtures:
@@ -324,7 +342,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--ops",
-        default="read,extract,roundtrip",
+        default="read,read_bulk,extract,roundtrip",
         help="comma-separated operations (default: all)",
     )
     parser.add_argument(
