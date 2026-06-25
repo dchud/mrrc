@@ -1965,10 +1965,16 @@ class MARCWriter:
 
 
 def _wrap_record(rust_record) -> Record:
-    """Wrap a raw Rust PyRecord in the Python Record wrapper."""
-    wrapper = Record(None)
+    """Wrap a raw Rust PyRecord in the Python Record wrapper.
+
+    Uses ``__new__`` to bypass the ``Record`` and ``Leader`` constructors,
+    which would each build a throwaway inner Rust object (``_Record`` and
+    ``_Leader``) only to have it discarded here. This wrapping runs once per
+    record on the read hot path, so the saved allocations matter.
+    """
+    wrapper = Record.__new__(Record)
     wrapper._inner = rust_record
-    leader = Leader()
+    leader = object.__new__(Leader)
     leader._rust_leader = rust_record.leader
     leader._parent_record = wrapper
     wrapper._leader = leader
