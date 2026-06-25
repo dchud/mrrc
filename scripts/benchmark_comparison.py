@@ -292,8 +292,10 @@ def render_markdown(context, fixtures, results, repeat) -> str:
     lines += [f"- {key}: {value}" for key, value in context.items()]
     lines += [
         f"- Method: median of {repeat} measured repetitions per cell "
-        "(one cache-warming run discarded); wall-clock records/second on a "
-        "quiet machine.",
+        "(one cache-warming run discarded); wall-clock records/second on the "
+        "host above — a working machine, not a dedicated benchmark rig, so "
+        "treat the figures as representative of the relative speedup rather "
+        "than a sterile maximum.",
         "- Comparison is Python-to-Python (mrrc wrapper vs pymarc). Absolute "
         "Rust throughput is measured separately via "
         "`cargo bench --bench marc_benchmarks`.",

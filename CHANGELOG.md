@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `copy.deepcopy()` support for `Record`, `Field`, and `Leader`: deep copies are fully
   independent of the original (and of any record), while `copy.copy()` stays shallow, matching
   pymarc. Deep-copying a live field handle yields a detached snapshot of its current data.
+- A reproducible mrrc-vs-pymarc benchmark (`scripts/benchmark_comparison.py`) and published
+  comparison figures (`docs/benchmarks/`): roughly 6–8× pymarc on per-record reads, ~30× on
+  the parallel bulk path, ~1.7× extract, ~7× roundtrip on the reference host. Replaces the
+  prior hedged "needs re-measurement" note.
 
 ### Changed
 
