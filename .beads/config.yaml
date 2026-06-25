@@ -37,12 +37,11 @@
 # Debounce interval for auto-flush (can also use BEADS_FLUSH_DEBOUNCE)
 # flush-debounce: "5s"
 
-# Git branch for beads commits (bd sync will commit to this branch)
-# IMPORTANT: Set this for team projects so all clones use the same sync branch.
-# This setting persists across clones (unlike database config which is gitignored).
-# Can also use BEADS_SYNC_BRANCH env var for local override.
-# If not set, bd sync will require you to run 'bd config set sync.branch <branch>'.
-sync-branch: "beads-sync"
+# NOTE: `sync-branch` was used by the legacy `bd` daemon to auto-commit the JSONL
+# to a dedicated branch. The current tool `br` never runs git, so there is no sync
+# branch: run `br sync --flush-only`, then commit `.beads/issues.jsonl` on your
+# working branch like any other file. It reaches `main` through a pull request —
+# direct pushes to `main` are blocked by the branch ruleset (required status checks).
 
 # Multi-repo configuration (experimental - bd-307)
 # Allows hydrating from multiple repositories and routing writes to the correct JSONL

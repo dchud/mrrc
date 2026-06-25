@@ -171,35 +171,38 @@ If `.cargo/check.sh` passes locally, CI will pass.
 ## Warnings
 
 - **`docs/history/`** — archival only (89 files). Do not modify.
-- **Never close issues before CI passes** — commit, push, verify CI on all
-  platforms, then close.
+- **Never close issues before the PR merges** — push the branch, open a PR,
+  verify the required checks pass, wait for the merge, then close.
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT
-complete until `git push` succeeds.
+**When ending a work session**, you MUST complete ALL steps below. `main` is
+protected by a branch ruleset with required status checks, so you CANNOT push to
+`main` directly — every change lands through a pull request. Work is NOT complete
+until your branch is pushed and a PR is open with CI green.
 
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** — Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) — Tests, linters, builds
-3. **Update issue status** — Close finished work, update in-progress items
-4. **PUSH TO REMOTE** — This is MANDATORY:
+2. **Run quality gates** (if code changed) — `.cargo/check.sh`
+3. **Sync beads onto your branch** — `br sync --flush-only`, then
+   `git add .beads/issues.jsonl` and commit it with your change. Beads state rides
+   into the PR like any other file; it is never pushed straight to `main`.
+4. **Push the branch and open a PR** — This is MANDATORY:
    ```bash
-   git pull --rebase
-   br sync --flush-only
-   git push
-   git status  # MUST show "up to date with origin"
+   git push -u origin <your-branch>
+   gh pr create   # add "Closes #NNN" if it resolves an elevated GitHub issue
    ```
-5. **Clean up** — Clear stashes, prune remote branches
-6. **Verify** — All changes committed AND pushed
-7. **Hand off** — Provide context for next session
+5. **Verify CI** — Wait for the required status checks to pass on the PR.
+6. **Hand off** — The maintainer reviews and merges. Provide context for the next
+   session.
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing — that leaves work stranded locally
-- NEVER say "ready to push when you are" — YOU must push
-- If push fails, resolve and retry until it succeeds
+- Work is NOT complete until the branch is pushed and a PR is open with green CI.
+- NEVER stop before pushing the branch — that leaves work stranded locally.
+- NEVER push directly to `main` — the ruleset rejects it. Use a PR.
+- NEVER merge the PR without explicit maintainer approval.
+- Close beads only after the PR is merged — CI green is not enough.
 
 ## See Also
 

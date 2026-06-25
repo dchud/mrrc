@@ -31,9 +31,9 @@ br close <id> --reason "Done" --json
 br list --status open --priority 1 --json
 br show <id> --json
 
-# Sync (CRITICAL at end of session!)
+# Sync (CRITICAL at end of session!) — commit on your branch; it lands via PR
 br sync --flush-only
-git add .beads/
+git add .beads/issues.jsonl
 git commit -m "sync beads"
 ```
 
@@ -44,10 +44,10 @@ git commit -m "sync beads"
 3. **Work on it**: Implement, test, document
 4. **Discover new work?** `br create "Found bug" -p 1 --deps discovered-from:<parent-id> --json`
 5. **Complete**: `br close <id> --reason "Done" --json`
-6. Sync and commit:
+6. Sync and commit on your branch (it reaches `main` through your PR):
    ```bash
    br sync --flush-only
-   git add .beads/
+   git add .beads/issues.jsonl
    git commit -m "sync beads"
    ```
 
@@ -62,7 +62,9 @@ git commit -m "sync beads"
 ### Git Workflow
 
 - Always commit `.beads/issues.jsonl` with code changes
-- Run `br sync --flush-only` at end of work sessions, then `git add .beads/ && git commit`
+- Run `br sync --flush-only` at end of work sessions, then `git add .beads/issues.jsonl && git commit`
+- `main` is protected by required status checks: land every change through a pull
+  request. Never push to `main` directly, and never merge a PR without maintainer approval.
 
 ### MCP Server (Recommended)
 

@@ -78,16 +78,19 @@ br update <issue-id> --status in_progress --json
 br close <issue-id> --reason "Description of what was completed" --json
 ```
 
-**Export the database to JSONL and commit**:
+**Export the database to JSONL and commit it on your branch**:
 ```bash
 br sync --flush-only
-git add .beads/
+git add .beads/issues.jsonl
 git commit -m "sync beads"
 ```
+The JSONL is committed like any other file and reaches `main` through your pull
+request — it is never pushed directly to `main`.
 
 ### Making Changes
 
-1. **Create a branch** (optional but recommended):
+1. **Create a branch** (required — `main` is protected and only accepts changes
+   through a pull request):
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -162,7 +165,9 @@ For complex memory-related changes, also run:
 .cargo/check.sh --memory-checks
 ```
 
-Only push when all checks pass.
+Push your branch and open a pull request once the checks pass. `main` is protected
+by required status checks, so changes cannot be pushed to `main` directly — they
+land through the PR after its checks go green and a maintainer merges it.
 
 ## Commit Messages
 
@@ -256,9 +261,12 @@ pub fn my_function() -> Result<()> {
 2. **Link related issues**: Reference Beads issue IDs in the PR description
 3. **Add tests**: Include tests for new functionality
 4. **Update documentation**: Ensure all public APIs are documented
-5. **Ensure CI passes**: GitHub Actions will run automated checks
+5. **Required checks must pass**: the `main` ruleset requires the Tests and Lint
+   checks to pass before the PR can merge
 6. **Request review**: Tag maintainers for review
 7. **Address feedback**: Make requested changes and update PR
+8. **Merge**: a maintainer merges the PR once the required checks pass and review
+   is approved
 
 ## Feature Development
 
