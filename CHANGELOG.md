@@ -151,6 +151,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `parse_batch_parallel_limited` were missing from the Python API reference; the release
   procedure understated the wheel count and used retired issue-tracker commands.
 
+### Dependencies
+
+- Bump ruff from 0.15.16 to 0.15.17
+- Bump syrupy from 5.3.1 to 5.3.2
+- Bump pytest from 9.0.3 to 9.1.0
+- Bump CodSpeedHQ/action from 4.17.0 to 4.17.5
+
 ## [0.8.2] - 2026-06-09
 
 ### Added
