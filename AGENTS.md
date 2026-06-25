@@ -171,8 +171,10 @@ If `.cargo/check.sh` passes locally, CI will pass.
 ## Warnings
 
 - **`docs/history/`** — archival only (89 files). Do not modify.
-- **Never close issues before the PR merges** — push the branch, open a PR,
-  verify the required checks pass, wait for the merge, then close.
+- **Close a bead in the PR that resolves it** — the closure rides in
+  `.beads/issues.jsonl` and takes effect on `main` when the PR merges, exactly
+  like a `Closes #NNN` line. Don't mark a bead done for work that won't ship;
+  reopen it if the PR is abandoned.
 
 ## Landing the Plane (Session Completion)
 
@@ -185,9 +187,10 @@ until your branch is pushed and a PR is open with CI green.
 
 1. **File issues for remaining work** — Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) — `.cargo/check.sh`
-3. **Sync beads onto your branch** — `br sync --flush-only`, then
-   `git add .beads/issues.jsonl` and commit it with your change. Beads state rides
-   into the PR like any other file; it is never pushed straight to `main`.
+3. **Record beads on your branch** — `br close` / `br update` the relevant beads,
+   run `br sync --flush-only`, then `git add .beads/issues.jsonl` and commit it with
+   your change. Closing the bead this PR resolves goes IN this PR — the closure
+   lands on `main` when the PR merges. Never push beads straight to `main`.
 4. **Push the branch and open a PR** — This is MANDATORY:
    ```bash
    git push -u origin <your-branch>
@@ -202,7 +205,8 @@ until your branch is pushed and a PR is open with CI green.
 - NEVER stop before pushing the branch — that leaves work stranded locally.
 - NEVER push directly to `main` — the ruleset rejects it. Use a PR.
 - NEVER merge the PR without explicit maintainer approval.
-- Close beads only after the PR is merged — CI green is not enough.
+- Close the bead a PR resolves IN that PR (the closure lands on merge), not in a
+  separate beads-only commit. CI green is not merged — reopen if the PR is abandoned.
 
 ## See Also
 

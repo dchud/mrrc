@@ -106,8 +106,9 @@ Do NOT use `br edit` (opens `$EDITOR`, blocks agents).
 ## Warnings
 
 - **`docs/history/`** — archival only (89 files). Do not modify.
-- **Never close issues before the PR merges** — push, verify the required checks
-  pass, wait for the merge, then close.
+- **Close a bead in the PR that resolves it** — the closure rides in
+  `.beads/issues.jsonl` and takes effect on `main` when the PR merges (like
+  `Closes #NNN`); reopen it if the PR is abandoned.
 
 ## Workflow
 
