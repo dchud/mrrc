@@ -52,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Control fields come back in record order rather than fixed ascending-tag order (a
   difference only for records whose control fields are stored out of order; record order
   matches pymarc).
+- Iterating a `MARCReader` is faster: wrapping each parsed record no longer builds a
+  throwaway inner `_Record` and two `_Leader` objects only to discard them, lifting
+  per-record read throughput (path and bytes inputs alike). Output is unchanged.
 - Writing ISO 2709 records (`MARCWriter` and the authority/holdings writers) allocates less:
   each directory entry's length and start-position digits are written straight into the
   output buffer instead of through a per-field `format!`.
