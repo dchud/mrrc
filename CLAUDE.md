@@ -106,12 +106,18 @@ Do NOT use `br edit` (opens `$EDITOR`, blocks agents).
 ## Warnings
 
 - **`docs/history/`** — archival only (89 files). Do not modify.
-- **Never close issues before CI passes** — commit, push, verify CI on all
-  platforms, then close.
+- **Close a bead in the PR that resolves it** — the closure rides in
+  `.beads/issues.jsonl` and takes effect on `main` when the PR merges (like
+  `Closes #NNN`); reopen it if the PR is abandoned.
 
 ## Workflow
 
 - New issue = new branch from `main`
+- `main` is protected by a branch ruleset with required status checks: you cannot
+  push to `main` directly. Land every change through a pull request, and let the
+  maintainer merge it (do not merge without explicit approval).
+- Beads state (`.beads/issues.jsonl`) is committed on your branch and rides into
+  the PR like any other file — never pushed straight to `main`.
 - Always run `.cargo/check.sh` before pushing
 - Use `uv` for all Python invocations
 
