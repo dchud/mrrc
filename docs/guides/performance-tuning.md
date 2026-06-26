@@ -4,9 +4,9 @@ Performance analysis and optimization guidance for MRRC. For parallel processing
 
 ## Executive Summary
 
-- **Single-thread**: record parsing runs in Rust; early benchmarking suggested
-  at least a 4x speedup over pymarc (these benchmarks need to be updated and
-  reconsidered — see [Benchmark Results](../benchmarks/results.md))
+- **Single-thread**: record parsing runs in Rust; the Python wrapper reads
+  roughly 7× faster than pymarc per record on a realistic corpus, and the
+  native Rust crate faster still (see [Benchmark Results](../benchmarks/results.md))
 - **Multi-thread**: GIL release during parsing lets speedup scale with core
   count
 - **GIL released** automatically during parsing (no code changes needed)
@@ -154,13 +154,13 @@ print(f"Processed {count} records in {elapsed:.2f}s")
 print(f"Throughput: {count / elapsed:.0f} rec/s")
 ```
 
-## Comparison: pymrrc vs pymarc
+## Comparison: mrrc vs pymarc
 
-pymrrc parses each record in Rust and releases the GIL while doing so, so it
+mrrc parses each record in Rust and releases the GIL while doing so, so it
 is faster single-threaded and its threading speedup scales with cores; pymarc
-parses in Python under the GIL, so threads provide no parsing parallelism.
-Early benchmarking suggested at least a 4x single-threaded speedup; these
-benchmarks need to be updated and reconsidered. Use the timing pattern above
+parses in Python under the GIL, so threads provide no parsing parallelism. On a
+realistic corpus the Python wrapper reads roughly 7× faster than pymarc per
+record and ~30× through the parallel batch path. Use the timing pattern above
 to measure on your own workload.
 
 ## References

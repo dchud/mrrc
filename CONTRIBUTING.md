@@ -12,7 +12,7 @@ To report a security vulnerability, see the [security policy](SECURITY.md) inste
 
 ### Prerequisites
 
-- **Rust 1.70+**: Install from [rustup.rs](https://rustup.rs/)
+- **Rust 1.88+**: Install from [rustup.rs](https://rustup.rs/)
 - **Git**: For version control
 - **Cargo**: Comes with Rust
 
@@ -148,7 +148,7 @@ This runs ASAN on library tests, detecting issues like:
 - See [ASAN documentation](https://github.com/google/sanitizers/wiki/AddressSanitizer) for detailed output interpretation
 
 **For library maintainers:**
-See `docs/design/MEMORY_SAFETY_CI.md` for comprehensive memory safety infrastructure details.
+See `docs/history/MEMORY_SAFETY_CI.md` for comprehensive memory safety infrastructure details.
 
 ### Before Pushing
 

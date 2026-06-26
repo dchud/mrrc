@@ -400,6 +400,22 @@ cargo metadata --format-version 1 --no-deps \
 - [ ] Both crates report the new version
 - [ ] Script exits with success (code 0)
 
+### 3.3 Sweep Version-Pinned Prose
+
+The workspace version bump does not touch prose that names a specific version. Update these by hand to match `$VERSION`:
+
+- `README.md` — the roadmap line naming the current release (e.g. "Version 0.8.2 is suitable for testing")
+- `docs/getting-started/installation.md` — the `mrrc = "0.X"` dependency example
+
+```bash
+rg -n '0\.[0-9]+\.[0-9]+|mrrc = "0\.' README.md docs/getting-started/installation.md
+```
+
+**Checklist**:
+
+- [ ] No prose claims an older version than `$VERSION`
+- [ ] The installation dependency example matches the new minor line
+
 ---
 
 ## Update Changelog
