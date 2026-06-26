@@ -77,6 +77,13 @@ pub struct MarcWriter<W: Write> {
     writer: W,
     records_written: usize,
     finished: bool,
+    /// Reusable scratch buffers, cleared and refilled per record so a bulk
+    /// write does not allocate fresh `Vec`s (and grow them from zero
+    /// capacity) for every record. `data_area` and `directory` accumulate
+    /// the serialized body; `leader_buf` holds the 24 leader bytes.
+    data_area: Vec<u8>,
+    directory: Vec<u8>,
+    leader_buf: Vec<u8>,
 }
 
 impl<W: Write> MarcWriter<W> {
@@ -98,6 +105,9 @@ impl<W: Write> MarcWriter<W> {
             writer,
             records_written: 0,
             finished: false,
+            data_area: Vec::new(),
+            directory: Vec::new(),
+            leader_buf: Vec::with_capacity(24),
         }
     }
 
@@ -143,29 +153,34 @@ impl<W: Write> MarcWriter<W> {
             });
         }
 
-        // Snapshot per-record error context up front so write-path failures
-        // carry the record's identity (1-based index in the output stream
-        // plus its 001 control number, when available).
+        // Snapshot the 1-based output index up front for error context. The
+        // 001 control number is fetched lazily (`rcn()`) only on the error
+        // paths that need it, so the happy path does not allocate a String
+        // per record just to leave it unused.
         let record_index = Some(self.records_written.saturating_add(1));
-        let record_control_number = crate::RecordHelpers::control_number(record).map(String::from);
+        let rcn = || crate::RecordHelpers::control_number(record).map(String::from);
 
-        // Build the data area first
-        let mut data_area = Vec::new();
-        let mut directory = Vec::new();
+        // Reuse the per-writer scratch buffers across records: clear keeps the
+        // backing capacity, so a bulk write does not reallocate (or grow from
+        // zero) for every record.
+        let data_area = &mut self.data_area;
+        let directory = &mut self.directory;
+        data_area.clear();
+        directory.clear();
         let mut current_position = 0;
 
         // Write control fields first (001-009)
         for (tag, values) in &record.control_fields {
             if tag.as_str() < "010" {
                 for value in values {
-                    validate_directory_tag(tag, record_index, record_control_number.as_deref())?;
+                    validate_directory_tag(tag, record_index, rcn().as_deref())?;
                     let field_data = value.as_bytes();
                     let field_length = field_data.len() + 1; // +1 for terminator
 
                     // Add directory entry
                     directory.extend_from_slice(tag.as_bytes());
-                    push_zero_padded(&mut directory, field_length, 4);
-                    push_zero_padded(&mut directory, current_position, 5);
+                    push_zero_padded(directory, field_length, 4);
+                    push_zero_padded(directory, current_position, 5);
 
                     // Add data
                     data_area.extend_from_slice(field_data);
@@ -175,30 +190,29 @@ impl<W: Write> MarcWriter<W> {
             }
         }
 
-        // Write data fields (010+)
+        // Write data fields (010+). Serialize each field straight into the
+        // shared data area and recover its length from the buffer's growth,
+        // rather than building it in a fresh per-field `Vec` and copying it in.
         for (tag, fields) in &record.fields {
             for field in fields {
-                validate_directory_tag(tag, record_index, record_control_number.as_deref())?;
-                let mut field_data = Vec::new();
-                field_data.push(field.indicator1 as u8);
-                field_data.push(field.indicator2 as u8);
+                validate_directory_tag(tag, record_index, rcn().as_deref())?;
+                let field_start = data_area.len();
+                data_area.push(field.indicator1 as u8);
+                data_area.push(field.indicator2 as u8);
 
                 for subfield in &field.subfields {
-                    field_data.push(SUBFIELD_DELIMITER);
-                    field_data.push(subfield.code as u8);
-                    field_data.extend_from_slice(subfield.value.as_bytes());
+                    data_area.push(SUBFIELD_DELIMITER);
+                    data_area.push(subfield.code as u8);
+                    data_area.extend_from_slice(subfield.value.as_bytes());
                 }
 
-                field_data.push(FIELD_TERMINATOR);
-                let field_length = field_data.len();
+                data_area.push(FIELD_TERMINATOR);
+                let field_length = data_area.len() - field_start;
 
                 // Add directory entry
                 directory.extend_from_slice(tag.as_bytes());
-                push_zero_padded(&mut directory, field_length, 4);
-                push_zero_padded(&mut directory, current_position, 5);
-
-                // Add data
-                data_area.extend_from_slice(&field_data);
+                push_zero_padded(directory, field_length, 4);
+                push_zero_padded(directory, current_position, 5);
                 current_position += field_length;
             }
         }
@@ -214,7 +228,7 @@ impl<W: Write> MarcWriter<W> {
             record_length,
             base_address,
             record_index,
-            record_control_number.as_deref(),
+            rcn().as_deref(),
         )?;
 
         // Update leader with correct values.
@@ -231,27 +245,24 @@ impl<W: Write> MarcWriter<W> {
         leader.record_length =
             u32::try_from(record_length).map_err(|_| MarcError::WriterError {
                 record_index,
-                record_control_number: record_control_number.clone(),
+                record_control_number: rcn(),
                 message: format!("Record length exceeds 4GB limit ({record_length} bytes)"),
             })?;
         leader.data_base_address =
             u32::try_from(base_address).map_err(|_| MarcError::WriterError {
                 record_index,
-                record_control_number: record_control_number.clone(),
+                record_control_number: rcn(),
                 message: format!("Base address exceeds 4GB limit ({base_address} bytes)"),
             })?;
 
-        // Write leader
-        let leader_bytes = leader.as_bytes()?;
-        self.writer.write_all(&leader_bytes)?;
-
-        // Write directory
-        self.writer.write_all(&directory)?;
-
-        // Write data area
-        self.writer.write_all(&data_area)?;
-
-        // Write record terminator
+        // Serialize the leader into the reused buffer (no per-record Vec) and
+        // write leader, directory, data area, and record terminator.
+        let leader_buf = &mut self.leader_buf;
+        leader_buf.clear();
+        leader.write_into(leader_buf)?;
+        self.writer.write_all(leader_buf)?;
+        self.writer.write_all(directory)?;
+        self.writer.write_all(data_area)?;
         self.writer.write_all(&[RECORD_TERMINATOR])?;
 
         self.records_written += 1;

@@ -330,24 +330,23 @@ impl Leader {
     /// Returns an error if the leader values are invalid for serialization.
     pub fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut bytes = Vec::with_capacity(24);
+        self.write_into(&mut bytes)?;
+        Ok(bytes)
+    }
 
-        // Record length (5 digits, zero-padded)
-        bytes.extend_from_slice(format!("{:05}", self.record_length).as_bytes());
-        bytes.push(self.record_status as u8);
-        bytes.push(self.record_type as u8);
-        bytes.push(self.bibliographic_level as u8);
-        bytes.push(self.control_record_type as u8);
-        bytes.push(self.character_coding as u8);
-        bytes.push(b'0' + self.indicator_count);
-        bytes.push(b'0' + self.subfield_code_count);
-
-        // Base address of data (5 digits, zero-padded)
-        bytes.extend_from_slice(format!("{:05}", self.data_base_address).as_bytes());
-        bytes.push(self.encoding_level as u8);
-        bytes.push(self.cataloging_form as u8);
-        bytes.push(self.multipart_level as u8);
-
-        // Reserved (4 bytes)
+    /// Append this leader's 24 serialized bytes to `buf`.
+    ///
+    /// Equivalent to extending `buf` with [`Leader::as_bytes`], but writes the
+    /// two 5-digit fields directly with a no-allocation zero-pad helper instead
+    /// of routing each through a heap-allocating `format!`. Lets a writer reuse
+    /// one buffer across records rather than allocating a fresh `Vec` per leader.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the reserved field is not exactly 4 bytes.
+    pub fn write_into(&self, buf: &mut Vec<u8>) -> Result<()> {
+        // Reserved (4 bytes) — validate before writing any bytes so a bad
+        // leader leaves `buf` untouched.
         let reserved_bytes = self.reserved.as_bytes();
         if reserved_bytes.len() != 4 {
             return Err(MarcError::leader_msg(format!(
@@ -355,9 +354,25 @@ impl Leader {
                 reserved_bytes.len()
             )));
         }
-        bytes.extend_from_slice(reserved_bytes);
 
-        Ok(bytes)
+        // Record length (5 digits, zero-padded)
+        crate::iso2709::push_zero_padded(buf, self.record_length as usize, 5);
+        buf.push(self.record_status as u8);
+        buf.push(self.record_type as u8);
+        buf.push(self.bibliographic_level as u8);
+        buf.push(self.control_record_type as u8);
+        buf.push(self.character_coding as u8);
+        buf.push(b'0' + self.indicator_count);
+        buf.push(b'0' + self.subfield_code_count);
+
+        // Base address of data (5 digits, zero-padded)
+        crate::iso2709::push_zero_padded(buf, self.data_base_address as usize, 5);
+        buf.push(self.encoding_level as u8);
+        buf.push(self.cataloging_form as u8);
+        buf.push(self.multipart_level as u8);
+
+        buf.extend_from_slice(reserved_bytes);
+        Ok(())
     }
 }
 
