@@ -94,6 +94,10 @@ quick-xml = { version = "0.40", features = ["serialize"] }
 # Ordered map for insertion order preservation
 indexmap = { version = "2.2", features = ["serde"] }
 
+# Fast non-cryptographic hasher for the tag-keyed record maps (see
+# `TagIndexMap` in src/record.rs).
+foldhash = "0.1.5"
+
 # Error handling
 thiserror = "2.0"
 
