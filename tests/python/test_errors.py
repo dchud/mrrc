@@ -105,9 +105,12 @@ class TestErrorCodes:
     @pytest.mark.parametrize("cls, code, _slug", _CODE_TABLE)
     def test_help_url_anchors_on_docs_page(self, cls, code, _slug):
         if cls is mrrc.BadSubfieldCodeWarning:
-            pytest.skip("BadSubfieldCodeWarning is a warning, not an exception")
+            pytest.skip(
+                "BadSubfieldCodeWarning is a warning, not an exception"
+            )
         instance = cls()
         from mrrc.exceptions import DOCS_BASE_URL
+
         assert (
             instance.help_url()
             == f"{DOCS_BASE_URL}/reference/error-codes/#{code}"
@@ -558,7 +561,9 @@ class TestFfiTypedExceptions:
     with positional attributes populated.
     """
 
-    def test_truncated_record_surfaces_as_typed_exception_with_byte_counts(self):
+    def test_truncated_record_surfaces_as_typed_exception_with_byte_counts(
+        self,
+    ):
         """A truncated record must surface as ``mrrc.TruncatedRecord``
         (a subclass of ``mrrc.EndOfRecordNotFound``) with
         ``expected_length`` and ``actual_length`` populated.
@@ -809,7 +814,9 @@ class _FailingReader:
     def __init__(self, message: str = "synthetic read failure") -> None:
         self._message = message
 
-    def read(self, n: int) -> bytes:  # pragma: no cover - reached but never returns
+    def read(
+        self, n: int
+    ) -> bytes:  # pragma: no cover - reached but never returns
         raise OSError(self._message)
 
 
@@ -874,7 +881,7 @@ class TestNonBinaryReaderLeaderErrorPositionalContext:
 
     def test_xml_to_record_bad_leader_carries_record_index(self):
         xml = (
-            f'<record><leader>{_BAD_LEADER}</leader>'
+            f"<record><leader>{_BAD_LEADER}</leader>"
             '<controlfield tag="001">bad</controlfield></record>'
         )
         with pytest.raises(mrrc.RecordLeaderInvalid) as excinfo:
@@ -883,11 +890,11 @@ class TestNonBinaryReaderLeaderErrorPositionalContext:
 
     def test_xml_to_records_bad_leader_identifies_failing_record(self):
         good = (
-            f'<record><leader>{_OK_LEADER}</leader>'
+            f"<record><leader>{_OK_LEADER}</leader>"
             '<controlfield tag="001">ok</controlfield></record>'
         )
         bad = (
-            f'<record><leader>{_BAD_LEADER}</leader>'
+            f"<record><leader>{_BAD_LEADER}</leader>"
             '<controlfield tag="001">bad</controlfield></record>'
         )
         xml = f"<collection>{good}{good}{bad}</collection>"
@@ -916,7 +923,9 @@ class TestGetFieldOrErrCrossRecordType:
     record's 001 control field.
     """
 
-    def test_bibliographic_record_get_field_or_err_raises_field_not_found(self):
+    def test_bibliographic_record_get_field_or_err_raises_field_not_found(
+        self,
+    ):
         with open("tests/data/simple_book.mrc", "rb") as fh:
             reader = mrrc.MARCReader(fh)
             record = next(reader)

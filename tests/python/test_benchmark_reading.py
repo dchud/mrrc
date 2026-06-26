@@ -15,9 +15,11 @@ class TestReadingBenchmarks:
     @pytest.mark.benchmark
     def test_read_1k_records(self, benchmark, fixture_1k):
         """Benchmark reading 1,000 records."""
+
         def read_all():
             # Create fresh BytesIO each time
             import io
+
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
             records = []
@@ -31,6 +33,7 @@ class TestReadingBenchmarks:
     @pytest.mark.benchmark
     def test_read_10k_records(self, benchmark, fixture_10k):
         """Benchmark reading 10,000 records."""
+
         def read_all():
             data = io.BytesIO(fixture_10k)
             reader = MARCReader(data)
@@ -45,6 +48,7 @@ class TestReadingBenchmarks:
     @pytest.mark.benchmark
     def test_read_1k_records_from_path(self, benchmark, fixture_1k_path):
         """Benchmark reading 1,000 records from a file path (RustFile backend)."""
+
         def read_all():
             reader = MARCReader(fixture_1k_path)
             records = []
@@ -58,6 +62,7 @@ class TestReadingBenchmarks:
     @pytest.mark.benchmark
     def test_read_10k_records_from_path(self, benchmark, fixture_10k_path):
         """Benchmark reading 10,000 records from a file path (RustFile backend)."""
+
         def read_all():
             reader = MARCReader(fixture_10k_path)
             records = []
@@ -71,6 +76,7 @@ class TestReadingBenchmarks:
     @pytest.mark.benchmark
     def test_read_and_extract_titles_1k(self, benchmark, fixture_1k):
         """Benchmark reading records and extracting titles."""
+
         def read_with_extraction():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -87,6 +93,7 @@ class TestReadingBenchmarks:
     @pytest.mark.benchmark
     def test_read_and_extract_titles_10k(self, benchmark, fixture_10k):
         """Benchmark reading 10k records and extracting titles."""
+
         def read_with_extraction():
             data = io.BytesIO(fixture_10k)
             reader = MARCReader(data)
@@ -106,6 +113,7 @@ class TestIterationBenchmarks:
     @pytest.mark.benchmark
     def test_iterator_vs_while_loop_1k(self, benchmark, fixture_1k):
         """Benchmark using iterator vs while loop."""
+
         def iterate_records():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -120,6 +128,7 @@ class TestIterationBenchmarks:
     @pytest.mark.benchmark
     def test_collect_all_records_1k(self, benchmark, fixture_1k):
         """Benchmark collecting all records into a list."""
+
         def collect_all():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)

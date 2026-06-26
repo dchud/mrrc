@@ -94,7 +94,9 @@ class TestGILReleaseVerification:
         assert record_count == 1000
         assert counter > 0, "Counter thread never ran — GIL was not released"
 
-    def test_python_file_releases_gil(self, suppress_auto_switching, fixture_1k):
+    def test_python_file_releases_gil(
+        self, suppress_auto_switching, fixture_1k
+    ):
         reader = MARCReader(io.BytesIO(fixture_1k))
         assert reader.backend_type == "python_file"
 

@@ -51,24 +51,45 @@ def create_test_record():
 
     # Title field
     record.add_field(
-        create_field("245", "1", "0", a="The Great Book", b="a subtitle", c="Author Name")
+        create_field(
+            "245",
+            "1",
+            "0",
+            a="The Great Book",
+            b="a subtitle",
+            c="Author Name",
+        )
     )
 
     # Authors with dates
-    record.add_field(create_field("100", "1", " ", a="Smith, John", d="1900-1980"))
+    record.add_field(
+        create_field("100", "1", " ", a="Smith, John", d="1900-1980")
+    )
     record.add_field(create_field("700", "1", " ", a="Jones, Mary", d="1950-"))
 
     # Subject headings - mix of LCSH (ind2=0), MeSH (ind2=2), and local (ind2=4)
-    record.add_field(create_field("650", " ", "0", a="History", x="20th century", v="Periodicals"))
+    record.add_field(
+        create_field(
+            "650", " ", "0", a="History", x="20th century", v="Periodicals"
+        )
+    )
     record.add_field(create_field("650", " ", "0", a="Science", x="History"))
-    record.add_field(create_field("650", " ", "2", a="Medical Subject", x="therapy"))
+    record.add_field(
+        create_field("650", " ", "2", a="Medical Subject", x="therapy")
+    )
     record.add_field(create_field("650", " ", "4", a="Local Subject"))
-    record.add_field(create_field("651", " ", "0", a="United States", x="History"))
-    record.add_field(create_field("600", "1", "0", a="Lincoln, Abraham", d="1809-1865"))
+    record.add_field(
+        create_field("651", " ", "0", a="United States", x="History")
+    )
+    record.add_field(
+        create_field("600", "1", "0", a="Lincoln, Abraham", d="1809-1865")
+    )
 
     # Notes
     record.add_field(create_field("500", a="General note."))
-    record.add_field(create_field("504", a="Includes bibliographical references."))
+    record.add_field(
+        create_field("504", a="Includes bibliographical references.")
+    )
 
     return record
 
@@ -221,7 +242,12 @@ class TestTagRangeQuery:
 
     def test_range_from_field_query(self):
         """Test creating TagRangeQuery from FieldQuery.tag_range()."""
-        query = FieldQuery().indicator2("0").has_subfield("a").tag_range("600", "699")
+        query = (
+            FieldQuery()
+            .indicator2("0")
+            .has_subfield("a")
+            .tag_range("600", "699")
+        )
         record = create_test_record()
         results = record.fields_matching_range(query)
         # All 6XX fields with ind2=0 and $a
@@ -312,7 +338,7 @@ class TestSubfieldPatternQuery:
         # Should find the 979 and non-978 ISBNs but not the 978 one
         assert len(results_neg) > 0
         for f in results_neg:
-            assert not f['a'].startswith('978-')
+            assert not f["a"].startswith("978-")
 
     def test_negated_pattern_includes_nonmatch(self):
         """Negated query includes fields where subfield doesn't match."""
@@ -404,16 +430,18 @@ class TestSubfieldValueQuery:
         results_neg = record.fields_matching_value(query_neg)
         assert len(results_neg) > 0
         for f in results_neg:
-            assert f['a'] != 'History'
+            assert f["a"] != "History"
 
     def test_negated_partial_excludes_match(self):
         """Negated partial query excludes fields containing the value."""
         record = create_test_record()
         # Negated partial: finds subjects NOT containing "History"
-        query = SubfieldValueQuery("650", "a", "History", partial=True, negate=True)
+        query = SubfieldValueQuery(
+            "650", "a", "History", partial=True, negate=True
+        )
         results = record.fields_matching_value(query)
         for f in results:
-            assert 'History' not in f['a']
+            assert "History" not in f["a"]
 
     def test_negate_property(self):
         """Test negate getter."""

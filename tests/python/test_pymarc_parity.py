@@ -37,7 +37,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _VALID = _REPO_ROOT / "tests" / "data" / "simple_book.mrc"
 
 _TOTAL = 100
-_MALFORMED_EVERY = 10  # every 10th record is malformed -> 10 malformed, 90 valid
+_MALFORMED_EVERY = (
+    10  # every 10th record is malformed -> 10 malformed, 90 valid
+)
 
 
 def _build_corpus() -> tuple[bytes, list[bool]]:
@@ -78,28 +80,40 @@ def _read_both(data: bytes):
     return mrrc_records, pymarc_records
 
 
-def _assert_record_values_match(mrrc_record, pymarc_record, where: str) -> None:
-    assert str(mrrc_record.leader) == str(pymarc_record.leader), f"{where}: leader"
+def _assert_record_values_match(
+    mrrc_record, pymarc_record, where: str
+) -> None:
+    assert str(mrrc_record.leader) == str(pymarc_record.leader), (
+        f"{where}: leader"
+    )
     assert mrrc_record.title == pymarc_record.title, f"{where}: title"
     mrrc_fields = mrrc_record.fields()
     pymarc_fields = pymarc_record.fields
     assert [f.tag for f in mrrc_fields] == [f.tag for f in pymarc_fields], (
         f"{where}: field tag sequence"
     )
-    for mrrc_field, pymarc_field in zip(mrrc_fields, pymarc_fields, strict=False):
+    for mrrc_field, pymarc_field in zip(
+        mrrc_fields, pymarc_fields, strict=False
+    ):
         tag = mrrc_field.tag
         assert mrrc_field.format_field() == pymarc_field.format_field(), (
             f"{where} field {tag}: format_field()"
         )
-        assert mrrc_field.value() == pymarc_field.value(), f"{where} field {tag}: value()"
-    assert mrrc_record.as_marc() == pymarc_record.as_marc(), f"{where}: as_marc() bytes"
+        assert mrrc_field.value() == pymarc_field.value(), (
+            f"{where} field {tag}: value()"
+        )
+    assert mrrc_record.as_marc() == pymarc_record.as_marc(), (
+        f"{where}: as_marc() bytes"
+    )
 
 
 def test_value_level_parity_simple_book() -> None:
     """Titles, field values/formatting, and serialization bytes match
     pymarc on a single known-good record."""
     mrrc_records, pymarc_records = _read_both(_VALID.read_bytes())
-    _assert_record_values_match(mrrc_records[0], pymarc_records[0], "simple_book")
+    _assert_record_values_match(
+        mrrc_records[0], pymarc_records[0], "simple_book"
+    )
 
 
 def test_value_level_parity_1k_corpus() -> None:
@@ -122,16 +136,25 @@ def test_permissive_iteration_shape_matches_pymarc() -> None:
 
     stream, expected = _build_corpus()
 
-    mrrc_shape = [r is not None for r in mrrc.MARCReader(stream, permissive=True)]
+    mrrc_shape = [
+        r is not None for r in mrrc.MARCReader(stream, permissive=True)
+    ]
     pymarc_shape = [
-        r is not None for r in pymarc.MARCReader(io.BytesIO(stream), permissive=True)
+        r is not None
+        for r in pymarc.MARCReader(io.BytesIO(stream), permissive=True)
     ]
 
-    assert len(mrrc_shape) == _TOTAL, f"mrrc iterated {len(mrrc_shape)}, expected {_TOTAL}"
+    assert len(mrrc_shape) == _TOTAL, (
+        f"mrrc iterated {len(mrrc_shape)}, expected {_TOTAL}"
+    )
     assert len(pymarc_shape) == _TOTAL, (
         f"pymarc iterated {len(pymarc_shape)}, expected {_TOTAL}"
     )
     # Both match the intended shape, and therefore each other.
-    assert mrrc_shape == expected, "mrrc shape diverged from the corpus pattern"
-    assert pymarc_shape == expected, "pymarc shape diverged from the corpus pattern"
+    assert mrrc_shape == expected, (
+        "mrrc shape diverged from the corpus pattern"
+    )
+    assert pymarc_shape == expected, (
+        "pymarc shape diverged from the corpus pattern"
+    )
     assert mrrc_shape == pymarc_shape

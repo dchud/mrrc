@@ -40,7 +40,6 @@ RAYON_NUM_THREADS=4 python my_script.py
 By default, Rayon will use all available CPU cores.
 """
 
-
 from ._mrrc import (
     parse_batch_parallel as _parse_batch_parallel,
 )

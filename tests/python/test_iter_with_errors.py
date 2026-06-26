@@ -90,7 +90,9 @@ def test_permissive_iter_yields_none_for_swallowed() -> None:
     # in the non-permissive Python wrapper would re-raise. With
     # permissive=True the wrapper swallows and yields None.
     bytes_ = _read_fixture("e201_bad_indicator.bin")
-    reader = mrrc.MARCReader(bytes_, permissive=True, validation_level="strict_marc")
+    reader = mrrc.MARCReader(
+        bytes_, permissive=True, validation_level="strict_marc"
+    )
     items = list(reader)
     # The fixture has a single record; since the parser raises on it,
     # permissive yields None for it.
@@ -101,7 +103,9 @@ def test_permissive_iter_with_errors_yields_none_plus_exception() -> None:
     """Per option (A): permissive-swallowed records become (None, [exception])
     via iter_with_errors so the diagnostic isn't lost."""
     bytes_ = _read_fixture("e201_bad_indicator.bin")
-    reader = mrrc.MARCReader(bytes_, permissive=True, validation_level="strict_marc")
+    reader = mrrc.MARCReader(
+        bytes_, permissive=True, validation_level="strict_marc"
+    )
     items = list(reader.iter_with_errors())
     assert len(items) == 1
     record, errors = items[0]
@@ -181,7 +185,9 @@ def test_strict_only_e006_raises_in_strict_clean_in_lenient() -> None:
         ("e106_field_length_past_data.bin", "E106"),
     ],
 )
-def test_recoverable_errors_captured_in_lenient(fixture: str, code: str) -> None:
+def test_recoverable_errors_captured_in_lenient(
+    fixture: str, code: str
+) -> None:
     """Mid-record recoverable errors land on record.errors in lenient
     mode. The parser yields a (partially recovered) record rather than
     propagating the error.

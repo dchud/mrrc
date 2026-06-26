@@ -80,7 +80,7 @@ def _render_hex_dump(
     row_width = _HEX_DUMP_ROW_WIDTH
     caret_line: str | None = None
     for row_idx in range(0, len(window), row_width):
-        chunk = window[row_idx:row_idx + row_width]
+        chunk = window[row_idx : row_idx + row_width]
         row_start = window_start_offset + row_idx
         hex_parts: list[str] = []
         for i, b in enumerate(chunk):
@@ -273,7 +273,9 @@ class _MrrcExceptionBase(_MixinBase):
                 )
             )
         if self.record_byte_offset is not None:
-            rows.append(("record-relative:", f"byte {self.record_byte_offset}"))
+            rows.append(
+                ("record-relative:", f"byte {self.record_byte_offset}")
+            )
 
         if not rows:
             header_out = header
@@ -345,9 +347,7 @@ class _MrrcExceptionBase(_MixinBase):
             "slug": getattr(self, "slug", None) or None,
             "severity": getattr(self, "severity", "error"),
             "help_url": (
-                self.help_url()
-                if getattr(self, "code", None)
-                else None
+                self.help_url() if getattr(self, "code", None) else None
             ),
         }
         for field in _POSITIONAL_FIELDS:
@@ -383,7 +383,9 @@ class _MrrcExceptionBase(_MixinBase):
         # Pull include_traceback out of kwargs so it's passed to to_dict
         # rather than json.dumps (which would reject it).
         include_traceback = kwargs.pop("include_traceback", False)
-        return json.dumps(self.to_dict(include_traceback=include_traceback), **kwargs)
+        return json.dumps(
+            self.to_dict(include_traceback=include_traceback), **kwargs
+        )
 
 
 class MrrcException(_MrrcExceptionBase, Exception):
@@ -475,7 +477,11 @@ class FieldNotFound(MrrcException):
     slug = "field_not_found"
 
     def _body_text(self) -> str:
-        return f"field {self.field_tag} not found" if self.field_tag else "field not found"
+        return (
+            f"field {self.field_tag} not found"
+            if self.field_tag
+            else "field not found"
+        )
 
 
 class FatalReaderError(MrrcException):

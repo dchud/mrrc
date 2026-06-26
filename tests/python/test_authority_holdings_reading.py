@@ -146,7 +146,10 @@ class TestAuthorityIteration:
             assert reader.read_record() is None
 
     def test_context_manager(self):
-        with open(AUTHORITY_FIXTURE, "rb") as fh, mrrc.AuthorityMARCReader(fh) as reader:
+        with (
+            open(AUTHORITY_FIXTURE, "rb") as fh,
+            mrrc.AuthorityMARCReader(fh) as reader,
+        ):
             record = next(reader)
         assert record.heading_text() == "Smith, John"
 
@@ -298,7 +301,10 @@ class TestHoldingsIteration:
             assert reader.read_record() is None
 
     def test_context_manager(self):
-        with open(HOLDINGS_FIXTURE, "rb") as fh, mrrc.HoldingsMARCReader(fh) as reader:
+        with (
+            open(HOLDINGS_FIXTURE, "rb") as fh,
+            mrrc.HoldingsMARCReader(fh) as reader,
+        ):
             record = next(reader)
         assert record.record_type() == "x"
 
@@ -363,7 +369,9 @@ class TestHoldingsSyntheticAccessors:
         basic = record.textual_holdings_basic()
         assert [f.tag for f in basic] == ["866"]
         assert basic[0].subfields_by_code("a") == ["v.1-v.10 (1990-1999)"]
-        assert [f.tag for f in record.textual_holdings_supplements()] == ["867"]
+        assert [f.tag for f in record.textual_holdings_supplements()] == [
+            "867"
+        ]
         assert [f.tag for f in record.textual_holdings_indexes()] == ["868"]
 
     def test_repeated_locations(self):

@@ -70,7 +70,9 @@ _PYTHON_BINDING_REGRESSIONS: dict[str, str] = {}
 
 def _fixture_path(case: dict[str, Any]) -> Path:
     rel = case.get("trigger_fixture")
-    assert rel, f"case {case['id']}: trigger_kind requires a trigger_fixture but none set"
+    assert rel, (
+        f"case {case['id']}: trigger_kind requires a trigger_fixture but none set"
+    )
     return _REPO_ROOT / rel
 
 
@@ -142,8 +144,13 @@ def _exercise_strict(case: dict[str, Any]) -> mrrc.MrrcException:
         # max_errors=CAP. The bad-record byte template is borrowed from
         # the e101 fixture (each copy trips DirectoryInvalid in lenient).
         cap = 1
-        bad = (_REPO_ROOT / "tests" / "data" / "error_fixtures"
-               / "e101_directory_non_digit_length.bin").read_bytes()
+        bad = (
+            _REPO_ROOT
+            / "tests"
+            / "data"
+            / "error_fixtures"
+            / "e101_directory_non_digit_length.bin"
+        ).read_bytes()
         stream = bad * (cap + 2)
         reader = mrrc.MARCReader(
             stream, recovery_mode="lenient", max_errors=cap
@@ -334,4 +341,6 @@ def test_coverage_tally(capsys: pytest.CaptureFixture[str]) -> None:
     total = len(_CASES)
     skipped = total - wired
     with capsys.disabled():
-        print(f"\n[error_coverage] wired in manifest: {wired}/{total} (unwired: {skipped})")
+        print(
+            f"\n[error_coverage] wired in manifest: {wired}/{total} (unwired: {skipped})"
+        )

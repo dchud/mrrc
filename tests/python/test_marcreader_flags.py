@@ -15,11 +15,14 @@ import mrrc
 # Helpers
 # ============================================================================
 
+
 def _build_valid_record_bytes() -> bytes:
     """Build a minimal valid MARC record and return as bytes."""
     record = mrrc.Record()
     record.add_field(mrrc.Field("001", data="test001"))
-    record.add_field(mrrc.Field("008", data="230327s2023    wau    ef     000 1 eng d"))
+    record.add_field(
+        mrrc.Field("008", data="230327s2023    wau    ef     000 1 eng d")
+    )
     f245 = mrrc.Field("245", "1", "0")
     f245.add_subfield("a", "Test title")
     record.add_field(f245)
@@ -43,7 +46,9 @@ def _build_malformed_record_bytes() -> bytes:
     # Directory: one 12-byte entry with garbage, then field terminator
     directory = b"XXX000100000" + b"\x1e"
     # Data area: fill to reach 50 bytes total, end with record terminator
-    data_needed = 50 - len(leader) - len(directory) - 1  # -1 for record terminator
+    data_needed = (
+        50 - len(leader) - len(directory) - 1
+    )  # -1 for record terminator
     data = b"\xff" * data_needed + b"\x1d"
     return leader + directory + data
 
@@ -61,6 +66,7 @@ def _build_two_record_stream(inject_bad_second: bool = False) -> bytes:
 # ============================================================================
 # to_unicode tests
 # ============================================================================
+
 
 class TestToUnicode:
     """Test to_unicode kwarg behavior."""
@@ -105,6 +111,7 @@ class TestToUnicode:
 # permissive tests
 # ============================================================================
 
+
 class TestPermissive:
     """Test permissive kwarg behavior (pymarc compatibility)."""
 
@@ -132,8 +139,12 @@ class TestPermissive:
         reader = mrrc.MARCReader(io.BytesIO(data), permissive=True)
         records = list(reader)
         # Should get the good record and None for the bad one
-        assert any(r is not None for r in records), "Should have at least one valid record"
-        assert any(r is None for r in records), "Should have None for malformed record"
+        assert any(r is not None for r in records), (
+            "Should have at least one valid record"
+        )
+        assert any(r is None for r in records), (
+            "Should have None for malformed record"
+        )
 
     def test_permissive_true_valid_records_normal(self):
         """permissive=True should return valid records normally."""
@@ -161,6 +172,7 @@ class TestPermissive:
 # ============================================================================
 # recovery_mode tests
 # ============================================================================
+
 
 class TestRecoveryMode:
     """Test recovery_mode kwarg behavior."""
@@ -197,6 +209,7 @@ class TestRecoveryMode:
 # Conflict validation tests
 # ============================================================================
 
+
 class TestConflictValidation:
     """Test that conflicting options are rejected."""
 
@@ -204,17 +217,23 @@ class TestConflictValidation:
         """permissive=True + recovery_mode='lenient' should raise ValueError."""
         data = _build_valid_record_bytes()
         with pytest.raises(ValueError, match="Cannot combine"):
-            mrrc.MARCReader(io.BytesIO(data), permissive=True, recovery_mode="lenient")
+            mrrc.MARCReader(
+                io.BytesIO(data), permissive=True, recovery_mode="lenient"
+            )
 
     def test_permissive_with_permissive_recovery_raises(self):
         """permissive=True + recovery_mode='permissive' should raise ValueError."""
         data = _build_valid_record_bytes()
         with pytest.raises(ValueError, match="Cannot combine"):
-            mrrc.MARCReader(io.BytesIO(data), permissive=True, recovery_mode="permissive")
+            mrrc.MARCReader(
+                io.BytesIO(data), permissive=True, recovery_mode="permissive"
+            )
 
     def test_permissive_with_strict_ok(self):
         """permissive=True + recovery_mode='strict' (default) should be fine."""
         data = _build_valid_record_bytes()
-        reader = mrrc.MARCReader(io.BytesIO(data), permissive=True, recovery_mode="strict")
+        reader = mrrc.MARCReader(
+            io.BytesIO(data), permissive=True, recovery_mode="strict"
+        )
         records = list(reader)
         assert len(records) == 1

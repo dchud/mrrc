@@ -29,6 +29,7 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_read_1k_records(self, fixture_1k):
         """Measure peak memory when reading 1,000 records."""
+
         def read_all():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -49,6 +50,7 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_read_10k_records(self, fixture_10k):
         """Measure peak memory when reading 10,000 records."""
+
         def read_all():
             data = io.BytesIO(fixture_10k)
             reader = MARCReader(data)
@@ -68,6 +70,7 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_streaming_read_10k(self, fixture_10k):
         """Measure memory with streaming (not storing all records)."""
+
         def stream_and_process():
             data = io.BytesIO(fixture_10k)
             reader = MARCReader(data)
@@ -90,11 +93,12 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_field_creation_bulk(self):
         """Measure memory usage when creating many fields."""
+
         def create_many_fields():
             fields = []
             for i in range(10000):
-                field = Field('650', ' ', '0')
-                field.add_subfield('a', f'Subject {i}')
+                field = Field("650", " ", "0")
+                field.add_subfield("a", f"Subject {i}")
                 fields.append(field)
             return fields
 
@@ -109,13 +113,14 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_record_creation_bulk(self):
         """Measure memory usage when creating many records."""
+
         def create_many_records():
             records = []
             for i in range(1000):
                 record = Record()
-                record.add_control_field('001', f'id-{i}')
-                field = Field('245', '1', '0')
-                field.add_subfield('a', f'Title {i}')
+                record.add_control_field("001", f"id-{i}")
+                field = Field("245", "1", "0")
+                field.add_subfield("a", f"Title {i}")
                 record.add_field(field)
                 records.append(record)
             return records
@@ -131,6 +136,7 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_serialization_1k(self, fixture_1k):
         """Measure memory when serializing 1k records to MARC21."""
+
         def serialize_all():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -151,6 +157,7 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_json_serialization_1k(self, fixture_1k):
         """Measure memory when serializing 1k records to JSON."""
+
         def json_serialize_all():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -171,6 +178,7 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_roundtrip_serialize_deserialize_1k(self, fixture_1k):
         """Measure memory for round-trip serialization/deserialization."""
+
         def roundtrip_all():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -200,6 +208,7 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_multiple_format_conversions_1k(self, fixture_1k):
         """Measure memory when converting 1k records to multiple formats."""
+
         def multi_format_convert():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -207,15 +216,17 @@ class TestMemoryBenchmarks:
 
             while record := reader.read_record():
                 formats = {
-                    'json': record.to_json(),
-                    'xml': record.to_xml(),
-                    'marcjson': record.to_marcjson(),
+                    "json": record.to_json(),
+                    "xml": record.to_xml(),
+                    "marcjson": record.to_marcjson(),
                 }
                 conversions.append(formats)
 
             return conversions
 
-        conversions, peak_memory = self.measure_peak_memory(multi_format_convert)
+        conversions, peak_memory = self.measure_peak_memory(
+            multi_format_convert
+        )
 
         assert len(conversions) == 1000
         # Multiple format conversions should use less than 100MB
@@ -226,6 +237,7 @@ class TestMemoryBenchmarks:
     @pytest.mark.benchmark
     def test_memory_field_access_patterns_1k(self, fixture_1k):
         """Measure memory overhead of field access patterns."""
+
         def access_patterns():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -236,7 +248,7 @@ class TestMemoryBenchmarks:
                 title = record.title
                 author = record.author
                 subjects = record.subjects
-                fields_245 = record.get_fields('245')
+                fields_245 = record.get_fields("245")
 
                 results.append((title, author, len(subjects), len(fields_245)))
 
@@ -265,8 +277,8 @@ class TestMemoryLeaks:
         for _batch in range(10):
             for i in range(100):
                 record = Record()
-                field = Field('245', '1', '0')
-                field.add_subfield('a', f'Title {i}')
+                field = Field("245", "1", "0")
+                field.add_subfield("a", f"Title {i}")
                 record.add_field(field)
 
             _current, peak = tracemalloc.get_traced_memory()
@@ -276,12 +288,14 @@ class TestMemoryLeaks:
 
         # Memory should not grow significantly between batches
         # Allow up to 2x growth (due to Python overhead)
-        assert measurements[-1] < measurements[0] * 2, \
+        assert measurements[-1] < measurements[0] * 2, (
             f"Memory leak detected: {measurements[0]} -> {measurements[-1]}"
+        )
 
     @pytest.mark.benchmark
     def test_repeated_serialization_no_leak(self, fixture_1k):
         """Verify no memory leak in repeated serialization."""
+
         def serialize_once():
             data = io.BytesIO(fixture_1k)
             reader = MARCReader(data)
@@ -299,9 +313,10 @@ class TestMemoryLeaks:
 
         # Memory per iteration should be relatively stable
         # Allow up to 2x variance between iterations (due to GC timing, etc.)
-        assert max(measurements) < min(measurements) * 2, \
+        assert max(measurements) < min(measurements) * 2, (
             f"Possible memory leak in serialization: {measurements}"
+        )
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

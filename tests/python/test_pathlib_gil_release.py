@@ -54,7 +54,9 @@ class TestBackendTypeRouting:
         """The actual invariant: pathlib.Path and str produce the same backend."""
         str_reader = MARCReader(str(mrc_file))
         path_reader = MARCReader(mrc_file)
-        assert str_reader.backend_type == path_reader.backend_type == "rust_file"
+        assert (
+            str_reader.backend_type == path_reader.backend_type == "rust_file"
+        )
 
 
 class TestPathlibThreadingCorrectness:
@@ -85,6 +87,7 @@ class TestPathlibThreadingCorrectness:
 
     def test_pathlib_parallel_reads_correct(self, temp_pathlib_fixtures):
         """Parallel reading with pathlib.Path completes without error."""
+
         def read_file(path):
             count = 0
             for _ in MARCReader(path):

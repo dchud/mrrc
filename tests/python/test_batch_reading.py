@@ -31,7 +31,9 @@ class TestBatchReadingBasics:
             assert record is not None
 
         # fixture_1k has 1000 records, so we should read all of them
-        assert records_read == 1000, f"Expected 1000 records, read {records_read}"
+        assert records_read == 1000, (
+            f"Expected 1000 records, read {records_read}"
+        )
 
     def test_iterator_idempotence_after_eof(self, fixture_1k):
         """

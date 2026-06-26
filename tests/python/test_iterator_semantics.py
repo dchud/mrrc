@@ -90,6 +90,7 @@ class TestEofIdempotence:
 
     def test_eof_idempotence_no_io_after_eof(self, fixture_small):
         """After EOF, no I/O should occur on subsequent calls"""
+
         # Create a wrapper that tracks read() calls
         class TrackingBytesIO(io.BytesIO):
             def __init__(self, *args, **kwargs):

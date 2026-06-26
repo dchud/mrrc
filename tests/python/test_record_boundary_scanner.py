@@ -49,7 +49,9 @@ class TestBoundaryScannerBasics:
 
     def test_scan_multiple_records(self):
         """Scan multiple records with distinct boundaries."""
-        data = bytes([1, 2, 0x1D, 3, 4, 0x1D, 5, 0x1D])  # 0x1D = record terminator
+        data = bytes(
+            [1, 2, 0x1D, 3, 4, 0x1D, 5, 0x1D]
+        )  # 0x1D = record terminator
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan(data)
 
@@ -86,8 +88,9 @@ class TestBoundaryScannerRealData:
         assert boundaries[0][0] == 0, "First record should start at offset 0"
         # All boundaries should end before file end
         for offset, length in boundaries:
-            assert offset + length <= len(simple_book_bytes), \
+            assert offset + length <= len(simple_book_bytes), (
                 "Record boundary exceeds file size"
+            )
 
     def test_scan_multi_records(self, multi_records_bytes):
         """Scan multi_records.mrc and verify record count."""
@@ -111,10 +114,13 @@ class TestBoundaryScannerRealData:
             # Should have content
             assert len(record_bytes) > 0, "Record should have content"
             # Should end with record terminator (0x1D)
-            assert record_bytes[-1] == 0x1D, "Record should end with 0x1D record terminator"
+            assert record_bytes[-1] == 0x1D, (
+                "Record should end with 0x1D record terminator"
+            )
             # Should not exceed file bounds
-            assert offset + length <= len(simple_book_bytes), \
+            assert offset + length <= len(simple_book_bytes), (
                 "Record should not exceed file boundaries"
+            )
 
 
 class TestBoundaryScannerLimiting:
@@ -153,8 +159,9 @@ class TestBoundaryScannerLimiting:
         # Test that scan_limited returns correct number
         half = (total_records + 1) // 2
         limited_boundaries = scanner.scan_limited(multi_records_bytes, half)
-        assert len(limited_boundaries) <= half, \
+        assert len(limited_boundaries) <= half, (
             f"Should return at most {half} records, got {len(limited_boundaries)}"
+        )
         assert len(limited_boundaries) > 0, "Should return at least one record"
 
 
@@ -254,8 +261,9 @@ class TestBoundaryScannerIntegration:
                 if i != j:
                     # Records should not overlap
                     end1 = offset1 + len1
-                    assert end1 <= offset2 or offset2 + len2 <= offset1, \
+                    assert end1 <= offset2 or offset2 + len2 <= offset1, (
                         f"Records {i} and {j} overlap"
+                    )
 
     def test_sequential_vs_boundary_parsing(self, multi_records_bytes):
         """Verify boundaries are consistent with sequential parsing."""
@@ -268,23 +276,30 @@ class TestBoundaryScannerIntegration:
                 break
             sequential_records.append(record)
 
-        assert len(sequential_records) > 0, "Should find records via sequential parsing"
+        assert len(sequential_records) > 0, (
+            "Should find records via sequential parsing"
+        )
 
         # Boundary-based scan finds record delimiters
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan(multi_records_bytes)
 
         # Both methods should find records/boundaries
-        assert len(boundaries) > 0, "Boundary scan should find record boundaries"
+        assert len(boundaries) > 0, (
+            "Boundary scan should find record boundaries"
+        )
         # Boundary scan typically finds >= sequential parser (may find partial records)
-        assert len(boundaries) >= len(sequential_records), \
+        assert len(boundaries) >= len(sequential_records), (
             "Boundary scan should find >= complete records"
+        )
 
 
 class TestBoundaryScannerAcceptanceCriteria:
     """Test boundary scanner acceptance criteria."""
 
-    def test_accepts_real_marc_data(self, simple_book_bytes, multi_records_bytes):
+    def test_accepts_real_marc_data(
+        self, simple_book_bytes, multi_records_bytes
+    ):
         """Criterion 1: Scanner accepts real MARC files."""
         scanner = RecordBoundaryScanner()
 
@@ -322,9 +337,12 @@ class TestBoundaryScannerAcceptanceCriteria:
 
         # All scanned bytes should be covered exactly once
         # Note: May not cover entire file if last record is incomplete
-        assert len(seen_ranges) == len(seen_ranges), "Should not have duplicates"
+        assert len(seen_ranges) == len(seen_ranges), (
+            "Should not have duplicates"
+        )
 
         # Verify boundaries don't exceed file size
         for offset, length in boundaries:
-            assert offset + length <= len(multi_records_bytes), \
+            assert offset + length <= len(multi_records_bytes), (
                 f"Boundary exceeds file: {offset} + {length} > {len(multi_records_bytes)}"
+            )
