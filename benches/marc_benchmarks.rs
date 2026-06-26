@@ -119,6 +119,56 @@ fn benchmark_read_with_field_access_10k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark writing 1,000 MARC records to ISO 2709 binary.
+///
+/// Records are parsed once up front; only serialization is timed. This is
+/// the regression sensor for the binary writer's hot path — the existing
+/// roundtrip benches bundle write with read (which dominates), so a write-path
+/// change is invisible there. The output buffer is reused across iterations
+/// so the benchmark measures the writer, not allocator warmup.
+fn benchmark_write_1k(c: &mut Criterion) {
+    let fixture = load_fixture("1k_records.mrc");
+    let mut reader = MarcReader::new(Cursor::new(fixture));
+    let mut records = Vec::new();
+    while let Ok(Some(record)) = reader.read_record() {
+        records.push(record);
+    }
+    let mut output = Vec::with_capacity(1 << 20);
+
+    c.bench_function("write_1k_records", |b| {
+        b.iter(|| {
+            output.clear();
+            let mut writer = MarcWriter::new(&mut output);
+            for record in &records {
+                writer.write_record(record).unwrap();
+            }
+            black_box(output.len())
+        });
+    });
+}
+
+/// Benchmark writing 10,000 MARC records to ISO 2709 binary.
+fn benchmark_write_10k(c: &mut Criterion) {
+    let fixture = load_fixture("10k_records.mrc");
+    let mut reader = MarcReader::new(Cursor::new(fixture));
+    let mut records = Vec::new();
+    while let Ok(Some(record)) = reader.read_record() {
+        records.push(record);
+    }
+    let mut output = Vec::with_capacity(4 << 20);
+
+    c.bench_function("write_10k_records", |b| {
+        b.iter(|| {
+            output.clear();
+            let mut writer = MarcWriter::new(&mut output);
+            for record in &records {
+                writer.write_record(record).unwrap();
+            }
+            black_box(output.len())
+        });
+    });
+}
+
 /// Benchmark JSON serialization of 1,000 MARC records.
 fn benchmark_serialization_to_json_1k(c: &mut Criterion) {
     let fixture = black_box(load_fixture("1k_records.mrc"));
@@ -252,6 +302,8 @@ criterion_group!(
     benchmark_read_10k_from_path,
     benchmark_read_with_field_access_1k,
     benchmark_read_with_field_access_10k,
+    benchmark_write_1k,
+    benchmark_write_10k,
     benchmark_serialization_to_json_1k,
     benchmark_serialization_to_xml_1k,
     benchmark_deserialize_marcxml_record,
