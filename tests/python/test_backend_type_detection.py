@@ -28,6 +28,7 @@ class TestTypeDetectionSupportedTypes:
             assert isinstance(reader, mrrc.MARCReader)
         finally:
             import os
+
             os.unlink(temp_path)
 
     def test_type_pathlib_path_creates_reader(self):
@@ -43,6 +44,7 @@ class TestTypeDetectionSupportedTypes:
             assert isinstance(reader, mrrc.MARCReader)
         finally:
             import os
+
             os.unlink(temp_path)
 
     def test_type_bytes_creates_reader(self):
@@ -72,6 +74,7 @@ class TestTypeDetectionSupportedTypes:
                 assert isinstance(reader, mrrc.MARCReader)
         finally:
             import os
+
             os.unlink(temp_path)
 
     def test_type_bytesio_creates_reader(self):
@@ -130,6 +133,7 @@ class TestTypeDetectionOrder:
             assert isinstance(reader, mrrc.MARCReader)
         finally:
             import os
+
             os.unlink(temp_path)
 
     def test_bytes_takes_priority_over_object_with_read(self):
@@ -164,6 +168,7 @@ class TestTypeDetectionRobustness:
             assert reader is not None
         finally:
             import os
+
             os.unlink(temp_path)
 
     def test_unicode_path_str_accepted(self):
@@ -189,7 +194,9 @@ class TestTypeDetectionRobustness:
         """Relative paths should work"""
         import os
 
-        with tempfile.NamedTemporaryFile(suffix=".mrc", dir=".", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            suffix=".mrc", dir=".", delete=False
+        ) as f:
             temp_path = f.name
             f.write(b"")
 

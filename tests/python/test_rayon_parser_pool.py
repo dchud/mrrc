@@ -95,8 +95,9 @@ class TestRayonParserPoolParity:
         parallel_records = parse_batch_parallel(boundaries, simple_book_bytes)
 
         # Should have same count
-        assert len(parallel_records) == len(sequential_records), \
+        assert len(parallel_records) == len(sequential_records), (
             f"Record count mismatch: {len(parallel_records)} vs {len(sequential_records)}"
+        )
 
         # Verify content matches (using marcjson for comparison)
         for i, (seq_rec, par_rec) in enumerate(
@@ -104,8 +105,9 @@ class TestRayonParserPoolParity:
         ):
             seq_json = seq_rec.to_marcjson()
             par_json = par_rec.to_marcjson()
-            assert seq_json == par_json, \
+            assert seq_json == par_json, (
                 f"Record {i} mismatch:\nSequential: {seq_json}\nParallel: {par_json}"
+            )
 
     def test_parity_multi_records(self, multi_records_bytes):
         """Parallel parsing matches sequential on multi-record file."""
@@ -121,11 +123,15 @@ class TestRayonParserPoolParity:
         # Parallel
         scanner = RecordBoundaryScanner()
         boundaries = scanner.scan(multi_records_bytes)
-        parallel_records = parse_batch_parallel(boundaries, multi_records_bytes)
+        parallel_records = parse_batch_parallel(
+            boundaries, multi_records_bytes
+        )
 
         assert len(parallel_records) == len(sequential_records)
 
-        for seq_rec, par_rec in zip(sequential_records, parallel_records, strict=False):
+        for seq_rec, par_rec in zip(
+            sequential_records, parallel_records, strict=False
+        ):
             assert seq_rec.to_marcjson() == par_rec.to_marcjson()
 
 
@@ -140,7 +146,9 @@ class TestRayonParserPoolBatching:
         if len(boundaries) > 1:
             # Parse only first 2 records
             limited_boundaries = boundaries[:2]
-            records = parse_batch_parallel(limited_boundaries, multi_records_bytes)
+            records = parse_batch_parallel(
+                limited_boundaries, multi_records_bytes
+            )
 
             assert len(records) == 2
 
@@ -240,7 +248,7 @@ class TestRayonParserPoolErrorHandling:
     def test_mixed_valid_invalid_records(self):
         """Multiple records with one invalid should error."""
         # Create a mixed buffer: valid terminator, then invalid data
-        buffer = b"\x00" * 24 + b"\x1E" + b"invalid"
+        buffer = b"\x00" * 24 + b"\x1e" + b"invalid"
         boundaries = [(0, 25), (25, 7)]
 
         # Should error on invalid record
@@ -292,7 +300,9 @@ class TestRayonParserPoolPerformance:
 class TestRayonParserPoolAcceptanceCriteria:
     """Test acceptance criteria."""
 
-    def test_criterion_parallel_produces_identical_output(self, multi_records_bytes):
+    def test_criterion_parallel_produces_identical_output(
+        self, multi_records_bytes
+    ):
         """Criterion 1: Parallel parsing produces identical output to sequential."""
         # Sequential
         reader = MARCReader(multi_records_bytes)
@@ -309,7 +319,9 @@ class TestRayonParserPoolAcceptanceCriteria:
         parallel = parse_batch_parallel(boundaries, multi_records_bytes)
         parallel_json = [r.to_marcjson() for r in parallel]
 
-        assert sequential == parallel_json, "Parallel output doesn't match sequential"
+        assert sequential == parallel_json, (
+            "Parallel output doesn't match sequential"
+        )
 
     def test_criterion_error_within_parallel_context(self):
         """Criterion 2: Errors within parallel context are properly handled."""
@@ -321,9 +333,14 @@ class TestRayonParserPoolAcceptanceCriteria:
             parse_batch_parallel(boundaries, buffer)
 
         # Error should be informative
-        assert "bound" in str(excinfo.value).lower() or "exceed" in str(excinfo.value).lower()
+        assert (
+            "bound" in str(excinfo.value).lower()
+            or "exceed" in str(excinfo.value).lower()
+        )
 
-    def test_criterion_all_records_parsed_identically(self, simple_book_bytes, multi_records_bytes):
+    def test_criterion_all_records_parsed_identically(
+        self, simple_book_bytes, multi_records_bytes
+    ):
         """Criterion 3: All records from real MARC files parse identically."""
         for test_data in [simple_book_bytes, multi_records_bytes]:
             # Sequential reference
@@ -337,8 +354,9 @@ class TestRayonParserPoolAcceptanceCriteria:
             boundaries = scanner.scan(test_data)
             parallel_records = parse_batch_parallel(boundaries, test_data)
 
-            assert len(parallel_records) == sequential_count, \
+            assert len(parallel_records) == sequential_count, (
                 f"Record count mismatch for {test_data[:20]!r}"
+            )
 
 
 class TestRayonParserPoolIntegration:

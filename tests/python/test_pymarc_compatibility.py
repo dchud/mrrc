@@ -16,13 +16,22 @@ from pathlib import Path
 
 import pytest
 
-from mrrc import ControlField, Field, Indicators, Leader, MARCReader, MARCWriter, Record, Subfield
+from mrrc import (
+    ControlField,
+    Field,
+    Indicators,
+    Leader,
+    MARCReader,
+    MARCWriter,
+    Record,
+    Subfield,
+)
 
 # Test data directory relative to this file
-TEST_DATA_DIR = Path(__file__).parent.parent / 'data'
+TEST_DATA_DIR = Path(__file__).parent.parent / "data"
 
 
-def create_field(tag, ind1='0', ind2='0', **subfields):
+def create_field(tag, ind1="0", ind2="0", **subfields):
     """Helper to create a field with subfields."""
     field = Field(tag, ind1, ind2)
     for code, value in subfields.items():
@@ -43,22 +52,22 @@ class TestRecordCreation:
     def test_record_with_leader(self):
         """Test that record preserves leader settings."""
         leader = Leader()
-        leader.record_type = 'c'
-        leader.bibliographic_level = 'd'
+        leader.record_type = "c"
+        leader.bibliographic_level = "d"
         record = Record(leader)
         # Note: accessing leader properties requires via the wrapper
-        assert record.leader.record_type == 'c'
-        assert record.leader.bibliographic_level == 'd'
+        assert record.leader.record_type == "c"
+        assert record.leader.bibliographic_level == "d"
 
     def test_record_equality(self):
         """Test comparing two identical records."""
         leader1 = Leader()
         record1 = Record(leader1)
-        record1.add_control_field('001', 'test-id')
+        record1.add_control_field("001", "test-id")
 
         leader2 = Leader()
         record2 = Record(leader2)
-        record2.add_control_field('001', 'test-id')
+        record2.add_control_field("001", "test-id")
 
         assert record1 == record2
 
@@ -69,79 +78,79 @@ class TestRecordFieldOperations:
     def test_add_single_field(self):
         """Test adding a single field to a record."""
         record = Record(Leader())
-        field = create_field('245', '1', '0', a='Test Title')
+        field = create_field("245", "1", "0", a="Test Title")
         record.add_field(field)
 
-        retrieved = record.get_field('245')
+        retrieved = record.get_field("245")
         assert retrieved is not None
 
     def test_add_multiple_fields(self):
         """Test adding multiple fields with same tag."""
         record = Record(Leader())
         for i in range(3):
-            field = create_field('650', ' ', '0', a=f'Subject {i}')
+            field = create_field("650", " ", "0", a=f"Subject {i}")
             record.add_field(field)
 
-        fields = record.get_fields('650')
+        fields = record.get_fields("650")
         assert len(fields) == 3
 
     def test_add_control_field(self):
-         """Test adding control fields."""
-         record = Record(Leader())
-         record.add_control_field('001', '12345')
-         record.add_control_field('003', 'ABC')
+        """Test adding control fields."""
+        record = Record(Leader())
+        record.add_control_field("001", "12345")
+        record.add_control_field("003", "ABC")
 
-         assert record.control_field('001') == '12345'
-         assert record.control_field('003') == 'ABC'
+        assert record.control_field("001") == "12345"
+        assert record.control_field("003") == "ABC"
 
     def test_control_field_dict_access(self):
-         """Test accessing control fields via dict-style access (pymarc compatibility)."""
-         record = Record(Leader())
-         record.add_control_field('001', '12345')
-         record.add_control_field('003', 'DLC')
+        """Test accessing control fields via dict-style access (pymarc compatibility)."""
+        record = Record(Leader())
+        record.add_control_field("001", "12345")
+        record.add_control_field("003", "DLC")
 
-         # Access via dict notation should return Field with is_control_field()
-         field_001 = record['001']
-         assert isinstance(field_001, Field)
-         assert field_001.data == '12345'
-         assert field_001.tag == '001'
+        # Access via dict notation should return Field with is_control_field()
+        field_001 = record["001"]
+        assert isinstance(field_001, Field)
+        assert field_001.data == "12345"
+        assert field_001.tag == "001"
 
     def test_control_field_value_property(self):
-         """Test control field .data property (pymarc compatibility)."""
-         record = Record(Leader())
-         record.add_control_field('005', '20210315120000.0')
+        """Test control field .data property (pymarc compatibility)."""
+        record = Record(Leader())
+        record.add_control_field("005", "20210315120000.0")
 
-         # Access via dict notation and .data property
-         assert record['005'].data == '20210315120000.0'
+        # Access via dict notation and .data property
+        assert record["005"].data == "20210315120000.0"
 
     def test_control_field_backward_compat(self):
-         """Test that record.control_field() still works after adding dict access."""
-         record = Record(Leader())
-         record.add_control_field('001', 'test-id')
+        """Test that record.control_field() still works after adding dict access."""
+        record = Record(Leader())
+        record.add_control_field("001", "test-id")
 
-         # Both access patterns should work and return same value
-         assert record['001'].data == record.control_field('001')
-         assert record['001'].data == 'test-id'
+        # Both access patterns should work and return same value
+        assert record["001"].data == record.control_field("001")
+        assert record["001"].data == "test-id"
 
     def test_missing_control_field_raises_keyerror(self):
-         """Test that missing control fields raise KeyError via dict access."""
-         record = Record(Leader())
-         with pytest.raises(KeyError):
-             record['001']
-         with pytest.raises(KeyError):
-             record['008']
+        """Test that missing control fields raise KeyError via dict access."""
+        record = Record(Leader())
+        with pytest.raises(KeyError):
+            record["001"]
+        with pytest.raises(KeyError):
+            record["008"]
 
     def test_get_nonexistent_field(self):
         """Test getting a field that doesn't exist."""
         record = Record(Leader())
-        field = record.get_field('999')
+        field = record.get_field("999")
         assert field is None
 
     def test_get_all_fields(self):
         """Test retrieving all fields from a record."""
         record = Record(Leader())
-        record.add_field(create_field('245', '1', '0', a='Title'))
-        record.add_field(create_field('650', ' ', '0', a='Subject'))
+        record.add_field(create_field("245", "1", "0", a="Title"))
+        record.add_field(create_field("650", " ", "0", a="Subject"))
 
         all_fields = record.fields()
         assert len(all_fields) >= 2
@@ -149,17 +158,17 @@ class TestRecordFieldOperations:
     def test_remove_field(self):
         """Test removing a specific field."""
         record = Record(Leader())
-        field = create_field('245', '1', '0', a='Title')
+        field = create_field("245", "1", "0", a="Title")
         record.add_field(field)
 
         # Verify field exists
-        assert record.get_field('245') is not None
+        assert record.get_field("245") is not None
 
         # Remove the field
-        record.remove_field('245')
+        record.remove_field("245")
 
         # Verify field is gone
-        assert record.get_field('245') is None
+        assert record.get_field("245") is None
 
 
 class TestFieldSubfieldOperations:
@@ -167,96 +176,98 @@ class TestFieldSubfieldOperations:
 
     def test_field_creation_with_indicators(self):
         """Test creating fields with specific indicators."""
-        field = Field('245', '1', '0')
-        assert field.tag == '245'
+        field = Field("245", "1", "0")
+        assert field.tag == "245"
         # Note: indicator access needs to be exposed in wrapper
 
     def test_add_subfield(self):
         """Test adding subfields to a field."""
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Title')
-        field.add_subfield('b', 'Subtitle')
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Title")
+        field.add_subfield("b", "Subtitle")
 
         assert len(field.subfields()) == 2
 
     def test_multiple_subfields_same_code(self):
         """Test field with multiple subfields with same code."""
-        field = Field('300', ' ', ' ')
-        field.add_subfield('a', '256 pages')
-        field.add_subfield('a', '24 cm')  # Multiple 'a' subfields
+        field = Field("300", " ", " ")
+        field.add_subfield("a", "256 pages")
+        field.add_subfield("a", "24 cm")  # Multiple 'a' subfields
 
         assert len(field.subfields()) >= 2
 
     def test_subfield_access(self):
         """Test accessing specific subfields."""
-        field = create_field('245', '1', '0', a='Title', b='Subtitle', c='Creator')
+        field = create_field(
+            "245", "1", "0", a="Title", b="Subtitle", c="Creator"
+        )
         # Verify subfields are accessible via the wrapper
         subfield_codes = [sf.code for sf in field.subfields()]
-        assert 'a' in subfield_codes
-        assert 'b' in subfield_codes
-        assert 'c' in subfield_codes
+        assert "a" in subfield_codes
+        assert "b" in subfield_codes
+        assert "c" in subfield_codes
 
     def test_field_getitem_returns_value(self):
         """Test Field.__getitem__ returns subfield value (pymarc compatibility)."""
-        field = create_field('245', '1', '0', a='Title')
-        assert field['a'] == 'Title'
+        field = create_field("245", "1", "0", a="Title")
+        assert field["a"] == "Title"
 
     def test_field_getitem_returns_none_for_missing(self):
         """Test Field.__getitem__ returns None for missing subfield (pymarc compatibility)."""
-        field = create_field('245', '1', '0', a='Title')
+        field = create_field("245", "1", "0", a="Title")
         # Should return None, not raise KeyError
-        assert field['z'] is None
+        assert field["z"] is None
 
     def test_field_getitem_with_multiple_same_code(self):
         """Test Field.__getitem__ returns first value when multiple subfields have same code."""
-        field = Field('300', ' ', ' ')
-        field.add_subfield('a', '256 pages')
-        field.add_subfield('a', '24 cm')
+        field = Field("300", " ", " ")
+        field.add_subfield("a", "256 pages")
+        field.add_subfield("a", "24 cm")
         # Should return first 'a' value
-        assert field['a'] == '256 pages'
+        assert field["a"] == "256 pages"
 
     def test_field_indicators_tuple_access(self):
-       """Test Field.indicators property returns Indicators tuple-like
-       object (pymarc compatibility).
-       """
-       field = Field('245', '1', '0')
+        """Test Field.indicators property returns Indicators tuple-like
+        object (pymarc compatibility).
+        """
+        field = Field("245", "1", "0")
 
-       # Access via indicators property
-       indicators = field.indicators
-       assert isinstance(indicators, Indicators)
-       assert indicators[0] == '1'
-       assert indicators[1] == '0'
+        # Access via indicators property
+        indicators = field.indicators
+        assert isinstance(indicators, Indicators)
+        assert indicators[0] == "1"
+        assert indicators[1] == "0"
 
     def test_field_indicators_unpacking(self):
-       """Test Field.indicators can be unpacked like a tuple (pymarc compatibility)."""
-       field = Field('245', '1', '0')
+        """Test Field.indicators can be unpacked like a tuple (pymarc compatibility)."""
+        field = Field("245", "1", "0")
 
-       # Unpacking
-       ind1, ind2 = field.indicators
-       assert ind1 == '1'
-       assert ind2 == '0'
+        # Unpacking
+        ind1, ind2 = field.indicators
+        assert ind1 == "1"
+        assert ind2 == "0"
 
     def test_field_indicators_backward_compat(self):
-       """Test that field.indicator1/indicator2 still work alongside indicators property."""
-       field = Field('245', '1', '0')
+        """Test that field.indicator1/indicator2 still work alongside indicators property."""
+        field = Field("245", "1", "0")
 
-       # Both patterns should work
-       assert field.indicator1 == field.indicators[0]
-       assert field.indicator2 == field.indicators[1]
+        # Both patterns should work
+        assert field.indicator1 == field.indicators[0]
+        assert field.indicator2 == field.indicators[1]
 
     def test_field_indicators_setter(self):
-       """Test Field.indicators setter (pymarc compatibility)."""
-       field = Field('245', '0', '0')
+        """Test Field.indicators setter (pymarc compatibility)."""
+        field = Field("245", "0", "0")
 
-       # Set via Indicators object
-       field.indicators = Indicators('1', '4')
-       assert field.indicator1 == '1'
-       assert field.indicator2 == '4'
+        # Set via Indicators object
+        field.indicators = Indicators("1", "4")
+        assert field.indicator1 == "1"
+        assert field.indicator2 == "4"
 
-       # Set via tuple
-       field.indicators = ('1', '0')
-       assert field.indicator1 == '1'
-       assert field.indicator2 == '0'
+        # Set via tuple
+        field.indicators = ("1", "0")
+        assert field.indicator1 == "1"
+        assert field.indicator2 == "0"
 
 
 class TestConvenienceMethods:
@@ -265,38 +276,38 @@ class TestConvenienceMethods:
     def test_title(self):
         """Test title() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('245', '1', '0', a='Test Title'))
-        assert record.title == 'Test Title'
+        record.add_field(create_field("245", "1", "0", a="Test Title"))
+        assert record.title == "Test Title"
 
     def test_author(self):
         """Test author() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('100', '1', ' ', a='Author, Test'))
-        assert 'Author' in record.author
+        record.add_field(create_field("100", "1", " ", a="Author, Test"))
+        assert "Author" in record.author
 
     def test_isbn(self):
         """Test isbn() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('020', ' ', ' ', a='0201616165'))
-        assert record.isbn == '0201616165'
+        record.add_field(create_field("020", " ", " ", a="0201616165"))
+        assert record.isbn == "0201616165"
 
     def test_issn(self):
         """Test issn() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('022', ' ', ' ', a='0028-0836'))
-        assert record.issn == '0028-0836'
+        record.add_field(create_field("022", " ", " ", a="0028-0836"))
+        assert record.issn == "0028-0836"
 
     def test_publisher(self):
         """Test publisher() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('260', ' ', ' ', b='Test Publisher'))
-        assert 'Publisher' in record.publisher or 'Test' in record.publisher
+        record.add_field(create_field("260", " ", " ", b="Test Publisher"))
+        assert "Publisher" in record.publisher or "Test" in record.publisher
 
     def test_subjects(self):
         """Test subjects() convenience method."""
         record = Record(Leader())
         for i in range(3):
-            record.add_field(create_field('650', ' ', '0', a=f'Subject {i}'))
+            record.add_field(create_field("650", " ", "0", a=f"Subject {i}"))
 
         subjects = record.subjects
         assert len(subjects) == 3
@@ -304,23 +315,23 @@ class TestConvenienceMethods:
     def test_location(self):
         """Test location() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('852', ' ', ' ', a='Main Library'))
+        record.add_field(create_field("852", " ", " ", a="Main Library"))
 
         locations = record.location
-        assert 'Main Library' in locations
+        assert "Main Library" in locations
 
     def test_notes(self):
         """Test notes() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('500', ' ', ' ', a='General note'))
+        record.add_field(create_field("500", " ", " ", a="General note"))
 
         notes = record.notes
-        assert 'General note' in notes
+        assert "General note" in notes
 
     def test_series(self):
         """Test series() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('490', ' ', ' ', a='Series Name'))
+        record.add_field(create_field("490", " ", " ", a="Series Name"))
 
         series = record.series
         assert series is not None
@@ -328,42 +339,42 @@ class TestConvenienceMethods:
     def test_physical_description(self):
         """Test physical_description() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('300', ' ', ' ', a='256 pages'))
+        record.add_field(create_field("300", " ", " ", a="256 pages"))
 
         phys_desc = record.physical_description
-        assert '256' in phys_desc or phys_desc is not None
+        assert "256" in phys_desc or phys_desc is not None
 
     def test_uniform_title(self):
         """Test uniform_title() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('130', ' ', '0', a='Uniform Title'))
+        record.add_field(create_field("130", " ", "0", a="Uniform Title"))
 
         uniform = record.uniform_title
-        assert 'Uniform' in uniform
+        assert "Uniform" in uniform
 
     def test_sudoc(self):
         """Test sudoc() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('086', ' ', ' ', a='I 19.2:En 3'))
+        record.add_field(create_field("086", " ", " ", a="I 19.2:En 3"))
 
         sudoc = record.sudoc
-        assert sudoc == 'I 19.2:En 3'
+        assert sudoc == "I 19.2:En 3"
 
     def test_issn_title(self):
         """Test issn_title() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('222', ' ', ' ', a='Key Title'))
+        record.add_field(create_field("222", " ", " ", a="Key Title"))
 
         issn_title = record.issn_title
-        assert 'Key Title' in issn_title
+        assert "Key Title" in issn_title
 
     def test_pubyear(self):
         """Test pubyear() convenience method."""
         record = Record(Leader())
-        record.add_field(create_field('260', ' ', ' ', c='2023'))
+        record.add_field(create_field("260", " ", " ", c="2023"))
 
         year = record.pubyear
-        assert year == '2023'
+        assert year == "2023"
 
 
 class TestRecordSerialization:
@@ -372,17 +383,17 @@ class TestRecordSerialization:
     def test_to_json(self):
         """Test JSON serialization."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        record.add_field(create_field('245', '1', '0', a='Title'))
+        record.add_control_field("001", "test-id")
+        record.add_field(create_field("245", "1", "0", a="Title"))
 
         json_str = record.to_json()
         assert json_str is not None
-        assert 'test-id' in json_str or 'Title' in json_str
+        assert "test-id" in json_str or "Title" in json_str
 
     def test_to_json_valid_json(self):
         """Test that JSON output is valid JSON."""
         record = Record(Leader())
-        record.add_field(create_field('245', '1', '0', a='Title'))
+        record.add_field(create_field("245", "1", "0", a="Title"))
 
         json_str = record.to_json()
         try:
@@ -394,21 +405,21 @@ class TestRecordSerialization:
     def test_to_xml(self):
         """Test XML serialization."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
+        record.add_control_field("001", "test-id")
 
         xml_str = record.to_xml()
         assert xml_str is not None
-        assert '<' in xml_str
+        assert "<" in xml_str
 
     def test_to_dublin_core(self):
         """Test Dublin Core serialization."""
         record = Record(Leader())
-        record.add_field(create_field('245', '1', '0', a='Test Title'))
+        record.add_field(create_field("245", "1", "0", a="Test Title"))
 
         dc = record.to_dublin_core()
         assert isinstance(dc, dict)
         # DC should have title from 245 field
-        assert 'title' in dc or len(dc) > 0
+        assert "title" in dc or len(dc) > 0
 
 
 class TestRecordTypeDetection:
@@ -417,8 +428,8 @@ class TestRecordTypeDetection:
     def test_is_book(self):
         """Test is_book() detection."""
         leader = Leader()
-        leader.record_type = 'a'
-        leader.bibliographic_level = 'm'
+        leader.record_type = "a"
+        leader.bibliographic_level = "m"
         record = Record(leader)
 
         assert record.is_book()
@@ -426,7 +437,7 @@ class TestRecordTypeDetection:
     def test_is_serial(self):
         """Test is_serial() detection."""
         leader = Leader()
-        leader.bibliographic_level = 's'
+        leader.bibliographic_level = "s"
         record = Record(leader)
 
         assert record.is_serial()
@@ -434,7 +445,7 @@ class TestRecordTypeDetection:
     def test_is_music(self):
         """Test is_music() detection."""
         leader = Leader()
-        leader.record_type = 'c'
+        leader.record_type = "c"
         record = Record(leader)
 
         assert record.is_music()
@@ -442,7 +453,7 @@ class TestRecordTypeDetection:
     def test_is_audiovisual(self):
         """Test is_audiovisual() detection."""
         leader = Leader()
-        leader.record_type = 'g'
+        leader.record_type = "g"
         record = Record(leader)
 
         assert record.is_audiovisual()
@@ -455,10 +466,12 @@ class TestMARCReaderWriter:
     def sample_record(self):
         """Create a sample MARC record for testing."""
         record = Record(Leader())
-        record.add_control_field('001', '12345')
-        record.add_field(create_field('245', '1', '0', a='Test Title', b='Subtitle'))
-        record.add_field(create_field('100', '1', ' ', a='Author, Test'))
-        record.add_field(create_field('650', ' ', '0', a='Subject'))
+        record.add_control_field("001", "12345")
+        record.add_field(
+            create_field("245", "1", "0", a="Test Title", b="Subtitle")
+        )
+        record.add_field(create_field("100", "1", " ", a="Author, Test"))
+        record.add_field(create_field("650", " ", "0", a="Subject"))
         return record
 
     def test_reader_creation(self, fixture_1k):
@@ -499,25 +512,29 @@ class TestEdgeCases:
 
         # Add many fields
         for i in range(20):
-            record.add_field(create_field('650', ' ', '0', a=f'Subject {i}'))
+            record.add_field(create_field("650", " ", "0", a=f"Subject {i}"))
 
         subjects = record.subjects
         assert len(subjects) == 20
 
     def test_field_with_many_subfields(self):
         """Test field with many subfields."""
-        field = Field('300', ' ', ' ')
+        field = Field("300", " ", " ")
 
         for i in range(10):
-            field.add_subfield('a', f'Value {i}')
+            field.add_subfield("a", f"Value {i}")
 
         assert len(field.subfields()) == 10
 
     def test_special_characters_in_subfields(self):
         """Test special characters in subfield values."""
-        field = create_field('245', '1', '0',
-                            a='Title with "quotes"',
-                            b="Subtitle with 'apostrophes'")
+        field = create_field(
+            "245",
+            "1",
+            "0",
+            a='Title with "quotes"',
+            b="Subtitle with 'apostrophes'",
+        )
 
         assert len(field.subfields()) == 2
 
@@ -528,8 +545,8 @@ class TestFormatConversions:
     def test_marcjson_roundtrip(self):
         """Test MARCJSON round-trip conversion."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        record.add_field(create_field('245', '1', '0', a='Title'))
+        record.add_control_field("001", "test-id")
+        record.add_field(create_field("245", "1", "0", a="Title"))
 
         marcjson = record.to_marcjson()
         assert marcjson is not None
@@ -541,49 +558,49 @@ class TestFieldCreation:
 
     def test_field_subfields_created(self):
         """Test subfields are properly created."""
-        field = Field('245', '0', '1')
-        field.add_subfield('a', 'Title')
-        field.add_subfield('b', 'Subtitle')
+        field = Field("245", "0", "1")
+        field.add_subfield("a", "Title")
+        field.add_subfield("b", "Subtitle")
         assert len(field.subfields()) == 2
 
     def test_field_indicators(self):
         """Test indicator access."""
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Test Title')
-        assert field.indicator1 == '1'
-        assert field.indicator2 == '0'
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Test Title")
+        assert field.indicator1 == "1"
+        assert field.indicator2 == "0"
 
     def test_field_reassign_indicators(self):
         """Test changing indicators."""
-        field = Field('245', '0', '1')
-        field.indicator1 = '1'
-        field.indicator2 = '0'
-        assert field.indicator1 == '1'
-        assert field.indicator2 == '0'
+        field = Field("245", "0", "1")
+        field.indicator1 = "1"
+        field.indicator2 = "0"
+        assert field.indicator1 == "1"
+        assert field.indicator2 == "0"
 
     def test_field_subfield_get_multiple(self):
         """Test getting multiple subfields by code."""
-        field = Field('650', ' ', '0')
-        field.add_subfield('a', 'First Subject')
-        field.add_subfield('v', 'Subdivision')
-        result = field.subfields_by_code('a')
-        assert 'First Subject' in result
+        field = Field("650", " ", "0")
+        field.add_subfield("a", "First Subject")
+        field.add_subfield("v", "Subdivision")
+        result = field.subfields_by_code("a")
+        assert "First Subject" in result
 
     def test_field_add_subfield(self):
         """Test adding subfields."""
-        field = Field('245', '0', '1')
-        field.add_subfield('a', 'foo')
-        field.add_subfield('b', 'bar')
+        field = Field("245", "0", "1")
+        field.add_subfield("a", "foo")
+        field.add_subfield("b", "bar")
         subfields = field.subfields()
         assert len(subfields) == 2
-        assert subfields[0].value == 'foo'
+        assert subfields[0].value == "foo"
 
     def test_field_is_subject_field(self):
         """Test identifying subject fields."""
-        subject_field = Field('650', ' ', '0')
-        subject_field.add_subfield('a', 'Python')
-        title_field = Field('245', '1', '0')
-        title_field.add_subfield('a', 'Title')
+        subject_field = Field("650", " ", "0")
+        subject_field.add_subfield("a", "Python")
+        title_field = Field("245", "1", "0")
+        title_field.add_subfield("a", "Title")
         assert subject_field.is_subject_field()
         assert not title_field.is_subject_field()
 
@@ -594,58 +611,58 @@ class TestRecordAdvanced:
     def test_record_add_field(self):
         """Test adding fields to records."""
         record = Record(Leader())
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Python')
-        field.add_subfield('c', 'Guido')
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Python")
+        field.add_subfield("c", "Guido")
         record.add_field(field)
         assert field in record.fields()
 
     def test_record_quick_access(self):
         """Test quick access via tags."""
         record = Record(Leader())
-        title = Field('245', '1', '0')
-        title.add_subfield('a', 'Python')
+        title = Field("245", "1", "0")
+        title.add_subfield("a", "Python")
         record.add_field(title)
-        assert record['245'] == title
+        assert record["245"] == title
 
     def test_record_getitem_missing_tag(self):
         """Test Record.__getitem__ raises KeyError for missing tag (pymarc compatibility)."""
         record = Record(Leader())
         with pytest.raises(KeyError):
-            record['999']
+            record["999"]
         with pytest.raises(KeyError):
-            record['245']
+            record["245"]
 
     def test_record_membership(self):
         """Test checking if tag exists in record."""
         record = Record(Leader())
-        title = Field('245', '1', '0')
-        title.add_subfield('a', 'Python')
+        title = Field("245", "1", "0")
+        title.add_subfield("a", "Python")
         record.add_field(title)
-        assert '245' in record
-        assert '999' not in record
+        assert "245" in record
+        assert "999" not in record
 
     def test_record_get_fields_multi(self):
         """Test retrieving multiple field types."""
         record = Record(Leader())
-        subject1 = Field('650', ' ', '0')
-        subject1.add_subfield('a', 'Programming')
-        subject2 = Field('651', ' ', '0')
-        subject2.add_subfield('a', 'Computer Science')
+        subject1 = Field("650", " ", "0")
+        subject1.add_subfield("a", "Programming")
+        subject2 = Field("651", " ", "0")
+        subject2.add_subfield("a", "Computer Science")
         record.add_field(subject1)
         record.add_field(subject2)
-        fields = record.get_fields('650', '651')
+        fields = record.get_fields("650", "651")
         assert len(fields) == 2
 
     def test_record_remove_field(self):
         """Test removing fields."""
         record = Record(Leader())
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Title')
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Title")
         record.add_field(field)
-        assert '245' in record
+        assert "245" in record
         record.remove_field(field)
-        assert record.get_field('245') is None
+        assert record.get_field("245") is None
 
 
 class TestReaderWriter:
@@ -653,7 +670,7 @@ class TestReaderWriter:
 
     def test_reader_from_file(self):
         """Test reading MARC records from file using direct path passing."""
-        test_file = TEST_DATA_DIR / 'simple_book.mrc'
+        test_file = TEST_DATA_DIR / "simple_book.mrc"
         # Pass path directly to MARCReader (recommended - allows Rust to handle I/O)
         reader = MARCReader(test_file)
         record = next(reader)
@@ -662,7 +679,7 @@ class TestReaderWriter:
 
     def test_reader_iteration(self):
         """Test iterating through records using direct path passing."""
-        test_file = TEST_DATA_DIR / 'simple_book.mrc'
+        test_file = TEST_DATA_DIR / "simple_book.mrc"
         # Pass path directly to MARCReader (recommended - allows Rust to handle I/O)
         reader = MARCReader(test_file)
         count = 0
@@ -674,9 +691,9 @@ class TestReaderWriter:
     def test_writer_to_bytes(self):
         """Test writing records to bytes."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Test Title')
+        record.add_control_field("001", "test-id")
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Test Title")
         record.add_field(field)
 
         output = io.BytesIO()
@@ -688,9 +705,9 @@ class TestReaderWriter:
     def test_roundtrip_record(self):
         """Test writing then reading a record."""
         original = Record(Leader())
-        original.add_control_field('001', 'test-123')
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Test Title')
+        original.add_control_field("001", "test-123")
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Test Title")
         original.add_field(field)
 
         # Write to bytes
@@ -705,7 +722,7 @@ class TestReaderWriter:
 
         # Verify content
         assert read_record is not None
-        assert read_record.control_field('001') == 'test-123'
+        assert read_record.control_field("001") == "test-123"
 
 
 class TestLeader:
@@ -719,39 +736,39 @@ class TestLeader:
     def test_leader_record_type(self):
         """Test setting record type."""
         leader = Leader()
-        leader.record_type = 'a'
-        assert leader.record_type == 'a'
+        leader.record_type = "a"
+        assert leader.record_type == "a"
 
     def test_leader_bibliographic_level(self):
         """Test setting bibliographic level."""
         leader = Leader()
-        leader.bibliographic_level = 'c'
-        assert leader.bibliographic_level == 'c'
+        leader.bibliographic_level = "c"
+        assert leader.bibliographic_level == "c"
 
     def test_leader_encoding_level(self):
         """Test setting encoding level."""
         leader = Leader()
-        leader.encoding_level = '4'
-        assert leader.encoding_level == '4'
+        leader.encoding_level = "4"
+        assert leader.encoding_level == "4"
 
     def test_leader_descriptor_cataloging_form(self):
         """Test descriptor cataloging form."""
         leader = Leader()
-        leader.descriptive_cataloging_form = 'c'
-        assert leader.descriptive_cataloging_form == 'c'
+        leader.descriptive_cataloging_form = "c"
+        assert leader.descriptive_cataloging_form == "c"
 
     def test_leader_multipart_resource_record_level(self):
         """Test multipart resource level."""
         leader = Leader()
-        leader.multipart_resource_record_level = 'a'
-        assert leader.multipart_resource_record_level == 'a'
+        leader.multipart_resource_record_level = "a"
+        assert leader.multipart_resource_record_level == "a"
 
     def test_leader_single_position_access(self):
         """Test Leader position-based access (pymarc compatibility)."""
         leader = Leader()
-        leader.record_status = 'c'
+        leader.record_status = "c"
         # Access by position 5
-        assert leader[5] == 'c'
+        assert leader[5] == "c"
 
     def test_leader_slice_access(self):
         """Test Leader slice-based access (pymarc compatibility)."""
@@ -764,55 +781,55 @@ class TestLeader:
     def test_leader_setitem_by_position(self):
         """Test Leader position-based setting (pymarc compatibility)."""
         leader = Leader()
-        leader[5] = 'a'  # Set record status at position 5
-        assert leader[5] == 'a'
-        assert leader.record_status == 'a'
+        leader[5] = "a"  # Set record status at position 5
+        assert leader[5] == "a"
+        assert leader.record_status == "a"
 
     def test_leader_position_and_property_stay_in_sync(self):
         """Test that position-based and property-based access stay synchronized."""
         leader = Leader()
 
         # Set via property
-        leader.record_status = 'd'
-        assert leader[5] == 'd'
+        leader.record_status = "d"
+        assert leader[5] == "d"
 
         # Set via position
-        leader[6] = 'a'
-        assert leader.record_type == 'a'
+        leader[6] = "a"
+        assert leader.record_type == "a"
 
     def test_leader_get_valid_values(self):
         """Test getting valid values for leader positions."""
         # Position 5: Record status
         values = Leader.get_valid_values(5)
         assert values is not None
-        assert 'a' in values
-        assert 'c' in values
-        assert 'd' in values
-        assert 'n' in values
-        assert 'p' in values
+        assert "a" in values
+        assert "c" in values
+        assert "d" in values
+        assert "n" in values
+        assert "p" in values
 
         # Position 6: Type of record
         values = Leader.get_valid_values(6)
         assert values is not None
-        assert 'a' in values
-        assert 'm' in values
+        assert "a" in values
+        assert "m" in values
 
         # Position 7: Bibliographic level
         values = Leader.get_valid_values(7)
         assert values is not None
-        assert 'm' in values
-        assert 's' in values
+        assert "m" in values
+        assert "s" in values
 
         # Position 17: Encoding level
         values = Leader.get_valid_values(17)
         assert values is not None
-        assert ' ' in values
-        assert '1' in values
+        assert " " in values
+        assert "1" in values
 
         # Position 18: Cataloging form
         values = Leader.get_valid_values(18)
         assert values is not None
-        assert 'a' in values
+        assert "a" in values
 
         # Position 0: No defined values
         values = Leader.get_valid_values(0)
@@ -821,41 +838,41 @@ class TestLeader:
     def test_leader_is_valid_value(self):
         """Test validating values for leader positions."""
         # Position 5: Record status
-        assert Leader.is_valid_value(5, 'a') is True
-        assert Leader.is_valid_value(5, 'c') is True
-        assert Leader.is_valid_value(5, 'x') is False
+        assert Leader.is_valid_value(5, "a") is True
+        assert Leader.is_valid_value(5, "c") is True
+        assert Leader.is_valid_value(5, "x") is False
 
         # Position 6: Type of record
-        assert Leader.is_valid_value(6, 'a') is True
-        assert Leader.is_valid_value(6, 'm') is True
-        assert Leader.is_valid_value(6, 'z') is False
+        assert Leader.is_valid_value(6, "a") is True
+        assert Leader.is_valid_value(6, "m") is True
+        assert Leader.is_valid_value(6, "z") is False
 
         # Position 0: No validation (any value accepted)
-        assert Leader.is_valid_value(0, '0') is True
-        assert Leader.is_valid_value(0, 'x') is True
+        assert Leader.is_valid_value(0, "0") is True
+        assert Leader.is_valid_value(0, "x") is True
 
     def test_leader_get_value_description(self):
         """Test getting descriptions of leader values."""
         # Position 5: Record status
-        desc = Leader.get_value_description(5, 'a')
+        desc = Leader.get_value_description(5, "a")
         assert desc is not None
-        assert 'Increase in encoding level' in desc
+        assert "Increase in encoding level" in desc
 
-        desc = Leader.get_value_description(5, 'c')
+        desc = Leader.get_value_description(5, "c")
         assert desc is not None
-        assert 'Corrected or revised' in desc
+        assert "Corrected or revised" in desc
 
         # Invalid value
-        desc = Leader.get_value_description(5, 'x')
+        desc = Leader.get_value_description(5, "x")
         assert desc is None
 
         # Position 6: Type of record
-        desc = Leader.get_value_description(6, 'a')
+        desc = Leader.get_value_description(6, "a")
         assert desc is not None
-        assert 'Language material' in desc
+        assert "Language material" in desc
 
         # Position 0: No descriptions
-        desc = Leader.get_value_description(0, '5')
+        desc = Leader.get_value_description(0, "5")
         assert desc is None
 
 
@@ -865,25 +882,25 @@ class TestEncoding:
     def test_utf8_record_creation(self):
         """Test creating records with UTF-8 data."""
         record = Record(Leader())
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Rū Harison no wārudo')  # UTF-8 string
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Rū Harison no wārudo")  # UTF-8 string
         record.add_field(field)
-        assert record.get_field('245') is not None
+        assert record.get_field("245") is not None
 
     def test_special_characters(self):
         """Test handling special characters."""
         record = Record(Leader())
-        field = Field('650', ' ', '0')
-        field.add_subfield('a', 'Müller')  # Umlaut
-        field.add_subfield('a', 'Café')    # Accent
+        field = Field("650", " ", "0")
+        field.add_subfield("a", "Müller")  # Umlaut
+        field.add_subfield("a", "Café")  # Accent
         record.add_field(field)
-        assert record.get_field('650') is not None
+        assert record.get_field("650") is not None
 
     def test_encoding_to_marc(self):
         """Test encoding record to MARC."""
         record = Record(Leader())
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Test')
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Test")
         record.add_field(field)
         encoded = record.to_marc21()
         assert encoded is not None
@@ -892,115 +909,149 @@ class TestEncoding:
 
 class TestRecordBinarySerialization:
     def test_as_marc_returns_bytes(self):
-        record = Record(fields=[
-            Field('245', '1', '0', subfields=[Subfield('a', 'Test Title')]),
-        ])
-        record.add_control_field('001', 'test-id')
+        record = Record(
+            fields=[
+                Field(
+                    "245", "1", "0", subfields=[Subfield("a", "Test Title")]
+                ),
+            ]
+        )
+        record.add_control_field("001", "test-id")
         result = record.as_marc()
         assert isinstance(result, bytes)
         assert len(result) > 0
 
     def test_as_marc21_alias(self):
-        record = Record(fields=[
-            Field('245', '1', '0', subfields=[Subfield('a', 'Test')]),
-        ])
-        record.add_control_field('001', 'test-id')
+        record = Record(
+            fields=[
+                Field("245", "1", "0", subfields=[Subfield("a", "Test")]),
+            ]
+        )
+        record.add_control_field("001", "test-id")
         assert record.as_marc() == record.as_marc21()
 
     def test_as_marc_roundtrip(self):
-        record = Record(fields=[
-            Field('245', '1', '0', subfields=[Subfield('a', 'Roundtrip Test')]),
-        ])
-        record.add_control_field('001', 'rt-001')
+        record = Record(
+            fields=[
+                Field(
+                    "245",
+                    "1",
+                    "0",
+                    subfields=[Subfield("a", "Roundtrip Test")],
+                ),
+            ]
+        )
+        record.add_control_field("001", "rt-001")
         marc_bytes = record.as_marc()
         reader = MARCReader(io.BytesIO(marc_bytes))
         recovered = next(reader)
-        assert recovered.title == 'Roundtrip Test'
+        assert recovered.title == "Roundtrip Test"
 
 
 class TestPymarcJsonSchema:
     def test_as_dict_structure(self):
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        record.add_field(Field('245', '1', '0', subfields=[
-            Subfield('a', 'Title'),
-            Subfield('c', 'Author'),
-        ]))
+        record.add_control_field("001", "test-id")
+        record.add_field(
+            Field(
+                "245",
+                "1",
+                "0",
+                subfields=[
+                    Subfield("a", "Title"),
+                    Subfield("c", "Author"),
+                ],
+            )
+        )
         d = record.as_dict()
-        assert 'leader' in d
-        assert 'fields' in d
-        assert isinstance(d['fields'], list)
+        assert "leader" in d
+        assert "fields" in d
+        assert isinstance(d["fields"], list)
 
     def test_as_dict_control_field_format(self):
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
+        record.add_control_field("001", "test-id")
         d = record.as_dict()
         # Find the 001 field in the list
         cf = None
-        for f in d['fields']:
-            if '001' in f:
+        for f in d["fields"]:
+            if "001" in f:
                 cf = f
                 break
-        assert cf == {'001': 'test-id'}
+        assert cf == {"001": "test-id"}
 
     def test_as_dict_data_field_format(self):
-        record = Record(fields=[
-            Field('245', '1', '0', subfields=[
-                Subfield('a', 'Title'),
-                Subfield('c', 'Author'),
-            ]),
-        ])
+        record = Record(
+            fields=[
+                Field(
+                    "245",
+                    "1",
+                    "0",
+                    subfields=[
+                        Subfield("a", "Title"),
+                        Subfield("c", "Author"),
+                    ],
+                ),
+            ]
+        )
         d = record.as_dict()
         # Find 245 in fields list
         df = None
-        for f in d['fields']:
-            if '245' in f:
+        for f in d["fields"]:
+            if "245" in f:
                 df = f
                 break
         assert df is not None
-        inner = df['245']
-        assert inner['ind1'] == '1'
-        assert inner['ind2'] == '0'
-        assert isinstance(inner['subfields'], list)
-        assert inner['subfields'][0] == {'a': 'Title'}
-        assert inner['subfields'][1] == {'c': 'Author'}
+        inner = df["245"]
+        assert inner["ind1"] == "1"
+        assert inner["ind2"] == "0"
+        assert isinstance(inner["subfields"], list)
+        assert inner["subfields"][0] == {"a": "Title"}
+        assert inner["subfields"][1] == {"c": "Author"}
 
     def test_as_dict_duplicate_subfield_codes_preserved(self):
-        record = Record(fields=[
-            Field('650', ' ', '0', subfields=[
-                Subfield('a', 'Topic 1'),
-                Subfield('a', 'Topic 2'),
-            ]),
-        ])
+        record = Record(
+            fields=[
+                Field(
+                    "650",
+                    " ",
+                    "0",
+                    subfields=[
+                        Subfield("a", "Topic 1"),
+                        Subfield("a", "Topic 2"),
+                    ],
+                ),
+            ]
+        )
         d = record.as_dict()
         df = None
-        for f in d['fields']:
-            if '650' in f:
+        for f in d["fields"]:
+            if "650" in f:
                 df = f
                 break
-        sfs = df['650']['subfields']
+        sfs = df["650"]["subfields"]
         assert len(sfs) == 2
-        assert sfs[0] == {'a': 'Topic 1'}
-        assert sfs[1] == {'a': 'Topic 2'}
+        assert sfs[0] == {"a": "Topic 1"}
+        assert sfs[1] == {"a": "Topic 2"}
 
     def test_as_json_returns_string(self):
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
+        record.add_control_field("001", "test-id")
         result = record.as_json()
         assert isinstance(result, str)
         parsed = json.loads(result)
-        assert 'leader' in parsed
+        assert "leader" in parsed
 
     def test_as_json_kwargs_forwarded(self):
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
+        record.add_control_field("001", "test-id")
         result = record.as_json(indent=2)
-        assert '\n' in result
+        assert "\n" in result
 
     def test_to_json_unchanged(self):
         """to_json() should still return mrrc's native format."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
+        record.add_control_field("001", "test-id")
         native = record.to_json()
         pymarc_compat = record.as_json()
         assert json.loads(native) != json.loads(pymarc_compat)
@@ -1012,9 +1063,9 @@ class TestSerialization:
     def test_json_serialization(self):
         """Test JSON serialization."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Title')
+        record.add_control_field("001", "test-id")
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Title")
         record.add_field(field)
 
         json_str = record.to_json()
@@ -1025,21 +1076,21 @@ class TestSerialization:
     def test_xml_serialization(self):
         """Test XML serialization."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Title')
+        record.add_control_field("001", "test-id")
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Title")
         record.add_field(field)
 
         xml_str = record.to_xml()
         assert xml_str is not None
-        assert '<' in xml_str
+        assert "<" in xml_str
 
     def test_dublin_core_serialization(self):
         """Test Dublin Core serialization."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Title')
+        record.add_control_field("001", "test-id")
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Title")
         record.add_field(field)
 
         dc_xml = record.to_dublin_core()
@@ -1051,57 +1102,77 @@ class TestConstructorKwargs:
 
     def test_field_with_indicators_kwarg(self):
         """Test Field with indicators= kwarg."""
-        field = Field('245', indicators=['1', '0'])
-        assert field.indicator1 == '1'
-        assert field.indicator2 == '0'
+        field = Field("245", indicators=["1", "0"])
+        assert field.indicator1 == "1"
+        assert field.indicator2 == "0"
 
     def test_field_with_subfields_kwarg(self):
         """Test Field with subfields= kwarg."""
-        field = Field('245', '1', '0', subfields=[Subfield('a', 'Test Title')])
-        assert field['a'] == 'Test Title'
+        field = Field("245", "1", "0", subfields=[Subfield("a", "Test Title")])
+        assert field["a"] == "Test Title"
         assert len(field.subfields()) == 1
 
     def test_field_with_indicators_and_subfields(self):
         """Test Field with both indicators= and subfields= kwargs."""
-        field = Field('245', indicators=['1', '0'], subfields=[
-            Subfield('a', 'Pragmatic Programmer'),
-            Subfield('c', 'Hunt and Thomas'),
-        ])
-        assert field.indicator1 == '1'
-        assert field.indicator2 == '0'
-        assert field['a'] == 'Pragmatic Programmer'
-        assert field['c'] == 'Hunt and Thomas'
+        field = Field(
+            "245",
+            indicators=["1", "0"],
+            subfields=[
+                Subfield("a", "Pragmatic Programmer"),
+                Subfield("c", "Hunt and Thomas"),
+            ],
+        )
+        assert field.indicator1 == "1"
+        assert field.indicator2 == "0"
+        assert field["a"] == "Pragmatic Programmer"
+        assert field["c"] == "Hunt and Thomas"
         assert len(field.subfields()) == 2
 
     def test_record_with_fields_kwarg(self):
         """Test Record with fields= kwarg."""
-        title = Field('245', '1', '0', subfields=[Subfield('a', 'My Book')])
-        author = Field('100', '1', ' ', subfields=[Subfield('a', 'Doe, John')])
+        title = Field("245", "1", "0", subfields=[Subfield("a", "My Book")])
+        author = Field("100", "1", " ", subfields=[Subfield("a", "Doe, John")])
         record = Record(fields=[title, author])
-        assert record.title == 'My Book'
-        assert record.get_field('100') is not None
+        assert record.title == "My Book"
+        assert record.get_field("100") is not None
 
     def test_full_inline_construction(self):
         """Test the exact pattern from the issue: full inline construction."""
-        record = Record(fields=[
-            Field('245', indicators=['0', '1'], subfields=[
-                Subfield('a', 'Pragmatic Programmer'),
-            ]),
-            Field('100', '1', ' ', subfields=[
-                Subfield('a', 'Hunt, Andrew'),
-            ]),
-            Field('650', ' ', '0', subfields=[
-                Subfield('a', 'Computer programming'),
-            ]),
-        ])
-        assert record.title == 'Pragmatic Programmer'
-        assert len(record.get_fields('650')) == 1
+        record = Record(
+            fields=[
+                Field(
+                    "245",
+                    indicators=["0", "1"],
+                    subfields=[
+                        Subfield("a", "Pragmatic Programmer"),
+                    ],
+                ),
+                Field(
+                    "100",
+                    "1",
+                    " ",
+                    subfields=[
+                        Subfield("a", "Hunt, Andrew"),
+                    ],
+                ),
+                Field(
+                    "650",
+                    " ",
+                    "0",
+                    subfields=[
+                        Subfield("a", "Computer programming"),
+                    ],
+                ),
+            ]
+        )
+        assert record.title == "Pragmatic Programmer"
+        assert len(record.get_fields("650")) == 1
 
     def test_field_backward_compat_positional_indicators(self):
         """Test backward compatibility: Field('245', '0', '1') still works."""
-        field = Field('245', '0', '1')
-        assert field.indicator1 == '0'
-        assert field.indicator2 == '1'
+        field = Field("245", "0", "1")
+        assert field.indicator1 == "0"
+        assert field.indicator2 == "1"
 
     def test_record_backward_compat_no_args(self):
         """Test backward compatibility: Record() with no args still works."""
@@ -1112,13 +1183,16 @@ class TestConstructorKwargs:
     def test_record_with_leader_and_fields(self):
         """Test Record with both leader and fields kwargs."""
         leader = Leader()
-        leader.record_type = 'a'
-        leader.bibliographic_level = 'm'
-        record = Record(leader, fields=[
-            Field('245', '1', '0', subfields=[Subfield('a', 'Title')]),
-        ])
-        assert record.leader.record_type == 'a'
-        assert record.title == 'Title'
+        leader.record_type = "a"
+        leader.bibliographic_level = "m"
+        record = Record(
+            leader,
+            fields=[
+                Field("245", "1", "0", subfields=[Subfield("a", "Title")]),
+            ],
+        )
+        assert record.leader.record_type == "a"
+        assert record.title == "Title"
 
 
 class TestFieldUnification:
@@ -1126,103 +1200,107 @@ class TestFieldUnification:
 
     def test_field_with_data_creates_control_field(self):
         """Field('001', data='12345') creates a control field."""
-        field = Field('001', data='12345')
+        field = Field("001", data="12345")
         assert field.is_control_field()
-        assert field.tag == '001'
-        assert field.data == '12345'
+        assert field.tag == "001"
+        assert field.data == "12345"
 
     def test_data_field_is_not_control(self):
         """Field('245', '1', '0') is not a control field."""
-        field = Field('245', '1', '0')
+        field = Field("245", "1", "0")
         assert not field.is_control_field()
         assert field.data is None
 
     def test_control_field_isinstance(self):
         """ControlField is a subclass of Field."""
-        cf = ControlField('001', '12345')
+        cf = ControlField("001", "12345")
         assert isinstance(cf, Field)
         assert cf.is_control_field()
 
     def test_control_field_backward_compat_class(self):
         """ControlField class still works as backward-compatible alias."""
-        cf = ControlField('003', 'DLC')
-        assert cf.tag == '003'
-        assert cf.data == 'DLC'
+        cf = ControlField("003", "DLC")
+        assert cf.tag == "003"
+        assert cf.data == "DLC"
         assert cf.is_control_field()
 
     def test_record_getitem_returns_field_for_control(self):
         """Record['001'] returns a Field instance (not ControlField)."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        field = record['001']
+        record.add_control_field("001", "test-id")
+        field = record["001"]
         assert isinstance(field, Field)
-        assert field.data == 'test-id'
+        assert field.data == "test-id"
 
     def test_record_getitem_raises_keyerror(self):
         """Record['999'] raises KeyError."""
         record = Record(Leader())
         with pytest.raises(KeyError):
-            record['999']
+            record["999"]
 
     def test_record_get_returns_none_for_missing(self):
         """record.get('999') returns None."""
         record = Record(Leader())
-        assert record.get('999') is None
-        assert record.get('001') is None
+        assert record.get("999") is None
+        assert record.get("001") is None
 
     def test_record_get_returns_field_for_existing(self):
         """record.get('001') returns a Field for existing control fields."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        field = record.get('001')
+        record.add_control_field("001", "test-id")
+        field = record.get("001")
         assert isinstance(field, Field)
-        assert field.data == 'test-id'
+        assert field.data == "test-id"
 
     def test_get_fields_includes_control_fields(self):
         """get_fields() returns Field instances for both control and data fields."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        record.add_control_field('003', 'DLC')
-        record.add_field(Field('245', '1', '0', subfields=[Subfield('a', 'Title')]))
+        record.add_control_field("001", "test-id")
+        record.add_control_field("003", "DLC")
+        record.add_field(
+            Field("245", "1", "0", subfields=[Subfield("a", "Title")])
+        )
 
         all_fields = record.get_fields()
         tags = [f.tag for f in all_fields]
-        assert '001' in tags
-        assert '003' in tags
-        assert '245' in tags
+        assert "001" in tags
+        assert "003" in tags
+        assert "245" in tags
         for f in all_fields:
             assert isinstance(f, Field)
 
     def test_get_fields_by_control_tag(self):
         """get_fields('001') returns a list with the control field."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        fields = record.get_fields('001')
+        record.add_control_field("001", "test-id")
+        fields = record.get_fields("001")
         assert len(fields) == 1
-        assert fields[0].data == 'test-id'
+        assert fields[0].data == "test-id"
 
     def test_add_field_with_control_field(self):
         """add_field() accepts a Field created with data=."""
         record = Record(Leader())
-        record.add_field(Field('001', data='12345'))
-        assert record.control_field('001') == '12345'
+        record.add_field(Field("001", data="12345"))
+        assert record.control_field("001") == "12345"
 
     def test_fields_method_includes_control_fields(self):
         """record.fields() includes control fields as Field instances."""
         record = Record(Leader())
-        record.add_control_field('001', 'test-id')
-        record.add_field(Field('245', '1', '0', subfields=[Subfield('a', 'Title')]))
+        record.add_control_field("001", "test-id")
+        record.add_field(
+            Field("245", "1", "0", subfields=[Subfield("a", "Title")])
+        )
 
         all_fields = record.fields()
         tags = [f.tag for f in all_fields]
-        assert '001' in tags
-        assert '245' in tags
+        assert "001" in tags
+        assert "245" in tags
 
     def test_default_indicators_are_spaces(self):
         """Default indicators should be spaces (matching pymarc)."""
-        field = Field('245')
-        assert field.indicator1 == ' '
-        assert field.indicator2 == ' '
+        field = Field("245")
+        assert field.indicator1 == " "
+        assert field.indicator2 == " "
 
 
 class TestFieldStringRepresentation:
@@ -1230,33 +1308,38 @@ class TestFieldStringRepresentation:
 
     def test_data_field_str(self):
         """str(field) returns pymarc MARC display format for data fields."""
-        field = Field('245', '1', '0', subfields=[
-            Subfield('a', 'The Great Gatsby'),
-            Subfield('c', 'F. Scott Fitzgerald'),
-        ])
-        assert str(field) == '=245  10$aThe Great Gatsby$cF. Scott Fitzgerald'
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[
+                Subfield("a", "The Great Gatsby"),
+                Subfield("c", "F. Scott Fitzgerald"),
+            ],
+        )
+        assert str(field) == "=245  10$aThe Great Gatsby$cF. Scott Fitzgerald"
 
     def test_control_field_str(self):
         """str(field) returns pymarc format for control fields."""
-        field = Field('001', data='12345')
-        assert str(field) == '=001  12345'
+        field = Field("001", data="12345")
+        assert str(field) == "=001  12345"
 
     def test_data_field_str_blank_indicators(self):
         """Blank indicators display as backslash."""
-        field = Field('650', ' ', '0', subfields=[Subfield('a', 'Python')])
-        assert str(field) == '=650  \\0$aPython'
+        field = Field("650", " ", "0", subfields=[Subfield("a", "Python")])
+        assert str(field) == "=650  \\0$aPython"
 
     def test_field_repr(self):
         """repr(field) should be informative."""
-        field = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        field = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
         r = repr(field)
-        assert '245' in r
+        assert "245" in r
 
     def test_control_field_repr(self):
         """repr for control field."""
-        field = Field('001', data='12345')
+        field = Field("001", data="12345")
         r = repr(field)
-        assert '001' in r
+        assert "001" in r
 
 
 class TestRecordPropertyAccessors:
@@ -1265,45 +1348,49 @@ class TestRecordPropertyAccessors:
     def _make_record(self):
         """Create a record with various fields for testing."""
         record = Record()
-        record.add_field(create_field('245', '1', '0', a='Test Title'))
-        record.add_field(create_field('100', '1', ' ', a='Smith, John'))
-        record.add_field(create_field('020', ' ', ' ', a='0201616165'))
-        record.add_field(create_field('022', ' ', ' ', a='0028-0836'))
-        record.add_field(create_field('260', ' ', ' ', a='Place :', b='Publisher,', c='2023'))
-        record.add_field(create_field('650', ' ', '0', a='Testing.'))
-        record.add_field(create_field('852', ' ', ' ', a='Library'))
-        record.add_field(create_field('500', ' ', ' ', a='A note.'))
-        record.add_field(create_field('130', ' ', ' ', a='Uniform'))
-        record.add_field(create_field('086', ' ', ' ', a='Y 1.1/2:'))
-        record.add_field(create_field('222', ' ', ' ', a='ISSN Title'))
-        record.add_field(create_field('024', '8', ' ', a='1234-5678'))
-        record.add_field(create_field('490', '1', ' ', a='Series Name'))
-        record.add_field(create_field('300', ' ', ' ', a='100 p.'))
-        record.add_field(create_field('700', '1', ' ', a='Jones, Mary'))
+        record.add_field(create_field("245", "1", "0", a="Test Title"))
+        record.add_field(create_field("100", "1", " ", a="Smith, John"))
+        record.add_field(create_field("020", " ", " ", a="0201616165"))
+        record.add_field(create_field("022", " ", " ", a="0028-0836"))
+        record.add_field(
+            create_field(
+                "260", " ", " ", a="Place :", b="Publisher,", c="2023"
+            )
+        )
+        record.add_field(create_field("650", " ", "0", a="Testing."))
+        record.add_field(create_field("852", " ", " ", a="Library"))
+        record.add_field(create_field("500", " ", " ", a="A note."))
+        record.add_field(create_field("130", " ", " ", a="Uniform"))
+        record.add_field(create_field("086", " ", " ", a="Y 1.1/2:"))
+        record.add_field(create_field("222", " ", " ", a="ISSN Title"))
+        record.add_field(create_field("024", "8", " ", a="1234-5678"))
+        record.add_field(create_field("490", "1", " ", a="Series Name"))
+        record.add_field(create_field("300", " ", " ", a="100 p."))
+        record.add_field(create_field("700", "1", " ", a="Jones, Mary"))
         return record
 
     def test_title_is_property(self):
         """record.title returns a value, not a bound method."""
         record = self._make_record()
-        assert record.title == 'Test Title'
+        assert record.title == "Test Title"
         assert not callable(record.title) or isinstance(record.title, str)
 
     def test_author_is_property(self):
         record = self._make_record()
-        assert 'Smith' in record.author
+        assert "Smith" in record.author
 
     def test_isbn_is_property(self):
         record = self._make_record()
-        assert record.isbn == '0201616165'
+        assert record.isbn == "0201616165"
 
     def test_issn_is_property(self):
         record = self._make_record()
-        assert record.issn == '0028-0836'
+        assert record.issn == "0028-0836"
 
     def test_subjects_is_property(self):
         record = self._make_record()
         assert isinstance(record.subjects, list)
-        assert 'Testing.' in record.subjects
+        assert "Testing." in record.subjects
 
     def test_publisher_is_property(self):
         record = self._make_record()
@@ -1341,7 +1428,7 @@ class TestRecordPropertyAccessors:
         year = record.pubyear
         assert year is not None
         assert isinstance(year, str)
-        assert year == '2023'
+        assert year == "2023"
 
     def test_pubyear_none_returns_none(self):
         """pubyear returns None when no year field exists."""
@@ -1372,7 +1459,7 @@ class TestRecordPropertyAccessors:
         entries = record.addedentries
         assert isinstance(entries, list)
         assert len(entries) >= 1
-        assert any('Jones' in str(e) for e in entries)
+        assert any("Jones" in str(e) for e in entries)
 
 
 class TestBulkFieldOperations:
@@ -1381,43 +1468,43 @@ class TestBulkFieldOperations:
     def test_add_multiple_fields(self):
         """add_field(*fields) accepts multiple fields at once."""
         record = Record(Leader())
-        f1 = Field('100', '1', ' ', subfields=[Subfield('a', 'Author')])
-        f2 = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
-        f3 = Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')])
+        f1 = Field("100", "1", " ", subfields=[Subfield("a", "Author")])
+        f2 = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
+        f3 = Field("650", " ", "0", subfields=[Subfield("a", "Subject")])
         record.add_field(f1, f2, f3)
-        assert record.get_field('100') is not None
-        assert record.get_field('245') is not None
-        assert record.get_field('650') is not None
+        assert record.get_field("100") is not None
+        assert record.get_field("245") is not None
+        assert record.get_field("650") is not None
 
     def test_add_field_single_still_works(self):
         """add_field still works with a single argument (backward compat)."""
         record = Record(Leader())
-        f = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        f = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
         record.add_field(f)
-        assert record.get_field('245') is not None
+        assert record.get_field("245") is not None
 
     def test_remove_field_by_object(self):
         """remove_field accepts a Field object."""
         record = Record(Leader())
-        f = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        f = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
         record.add_field(f)
         record.remove_field(f)
-        assert record.get_field('245') is None
+        assert record.get_field("245") is None
 
     def test_remove_field_multiple(self):
         """remove_field accepts multiple Field objects."""
         record = Record(Leader())
-        f1 = Field('100', '1', ' ', subfields=[Subfield('a', 'Author')])
-        f2 = Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')])
+        f1 = Field("100", "1", " ", subfields=[Subfield("a", "Author")])
+        f2 = Field("650", " ", "0", subfields=[Subfield("a", "Subject")])
         record.add_field(f1, f2)
         record.remove_field(f1, f2)
-        assert record.get_field('100') is None
-        assert record.get_field('650') is None
+        assert record.get_field("100") is None
+        assert record.get_field("650") is None
 
     def test_remove_field_returns_none(self):
         """remove_field returns None (not a list)."""
         record = Record(Leader())
-        f = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        f = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
         record.add_field(f)
         result = record.remove_field(f)
         assert result is None
@@ -1425,17 +1512,23 @@ class TestBulkFieldOperations:
     def test_remove_fields_by_tags(self):
         """remove_fields(*tags) removes all fields with given tags."""
         record = Record(Leader())
-        record.add_field(Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')]))
-        record.add_field(Field('700', '1', ' ', subfields=[Subfield('a', 'Author')]))
-        record.remove_fields('650', '700')
-        assert record.get_field('650') is None
-        assert record.get_field('700') is None
+        record.add_field(
+            Field("650", " ", "0", subfields=[Subfield("a", "Subject")])
+        )
+        record.add_field(
+            Field("700", "1", " ", subfields=[Subfield("a", "Author")])
+        )
+        record.remove_fields("650", "700")
+        assert record.get_field("650") is None
+        assert record.get_field("700") is None
 
     def test_remove_fields_returns_none(self):
         """remove_fields returns None."""
         record = Record(Leader())
-        record.add_field(Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')]))
-        result = record.remove_fields('650')
+        record.add_field(
+            Field("650", " ", "0", subfields=[Subfield("a", "Subject")])
+        )
+        result = record.remove_fields("650")
         assert result is None
 
 
@@ -1444,170 +1537,208 @@ class TestOrderedFieldInsertion:
 
     def test_add_ordered_field(self):
         """add_ordered_field inserts field in tag-sorted position."""
-        record = Record(fields=[
-            Field('100', '1', ' ', subfields=[Subfield('a', 'Author')]),
-            Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')]),
-        ])
-        f245 = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        record = Record(
+            fields=[
+                Field("100", "1", " ", subfields=[Subfield("a", "Author")]),
+                Field("650", " ", "0", subfields=[Subfield("a", "Subject")]),
+            ]
+        )
+        f245 = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
         record.add_ordered_field(f245)
         tags = [f.tag for f in record.get_fields()]
         # Filter to just data field tags (not control fields)
-        data_tags = [t for t in tags if t >= '010']
-        assert data_tags == ['100', '245', '650']
+        data_tags = [t for t in tags if t >= "010"]
+        assert data_tags == ["100", "245", "650"]
 
     def test_add_ordered_field_at_end(self):
-        record = Record(fields=[
-            Field('100', '1', ' ', subfields=[Subfield('a', 'Author')]),
-        ])
-        f650 = Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')])
+        record = Record(
+            fields=[
+                Field("100", "1", " ", subfields=[Subfield("a", "Author")]),
+            ]
+        )
+        f650 = Field("650", " ", "0", subfields=[Subfield("a", "Subject")])
         record.add_ordered_field(f650)
-        data_tags = [f.tag for f in record.get_fields() if f.tag >= '010']
-        assert data_tags == ['100', '650']
+        data_tags = [f.tag for f in record.get_fields() if f.tag >= "010"]
+        assert data_tags == ["100", "650"]
 
     def test_add_grouped_field(self):
-        record = Record(fields=[
-            Field('650', ' ', '0', subfields=[Subfield('a', 'Subject 1')]),
-            Field('650', ' ', '0', subfields=[Subfield('a', 'Subject 2')]),
-            Field('700', '1', ' ', subfields=[Subfield('a', 'Author')]),
-        ])
-        f650 = Field('650', ' ', '0', subfields=[Subfield('a', 'Subject 3')])
+        record = Record(
+            fields=[
+                Field("650", " ", "0", subfields=[Subfield("a", "Subject 1")]),
+                Field("650", " ", "0", subfields=[Subfield("a", "Subject 2")]),
+                Field("700", "1", " ", subfields=[Subfield("a", "Author")]),
+            ]
+        )
+        f650 = Field("650", " ", "0", subfields=[Subfield("a", "Subject 3")])
         record.add_grouped_field(f650)
-        data_tags = [f.tag for f in record.get_fields() if f.tag >= '010']
-        assert data_tags == ['650', '650', '650', '700']
+        data_tags = [f.tag for f in record.get_fields() if f.tag >= "010"]
+        assert data_tags == ["650", "650", "650", "700"]
 
     def test_add_grouped_field_no_existing(self):
-        record = Record(fields=[
-            Field('100', '1', ' ', subfields=[Subfield('a', 'Author')]),
-            Field('650', ' ', '0', subfields=[Subfield('a', 'Subject')]),
-        ])
-        f245 = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        record = Record(
+            fields=[
+                Field("100", "1", " ", subfields=[Subfield("a", "Author")]),
+                Field("650", " ", "0", subfields=[Subfield("a", "Subject")]),
+            ]
+        )
+        f245 = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
         record.add_grouped_field(f245)
-        data_tags = [f.tag for f in record.get_fields() if f.tag >= '010']
-        assert data_tags == ['100', '245', '650']
+        data_tags = [f.tag for f in record.get_fields() if f.tag >= "010"]
+        assert data_tags == ["100", "245", "650"]
 
 
 class TestFieldLinkage:
     def test_linkage_occurrence_num(self):
-        field = Field('245', '1', '0', subfields=[
-            Subfield('6', '880-03'),
-            Subfield('a', 'Title'),
-        ])
-        assert field.linkage_occurrence_num() == '03'
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[
+                Subfield("6", "880-03"),
+                Subfield("a", "Title"),
+            ],
+        )
+        assert field.linkage_occurrence_num() == "03"
 
     def test_linkage_occurrence_num_no_subfield_6(self):
-        field = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        field = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
         assert field.linkage_occurrence_num() is None
 
     def test_linkage_occurrence_num_no_dash(self):
-        field = Field('245', '1', '0', subfields=[
-            Subfield('6', '880'),
-            Subfield('a', 'Title'),
-        ])
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[
+                Subfield("6", "880"),
+                Subfield("a", "Title"),
+            ],
+        )
         assert field.linkage_occurrence_num() is None
 
 
 class TestSubfieldPositionalInsert:
     def test_add_subfield_default_appends(self):
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Title')
-        field.add_subfield('c', 'Author')
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Title")
+        field.add_subfield("c", "Author")
         subs = field.subfields()
-        assert subs[0].code == 'a'
-        assert subs[1].code == 'c'
+        assert subs[0].code == "a"
+        assert subs[1].code == "c"
 
     def test_add_subfield_at_position(self):
-        field = Field('245', '1', '0')
-        field.add_subfield('a', 'Title')
-        field.add_subfield('c', 'Author')
-        field.add_subfield('b', 'Subtitle', pos=1)
+        field = Field("245", "1", "0")
+        field.add_subfield("a", "Title")
+        field.add_subfield("c", "Author")
+        field.add_subfield("b", "Subtitle", pos=1)
         subs = field.subfields()
-        assert subs[0].code == 'a'
-        assert subs[1].code == 'b'
-        assert subs[2].code == 'c'
+        assert subs[0].code == "a"
+        assert subs[1].code == "b"
+        assert subs[2].code == "c"
 
     def test_add_subfield_at_zero(self):
-        field = Field('245', '1', '0')
-        field.add_subfield('c', 'Author')
-        field.add_subfield('a', 'Title', pos=0)
+        field = Field("245", "1", "0")
+        field.add_subfield("c", "Author")
+        field.add_subfield("a", "Title", pos=0)
         subs = field.subfields()
-        assert subs[0].code == 'a'
-        assert subs[1].code == 'c'
+        assert subs[0].code == "a"
+        assert subs[1].code == "c"
 
 
 class TestFieldValueMethods:
     def test_value_data_field(self):
-        field = Field('245', '1', '0', subfields=[
-            Subfield('a', 'The Great Gatsby'),
-            Subfield('c', 'F. Scott Fitzgerald'),
-        ])
-        assert field.value() == 'The Great Gatsby F. Scott Fitzgerald'
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[
+                Subfield("a", "The Great Gatsby"),
+                Subfield("c", "F. Scott Fitzgerald"),
+            ],
+        )
+        assert field.value() == "The Great Gatsby F. Scott Fitzgerald"
 
     def test_value_control_field(self):
-        field = Field('001', data='12345')
-        assert field.value() == '12345'
+        field = Field("001", data="12345")
+        assert field.value() == "12345"
 
     def test_value_single_subfield(self):
-        field = Field('020', ' ', ' ', subfields=[Subfield('a', '0201616165')])
-        assert field.value() == '0201616165'
+        field = Field("020", " ", " ", subfields=[Subfield("a", "0201616165")])
+        assert field.value() == "0201616165"
 
     def test_format_field_data(self):
-        field = Field('245', '1', '0', subfields=[
-            Subfield('a', 'The Great Gatsby'),
-            Subfield('c', 'F. Scott Fitzgerald'),
-        ])
-        assert field.format_field() == 'The Great Gatsby F. Scott Fitzgerald'
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[
+                Subfield("a", "The Great Gatsby"),
+                Subfield("c", "F. Scott Fitzgerald"),
+            ],
+        )
+        assert field.format_field() == "The Great Gatsby F. Scott Fitzgerald"
 
     def test_format_field_control(self):
-        field = Field('001', data='12345')
-        assert field.format_field() == '12345'
+        field = Field("001", data="12345")
+        assert field.format_field() == "12345"
 
 
 class TestFieldBinarySerialization:
     def test_field_as_marc_returns_bytes(self):
-        field = Field('245', '1', '0', subfields=[Subfield('a', 'Title')])
+        field = Field("245", "1", "0", subfields=[Subfield("a", "Title")])
         result = field.as_marc()
         assert isinstance(result, bytes)
         assert len(result) > 0
 
     def test_control_field_as_marc(self):
-        field = Field('001', data='12345')
+        field = Field("001", data="12345")
         result = field.as_marc()
         assert isinstance(result, bytes)
-        assert b'12345' in result
+        assert b"12345" in result
 
     def test_field_as_marc21_alias(self):
-        field = Field('245', '1', '0', subfields=[Subfield('a', 'Test')])
+        field = Field("245", "1", "0", subfields=[Subfield("a", "Test")])
         assert field.as_marc() == field.as_marc21()
 
     def test_field_as_marc_contains_subfield_data(self):
-        field = Field('245', '1', '0', subfields=[
-            Subfield('a', 'Title'),
-            Subfield('c', 'Author'),
-        ])
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[
+                Subfield("a", "Title"),
+                Subfield("c", "Author"),
+            ],
+        )
         result = field.as_marc()
-        assert b'Title' in result
-        assert b'Author' in result
+        assert b"Title" in result
+        assert b"Author" in result
 
 
 class TestConvenienceFunctions:
     def test_map_records(self):
         """map_records applies a function to each record in a file."""
         from pathlib import Path
-        test_file = Path(__file__).parent.parent / 'data' / 'simple_book.mrc'
+
+        test_file = Path(__file__).parent.parent / "data" / "simple_book.mrc"
         titles = []
         from mrrc import map_records
+
         map_records(lambda r: titles.append(r.title), str(test_file))
         assert len(titles) > 0
 
     def test_parse_json_to_array(self):
         """parse_json_to_array parses pymarc-format JSON."""
         from mrrc import parse_json_to_array
-        record = Record(fields=[
-            Field('245', '1', '0', subfields=[Subfield('a', 'Title')]),
-        ])
-        record.add_control_field('001', 'test-id')
+
+        record = Record(
+            fields=[
+                Field("245", "1", "0", subfields=[Subfield("a", "Title")]),
+            ]
+        )
+        record.add_control_field("001", "test-id")
         json_str = record.as_json()
-        json_array = '[' + json_str + ']'
+        json_array = "[" + json_str + "]"
         records = parse_json_to_array(json_array)
         assert len(records) == 1
         assert isinstance(records[0], Record)
@@ -1622,16 +1753,18 @@ class TestMarcConstants:
             LEADER_LEN,
             SUBFIELD_INDICATOR,
         )
+
         assert LEADER_LEN == 24
         assert DIRECTORY_ENTRY_LEN == 12
-        assert END_OF_FIELD == '\x1e'
-        assert END_OF_RECORD == '\x1d'
-        assert SUBFIELD_INDICATOR == '\x1f'
+        assert END_OF_FIELD == "\x1e"
+        assert END_OF_RECORD == "\x1d"
+        assert SUBFIELD_INDICATOR == "\x1f"
 
     def test_xml_constants(self):
         from mrrc import MARC_XML_NS, MARC_XML_SCHEMA
-        assert 'loc.gov' in MARC_XML_NS
-        assert 'loc.gov' in MARC_XML_SCHEMA
+
+        assert "loc.gov" in MARC_XML_NS
+        assert "loc.gov" in MARC_XML_SCHEMA
 
 
 class TestExceptionHierarchy:
@@ -1647,6 +1780,7 @@ class TestExceptionHierarchy:
             RecordLeaderInvalid,
             RecordLengthInvalid,
         )
+
         assert issubclass(RecordLengthInvalid, MrrcException)
         assert issubclass(RecordLeaderInvalid, MrrcException)
         assert issubclass(BaseAddressInvalid, MrrcException)
@@ -1658,6 +1792,7 @@ class TestExceptionHierarchy:
 
     def test_exception_hierarchy(self):
         from mrrc import MrrcException, RecordLengthInvalid
+
         try:
             raise RecordLengthInvalid("bad length")
         except MrrcException as e:
@@ -1665,17 +1800,20 @@ class TestExceptionHierarchy:
 
     def test_exceptions_are_exceptions(self):
         from mrrc import MrrcException
+
         assert issubclass(MrrcException, Exception)
 
 
 class TestLegacySubfields:
     def test_convert_legacy_subfields(self):
-        result = Field.convert_legacy_subfields(['a', 'Title', 'b', 'Subtitle'])
+        result = Field.convert_legacy_subfields(
+            ["a", "Title", "b", "Subtitle"]
+        )
         assert len(result) == 2
-        assert result[0].code == 'a'
-        assert result[0].value == 'Title'
-        assert result[1].code == 'b'
-        assert result[1].value == 'Subtitle'
+        assert result[0].code == "a"
+        assert result[0].value == "Title"
+        assert result[1].code == "b"
+        assert result[1].value == "Subtitle"
 
     def test_convert_empty_list(self):
         result = Field.convert_legacy_subfields([])
@@ -1684,7 +1822,7 @@ class TestLegacySubfields:
 
 class TestParseXmlToArray:
     def test_parse_xml_from_string(self):
-        xml = '''<?xml version="1.0" encoding="UTF-8"?>
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
         <collection xmlns="http://www.loc.gov/MARC21/slim">
           <record>
             <leader>00000nam a2200000 a 4500</leader>
@@ -1693,33 +1831,37 @@ class TestParseXmlToArray:
               <subfield code="a">Test Title</subfield>
             </datafield>
           </record>
-        </collection>'''
+        </collection>"""
         from mrrc import parse_xml_to_array
+
         records = parse_xml_to_array(xml)
         assert len(records) >= 1
         assert isinstance(records[0], Record)
 
     def test_parse_xml_from_file_object(self):
         import io
-        xml = '''<?xml version="1.0" encoding="UTF-8"?>
+
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
         <collection xmlns="http://www.loc.gov/MARC21/slim">
           <record>
             <leader>00000nam a2200000 a 4500</leader>
             <controlfield tag="001">test-id</controlfield>
           </record>
-        </collection>'''
+        </collection>"""
         from mrrc import parse_xml_to_array
+
         records = parse_xml_to_array(io.StringIO(xml))
         assert len(records) >= 1
 
     def test_parse_xml_returns_list(self):
-        xml = '''<?xml version="1.0" encoding="UTF-8"?>
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
         <collection xmlns="http://www.loc.gov/MARC21/slim">
-        </collection>'''
+        </collection>"""
         from mrrc import parse_xml_to_array
+
         records = parse_xml_to_array(xml)
         assert isinstance(records, list)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

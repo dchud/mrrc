@@ -75,7 +75,9 @@ def test_clean_iteration_clears_prior_exception() -> None:
     good = (_REPO_ROOT / "tests" / "data" / "simple_book.mrc").read_bytes()
     stream = bad + good
 
-    reader = mrrc.MARCReader(stream, permissive=True, validation_level="strict_marc")
+    reader = mrrc.MARCReader(
+        stream, permissive=True, validation_level="strict_marc"
+    )
     first = next(reader)
     assert first is None
     assert reader.current_exception is not None
@@ -103,7 +105,9 @@ def test_permissive_swallow_populates_exception_and_chunk() -> None:
         / "non-ascii-tag-roundtrip.mrc"
     ).read_bytes()
 
-    reader = mrrc.MARCReader(bytes_, permissive=True, validation_level="strict_marc")
+    reader = mrrc.MARCReader(
+        bytes_, permissive=True, validation_level="strict_marc"
+    )
     record = next(reader)
     assert record is None  # swallowed
 
@@ -234,7 +238,9 @@ def test_iter_with_errors_does_not_clobber_accessors() -> None:
         / "error_classification"
         / "non-ascii-tag-roundtrip.mrc"
     ).read_bytes()
-    reader = mrrc.MARCReader(bad, permissive=True, validation_level="strict_marc")
+    reader = mrrc.MARCReader(
+        bad, permissive=True, validation_level="strict_marc"
+    )
 
     pairs = list(reader.iter_with_errors())
     # The fixture's malformation knocks the parser off record boundaries
@@ -275,7 +281,9 @@ def test_iteration_shape_matches_pymarc_default() -> None:
 
     import io
 
-    mrrc_reader = mrrc.MARCReader(stream, permissive=True, validation_level="strict_marc")
+    mrrc_reader = mrrc.MARCReader(
+        stream, permissive=True, validation_level="strict_marc"
+    )
     mrrc_shape = [r is not None for r in mrrc_reader]
 
     pymarc_reader = pymarc.MARCReader(io.BytesIO(stream))

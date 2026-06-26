@@ -113,7 +113,7 @@ def _is_control_tag(tag: str) -> bool:
 
     Matches pymarc's logic: tag < '010' and tag.isdigit().
     """
-    return tag < '010' and tag.isdigit()
+    return tag < "010" and tag.isdigit()
 
 
 class StaleFieldError(MrrcException):
@@ -126,7 +126,9 @@ class StaleFieldError(MrrcException):
     """
 
 
-def _wrap_field(rust_field, parent: 'Record | None' = None, occurrence: int = 0) -> 'Field':
+def _wrap_field(
+    rust_field, parent: "Record | None" = None, occurrence: int = 0
+) -> "Field":
     """Wrap a Rust _Field in a Python Field wrapper.
 
     With ``parent``, the wrapper is a live handle: ``occurrence`` is the
@@ -142,11 +144,13 @@ def _wrap_field(rust_field, parent: 'Record | None' = None, occurrence: int = 0)
     return wrapper
 
 
-def _wrap_control_field(parent: 'Record', tag: str, occurrence: int, value: str) -> 'Field':
+def _wrap_control_field(
+    parent: "Record", tag: str, occurrence: int, value: str
+) -> "Field":
     """Create a live control-field handle bound to ``parent``."""
     wrapper = Field.__new__(Field)
     wrapper._data = value
-    wrapper._inner = _Field(tag, ' ', ' ')
+    wrapper._inner = _Field(tag, " ", " ")
     wrapper._parent = parent
     wrapper._occurrence = occurrence
     wrapper._generation = parent._inner.generation
@@ -164,17 +168,17 @@ def _field_value_key(rust_field) -> tuple:
 
 
 # Control field tags for enumeration (when we need to iterate all possible control fields)
-_CONTROL_TAGS = ('001', '002', '003', '004', '005', '006', '007', '008', '009')
+_CONTROL_TAGS = ("001", "002", "003", "004", "005", "006", "007", "008", "009")
 
 
 # MARC format constants (pymarc compatibility)
 LEADER_LEN = 24
 DIRECTORY_ENTRY_LEN = 12
-END_OF_FIELD = '\x1e'
-END_OF_RECORD = '\x1d'
-SUBFIELD_INDICATOR = '\x1f'
-MARC_XML_NS = 'http://www.loc.gov/MARC21/slim'
-MARC_XML_SCHEMA = 'http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd'
+END_OF_FIELD = "\x1e"
+END_OF_RECORD = "\x1d"
+SUBFIELD_INDICATOR = "\x1f"
+MARC_XML_NS = "http://www.loc.gov/MARC21/slim"
+MARC_XML_SCHEMA = "http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
 
 
 class Indicators:
@@ -235,8 +239,8 @@ class Field:
     def __init__(
         self,
         tag: str,
-        indicator1: str = ' ',
-        indicator2: str = ' ',
+        indicator1: str = " ",
+        indicator2: str = " ",
         *,
         subfields: list[Subfield] | None = None,
         indicators: list[str] | None = None,
@@ -258,10 +262,14 @@ class Field:
         self._generation = 0
         if data is not None:
             # Control field: create a minimal _inner for tag access only
-            self._inner = _Field(tag, ' ', ' ')
+            self._inner = _Field(tag, " ", " ")
         else:
             self._inner = _Field(
-                tag, indicator1, indicator2, subfields=subfields, indicators=indicators
+                tag,
+                indicator1,
+                indicator2,
+                subfields=subfields,
+                indicators=indicators,
             )
 
     def _refresh(self) -> None:
@@ -279,13 +287,15 @@ class Field:
                 "record modification - re-fetch the field from the record"
             )
         if self._data is not None:
-            value = parent._inner.control_field_value_at(self._inner.tag, self._occurrence)
+            value = parent._inner.control_field_value_at(
+                self._inner.tag, self._occurrence
+            )
             if value is None:
                 raise StaleFieldError(
                     f"control field handle for tag {self._inner.tag!r} no longer "
                     "resolves - re-fetch the field from the record"
                 )
-            object.__setattr__(self, '_data', value)
+            object.__setattr__(self, "_data", value)
         else:
             fresh = parent._inner.field_at(self._inner.tag, self._occurrence)
             if fresh is None:
@@ -293,7 +303,7 @@ class Field:
                     f"field handle for tag {self._inner.tag!r} no longer "
                     "resolves - re-fetch the field from the record"
                 )
-            object.__setattr__(self, '_inner', fresh)
+            object.__setattr__(self, "_inner", fresh)
 
     def _writeback(self) -> None:
         """Push a live handle's state back to its record; no-op when detached."""
@@ -316,7 +326,13 @@ class Field:
 
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Field."""
-        if name in ('_inner', '_data', '_parent', '_occurrence', '_generation'):
+        if name in (
+            "_inner",
+            "_data",
+            "_parent",
+            "_occurrence",
+            "_generation",
+        ):
             raise AttributeError(name)
         if self._parent is not None:
             self._refresh()
@@ -363,7 +379,7 @@ class Field:
         """Set subfield value (replace first occurrence)."""
         self._refresh()
         subfields = self._inner.subfields()
-        code_char = code[0] if code else ''
+        code_char = code[0] if code else ""
 
         # Check if code already exists
         found_count = sum(1 for sf in subfields if sf.code == code_char)
@@ -410,7 +426,7 @@ class Field:
         if self._data is None:
             raise AttributeError("data is only settable on control fields")
         self._refresh()
-        object.__setattr__(self, '_data', value)
+        object.__setattr__(self, "_data", value)
         self._writeback()
 
     def value(self) -> str:
@@ -420,16 +436,16 @@ class Field:
         """
         self._refresh()
         if self.is_control_field():
-            return self._data or ''
-        return ' '.join(sf.value for sf in self._inner.subfields())
+            return self._data or ""
+        return " ".join(sf.value for sf in self._inner.subfields())
 
     def format_field(self) -> str:
         """Return human-readable text without indicators or subfield codes
         (pymarc compatibility).
         """
         if self.is_control_field():
-            return self._data or ''
-        return ' '.join(sf.value for sf in self.subfields())
+            return self._data or ""
+        return " ".join(sf.value for sf in self.subfields())
 
     def is_control_field(self) -> bool:
         """Check if this is a control field (pymarc compatibility)."""
@@ -443,11 +459,13 @@ class Field:
         """
         self._refresh()
         if self.is_control_field():
-            return f'={self._inner.tag}  {self._data}'
-        ind1 = self._inner.indicator1.replace(' ', '\\')
-        ind2 = self._inner.indicator2.replace(' ', '\\')
-        subfield_str = ''.join(f'${sf.code}{sf.value}' for sf in self._inner.subfields())
-        return f'={self._inner.tag}  {ind1}{ind2}{subfield_str}'
+            return f"={self._inner.tag}  {self._data}"
+        ind1 = self._inner.indicator1.replace(" ", "\\")
+        ind2 = self._inner.indicator2.replace(" ", "\\")
+        subfield_str = "".join(
+            f"${sf.code}{sf.value}" for sf in self._inner.subfields()
+        )
+        return f"={self._inner.tag}  {ind1}{ind2}{subfield_str}"
 
     def __repr__(self) -> str:
         """Informative repr. Never raises: stale handles say so."""
@@ -503,7 +521,9 @@ class Field:
             pass
         return result
 
-    def add_subfield(self, code: str, value: str, pos: int | None = None) -> None:
+    def add_subfield(
+        self, code: str, value: str, pos: int | None = None
+    ) -> None:
         """Add a subfield, optionally at a specific position (pymarc compatibility)."""
         self._refresh()
         if pos is None:
@@ -514,7 +534,7 @@ class Field:
             tag = self._inner.tag
             ind1 = self._inner.indicator1
             ind2 = self._inner.indicator2
-            object.__setattr__(self, '_inner', _Field(tag, ind1, ind2))
+            object.__setattr__(self, "_inner", _Field(tag, ind1, ind2))
             current.insert(pos, new_sf)
             for sf in current:
                 self._inner.add_subfield(sf.code, sf.value)
@@ -562,7 +582,7 @@ class Field:
         self._writeback()
 
     @property
-    def indicators(self) -> 'Indicators':
+    def indicators(self) -> "Indicators":
         """Get indicators as tuple-like Indicators object (pymarc compatibility).
 
         Example:
@@ -575,7 +595,9 @@ class Field:
         return Indicators(self.indicator1, self.indicator2)
 
     @indicators.setter
-    def indicators(self, value: Union['Indicators', tuple[str, str], list[str]]) -> None:
+    def indicators(
+        self, value: Union["Indicators", tuple[str, str], list[str]]
+    ) -> None:
         """Set indicators from Indicators object or tuple/list (pymarc compatibility)."""
         if isinstance(value, Indicators):
             self.indicator1 = value.ind1
@@ -584,26 +606,28 @@ class Field:
             self.indicator1 = value[0]
             self.indicator2 = value[1]
         else:
-            raise ValueError("indicators must be Indicators object or [ind1, ind2] tuple/list")
+            raise ValueError(
+                "indicators must be Indicators object or [ind1, ind2] tuple/list"
+            )
 
     def is_subject_field(self) -> bool:
         """Check if this is a subject field (6xx)."""
         tag = self.tag
-        return tag.startswith('6') and len(tag) >= 2
+        return tag.startswith("6") and len(tag) >= 2
 
     def linkage_occurrence_num(self) -> str | None:
         """Extract the occurrence number from subfield $6 linkage (pymarc compatibility)."""
         if self.is_control_field():
             return None
-        sub6 = self['6']
+        sub6 = self["6"]
         if sub6 is None:
             return None
-        if '-' not in sub6:
+        if "-" not in sub6:
             return None
-        parts = sub6.split('-', 1)
+        parts = sub6.split("-", 1)
         occ = parts[1]
-        if '/' in occ:
-            occ = occ.split('/')[0]
+        if "/" in occ:
+            occ = occ.split("/")[0]
         return occ if occ else None
 
     def __eq__(self, other: Any) -> bool:
@@ -611,17 +635,18 @@ class Field:
         if not isinstance(other, Field):
             return False
         if self.is_control_field() or other.is_control_field():
-            return (self.tag == other.tag and
-                    self._data == other._data)
-        return (self.tag == other.tag and
-                self.indicator1 == other.indicator1 and
-                self.indicator2 == other.indicator2 and
-                self.subfields() == other.subfields())
+            return self.tag == other.tag and self._data == other._data
+        return (
+            self.tag == other.tag
+            and self.indicator1 == other.indicator1
+            and self.indicator2 == other.indicator2
+            and self.subfields() == other.subfields()
+        )
 
     def as_marc(self) -> bytes:
         """Serialize field to ISO 2709 binary format (pymarc compatibility)."""
         if self.is_control_field():
-            return (self.data or '').encode('utf-8') + b'\x1e'
+            return (self.data or "").encode("utf-8") + b"\x1e"
         return bytes(self._inner.to_marc21())
 
     def as_marc21(self) -> bytes:
@@ -656,338 +681,356 @@ class ControlField(Field):
 
 
 class Leader:
-     """Enhanced Leader wrapper with pymarc-compatible API.
+    """Enhanced Leader wrapper with pymarc-compatible API.
 
-     Provides both property-based access and MARC 21 reference information for leader positions.
-     """
+    Provides both property-based access and MARC 21 reference information for leader positions.
+    """
 
-     # MARC 21 Reference: Position 5 - Record Status
-     RECORD_STATUS_VALUES: ClassVar[dict[str, str]] = {
-         'a': 'Increase in encoding level',
-         'c': 'Corrected or revised',
-         'd': 'Deleted',
-         'n': 'New',
-         'p': 'Increase in encoding level from prepublication',
-     }
+    # MARC 21 Reference: Position 5 - Record Status
+    RECORD_STATUS_VALUES: ClassVar[dict[str, str]] = {
+        "a": "Increase in encoding level",
+        "c": "Corrected or revised",
+        "d": "Deleted",
+        "n": "New",
+        "p": "Increase in encoding level from prepublication",
+    }
 
-     # MARC 21 Reference: Position 6 - Type of record
-     RECORD_TYPE_VALUES: ClassVar[dict[str, str]] = {
-         'a': 'Language material',
-         'b': 'Notated music',
-         'c': 'Notated music',
-         'd': 'Manuscript notated music',
-         'e': 'Cartographic material',
-         'f': 'Manuscript cartographic material',
-         'g': 'Projected medium',
-         'h': 'Microform',
-         'i': 'Nonmusical sound recording',
-         'j': 'Musical sound recording',
-         'k': 'Two-dimensional nonprojectable graphic',
-         'm': 'Computer file',
-         'o': 'Kit',
-         'p': 'Mixed materials',
-         'r': 'Three-dimensional artifact or naturally occurring object',
-         't': 'Manuscript language material',
-     }
+    # MARC 21 Reference: Position 6 - Type of record
+    RECORD_TYPE_VALUES: ClassVar[dict[str, str]] = {
+        "a": "Language material",
+        "b": "Notated music",
+        "c": "Notated music",
+        "d": "Manuscript notated music",
+        "e": "Cartographic material",
+        "f": "Manuscript cartographic material",
+        "g": "Projected medium",
+        "h": "Microform",
+        "i": "Nonmusical sound recording",
+        "j": "Musical sound recording",
+        "k": "Two-dimensional nonprojectable graphic",
+        "m": "Computer file",
+        "o": "Kit",
+        "p": "Mixed materials",
+        "r": "Three-dimensional artifact or naturally occurring object",
+        "t": "Manuscript language material",
+    }
 
-     # MARC 21 Reference: Position 7 - Bibliographic level
-     BIBLIOGRAPHIC_LEVEL_VALUES: ClassVar[dict[str, str]] = {
-         'a': 'Monographic component part',
-         'b': 'Serial component part',
-         'c': 'Collection',
-         'd': 'Subunit',
-         'i': 'Integrating resource',
-         'm': 'Monograph',
-         's': 'Serial',
-     }
+    # MARC 21 Reference: Position 7 - Bibliographic level
+    BIBLIOGRAPHIC_LEVEL_VALUES: ClassVar[dict[str, str]] = {
+        "a": "Monographic component part",
+        "b": "Serial component part",
+        "c": "Collection",
+        "d": "Subunit",
+        "i": "Integrating resource",
+        "m": "Monograph",
+        "s": "Serial",
+    }
 
-     # MARC 21 Reference: Position 17 - Encoding level
-     ENCODING_LEVEL_VALUES: ClassVar[dict[str, str]] = {
-         ' ': 'Full level',
-         '1': 'Full level, material not examined',
-         '2': 'Less-than-full level, material not examined',
-         '3': 'Abbreviated level',
-         '4': 'Core level',
-         '5': 'Partial (preliminary) level',
-         '7': 'Minimal level',
-         '8': 'Prepublication level',
-         'u': 'Unknown',
-         'z': 'Not applicable',
-     }
+    # MARC 21 Reference: Position 17 - Encoding level
+    ENCODING_LEVEL_VALUES: ClassVar[dict[str, str]] = {
+        " ": "Full level",
+        "1": "Full level, material not examined",
+        "2": "Less-than-full level, material not examined",
+        "3": "Abbreviated level",
+        "4": "Core level",
+        "5": "Partial (preliminary) level",
+        "7": "Minimal level",
+        "8": "Prepublication level",
+        "u": "Unknown",
+        "z": "Not applicable",
+    }
 
-     # MARC 21 Reference: Position 18 - Descriptive cataloging form (Cataloging form)
-     CATALOGING_FORM_VALUES: ClassVar[dict[str, str]] = {
-         ' ': 'Non-ISBD',
-         'a': 'AACR 2',
-         'c': 'ISBD punctuation omitted',
-         'i': 'ISBD punctuation included',
-         'n': 'Non-ISBD punctuation omitted',
-         'u': 'Unknown',
-     }
+    # MARC 21 Reference: Position 18 - Descriptive cataloging form (Cataloging form)
+    CATALOGING_FORM_VALUES: ClassVar[dict[str, str]] = {
+        " ": "Non-ISBD",
+        "a": "AACR 2",
+        "c": "ISBD punctuation omitted",
+        "i": "ISBD punctuation included",
+        "n": "Non-ISBD punctuation omitted",
+        "u": "Unknown",
+    }
 
-     @classmethod
-     def get_valid_values(cls, position: int) -> dict | None:
-         """Get dictionary of valid values for a leader position.
+    @classmethod
+    def get_valid_values(cls, position: int) -> dict | None:
+        """Get dictionary of valid values for a leader position.
 
-         MARC 21 positions with defined valid values:
-         - 5: Record status (RECORD_STATUS_VALUES)
-         - 6: Type of record (RECORD_TYPE_VALUES)
-         - 7: Bibliographic level (BIBLIOGRAPHIC_LEVEL_VALUES)
-         - 17: Encoding level (ENCODING_LEVEL_VALUES)
-         - 18: Cataloging form (CATALOGING_FORM_VALUES)
+        MARC 21 positions with defined valid values:
+        - 5: Record status (RECORD_STATUS_VALUES)
+        - 6: Type of record (RECORD_TYPE_VALUES)
+        - 7: Bibliographic level (BIBLIOGRAPHIC_LEVEL_VALUES)
+        - 17: Encoding level (ENCODING_LEVEL_VALUES)
+        - 18: Cataloging form (CATALOGING_FORM_VALUES)
 
-         Args:
-             position: Leader position (0-23)
+        Args:
+            position: Leader position (0-23)
 
-         Returns:
-             Dictionary mapping values to descriptions, or None if position has no defined values
+        Returns:
+            Dictionary mapping values to descriptions, or None if position has no defined values
 
-         Example:
-             ```pycon
-             >>> Leader.get_valid_values(5)
-             {'a': 'Increase in encoding level', 'c': 'Corrected or revised', ...}
-             >>> Leader.get_valid_values(0)  # Record length has no fixed values
-             None
-             ```
-         """
-         position_map = {
-             5: cls.RECORD_STATUS_VALUES,
-             6: cls.RECORD_TYPE_VALUES,
-             7: cls.BIBLIOGRAPHIC_LEVEL_VALUES,
-             17: cls.ENCODING_LEVEL_VALUES,
-             18: cls.CATALOGING_FORM_VALUES,
-         }
-         return position_map.get(position)
+        Example:
+            ```pycon
+            >>> Leader.get_valid_values(5)
+            {'a': 'Increase in encoding level', 'c': 'Corrected or revised', ...}
+            >>> Leader.get_valid_values(0)  # Record length has no fixed values
+            None
+            ```
+        """
+        position_map = {
+            5: cls.RECORD_STATUS_VALUES,
+            6: cls.RECORD_TYPE_VALUES,
+            7: cls.BIBLIOGRAPHIC_LEVEL_VALUES,
+            17: cls.ENCODING_LEVEL_VALUES,
+            18: cls.CATALOGING_FORM_VALUES,
+        }
+        return position_map.get(position)
 
-     @classmethod
-     def is_valid_value(cls, position: int, value: str) -> bool:
-         """Check if a value is valid for a leader position.
+    @classmethod
+    def is_valid_value(cls, position: int, value: str) -> bool:
+        """Check if a value is valid for a leader position.
 
-         Args:
-             position: Leader position (0-23)
-             value: Single character value to validate
+        Args:
+            position: Leader position (0-23)
+            value: Single character value to validate
 
-         Returns:
-             True if value is valid for this position, False otherwise
+        Returns:
+            True if value is valid for this position, False otherwise
 
-         Example:
-             ```pycon
-             >>> Leader.is_valid_value(5, 'a')  # Record status
-             True
-             >>> Leader.is_valid_value(5, 'x')  # Invalid
-             False
-             ```
-         """
-         valid_values = cls.get_valid_values(position)
-         if valid_values is None:
-             return True  # Position without defined values accepts any single char
-         return value in valid_values
+        Example:
+            ```pycon
+            >>> Leader.is_valid_value(5, 'a')  # Record status
+            True
+            >>> Leader.is_valid_value(5, 'x')  # Invalid
+            False
+            ```
+        """
+        valid_values = cls.get_valid_values(position)
+        if valid_values is None:
+            return (
+                True  # Position without defined values accepts any single char
+            )
+        return value in valid_values
 
-     @classmethod
-     def get_value_description(cls, position: int, value: str) -> str | None:
-         """Get description of a leader value.
+    @classmethod
+    def get_value_description(cls, position: int, value: str) -> str | None:
+        """Get description of a leader value.
 
-         Args:
-             position: Leader position (0-23)
-             value: Single character value
+        Args:
+            position: Leader position (0-23)
+            value: Single character value
 
-         Returns:
-             Description string if value is defined, None otherwise
+        Returns:
+            Description string if value is defined, None otherwise
 
-         Example:
-             ```pycon
-             >>> Leader.get_value_description(5, 'a')
-             'Increase in encoding level'
-             >>> Leader.get_value_description(5, 'x')  # Invalid
-             None
-             ```
-         """
-         valid_values = cls.get_valid_values(position)
-         if valid_values is None:
-             return None
-         return valid_values.get(value)
+        Example:
+            ```pycon
+            >>> Leader.get_value_description(5, 'a')
+            'Increase in encoding level'
+            >>> Leader.get_value_description(5, 'x')  # Invalid
+            None
+            ```
+        """
+        valid_values = cls.get_valid_values(position)
+        if valid_values is None:
+            return None
+        return valid_values.get(value)
 
-     def __init__(self, leader: str | None = None):
-         """Create a new Leader, optionally from a 24-character string.
+    def __init__(self, leader: str | None = None):
+        """Create a new Leader, optionally from a 24-character string.
 
-         Example:
-             ```python
-             Leader()                              # default values
-             Leader('00136nam a2200061   4500')    # parsed, pymarc-style
-             ```
-         """
-         if leader is not None:
-             self._update_leader_from_string(leader)
+        Example:
+            ```python
+            Leader()                              # default values
+            Leader('00136nam a2200061   4500')    # parsed, pymarc-style
+            ```
+        """
+        if leader is not None:
+            self._update_leader_from_string(leader)
 
-     def __new__(cls, leader: str | None = None):
-         """Create instance - actually returns a Rust Leader with aliases."""
-         instance = object.__new__(cls)
-         instance._rust_leader = _Leader()
-         instance._parent_record = None
-         return instance
+    def __new__(cls, leader: str | None = None):
+        """Create instance - actually returns a Rust Leader with aliases."""
+        instance = object.__new__(cls)
+        instance._rust_leader = _Leader()
+        instance._parent_record = None
+        return instance
 
-     def __getattr__(self, name: str) -> Any:
-         """Delegate attribute access, handling aliases."""
-         # Aliases for pymarc compatibility
-         if name == 'descriptive_cataloging_form':
-             return self._rust_leader.cataloging_form
-         elif name == 'multipart_resource_record_level':
-             return self._rust_leader.multipart_level
-         # Delegate everything else
-         return getattr(self._rust_leader, name)
+    def __getattr__(self, name: str) -> Any:
+        """Delegate attribute access, handling aliases."""
+        # Aliases for pymarc compatibility
+        if name == "descriptive_cataloging_form":
+            return self._rust_leader.cataloging_form
+        elif name == "multipart_resource_record_level":
+            return self._rust_leader.multipart_level
+        # Delegate everything else
+        return getattr(self._rust_leader, name)
 
-     def __deepcopy__(self, memo: dict) -> "Leader":
-         """Return an independent copy of this leader, detached from any record."""
-         new: Leader = Leader.__new__(Leader)
-         new._rust_leader = self._rust_leader.__deepcopy__(memo)
-         new._parent_record = None
-         memo[id(self)] = new
-         return new
+    def __deepcopy__(self, memo: dict) -> "Leader":
+        """Return an independent copy of this leader, detached from any record."""
+        new: Leader = Leader.__new__(Leader)
+        new._rust_leader = self._rust_leader.__deepcopy__(memo)
+        new._parent_record = None
+        memo[id(self)] = new
+        return new
 
-     def __setattr__(self, name: str, value: Any) -> None:
-         """Delegate attribute setting, handling aliases."""
-         if name in ('_rust_leader', '_parent_record'):
-             object.__setattr__(self, name, value)
-         elif name == 'descriptive_cataloging_form':
-             self._rust_leader.cataloging_form = value
-             # Mark parent record as having modified leader
-             if hasattr(self, '_parent_record') and self._parent_record is not None:
-                 self._parent_record._leader_modified = True
-         elif name == 'multipart_resource_record_level':
-             self._rust_leader.multipart_level = value
-             # Mark parent record as having modified leader
-             if hasattr(self, '_parent_record') and self._parent_record is not None:
-                 self._parent_record._leader_modified = True
-         else:
-             setattr(self._rust_leader, name, value)
-             # Mark parent record as having modified leader
-             if hasattr(self, '_parent_record') and self._parent_record is not None:
-                 self._parent_record._leader_modified = True
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Delegate attribute setting, handling aliases."""
+        if name in ("_rust_leader", "_parent_record"):
+            object.__setattr__(self, name, value)
+        elif name == "descriptive_cataloging_form":
+            self._rust_leader.cataloging_form = value
+            # Mark parent record as having modified leader
+            if (
+                hasattr(self, "_parent_record")
+                and self._parent_record is not None
+            ):
+                self._parent_record._leader_modified = True
+        elif name == "multipart_resource_record_level":
+            self._rust_leader.multipart_level = value
+            # Mark parent record as having modified leader
+            if (
+                hasattr(self, "_parent_record")
+                and self._parent_record is not None
+            ):
+                self._parent_record._leader_modified = True
+        else:
+            setattr(self._rust_leader, name, value)
+            # Mark parent record as having modified leader
+            if (
+                hasattr(self, "_parent_record")
+                and self._parent_record is not None
+            ):
+                self._parent_record._leader_modified = True
 
-     def __getitem__(self, index: int | slice) -> str | str | None:
-         """Get leader character(s) by position (pymarc compatibility).
+    def __getitem__(self, index: int | slice) -> str | str | None:
+        """Get leader character(s) by position (pymarc compatibility).
 
-         Examples:
-             ```python
-             leader[5]       # Get record status character
-             leader[0:5]     # Get first 5 characters (record length)
-             leader[18]      # Get cataloging form character
-             ```
-         """
-         # Get the leader as a 24-character string
-         leader_str = self._get_leader_as_string()
+        Examples:
+            ```python
+            leader[5]       # Get record status character
+            leader[0:5]     # Get first 5 characters (record length)
+            leader[18]      # Get cataloging form character
+            ```
+        """
+        # Get the leader as a 24-character string
+        leader_str = self._get_leader_as_string()
 
-         if isinstance(index, slice):
-             # Slice access: leader[0:5]
-             start = index.start or 0
-             stop = index.stop or len(leader_str)
-             if start < 0 or stop > len(leader_str):
-                 raise IndexError("Leader position out of range")
-             return leader_str[start:stop]
-         else:
-             # Single position access: leader[5]
-             if index < 0 or index >= len(leader_str):
-                 raise IndexError("Leader position out of range")
-             return leader_str[index]
+        if isinstance(index, slice):
+            # Slice access: leader[0:5]
+            start = index.start or 0
+            stop = index.stop or len(leader_str)
+            if start < 0 or stop > len(leader_str):
+                raise IndexError("Leader position out of range")
+            return leader_str[start:stop]
+        else:
+            # Single position access: leader[5]
+            if index < 0 or index >= len(leader_str):
+                raise IndexError("Leader position out of range")
+            return leader_str[index]
 
-     def __setitem__(self, index: int, value: str) -> None:
-         """Set leader character by position (pymarc compatibility).
+    def __setitem__(self, index: int, value: str) -> None:
+        """Set leader character by position (pymarc compatibility).
 
-         Example:
-             ```python
-             leader[5] = 'a'  # Set record status
-             ```
-         """
-         if not isinstance(index, int):
-             raise TypeError("Leader position must be an integer")
-         if not isinstance(value, str) or len(value) != 1:
-             raise ValueError("Leader value must be a single character string")
+        Example:
+            ```python
+            leader[5] = 'a'  # Set record status
+            ```
+        """
+        if not isinstance(index, int):
+            raise TypeError("Leader position must be an integer")
+        if not isinstance(value, str) or len(value) != 1:
+            raise ValueError("Leader value must be a single character string")
 
-         # Get current leader as string
-         leader_str = self._get_leader_as_string()
+        # Get current leader as string
+        leader_str = self._get_leader_as_string()
 
-         if index < 0 or index >= len(leader_str):
-             raise IndexError("Leader position out of range")
+        if index < 0 or index >= len(leader_str):
+            raise IndexError("Leader position out of range")
 
-         # Replace character at position
-         new_leader_str = leader_str[:index] + value + leader_str[index+1:]
+        # Replace character at position
+        new_leader_str = leader_str[:index] + value + leader_str[index + 1 :]
 
-         # Update the leader based on the position
-         self._update_leader_from_string(new_leader_str)
+        # Update the leader based on the position
+        self._update_leader_from_string(new_leader_str)
 
-     def _get_leader_as_string(self) -> str:
-         """Get the leader as a 24-character MARC21 leader string."""
-         # Build leader string from properties
-         leader = []
-         leader.append(str(self._rust_leader.record_length).zfill(5))
-         leader.append(self._rust_leader.record_status)
-         leader.append(self._rust_leader.record_type)
-         leader.append(self._rust_leader.bibliographic_level)
-         leader.append(self._rust_leader.control_record_type)
-         leader.append(self._rust_leader.character_coding)
-         leader.append(str(self._rust_leader.indicator_count))
-         leader.append(str(self._rust_leader.subfield_code_count))
-         leader.append(str(self._rust_leader.data_base_address).zfill(5))
-         leader.append(self._rust_leader.encoding_level)
-         leader.append(self._rust_leader.cataloging_form)
-         leader.append(self._rust_leader.multipart_level)
-         leader.append(self._rust_leader.reserved)
+    def _get_leader_as_string(self) -> str:
+        """Get the leader as a 24-character MARC21 leader string."""
+        # Build leader string from properties
+        leader = []
+        leader.append(str(self._rust_leader.record_length).zfill(5))
+        leader.append(self._rust_leader.record_status)
+        leader.append(self._rust_leader.record_type)
+        leader.append(self._rust_leader.bibliographic_level)
+        leader.append(self._rust_leader.control_record_type)
+        leader.append(self._rust_leader.character_coding)
+        leader.append(str(self._rust_leader.indicator_count))
+        leader.append(str(self._rust_leader.subfield_code_count))
+        leader.append(str(self._rust_leader.data_base_address).zfill(5))
+        leader.append(self._rust_leader.encoding_level)
+        leader.append(self._rust_leader.cataloging_form)
+        leader.append(self._rust_leader.multipart_level)
+        leader.append(self._rust_leader.reserved)
 
-         return ''.join(leader)
+        return "".join(leader)
 
-     def _update_leader_from_string(self, leader_str: str) -> None:
-         """Update leader properties from a 24-character string."""
-         if len(leader_str) != 24:
-             raise ValueError(f"Leader string must be exactly 24 characters, got {len(leader_str)}")
+    def _update_leader_from_string(self, leader_str: str) -> None:
+        """Update leader properties from a 24-character string."""
+        if len(leader_str) != 24:
+            raise ValueError(
+                f"Leader string must be exactly 24 characters, got {len(leader_str)}"
+            )
 
-         # Parse MARC21 leader format (positions as per standard)
-         self._rust_leader.record_length = int(leader_str[0:5])
-         self._rust_leader.record_status = leader_str[5]
-         self._rust_leader.record_type = leader_str[6]
-         self._rust_leader.bibliographic_level = leader_str[7]
-         self._rust_leader.control_record_type = leader_str[8]
-         self._rust_leader.character_coding = leader_str[9]
-         self._rust_leader.indicator_count = int(leader_str[10])
-         self._rust_leader.subfield_code_count = int(leader_str[11])
-         self._rust_leader.data_base_address = int(leader_str[12:17])
-         self._rust_leader.encoding_level = leader_str[17]
-         self._rust_leader.cataloging_form = leader_str[18]
-         self._rust_leader.multipart_level = leader_str[19]
-         self._rust_leader.reserved = leader_str[20:24]
+        # Parse MARC21 leader format (positions as per standard)
+        self._rust_leader.record_length = int(leader_str[0:5])
+        self._rust_leader.record_status = leader_str[5]
+        self._rust_leader.record_type = leader_str[6]
+        self._rust_leader.bibliographic_level = leader_str[7]
+        self._rust_leader.control_record_type = leader_str[8]
+        self._rust_leader.character_coding = leader_str[9]
+        self._rust_leader.indicator_count = int(leader_str[10])
+        self._rust_leader.subfield_code_count = int(leader_str[11])
+        self._rust_leader.data_base_address = int(leader_str[12:17])
+        self._rust_leader.encoding_level = leader_str[17]
+        self._rust_leader.cataloging_form = leader_str[18]
+        self._rust_leader.multipart_level = leader_str[19]
+        self._rust_leader.reserved = leader_str[20:24]
 
-         # Mark parent record as having modified leader
-         if hasattr(self, '_parent_record') and self._parent_record is not None:
-             self._parent_record._leader_modified = True
+        # Mark parent record as having modified leader
+        if hasattr(self, "_parent_record") and self._parent_record is not None:
+            self._parent_record._leader_modified = True
 
-     def __str__(self) -> str:
-         """The 24-character MARC 21 leader string (pymarc-compatible)."""
-         return self._get_leader_as_string()
+    def __str__(self) -> str:
+        """The 24-character MARC 21 leader string (pymarc-compatible)."""
+        return self._get_leader_as_string()
 
-     def __repr__(self) -> str:
-         return f"Leader('{self._get_leader_as_string()}')"
+    def __repr__(self) -> str:
+        return f"Leader('{self._get_leader_as_string()}')"
 
-     def __len__(self) -> int:
-         """Leaders are always 24 characters (pymarc-compatible)."""
-         return 24
+    def __len__(self) -> int:
+        """Leaders are always 24 characters (pymarc-compatible)."""
+        return 24
 
-     def __eq__(self, other: Any) -> bool:
-         """Compare leaders by content; strings compare against the
-         24-character form (pymarc's Leader is a str subclass)."""
-         if isinstance(other, str):
-             return self._get_leader_as_string() == other
-         if isinstance(other, Leader):
-             return bool(self._rust_leader == other._rust_leader)
-         return NotImplemented
+    def __eq__(self, other: Any) -> bool:
+        """Compare leaders by content; strings compare against the
+        24-character form (pymarc's Leader is a str subclass)."""
+        if isinstance(other, str):
+            return self._get_leader_as_string() == other
+        if isinstance(other, Leader):
+            return bool(self._rust_leader == other._rust_leader)
+        return NotImplemented
 
-     def __hash__(self) -> int:
-         """Hash based on rust leader."""
-         return hash(id(self._rust_leader))
+    def __hash__(self) -> int:
+        """Hash based on rust leader."""
+        return hash(id(self._rust_leader))
 
 
 class Record:
     """Enhanced Record wrapper with pymarc-compatible API."""
 
-    def __init__(self, leader: Leader | None = None, *, fields: list[Field] | None = None):
+    def __init__(
+        self,
+        leader: Leader | None = None,
+        *,
+        fields: list[Field] | None = None,
+    ):
         """Create a new Record.
 
         Args:
@@ -997,7 +1040,9 @@ class Record:
         if leader is None:
             leader = Leader()
         # Get the inner Rust leader
-        rust_leader = leader._rust_leader if isinstance(leader, Leader) else leader
+        rust_leader = (
+            leader._rust_leader if isinstance(leader, Leader) else leader
+        )
         self._inner = _Record(rust_leader)
         self._leader = leader
         if fields:
@@ -1006,7 +1051,7 @@ class Record:
 
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the inner Rust Record."""
-        if name in ('_inner', '_leader'):
+        if name in ("_inner", "_leader"):
             raise AttributeError(name)
         return getattr(self._inner, name)
 
@@ -1043,26 +1088,26 @@ class Record:
         """
         return iter(self.fields())
 
-    def __getitem__(self, tag: str) -> 'Field':
-         """Get first field with given tag (pymarc compatibility).
+    def __getitem__(self, tag: str) -> "Field":
+        """Get first field with given tag (pymarc compatibility).
 
-         Returns a Field instance for both control and data fields.
-         Raises KeyError if the tag is not present in the record.
-         """
-         # Check if this is a control field (001-009)
-         if _is_control_tag(tag):
-             value = self._inner.control_field(tag)
-             if value is not None:
-                 return _wrap_control_field(self, tag, 0, value)
-             raise KeyError(tag)
+        Returns a Field instance for both control and data fields.
+        Raises KeyError if the tag is not present in the record.
+        """
+        # Check if this is a control field (001-009)
+        if _is_control_tag(tag):
+            value = self._inner.control_field(tag)
+            if value is not None:
+                return _wrap_control_field(self, tag, 0, value)
+            raise KeyError(tag)
 
-         # For data fields, return a live handle
-         field = self._inner.get_field(tag)
-         if field:
-             return _wrap_field(field, self, 0)
-         raise KeyError(tag)
+        # For data fields, return a live handle
+        field = self._inner.get_field(tag)
+        if field:
+            return _wrap_field(field, self, 0)
+        raise KeyError(tag)
 
-    def get_fields(self, *tags: str) -> list['Field']:
+    def get_fields(self, *tags: str) -> list["Field"]:
         """Get all fields with given tags.
 
         If no tags provided, returns all fields (control + data).
@@ -1088,7 +1133,9 @@ class Record:
             # Return fields for specified tags
             for tag in tags:
                 if _is_control_tag(tag):
-                    for i, value in enumerate(self._inner.control_field_values(tag)):
+                    for i, value in enumerate(
+                        self._inner.control_field_values(tag)
+                    ):
                         result.append(_wrap_control_field(self, tag, i, value))
                 else:
                     for i, field in enumerate(self._inner.get_fields(tag)):
@@ -1096,11 +1143,11 @@ class Record:
 
         return result
 
-    def add_field(self, *fields: 'Field') -> None:
+    def add_field(self, *fields: "Field") -> None:
         """Add one or more fields to the record."""
         for field in fields:
             if field.is_control_field():
-                self._inner.add_control_field(field.tag, field.data or '')
+                self._inner.add_control_field(field.tag, field.data or "")
             else:
                 self._inner.add_field(field._inner)
 
@@ -1111,14 +1158,14 @@ class Record:
         except KeyError:
             return default
 
-    def get_field(self, tag: str) -> Optional['Field']:
+    def get_field(self, tag: str) -> Optional["Field"]:
         """Get first field with given tag."""
         field = self._inner.get_field(tag)
         if field:
             return _wrap_field(field, self, 0)
         return None
 
-    def get_field_or_err(self, tag: str) -> 'Field':
+    def get_field_or_err(self, tag: str) -> "Field":
         """Get first field with given tag, raising :class:`mrrc.FieldNotFound`
         (E105) when the tag is not present.
 
@@ -1130,7 +1177,7 @@ class Record:
         """
         return _wrap_field(self._inner.get_field_or_err(tag), self, 0)
 
-    def remove_field(self, *fields: Union['Field', str]) -> None:
+    def remove_field(self, *fields: Union["Field", str]) -> None:
         """Remove one or more fields from the record (pymarc compatibility).
 
         A Field argument removes exactly that field: a live handle
@@ -1167,7 +1214,7 @@ class Record:
         else:
             self._inner.remove_field(tag)
 
-    def _remove_one(self, field: 'Field') -> None:
+    def _remove_one(self, field: "Field") -> None:
         """Remove exactly one field.
 
         Live handles bound to this record remove their occurrence
@@ -1205,11 +1252,11 @@ class Record:
         for f in field_list:
             self._inner.add_field(f)
 
-    def add_ordered_field(self, *fields: 'Field') -> None:
+    def add_ordered_field(self, *fields: "Field") -> None:
         """Add fields maintaining tag sort order (pymarc compatibility)."""
         for field in fields:
             if field.is_control_field():
-                self._inner.add_control_field(field.tag, field.data or '')
+                self._inner.add_control_field(field.tag, field.data or "")
             else:
                 existing = list(self._inner.fields())
                 insert_idx = len(existing)
@@ -1220,11 +1267,11 @@ class Record:
                 existing.insert(insert_idx, field._inner)
                 self._rebuild_fields(existing)
 
-    def add_grouped_field(self, *fields: 'Field') -> None:
+    def add_grouped_field(self, *fields: "Field") -> None:
         """Add fields after the last field with the same tag (pymarc compatibility)."""
         for field in fields:
             if field.is_control_field():
-                self._inner.add_control_field(field.tag, field.data or '')
+                self._inner.add_control_field(field.tag, field.data or "")
                 continue
             existing = list(self._inner.fields())
             last_idx = None
@@ -1245,7 +1292,7 @@ class Record:
         """Get a control field value."""
         return self._inner.control_field(tag)
 
-    def fields(self) -> list['Field']:
+    def fields(self) -> list["Field"]:
         """Get all fields (control + data), as live handles.
 
         Enumerates identically to no-arg :meth:`get_fields`: repeated
@@ -1342,7 +1389,7 @@ class Record:
     @property
     def addedentries(self) -> list:
         """Added entries from 700/710/711/730 fields (pymarc compatibility)."""
-        return self.get_fields('700', '710', '711', '730')
+        return self.get_fields("700", "710", "711", "730")
 
     def is_book(self) -> bool:
         """Check if this is a book."""
@@ -1364,7 +1411,7 @@ class Record:
     # Linked field navigation (880 alternate graphic representation)
     # =========================================================================
 
-    def get_linked_fields(self, field: 'Field') -> list['Field']:
+    def get_linked_fields(self, field: "Field") -> list["Field"]:
         """Find all 880 fields linked to a given field via subfield $6.
 
         Given a non-880 field that has a $6 linkage subfield, returns all 880
@@ -1391,7 +1438,7 @@ class Record:
             result.append(wrapper)
         return result
 
-    def get_linked_field(self, field: 'Field') -> Optional['Field']:
+    def get_linked_field(self, field: "Field") -> Optional["Field"]:
         """Find the single 880 field linked to a given field via subfield $6.
 
         Like get_linked_fields() but returns only the first match.
@@ -1409,7 +1456,7 @@ class Record:
             return wrapper
         return None
 
-    def get_original_field(self, field_880: 'Field') -> Optional['Field']:
+    def get_original_field(self, field_880: "Field") -> Optional["Field"]:
         """Find the original field linked from a given 880 field.
 
         Args:
@@ -1425,7 +1472,9 @@ class Record:
             return wrapper
         return None
 
-    def get_field_pairs(self, tag: str) -> list[tuple['Field', Optional['Field']]]:
+    def get_field_pairs(
+        self, tag: str
+    ) -> list[tuple["Field", Optional["Field"]]]:
         """Get field pairs of original fields with their linked 880 counterparts.
 
         Args:
@@ -1448,7 +1497,9 @@ class Record:
             orig_wrapper._inner = orig
             linked_wrapper = None
             if linked is not None:
-                linked_wrapper = Field(linked.tag, linked.indicator1, linked.indicator2)
+                linked_wrapper = Field(
+                    linked.tag, linked.indicator1, linked.indicator2
+                )
                 linked_wrapper._inner = linked
             result.append((orig_wrapper, linked_wrapper))
         return result
@@ -1458,8 +1509,12 @@ class Record:
     # =========================================================================
 
     def fields_by_indicator(
-        self, tag: str, *, indicator1: str | None = None, indicator2: str | None = None
-    ) -> list['Field']:
+        self,
+        tag: str,
+        *,
+        indicator1: str | None = None,
+        indicator2: str | None = None,
+    ) -> list["Field"]:
         """Get fields matching indicator values.
 
         This is a convenience method for filtering by indicators.
@@ -1488,7 +1543,7 @@ class Record:
             result.append(_wrap_field(field))
         return result
 
-    def fields_in_range(self, start_tag: str, end_tag: str) -> list['Field']:
+    def fields_in_range(self, start_tag: str, end_tag: str) -> list["Field"]:
         """Get fields within a tag range (inclusive).
 
         Useful for querying groups of related fields, such as all subject fields
@@ -1514,7 +1569,7 @@ class Record:
             result.append(_wrap_field(field))
         return result
 
-    def fields_matching(self, query: 'FieldQuery') -> list['Field']:
+    def fields_matching(self, query: "FieldQuery") -> list["Field"]:
         """Get fields matching a FieldQuery.
 
         This method enables complex field matching using the Query DSL.
@@ -1539,7 +1594,7 @@ class Record:
             result.append(_wrap_field(field))
         return result
 
-    def fields_matching_range(self, query: 'TagRangeQuery') -> list['Field']:
+    def fields_matching_range(self, query: "TagRangeQuery") -> list["Field"]:
         """Get fields matching a TagRangeQuery.
 
         This method finds fields within a tag range that also match indicator
@@ -1563,7 +1618,9 @@ class Record:
             result.append(_wrap_field(field))
         return result
 
-    def fields_matching_pattern(self, query: 'SubfieldPatternQuery') -> list['Field']:
+    def fields_matching_pattern(
+        self, query: "SubfieldPatternQuery"
+    ) -> list["Field"]:
         """Get fields matching a SubfieldPatternQuery (regex matching).
 
         This method finds fields where a specific subfield's value matches
@@ -1587,7 +1644,9 @@ class Record:
             result.append(_wrap_field(field))
         return result
 
-    def fields_matching_value(self, query: 'SubfieldValueQuery') -> list['Field']:
+    def fields_matching_value(
+        self, query: "SubfieldValueQuery"
+    ) -> list["Field"]:
         """Get fields matching a SubfieldValueQuery (exact or partial string matching).
 
         This method finds fields where a specific subfield's value matches
@@ -1635,7 +1694,7 @@ class Record:
     def leader(self) -> Leader:
         """The record leader (attribute, matching pymarc's record.leader)."""
         # Ensure _leader is initialized and synced
-        if not hasattr(self, '_leader') or self._leader is None:
+        if not hasattr(self, "_leader") or self._leader is None:
             leader = Leader()
             leader._rust_leader = self._inner.leader
             leader._parent_record = self
@@ -1645,7 +1704,7 @@ class Record:
         return self._leader
 
     @leader.setter
-    def leader(self, value: Union['Leader', str]) -> None:
+    def leader(self, value: Union["Leader", str]) -> None:
         """Replace the leader with a Leader or a 24-character string
         (matching pymarc's assignable record.leader)."""
         if isinstance(value, str):
@@ -1661,10 +1720,10 @@ class Record:
     def _sync_leader(self) -> None:
         """Sync the Python leader back to the Rust record if it was modified."""
         # Only sync if the leader was actually accessed/modified
-        if not getattr(self, '_leader_modified', False):
+        if not getattr(self, "_leader_modified", False):
             return
 
-        if hasattr(self, '_leader') and self._leader is not None:
+        if hasattr(self, "_leader") and self._leader is not None:
             # Just directly replace the inner leader with our modified one
             try:
                 self._inner.set_leader(self._leader._rust_leader)
@@ -1680,12 +1739,22 @@ class Record:
                     inner_leader.record_length = rust_leader.record_length
                     inner_leader.record_status = rust_leader.record_status
                     inner_leader.record_type = rust_leader.record_type
-                    inner_leader.bibliographic_level = rust_leader.bibliographic_level
-                    inner_leader.control_record_type = rust_leader.control_record_type
-                    inner_leader.character_coding = rust_leader.character_coding
+                    inner_leader.bibliographic_level = (
+                        rust_leader.bibliographic_level
+                    )
+                    inner_leader.control_record_type = (
+                        rust_leader.control_record_type
+                    )
+                    inner_leader.character_coding = (
+                        rust_leader.character_coding
+                    )
                     inner_leader.indicator_count = rust_leader.indicator_count
-                    inner_leader.subfield_code_count = rust_leader.subfield_code_count
-                    inner_leader.data_base_address = rust_leader.data_base_address
+                    inner_leader.subfield_code_count = (
+                        rust_leader.subfield_code_count
+                    )
+                    inner_leader.data_base_address = (
+                        rust_leader.data_base_address
+                    )
                     inner_leader.encoding_level = rust_leader.encoding_level
                     inner_leader.cataloging_form = rust_leader.cataloging_form
                     inner_leader.multipart_level = rust_leader.multipart_level
@@ -1701,21 +1770,24 @@ class Record:
             fields_list.append({tag: value})
         for field in self._inner.fields():
             subfields_list = [{sf.code: sf.value} for sf in field.subfields()]
-            fields_list.append({
-                field.tag: {
-                    'ind1': field.indicator1,
-                    'ind2': field.indicator2,
-                    'subfields': subfields_list,
+            fields_list.append(
+                {
+                    field.tag: {
+                        "ind1": field.indicator1,
+                        "ind2": field.indicator2,
+                        "subfields": subfields_list,
+                    }
                 }
-            })
+            )
         return {
-            'leader': str(self.leader),
-            'fields': fields_list,
+            "leader": str(self.leader),
+            "fields": fields_list,
         }
 
     def as_json(self, **kwargs) -> str:
         """Serialize to pymarc-compatible MARC-in-JSON string."""
         import json as _json
+
         return _json.dumps(self.as_dict(), **kwargs)
 
     def as_marc(self) -> bytes:
@@ -1741,13 +1813,20 @@ class Record:
 
         # Compare each field
         for self_f, other_f in zip(self_fields, other_fields, strict=False):
-            if (self_f.tag != other_f.tag or
-                self_f.indicator1 != other_f.indicator1 or
-                self_f.indicator2 != other_f.indicator2 or
-                len(self_f.subfields()) != len(other_f.subfields())):
+            if (
+                self_f.tag != other_f.tag
+                or self_f.indicator1 != other_f.indicator1
+                or self_f.indicator2 != other_f.indicator2
+                or len(self_f.subfields()) != len(other_f.subfields())
+            ):
                 return False
-            for self_sf, other_sf in zip(self_f.subfields(), other_f.subfields(), strict=False):
-                if self_sf.code != other_sf.code or self_sf.value != other_sf.value:
+            for self_sf, other_sf in zip(
+                self_f.subfields(), other_f.subfields(), strict=False
+            ):
+                if (
+                    self_sf.code != other_sf.code
+                    or self_sf.value != other_sf.value
+                ):
                     return False
 
         # Compare control fields
@@ -1794,13 +1873,19 @@ class MARCReader:
             mode (the first error fires before any recovery accumulates).
     """
 
-    def __init__(self, file_obj: Any, to_unicode: bool = True, permissive: bool = False,
-                 recovery_mode: str | None = None,
-                 validation_level: str = "structural",
-                 max_errors: int | None = None):
+    def __init__(
+        self,
+        file_obj: Any,
+        to_unicode: bool = True,
+        permissive: bool = False,
+        recovery_mode: str | None = None,
+        validation_level: str = "structural",
+        max_errors: int | None = None,
+    ):
         """Create a new MARC reader."""
         if not to_unicode:
             import warnings
+
             warnings.warn(
                 "mrrc always converts MARC-8 to UTF-8; to_unicode=False has no effect",
                 stacklevel=2,
@@ -2018,14 +2103,15 @@ def parse_xml_to_array(xml_file) -> list[Record]:
     Accepts file paths (str/Path), open file handles, or XML strings.
     """
     import os
+
     if isinstance(xml_file, (str, os.PathLike)):
         path = str(xml_file)
         if os.path.isfile(path):
-            with open(path, encoding='utf-8') as f:
+            with open(path, encoding="utf-8") as f:
                 xml_str = f.read()
         else:
             xml_str = path
-    elif hasattr(xml_file, 'read'):
+    elif hasattr(xml_file, "read"):
         xml_str = xml_file.read()
     else:
         xml_str = str(xml_file)
@@ -2134,17 +2220,17 @@ def read(path: str | Any, format: str | None = None):
     import os
 
     # Convert pathlib.Path to string if needed
-    if hasattr(path, '__fspath__'):
+    if hasattr(path, "__fspath__"):
         path = os.fspath(path)
 
     # Determine format from extension if not specified
     if format is None:
         _, ext = os.path.splitext(path)
-        ext = ext.lower().lstrip('.')
+        ext = ext.lower().lstrip(".")
 
         extension_map = {
-            'mrc': 'marc',
-            'marc': 'marc',
+            "mrc": "marc",
+            "marc": "marc",
         }
 
         format = extension_map.get(ext)
@@ -2158,12 +2244,12 @@ def read(path: str | Any, format: str | None = None):
     # Normalize format aliases
     format = format.lower()
     format_aliases = {
-        'mrc': 'marc',
+        "mrc": "marc",
     }
     format = format_aliases.get(format, format)
 
     # Return appropriate reader
-    if format == 'marc':
+    if format == "marc":
         return MARCReader(path)
     else:
         raise ValueError(
@@ -2197,17 +2283,17 @@ def write(records, path: str | Any, format: str | None = None) -> int:
     import os
 
     # Convert pathlib.Path to string if needed
-    if hasattr(path, '__fspath__'):
+    if hasattr(path, "__fspath__"):
         path = os.fspath(path)
 
     # Determine format from extension if not specified
     if format is None:
         _, ext = os.path.splitext(path)
-        ext = ext.lower().lstrip('.')
+        ext = ext.lower().lstrip(".")
 
         extension_map = {
-            'mrc': 'marc',
-            'marc': 'marc',
+            "mrc": "marc",
+            "marc": "marc",
         }
 
         format = extension_map.get(ext)
@@ -2221,14 +2307,14 @@ def write(records, path: str | Any, format: str | None = None) -> int:
     # Normalize format aliases
     format = format.lower()
     format_aliases = {
-        'mrc': 'marc',
+        "mrc": "marc",
     }
     format = format_aliases.get(format, format)
 
     # Write using appropriate writer
     count = 0
-    if format == 'marc':
-        with open(path, 'wb') as f:
+    if format == "marc":
+        with open(path, "wb") as f:
             writer = MARCWriter(f)
             for record in records:
                 writer.write(record)
@@ -2245,6 +2331,7 @@ def write(records, path: str | Any, format: str | None = None) -> int:
 # =============================================================================
 # BIBFRAME Conversion Functions (LOC Linked Data Format)
 # =============================================================================
+
 
 def marc_to_bibframe(record, config: BibframeConfig | None = None) -> RdfGraph:
     """Convert a MARC record to a BIBFRAME RDF graph.
@@ -2272,11 +2359,11 @@ def marc_to_bibframe(record, config: BibframeConfig | None = None) -> RdfGraph:
     if config is None:
         config = BibframeConfig()
     # Handle wrapped Record (get inner PyRecord)
-    inner_record = record._inner if hasattr(record, '_inner') else record
+    inner_record = record._inner if hasattr(record, "_inner") else record
     return _marc_to_bibframe(inner_record, config)
 
 
-def bibframe_to_marc(graph: RdfGraph) -> 'Record':
+def bibframe_to_marc(graph: RdfGraph) -> "Record":
     """Convert a BIBFRAME RDF graph to a MARC record.
 
     This function transforms a BIBFRAME 2.0 RDF graph back into a MARC
@@ -2320,24 +2407,25 @@ def map_records(func, *files: str) -> None:
 def parse_json_to_array(json_str: str) -> list[Record]:
     """Parse a JSON array of pymarc-format records (pymarc compatibility)."""
     import json as _json
+
     data = _json.loads(json_str)
     if not isinstance(data, list):
         data = [data]
     records = []
     for item in data:
         record = Record()
-        if 'leader' in item:
-            record.leader = str(item['leader'])
-        if 'fields' in item:
-            for field_dict in item['fields']:
+        if "leader" in item:
+            record.leader = str(item["leader"])
+        if "fields" in item:
+            for field_dict in item["fields"]:
                 for tag, value in field_dict.items():
                     if isinstance(value, str):
                         record.add_control_field(tag, value)
                     elif isinstance(value, dict):
-                        ind1 = value.get('ind1', ' ')
-                        ind2 = value.get('ind2', ' ')
+                        ind1 = value.get("ind1", " ")
+                        ind2 = value.get("ind2", " ")
                         subfields = []
-                        for sf_dict in value.get('subfields', []):
+                        for sf_dict in value.get("subfields", []):
                             for code, val in sf_dict.items():
                                 subfields.append(Subfield(code, val))
                         f = Field(tag, ind1, ind2, subfields=subfields)

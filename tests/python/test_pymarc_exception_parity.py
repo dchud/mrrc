@@ -86,7 +86,9 @@ PYMARC_CLASS_NAMES_MRRC_OMITS = {
 
 
 @pytest.mark.parametrize("name", PYMARC_CLASS_NAMES_MRRC_PROVIDES)
-def test_pymarc_compatible_name_is_importable_from_exceptions(name: str) -> None:
+def test_pymarc_compatible_name_is_importable_from_exceptions(
+    name: str,
+) -> None:
     """Every pymarc-shape name a port could catch is importable from
     ``mrrc.exceptions``."""
     assert hasattr(mexc, name), (
@@ -122,7 +124,9 @@ def test_pymarc_compatible_class_is_mrrc_branded(name: str) -> None:
 
 
 @pytest.mark.parametrize("name", PYMARC_CLASS_NAMES_MRRC_PROVIDES)
-def test_pymarc_compatible_name_re_exported_from_top_level_mrrc(name: str) -> None:
+def test_pymarc_compatible_name_re_exported_from_top_level_mrrc(
+    name: str,
+) -> None:
     """The pymarc-compatible names should also be reachable as
     ``mrrc.<Name>`` so ``from pymarc import RecordDirectoryInvalid``
     has a 1:1 ``from mrrc import RecordDirectoryInvalid`` replacement
@@ -130,10 +134,10 @@ def test_pymarc_compatible_name_re_exported_from_top_level_mrrc(name: str) -> No
     # Optional re-export — record this as a documented gap if it
     # surfaces, but don't block on it for the warning case.
     if name == "BadSubfieldCodeWarning" and not hasattr(mrrc, name):
-            pytest.skip(
-                f"{name} not re-exported on top-level mrrc; documented "
-                f"as accessible via mrrc.exceptions"
-            )
+        pytest.skip(
+            f"{name} not re-exported on top-level mrrc; documented "
+            f"as accessible via mrrc.exceptions"
+        )
     assert hasattr(mrrc, name), (
         f"mrrc.{name} not re-exported; pymarc users must change "
         f"`from pymarc import {name}` to "
@@ -165,7 +169,11 @@ def test_specific_class_except_catches_mrrc_raised_exception() -> None:
     catches what mrrc raises on a record with an invalid directory
     tag byte (the E101 non-ASCII-tag fixture)."""
     bad_bytes = (
-        _REPO_ROOT / "tests" / "data" / "error_fixtures" / "e101_non_ascii_tag.bin"
+        _REPO_ROOT
+        / "tests"
+        / "data"
+        / "error_fixtures"
+        / "e101_non_ascii_tag.bin"
     ).read_bytes()
     reader = mrrc.MARCReader(
         bad_bytes, recovery_mode="strict", validation_level="strict_marc"

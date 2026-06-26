@@ -21,6 +21,7 @@ import mrrc
 
 try:
     import pymarc
+
     HAS_PYMARC = True
 except ImportError:
     HAS_PYMARC = False
@@ -34,6 +35,7 @@ requires_pymarc = pytest.mark.skipif(
 # Fixture builders — mrrc-only (no pymarc dependency)
 # ============================================================================
 
+
 def _build_record_with_two_007s_mrrc() -> bytes:
     """Build a MARC record with two 007 fields using mrrc, return as bytes.
 
@@ -44,7 +46,9 @@ def _build_record_with_two_007s_mrrc() -> bytes:
     record.add_field(mrrc.Field("001", data="1118690"))
     record.add_field(mrrc.Field("007", data="cr|nn ||||||aa"))
     record.add_field(mrrc.Field("007", data="fb|a bnnnn"))
-    record.add_field(mrrc.Field("008", data="230327s2023    wau    ef     000 1 eng d"))
+    record.add_field(
+        mrrc.Field("008", data="230327s2023    wau    ef     000 1 eng d")
+    )
     f245 = mrrc.Field("245", "1", "0")
     f245.add_subfield("a", "Test title")
     record.add_field(f245)
@@ -64,7 +68,9 @@ def _build_record_with_repeated_006_007_mrrc() -> bytes:
     record.add_field(mrrc.Field("007", data="cr |||||||||||"))
     record.add_field(mrrc.Field("007", data="sd fsngnnmmned"))
     record.add_field(mrrc.Field("007", data="vf cbahos"))
-    record.add_field(mrrc.Field("008", data="230327s2023    wau    ef     000 1 eng d"))
+    record.add_field(
+        mrrc.Field("008", data="230327s2023    wau    ef     000 1 eng d")
+    )
     f245 = mrrc.Field("245", "1", "0")
     f245.add_subfield("a", "Multi-format item")
     record.add_field(f245)
@@ -78,6 +84,7 @@ def _build_record_with_repeated_006_007_mrrc() -> bytes:
 # ============================================================================
 # Fixture builders — pymarc (for parity tests)
 # ============================================================================
+
 
 def _build_record_with_two_007s_pymarc() -> bytes:
     """Build a MARC record with two 007 fields using pymarc, return as bytes."""
@@ -129,6 +136,7 @@ def _build_record_with_repeated_006_007_pymarc() -> bytes:
 # ============================================================================
 # mrrc-only tests (always run, no pymarc dependency)
 # ============================================================================
+
 
 class TestMrrcRepeatedControlFields:
     """Test that mrrc preserves repeated control fields through parsing."""
@@ -235,6 +243,7 @@ class TestMrrcRepeatedControlFieldRoundTrip:
 # ============================================================================
 # Pymarc parity tests (skipped when pymarc is not installed)
 # ============================================================================
+
 
 @requires_pymarc
 class TestPymarcBaselineRepeatedControlFields:

@@ -98,8 +98,9 @@ exclude = [
 
 [tool.ruff]
 target-version = "py310"
-# Match the repository-wide 100-column convention (CHANGELOG lint).
-line-length = 100
+# PEP 8's 79-column limit for Python. `ruff format` reflows code to fit;
+# CHANGELOG.md keeps its own separate 100-column Markdown lint.
+line-length = 79
 
 [tool.ruff.lint]
 # Defaults cover only E4/E7/E9 + F; select the broader set so the
@@ -115,6 +116,12 @@ select = [
     "SIM", # flake8-simplify
     "RUF", # ruff-specific rules
 ]
+# Line length is owned by the formatter, not the linter. `ruff format`
+# reflows code to the 79-column limit; the only lines it leaves long are
+# docstrings, comments, and atomic string literals it won't break.
+# Enforcing E501 on top would just nag about those with no autofix, so the
+# formatter is the single source of line-length truth.
+ignore = ["E501"]
 # Characters that look like ASCII but are legitimate content in a
 # bibliographic library: en dash and multiplication sign in prose, and
 # the ALA-LC romanization modifier letter (ʻ) in MARC test data.

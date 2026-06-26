@@ -62,8 +62,9 @@ class TestParityRustFileVsPythonFile:
             # Compare marcjson for content parity
             rust_json = self._record_to_comparable(rec_rust)
             py_json = self._record_to_comparable(rec_py)
-            assert rust_json == py_json, \
+            assert rust_json == py_json, (
                 f"Record {i} mismatch: RustFile vs PythonFile"
+            )
 
     def test_parity_multi_records_file_path(self):
         """RustFile vs PythonFile - multi_records.mrc"""
@@ -143,8 +144,9 @@ class TestParityCursorBackendVsRustFile:
         ):
             cursor_json = self._record_to_comparable(rec_cursor)
             rust_json = self._record_to_comparable(rec_rust)
-            assert cursor_json == rust_json, \
+            assert cursor_json == rust_json, (
                 f"Record {i} mismatch: CursorBackend vs RustFile"
+            )
 
     def test_parity_bytearray_vs_file_path(self):
         """CursorBackend (bytearray) vs RustFile (file path)"""
@@ -218,25 +220,33 @@ class TestGILReleaseVerification:
 
         # Test RustFile (file path)
         results["rustfile_count"] = 0
-        thread1 = threading.Thread(target=reader_thread, args=(test_file, "rustfile"))
+        thread1 = threading.Thread(
+            target=reader_thread, args=(test_file, "rustfile")
+        )
         thread1.start()
         thread1.join(timeout=10)
 
         assert not thread1.is_alive(), "RustFile read timed out"
         assert "rustfile_count" in results, "RustFile read did not complete"
-        assert results["rustfile_count"] > 0, "RustFile read returned no records"
+        assert results["rustfile_count"] > 0, (
+            "RustFile read returned no records"
+        )
 
         # Test CursorBackend (in-memory bytes)
         with open(test_file, "rb") as f:
             file_data = f.read()
         results["cursor_count"] = 0
-        thread2 = threading.Thread(target=reader_thread, args=(file_data, "cursor"))
+        thread2 = threading.Thread(
+            target=reader_thread, args=(file_data, "cursor")
+        )
         thread2.start()
         thread2.join(timeout=10)
 
         assert not thread2.is_alive(), "CursorBackend read timed out"
         assert "cursor_count" in results, "CursorBackend read did not complete"
-        assert results["cursor_count"] > 0, "CursorBackend read returned no records"
+        assert results["cursor_count"] > 0, (
+            "CursorBackend read returned no records"
+        )
 
         # Verify no errors occurred
         assert not results["errors"], f"Threading errors: {results['errors']}"
@@ -278,8 +288,9 @@ class TestGILReleaseVerification:
         # Verify all threads got the same record count
         assert not results["errors"], f"Errors occurred: {results['errors']}"
         assert len(results["counts"]) == 3, "Not all threads completed"
-        assert all(c == results["counts"][0] for c in results["counts"]), \
+        assert all(c == results["counts"][0] for c in results["counts"]), (
             f"Different record counts across threads: {results['counts']}"
+        )
 
 
 class TestBackendParityAcceptanceCriteria:
@@ -300,7 +311,9 @@ class TestBackendParityAcceptanceCriteria:
             reader2 = mrrc.MARCReader(f)
             records_py = [json.loads(r.to_marcjson()) for r in reader2]
 
-        assert records_rust == records_py, "RustFile and PythonFile outputs differ"
+        assert records_rust == records_py, (
+            "RustFile and PythonFile outputs differ"
+        )
 
     def test_gate_cursorbackend_equals_rustfile(self):
         """Criterion 2: CursorBackend output identical to RustFile"""
@@ -319,7 +332,9 @@ class TestBackendParityAcceptanceCriteria:
         reader2 = mrrc.MARCReader(test_file)
         records_rust = [json.loads(r.to_marcjson()) for r in reader2]
 
-        assert records_cursor == records_rust, "CursorBackend and RustFile outputs differ"
+        assert records_cursor == records_rust, (
+            "CursorBackend and RustFile outputs differ"
+        )
 
     def test_gate_no_exceptions_or_panics(self):
         """Criterion 3: Clean reading with no exceptions or panics"""

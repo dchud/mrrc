@@ -432,7 +432,9 @@ def reader_record() -> mrrc.Record:
     return record
 
 
-def test_reader_record_handle_write_through(reader_record: mrrc.Record) -> None:
+def test_reader_record_handle_write_through(
+    reader_record: mrrc.Record,
+) -> None:
     reader_record["245"]["a"] = "Revised title /"
     assert reader_record["245"]["a"] == "Revised title /"
 

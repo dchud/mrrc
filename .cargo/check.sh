@@ -61,6 +61,10 @@ echo "=== Clippy check (mrrc-python) ==="
 cargo clippy --package mrrc-python --all-targets -- -D warnings
 
 echo ""
+echo "=== Python format (ruff format --check) ==="
+uv run ruff format --check mrrc/ tests/python/
+
+echo ""
 echo "=== Python lint (ruff) ==="
 uv run ruff check mrrc/ tests/python/
 
