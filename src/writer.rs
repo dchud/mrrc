@@ -44,7 +44,7 @@
 
 use crate::error::{MarcError, Result};
 use crate::formats::FormatWriter;
-use crate::iso2709::{push_zero_padded, validate_directory_tag};
+use crate::iso2709::{check_directory_field_length, push_zero_padded, validate_directory_tag};
 use crate::record::Record;
 use std::io::Write;
 
@@ -176,6 +176,12 @@ impl<W: Write> MarcWriter<W> {
                     validate_directory_tag(tag, record_index, rcn().as_deref())?;
                     let field_data = value.as_bytes();
                     let field_length = field_data.len() + 1; // +1 for terminator
+                    check_directory_field_length(
+                        tag,
+                        field_length,
+                        record_index,
+                        rcn().as_deref(),
+                    )?;
 
                     // Add directory entry
                     directory.extend_from_slice(tag.as_bytes());
@@ -208,6 +214,7 @@ impl<W: Write> MarcWriter<W> {
 
                 data_area.push(FIELD_TERMINATOR);
                 let field_length = data_area.len() - field_start;
+                check_directory_field_length(tag, field_length, record_index, rcn().as_deref())?;
 
                 // Add directory entry
                 directory.extend_from_slice(tag.as_bytes());
@@ -526,5 +533,56 @@ mod tests {
 
         let result = writer.write_record(&record);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_field_exceeding_directory_length_is_rejected() {
+        // The ISO 2709 directory entry stores each field's length in a fixed
+        // 4-digit field (max 9999). A single field whose serialized length
+        // exceeds that cannot be represented; the writer must reject it at
+        // serialize time rather than emit a 13-byte directory entry and a
+        // corrupt directory. The record-level size guard does not catch this
+        // (the whole record is still well under the 99999 leader limit).
+        let mut record = Record::new(make_test_leader());
+        let mut field = Field::new("245".to_string(), '1', '0');
+        // field_length = 2 indicators + (delimiter + code + value) + terminator
+        //              = 2 + (1 + 1 + 9995) + 1 = 10000 > 9999.
+        field.add_subfield('a', "x".repeat(9995));
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        let mut writer = MarcWriter::new(&mut buffer);
+        let err = writer
+            .write_record(&record)
+            .expect_err("field longer than 9999 bytes must be rejected");
+        assert!(
+            matches!(err, MarcError::WriterError { .. }),
+            "expected WriterError, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_field_at_max_directory_length_roundtrips() {
+        use crate::reader::MarcReader;
+        // A field whose serialized length is exactly 9999 (the largest the
+        // 4-digit directory field holds) must still serialize and round-trip:
+        // 2 indicators + (delimiter + code + 9994-byte value) + terminator.
+        let mut record = Record::new(make_test_leader());
+        let mut field = Field::new("245".to_string(), '1', '0');
+        let value = "y".repeat(9994);
+        field.add_subfield('a', value.clone());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = MarcWriter::new(&mut buffer);
+            writer
+                .write_record(&record)
+                .expect("max-length (9999) field must serialize");
+        }
+        let mut reader = MarcReader::new(Cursor::new(buffer));
+        let read = reader.read_record().unwrap().unwrap();
+        let fields = read.get_fields("245").unwrap();
+        assert_eq!(fields[0].get_subfield('a'), Some(value.as_str()));
     }
 }

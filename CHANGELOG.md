@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The binary writers now reject a single field whose serialized length exceeds
+  9999 bytes instead of emitting a corrupt directory. The ISO 2709 directory
+  entry stores field length in a fixed 4-digit field, so an over-long field
+  previously produced a malformed 13-byte entry; it now returns a `WriterError`
+  naming the offending tag. Affects the bibliographic, authority, and holdings
+  writers.
+
 ### Performance
 
 - Binary ISO 2709 writing is roughly 2.8–3.2× faster: the bibliographic

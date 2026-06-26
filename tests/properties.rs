@@ -491,6 +491,58 @@ proptest! {
         prop_assert!(next.is_none(), "expected exactly one record in buffer");
     }
 
+    /// A single field whose serialized length straddles the 9999-byte ISO
+    /// 2709 directory-entry length limit must be handled cleanly: the writer
+    /// either rejects it (`WriterError`) or, when it fits, emits well-formed
+    /// framing that round-trips. It must never emit a corrupt 13-byte
+    /// directory entry. The default generators cap field sizes far below this
+    /// boundary, so this property feeds a value sized around it directly.
+    ///
+    /// For one subfield the field length is `5 + value_len` (2 indicators +
+    /// delimiter + code + value + terminator), so `value_len == 9994` is the
+    /// largest that fits in the 4-digit length field.
+    #[test]
+    fn writer_field_length_boundary(
+        leader in arb_leader(),
+        value_len in 9_990usize..=10_010,
+    ) {
+        let value = "a".repeat(value_len);
+        let mut record = Record::new(leader);
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', value.clone());
+        record.add_field(field);
+
+        let field_length = 5 + value_len;
+
+        let mut buffer = Vec::new();
+        let result = MarcWriter::new(&mut buffer).write_record(&record);
+
+        if field_length > 9_999 {
+            // Over the directory limit: the writer must refuse it rather than
+            // emit a corrupt directory.
+            let err = result.expect_err(
+                "field longer than 9999 bytes must be rejected, not serialized",
+            );
+            prop_assert!(
+                matches!(err, MarcError::WriterError { .. }),
+                "expected WriterError, got {:?}",
+                err
+            );
+        } else {
+            // In range: framing must be well-formed (12-byte directory entries
+            // tiling the data area) and the value must round-trip intact.
+            prop_assert!(result.is_ok(), "in-range field rejected: {:?}", result.err());
+            assert_iso2709_framing(&buffer)?;
+            let mut reader = MarcReader::new(Cursor::new(&buffer));
+            let parsed = reader
+                .read_record()
+                .expect("read should succeed")
+                .expect("should get a record");
+            let fields = parsed.get_fields("245").expect("245 should be present");
+            prop_assert_eq!(fields[0].get_subfield('a'), Some(value.as_str()));
+        }
+    }
+
     /// Serialization should always produce valid bytes (no panic, no error).
     #[test]
     fn serialization_never_panics(record in arb_record()) {

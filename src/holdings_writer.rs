@@ -6,7 +6,7 @@
 
 use crate::error::{MarcError, Result};
 use crate::holdings_record::HoldingsRecord;
-use crate::iso2709::{push_zero_padded, validate_directory_tag};
+use crate::iso2709::{check_directory_field_length, push_zero_padded, validate_directory_tag};
 use std::io::Write;
 
 const FIELD_TERMINATOR: u8 = 0x1E;
@@ -81,6 +81,7 @@ impl<W: Write> HoldingsMarcWriter<W> {
             validate_directory_tag(tag, None, None)?;
             // Write directory entry (tag + length + start position)
             let length = data.len() - start_pos;
+            check_directory_field_length(tag, length, None, None)?;
             directory.extend_from_slice(tag.as_bytes());
             push_zero_padded(directory, length, 4);
             push_zero_padded(directory, start_pos, 5);

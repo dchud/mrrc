@@ -641,6 +641,46 @@ pub fn check_iso2709_size(
     Ok(())
 }
 
+/// ISO 2709 stores each field's length in the directory entry's 4-ASCII-digit
+/// length subfield (bytes 3-6 of the 12-byte entry). A field whose serialized
+/// length exceeds this cannot be represented: writing it would emit a 5-digit
+/// length, producing a 13-byte directory entry and a corrupt directory that
+/// misparses on read-back. The writer must refuse such a field at serialize
+/// time. This bound is fixed by the ISO 2709 directory layout, independent of
+/// the per-record [`ISO2709_MAX_FIELD`] leader limit (a record can stay well
+/// under 99999 bytes while still carrying a single field over 9999).
+pub const ISO2709_MAX_DIRECTORY_FIELD_LEN: usize = 9_999;
+
+/// Reject a single field whose serialized length would overflow the directory
+/// entry's 4-digit length subfield. Shared by the bibliographic, authority,
+/// and holdings writers; the bound is fixed by the ISO 2709 directory layout,
+/// not by writer convention. `field_length` is the field's serialized byte
+/// count including indicators, subfield delimiters/codes, value bytes, and the
+/// trailing field terminator.
+///
+/// # Errors
+///
+/// Returns [`MarcError::WriterError`] (E404) with the documented positional
+/// context (`record_index`, `record_control_number`) and a `message` naming
+/// the offending tag and length.
+pub fn check_directory_field_length(
+    tag: &str,
+    field_length: usize,
+    record_index: Option<usize>,
+    record_control_number: Option<&str>,
+) -> Result<()> {
+    if field_length > ISO2709_MAX_DIRECTORY_FIELD_LEN {
+        return Err(MarcError::WriterError {
+            record_index,
+            record_control_number: record_control_number.map(String::from),
+            message: format!(
+                "Field {tag} length exceeds ISO 2709 directory entry limit ({field_length} bytes; max {ISO2709_MAX_DIRECTORY_FIELD_LEN}); cannot fit into the directory entry's 4-digit length field"
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// How to handle unrecognized bytes encountered while walking subfield
 /// boundaries inside a data field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1092,6 +1132,34 @@ mod tests {
     fn parse_directory_entry_invalid_length() {
         let entry = b"245XX1500042";
         assert!(parse_directory_entry(entry).is_err());
+    }
+
+    #[test]
+    fn check_directory_field_length_accepts_up_to_9999() {
+        assert!(check_directory_field_length("245", 9_999, None, None).is_ok());
+        assert!(check_directory_field_length("245", 1, None, None).is_ok());
+    }
+
+    #[test]
+    fn check_directory_field_length_rejects_over_9999() {
+        let err = check_directory_field_length("245", 10_000, Some(2), Some("ctrl-1"))
+            .expect_err("a field over 9999 bytes must be rejected");
+        match err {
+            MarcError::WriterError {
+                record_index,
+                record_control_number,
+                message,
+            } => {
+                assert_eq!(record_index, Some(2));
+                assert_eq!(record_control_number.as_deref(), Some("ctrl-1"));
+                assert!(message.contains("245"), "message names the tag: {message}");
+                assert!(
+                    message.contains("10000"),
+                    "message names the length: {message}"
+                );
+            },
+            other => panic!("expected WriterError, got {other:?}"),
+        }
     }
 
     #[test]
