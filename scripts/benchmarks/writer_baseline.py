@@ -3,7 +3,7 @@
 Baseline performance measurement for current PyMARCWriter (pre-refactoring).
 
 This script measures current writer performance to establish a baseline for
-comparison after Phase D refactoring. Metrics captured:
+comparison after the writer refactoring. Metrics captured:
 - Write 10K records to BytesIO (Python file object)
 - Write 10K records to temp file
 - Concurrent write (2 threads × 5K records)
@@ -251,7 +251,7 @@ def main():
                     f.write(f"  {key:30s}: {value}\n")
         
         f.write("\n" + "=" * 80 + "\n")
-        f.write("ACCEPTANCE CRITERIA (Phase D.6)\n")
+        f.write("ACCEPTANCE CRITERIA\n")
         f.write("=" * 80 + "\n")
         f.write("RustFile backend:     >= 1.2x faster than baseline\n")
         f.write("PythonFile backend:   >= baseline (no regression)\n")

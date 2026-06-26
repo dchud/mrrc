@@ -34,7 +34,7 @@ Concurrent writes (2 threads × 5K records)
   peak_memory_mb                : 0.0
 
 ================================================================================
-ACCEPTANCE CRITERIA (Phase D.6)
+ACCEPTANCE CRITERIA
 ================================================================================
 RustFile backend:     >= 1.2x faster than baseline
 PythonFile backend:   >= baseline (no regression)
