@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Performance
+
+### Documentation
+
+## [0.9.0] - 2026-06-26
+
+### Breaking
+
+- **Python** — `record.leader` is now a property, not a method (use `record.leader`,
+  not `record.leader()`). `Leader` constructs from a 24-character string or as
+  `Leader()` with properties assigned; the old field keyword arguments
+  (`Leader(record_type=..., ...)`) are removed.
+- **Python** — `Record.get_fields()` returns control fields in record order (was
+  fixed ascending-tag order).
+- **Rust** — `MarcError` and the `PipelineError`, `RecoveryMode`, `ValidationLevel`,
+  `EncodingAnalysis`, `RdfFormat`, and `IndicatorValidation` enums are
+  `#[non_exhaustive]`: exhaustive `match`es need a wildcard arm, and external
+  construction goes through the new `MarcError` constructors.
+- **Rust** — `from_path` constructors now return `MarcReader<BufReader<File>>` (was
+  `MarcReader<File>`).
+- **Rust** — `recovery::try_recover_record` is removed; truncated-record salvage now
+  runs through the ISO 2709 skeleton walk.
+- **Build** — MSRV is now Rust 1.88; both crates use edition 2024.
+
+### Added
+
 - Community files: issue and pull request templates, and a security policy (`SECURITY.md`)
   pointing at GitHub private advisories.
 - `parse_record_from_bytes`: parse one complete MARC record from in-memory bytes with
@@ -40,10 +70,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `copy.deepcopy()` support for `Record`, `Field`, and `Leader`: deep copies are fully
   independent of the original (and of any record), while `copy.copy()` stays shallow, matching
   pymarc. Deep-copying a live field handle yields a detached snapshot of its current data.
-- A reproducible mrrc-vs-pymarc benchmark (`scripts/benchmark_comparison.py`) and published
-  comparison figures (`docs/benchmarks/`): roughly 6–8× pymarc on per-record reads, ~30× on
-  the parallel bulk path, ~1.7× extract, ~7× roundtrip on the reference host. Replaces the
-  prior hedged "needs re-measurement" note.
+- A reproducible three-way benchmark (`scripts/benchmark_comparison.py`, with
+  `examples/benchmark_native.rs` for the native column) and published figures
+  (`docs/benchmarks/`): the Python wrapper reads ~7× pymarc per record, ~30× on the
+  parallel bulk path, ~1.6× extract, and ~6.5× roundtrip, against a native-Rust
+  ceiling of ~9×/~35× on the reference host. Replaces the prior "needs
+  re-measurement" hedge.
 
 ### Changed
 
@@ -87,9 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   alloc+memcpy that every read path paid so that the under-1% of records that error
   could render hex dumps. Error `bytes_near` output is unchanged.
 - Tuned the release profile: fat LTO, `codegen-units = 1`, and debuginfo stripping.
-  Wheels get ~2-3% higher read throughput and a 21% smaller extension binary, and
-  cross-crate inlining is now deterministic, so instruction-count CI benchmarks stop
-  producing phantom swings when unrelated code moves between codegen units.
+  Wheels get ~2-3% higher read throughput and a 21% smaller extension binary.
 - The Python leader surface now matches pymarc: `record.leader` is a property (was a
   method) and assignable from a `Leader` or 24-character string; `Leader` renders and
   compares as its 24-character MARC 21 string (`str()`, `len()`, `==` with str, `repr`)

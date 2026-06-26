@@ -49,7 +49,7 @@ object construction, not a verdict on pymarc — for many Python codebases the
 wrapper's drop-in compatibility with it is the whole point.
 
 Context: Apple M4 (10 cores, 24 GiB), macOS 26.5, Python 3.14, rustc 1.95, a
-**release** build of mrrc 0.8.x, pymarc 5.3.1, over a 2,000-record realistic
+**release** build of mrrc 0.9.0, pymarc 5.3.1, over a 2,000-record realistic
 fixture (`tests/data/fixtures/realistic.mrc`, ~1.1 KB/record). The build profile
 matters — a debug build is several times slower, so a release build
 (`maturin develop --release`, or any published wheel) is required to reproduce

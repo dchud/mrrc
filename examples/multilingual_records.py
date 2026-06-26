@@ -43,11 +43,10 @@ def hebrew_language_record():
     print("=" * 70 + "\n")
     
     # Use UTF-8 for modern systems
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding='a',  # UTF-8
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
+    leader.character_coding = 'a'  # UTF-8
     
     record = Record(leader)
     
@@ -121,8 +120,8 @@ def hebrew_language_record():
     
     print("Original Hebrew Content (880 variants):")
     for field in record.get_fields('880'):
-        a_subfield = field.get_subfield('a')
-        tag_link = field.get_subfield('6')
+        a_subfield = field['a']
+        tag_link = field['6']
         if a_subfield and field.tag == '880':
             print(f"  {a_subfield}")
     print()
@@ -142,11 +141,10 @@ def arabic_language_record():
     print("2. ARABIC-LANGUAGE RESOURCE")
     print("=" * 70 + "\n")
     
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding='a',  # UTF-8
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
+    leader.character_coding = 'a'  # UTF-8
     
     record = Record(leader)
     
@@ -198,7 +196,7 @@ def arabic_language_record():
     print("Script Variants (Arabic original):")
     for field in record.get_fields('880'):
         if field.tag == '880':
-            title_ar = field.get_subfield('a')
+            title_ar = field['a']
             if title_ar:
                 print(f"  {title_ar}")
     print()
@@ -218,11 +216,10 @@ def cyrillic_language_record():
     print("3. CYRILLIC-LANGUAGE RESOURCE (Russian)")
     print("=" * 70 + "\n")
     
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding='a',  # UTF-8
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
+    leader.character_coding = 'a'  # UTF-8
     
     record = Record(leader)
     
@@ -280,7 +277,7 @@ def cyrillic_language_record():
     print("Cyrillic Variants:")
     for field in record.get_fields('880'):
         if field.tag == '880':
-            text_cyrillic = field.get_subfield('a')
+            text_cyrillic = field['a']
             if text_cyrillic:
                 print(f"  {text_cyrillic}")
     print()
@@ -299,11 +296,10 @@ def mixed_language_record():
     print("4. MIXED-LANGUAGE RECORD")
     print("=" * 70 + "\n")
     
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding='a',  # UTF-8
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
+    leader.character_coding = 'a'  # UTF-8
     
     record = Record(leader)
     
@@ -353,10 +349,10 @@ def mixed_language_record():
     print("Language Fields:")
     if '041' in record:
         lang_field = record['041']
-        langs = lang_field.get_subfield_values('a')
+        langs = lang_field.get_subfields('a')
         if langs:
             print(f"  Original languages: {', '.join(langs)}")
-        trans_langs = lang_field.get_subfield_values('d')
+        trans_langs = lang_field.get_subfields('d')
         if trans_langs:
             print(f"  Translations: {', '.join(trans_langs)}")
     print()
