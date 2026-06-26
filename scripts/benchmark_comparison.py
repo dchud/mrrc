@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
-"""Compare wall-clock throughput of mrrc (pymrrc) against pymarc.
+"""Compare wall-clock throughput of pymarc, the mrrc Python wrapper, and mrrc's
+native Rust path over identical fixtures and operations.
 
-This is the Python-to-Python comparison behind any "Nx pymarc" claim: it
-measures the mrrc Python wrapper against a pinned pymarc over identical
-fixtures and operations, and emits a Markdown report carrying the full
-run context that ``docs/benchmarks/results.md`` requires for a citable
-figure.
+This is the harness behind the three-way comparison in
+``docs/benchmarks/results.md``. It measures three columns over the same records:
 
-Absolute Rust-library throughput is a *separate* measurement
-(``cargo bench --bench marc_benchmarks``). Rust-vs-Python is not an
-apples-to-apples comparison, so it is deliberately out of scope here.
+* **pymarc** — the mature pure-Python reference library.
+* **mrrc (Python)** — the wrapper a Python user actually calls: it parses in
+  Rust, then materializes Python ``Record``/``Field`` objects across the PyO3
+  boundary.
+* **mrrc (Rust)** — the native ceiling, measured by ``examples/benchmark_native``
+  (run via ``cargo run --release``). It parses to Rust ``Record``s and stops; it
+  does *not* build Python objects.
+
+The gap between the two mrrc columns is therefore the cost of the Python binding
+(boundary crossings plus object materialization), not a same-task speedup — read
+it as how close the wrapper gets to the native ceiling. Pass ``--no-native`` to
+drop the Rust column where a Rust toolchain is unavailable.
 
 Operations, each applied to every record in the file:
 
@@ -42,6 +49,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import importlib.metadata
+import json
 import os
 import platform
 import statistics
@@ -164,6 +172,53 @@ OPERATIONS = {
 }
 
 
+# --- native (pure-Rust) ceiling -------------------------------------------
+#
+# The native column comes from `examples/benchmark_native`, which mirrors the
+# operations above against the same fixture. It is a separate process built and
+# run by cargo, so the comparison is median-vs-median across processes (each is
+# internally consistent). The Rust example uses the same warm-discard + median
+# protocol and the same --repeat as the Python measurements.
+
+
+def native_measure(
+    path: Path, repeat: int, ops: list[str]
+) -> dict[str, tuple[int, float]]:
+    """Return {op: (count, rec/s)} from the pure-Rust harness, or exit."""
+    cmd = [
+        "cargo",
+        "run",
+        "--release",
+        "--quiet",
+        "--example",
+        "benchmark_native",
+        "--",
+        str(path),
+        "--repeat",
+        str(repeat),
+        "--ops",
+        ",".join(ops),
+        "--json",
+    ]
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    except FileNotFoundError:
+        sys.exit(
+            "cargo not found; the native Rust column needs a Rust toolchain. "
+            "Re-run with --no-native to skip it."
+        )
+    except subprocess.CalledProcessError as exc:
+        sys.exit(
+            f"native harness failed (exit {exc.returncode}):\n{exc.stderr}\n"
+            "Re-run with --no-native to skip the Rust column."
+        )
+    payload = out.stdout.strip().splitlines()
+    if not payload:
+        sys.exit("native harness produced no output")
+    data = json.loads(payload[-1])
+    return {op: (cell["count"], cell["rec_s"]) for op, cell in data.items()}
+
+
 # --- measurement ----------------------------------------------------------
 
 
@@ -277,14 +332,16 @@ def human_size(path: Path) -> str:
     size = path.stat().st_size
     for unit in ("B", "KB", "MB", "GB"):
         if size < 1024 or unit == "GB":
-            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+            return (
+                f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+            )
         size /= 1024
     return f"{size:.1f} GB"
 
 
-def render_markdown(context, fixtures, results, repeat) -> str:
+def render_markdown(context, fixtures, results, repeat, native: bool) -> str:
     lines = [
-        f"## mrrc vs pymarc — {context['Date'][:10]}",
+        f"## pymarc vs mrrc — {context['Date'][:10]}",
         "",
         "**Run context**",
         "",
@@ -296,9 +353,23 @@ def render_markdown(context, fixtures, results, repeat) -> str:
         "host above — a working machine, not a dedicated benchmark rig, so "
         "treat the figures as representative of the relative speedup rather "
         "than a sterile maximum.",
-        "- Comparison is Python-to-Python (mrrc wrapper vs pymarc). Absolute "
-        "Rust throughput is measured separately via "
-        "`cargo bench --bench marc_benchmarks`.",
+    ]
+    if native:
+        lines += [
+            "- Three columns: **pymarc** (pure Python), **mrrc (Python)** (the "
+            "wrapper — parses in Rust, then builds Python objects), and **mrrc "
+            "(Rust)** (the native ceiling — parses to Rust records, no Python "
+            "objects). Both speedups are vs the same pymarc baseline; the gap "
+            "between *Python vs pymarc* and *Rust vs pymarc* is the Python "
+            "binding overhead (how much native headroom the wrapper leaves), "
+            "not extra parsing work.",
+        ]
+    else:
+        lines += [
+            "- Comparison is Python-to-Python (mrrc wrapper vs pymarc). The "
+            "native Rust ceiling is omitted (`--no-native`).",
+        ]
+    lines += [
         "- `read` = per-record iteration (`for r in reader`), the pymarc-shaped "
         "path. `read_bulk` = mrrc's parallel `parse_batch_parallel` vs pymarc's "
         "per-record read — each library's fastest read path.",
@@ -310,20 +381,50 @@ def render_markdown(context, fixtures, results, repeat) -> str:
             f"### {path.name} — {fixture['count']:,} records "
             f"({human_size(path)})",
             "",
-            "| Operation | mrrc (rec/s) | pymarc (rec/s) | speedup |",
-            "|-----------|-------------:|---------------:|--------:|",
         ]
-        for op_name in fixture["ops"]:
-            cell = results[(path, op_name)]
-            speed = (
-                f"{cell['mrrc'] / cell['pymarc']:.2f}x"
-                if cell["pymarc"]
-                else "n/a"
-            )
-            lines.append(
-                f"| {op_name} | {cell['mrrc']:,.0f} | "
-                f"{cell['pymarc']:,.0f} | {speed} |"
-            )
+        if native:
+            lines += [
+                "| Operation | pymarc (rec/s) | mrrc Python (rec/s) | "
+                "mrrc Rust (rec/s) | Python vs pymarc | Rust vs pymarc |",
+                "|-----------|---------------:|--------------------:|"
+                "-----------------:|-----------------:|---------------:|",
+            ]
+            for op_name in fixture["ops"]:
+                cell = results[(path, op_name)]
+                py_speed = (
+                    f"{cell['mrrc'] / cell['pymarc']:.1f}x"
+                    if cell["pymarc"]
+                    else "n/a"
+                )
+                rust_speed = (
+                    f"{cell['native'] / cell['pymarc']:.1f}x"
+                    if cell["pymarc"] and cell["native"]
+                    else "n/a"
+                )
+                native_cell = (
+                    f"{cell['native']:,.0f}" if cell["native"] else "n/a"
+                )
+                lines.append(
+                    f"| {op_name} | {cell['pymarc']:,.0f} | "
+                    f"{cell['mrrc']:,.0f} | {native_cell} | {py_speed} | "
+                    f"{rust_speed} |"
+                )
+        else:
+            lines += [
+                "| Operation | mrrc (rec/s) | pymarc (rec/s) | speedup |",
+                "|-----------|-------------:|---------------:|--------:|",
+            ]
+            for op_name in fixture["ops"]:
+                cell = results[(path, op_name)]
+                speed = (
+                    f"{cell['mrrc'] / cell['pymarc']:.2f}x"
+                    if cell["pymarc"]
+                    else "n/a"
+                )
+                lines.append(
+                    f"| {op_name} | {cell['mrrc']:,.0f} | "
+                    f"{cell['pymarc']:,.0f} | {speed} |"
+                )
         lines.append("")
     return "\n".join(lines)
 
@@ -354,6 +455,11 @@ def main() -> None:
         "discarding it",
     )
     parser.add_argument(
+        "--no-native",
+        action="store_true",
+        help="skip the native Rust ceiling column (no Rust toolchain needed)",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         help="write the Markdown report here (also printed to stdout)",
@@ -374,11 +480,13 @@ def main() -> None:
     for key, value in context.items():
         print(f"  {key}: {value}", file=sys.stderr)
 
+    native_on = not args.no_native
     fixtures = []
     results: dict[tuple[Path, str], dict[str, float]] = {}
     for path in args.files:
         print(f"\n{path} ({human_size(path)})", file=sys.stderr)
         counts: set[int] = set()
+        native = native_measure(path, args.repeat, ops) if native_on else {}
         for op_name in ops:
             mrrc_op, pymarc_op = OPERATIONS[op_name]
             m_count, m_rates = measure(
@@ -390,14 +498,19 @@ def main() -> None:
             counts.update({m_count, p_count})
             m_median = statistics.median(m_rates)
             p_median = statistics.median(p_rates)
+            n_count, n_median = native.get(op_name, (None, None))
+            if n_count is not None:
+                counts.add(n_count)
             results[(path, op_name)] = {
                 "mrrc": m_median,
                 "pymarc": p_median,
+                "native": n_median,
             }
             speed = m_median / p_median if p_median else float("nan")
+            native_str = f"  native {n_median:>12,.0f}" if n_median else ""
             print(
-                f"  {op_name:<10} mrrc {m_median:>12,.0f}  "
-                f"pymarc {p_median:>12,.0f}  ({speed:.2f}x)",
+                f"  {op_name:<10} pymarc {p_median:>12,.0f}  "
+                f"mrrc {m_median:>12,.0f}{native_str}  ({speed:.2f}x)",
                 file=sys.stderr,
             )
             if m_count != p_count:
@@ -407,11 +520,11 @@ def main() -> None:
                     "for this fixture is not apples-to-apples.",
                     file=sys.stderr,
                 )
-        fixtures.append(
-            {"path": path, "count": max(counts), "ops": ops}
-        )
+        fixtures.append({"path": path, "count": max(counts), "ops": ops})
 
-    report = render_markdown(context, fixtures, results, args.repeat)
+    report = render_markdown(
+        context, fixtures, results, args.repeat, native_on
+    )
     print("\n" + report)
     if args.output:
         args.output.write_text(report + "\n")
