@@ -2,8 +2,7 @@
 
 [![Tests](https://github.com/dchud/mrrc/actions/workflows/test.yml/badge.svg)](https://github.com/dchud/mrrc/actions/workflows/test.yml)
 [![Lint](https://github.com/dchud/mrrc/actions/workflows/lint.yml/badge.svg)](https://github.com/dchud/mrrc/actions/workflows/lint.yml)
-[![Build](https://github.com/dchud/mrrc/actions/workflows/build.yml/badge.svg)](https://github.com/dchud/mrrc/actions/workflows/build.yml)
-[![codecov](https://codecov.io/gh/dchud/mrrc/branch/main/graph/badge.svg)](https://codecov.io/gh/dchud/mrrc)
+[![Build](https://github.com/dchud/mrrc/actions/workflows/python-build.yml/badge.svg)](https://github.com/dchud/mrrc/actions/workflows/python-build.yml)
 [![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json?org=dchud&repo=mrrc)](https://codspeed.io/dchud/mrrc)
 
 A Rust library for reading, writing, and manipulating MARC bibliographic records, with Python bindings.
