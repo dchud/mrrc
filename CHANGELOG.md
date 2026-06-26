@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   temporary `Vec` per field and per record, dropping per-record allocations from
   ~68 to ~1. Reading is modestly faster (~10%) from removing a redundant per-field
   tag-string clone in `Record::add_field`.
+- Reading binary MARC is a few percent faster (~5–6% measured): the tag-keyed
+  field maps now hash with `foldhash` instead of the standard library's
+  `SipHash`, dropping cryptographic-hash overhead that was unnecessary for short,
+  trusted MARC tags. Record output and field ordering are unchanged.
 
 ### Documentation
 

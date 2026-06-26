@@ -50,11 +50,21 @@
 
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
+use foldhash::fast::FixedState;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::collections::BTreeMap;
 use std::ops::Index;
+
+/// Insertion-ordered map from a 3-byte MARC tag to its values, used for the
+/// control-field and data-field maps of every record type.
+///
+/// Hashed with `foldhash`'s fixed-seed hasher rather than the default
+/// `SipHash`: MARC tags are short, trusted keys for which a cryptographic hash
+/// is needless overhead. [`IndexMap`] preserves insertion order independent of
+/// the hasher, so record field ordering is unchanged.
+pub type TagIndexMap<V> = IndexMap<String, V, FixedState>;
 
 /// A MARC bibliographic record
 ///
@@ -67,9 +77,9 @@ pub struct Record {
     pub leader: Leader,
     /// Control fields (000-009) - tag -> values, preserves insertion order
     /// Multiple values per tag are supported (e.g., repeated 006/007 fields)
-    pub control_fields: IndexMap<String, Vec<String>>,
+    pub control_fields: TagIndexMap<Vec<String>>,
     /// Data fields (010+) - tag -> fields, preserves insertion order
-    pub fields: IndexMap<String, Vec<Field>>,
+    pub fields: TagIndexMap<Vec<Field>>,
     /// Non-fatal errors accumulated while parsing this record. Always
     /// empty in `RecoveryMode::Strict` (the parser returns `Err` on the
     /// first error before the record is yielded). Populated in
@@ -110,8 +120,8 @@ impl Record {
     pub fn new(leader: Leader) -> Self {
         Record {
             leader,
-            control_fields: IndexMap::new(),
-            fields: IndexMap::new(),
+            control_fields: TagIndexMap::default(),
+            fields: TagIndexMap::default(),
             errors: crate::error::empty_errors_arc(),
         }
     }
@@ -151,8 +161,8 @@ impl Record {
         RecordBuilder {
             record: Record {
                 leader,
-                control_fields: IndexMap::new(),
-                fields: IndexMap::new(),
+                control_fields: TagIndexMap::default(),
+                fields: TagIndexMap::default(),
                 errors: crate::error::empty_errors_arc(),
             },
         }

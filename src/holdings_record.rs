@@ -6,9 +6,8 @@
 
 use crate::leader::Leader;
 use crate::marc_record::MarcRecord;
-use crate::record::Field;
+use crate::record::{Field, TagIndexMap};
 use crate::record_helpers::control_field_char_at;
-use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 /// A MARC Holdings record (Type x/y/v/u, Leader/06)
@@ -21,9 +20,9 @@ pub struct HoldingsRecord {
     pub leader: Leader,
     /// Control fields (000-009) - preserves insertion order
     /// Multiple values per tag are supported (e.g., repeated 006/007 fields)
-    pub control_fields: IndexMap<String, Vec<String>>,
+    pub control_fields: TagIndexMap<Vec<String>>,
     /// Variable fields (010+) - unified storage, preserves insertion order
-    pub fields: IndexMap<String, Vec<Field>>,
+    pub fields: TagIndexMap<Vec<Field>>,
     /// Non-fatal errors accumulated while parsing this record. Always
     /// empty in `RecoveryMode::Strict`. Wrapped in `Arc` so cloning is
     /// cheap. Skipped during serialization.
@@ -95,8 +94,8 @@ impl HoldingsRecord {
     pub fn new(leader: Leader) -> Self {
         HoldingsRecord {
             leader,
-            control_fields: IndexMap::new(),
-            fields: IndexMap::new(),
+            control_fields: TagIndexMap::default(),
+            fields: TagIndexMap::default(),
             errors: crate::error::empty_errors_arc(),
         }
     }

@@ -588,6 +588,7 @@ dependencies = [
  "codspeed-criterion-compat",
  "crossbeam-channel",
  "flate2",
+ "foldhash",
  "indexmap",
  "insta",
  "memchr",
