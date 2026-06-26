@@ -1,8 +1,18 @@
 name: Miri
 
+# Miri is a non-gating canary, not a PR check. The mrrc core crate (the
+# `--lib` target below) is entirely safe Rust — it has no first-party
+# `unsafe`, so Miri's only job here is to catch undefined behaviour in how
+# the crate drives its unsafe *dependencies* (smallvec's `union` storage,
+# memchr in the parser) and in any first-party `unsafe` added to the core
+# later. The genuine first-party `unsafe` lives in the PyO3 bindings
+# (src-python/), which Miri cannot run at all (it can't execute the CPython
+# FFI). Given that narrow, slow-moving value, a full-suite run every night
+# is wasteful, so this runs weekly. Run it on demand (workflow_dispatch)
+# after touching `unsafe` or bumping an unsafe-bearing dependency.
 on:
   schedule:
-    - cron: '0 6 * * *'  # daily at 6am UTC
+    - cron: '0 6 * * 1'  # weekly, Mondays at 6am UTC
   workflow_dispatch:       # allow manual trigger
 
 permissions:
