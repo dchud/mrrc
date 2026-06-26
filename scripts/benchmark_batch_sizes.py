@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
 """
-C.Gate: Benchmark Batch Sizes (10-500 sweep)
+Benchmark batch reading at various batch sizes (10-500 sweep).
 
-Measure the speedup achieved with batch reading at various batch sizes.
-Determines the optimal batch size for GIL amortization.
-
-**REVISED TARGET (Jan 5, 2026):**
-- Original target: ≥1.8x speedup with 2-thread concurrent read
-- Revised target: ≥1.2x speedup (Python file I/O architectural limit)
-
-**Why revised:**
-Python file object's .read() method requires GIL. Phase C batching amortizes GIL
-acquire/release frequency (from N to N/batch_size) but cannot parallelize I/O.
-Parallelism requires Phase H RustFile backend.
+Measures the speedup from batch reading and finds a good batch size for GIL
+amortization. Target: ≥1.2x speedup with a 2-thread concurrent read — the
+practical ceiling for a Python file object, whose .read() holds the GIL.
+Batching amortizes GIL acquire/release (from N to N/batch_size) but cannot
+parallelize the I/O itself; true parallelism needs the RustFile backend.
 
 **Test methodology:**
 1. Sequential baseline: Read 10k records in main thread
@@ -131,9 +125,9 @@ def calculate_speedup(seq_time: float, concurrent_time: float) -> float:
 
 
 def run_benchmark() -> dict:
-    """Run full C.Gate benchmark suite."""
+    """Run the full batch-size benchmark suite."""
     print("=" * 70)
-    print("C.Gate: Batch Size Benchmarking & Speedup Validation")
+    print("Batch Size Benchmarking & Speedup Validation")
     print("=" * 70)
     print()
     
@@ -176,7 +170,7 @@ def run_benchmark() -> dict:
     # Note: Speedup < 1.0 indicates threading overhead > GIL amortization benefit
     # This is expected with Python file I/O, which requires GIL
     if speedup >= 1.2:
-        print("✅ PASS: Speedup ≥ 1.2x (meets revised C.Gate criterion)")
+        print("✅ PASS: Speedup ≥ 1.2x")
     elif speedup >= 0.8:
         print(f"⚠️  ARCHITECTURAL LIMIT: Speedup {speedup:.2f}x (Python file I/O requires GIL)")
         print("    GIL amortization is working (100x reduction in GIL acquire/release)")
@@ -188,7 +182,7 @@ def run_benchmark() -> dict:
     print("📝 ANALYSIS:")
     print("  Batch reading provides GIL amortization (100x reduction in GIL")
     print("  acquire/release frequency). However, Python file I/O requires GIL,")
-    print("  limiting parallelism. For true parallel speedup (≥2.5x), Phase H")
+    print("  limiting parallelism. For true parallel speedup (≥2.5x), the")
     print("  RustFile backend is required.")
     print()
     
@@ -205,19 +199,9 @@ if __name__ == "__main__":
     results = run_benchmark()
     
     print("=" * 70)
-    print("NEXT STEPS:")
+    print("For parallel throughput and a GIL-release check, see")
+    print("scripts/parallel_throughput.py (use --gil-check).")
     print("=" * 70)
-    print()
-    print("1. Run supplementary GIL release validation test:")
-    print("   python scripts/test_gil_release_validation.py")
-    print()
-    print("2. If validation confirms GIL is releasing (event test PASS):")
-    print("   - C.3 and C.4 are complete")
-    print("   - Proceed to Phase H (RustFile backend for parallelism)")
-    print()
-    print("3. Documentation: See README_BEADS_INTEGRATION.md")
-    print("   - Phase C: GIL amortization (100x reduction)")
-    print("   - Phase H: RustFile + Rayon (true parallelism, ≥2.5x target)")
     print()
     
     # Exit with code 0 if GIL amortization working (even if no parallelism)
