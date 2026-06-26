@@ -2,17 +2,17 @@
 
 ## Performance Questions
 
-### Is pymrrc faster than pymarc?
+### Is mrrc faster than pymarc?
 
-Early benchmarking suggested at least a 4x single-threaded speedup over
-pymarc; these benchmarks need to be updated and reconsidered. The mechanism
-behind the speedup is structural: each record is parsed by compiled Rust code
-instead of interpreted Python. To measure the difference on your own workload,
-see [Results](results.md).
+Yes. On a realistic corpus the Python wrapper reads roughly 7× faster than
+pymarc per record, and ~30× through the parallel batch path; the native Rust
+crate is faster still. The speedup is structural: each record is parsed by
+compiled Rust instead of interpreted Python. See [Results](results.md) for the
+full three-way comparison and how to measure it on your own workload.
 
-### Does pymrrc automatically use multiple cores?
+### Does mrrc automatically use multiple cores?
 
-No. By default, pymrrc runs on one thread (like pymarc), but each record
+No. By default, mrrc runs on one thread (like pymarc), but each record
 parses faster because parsing happens in Rust.
 
 To use multiple cores:
@@ -22,7 +22,7 @@ To use multiple cores:
 
 ### Do I need to change my code to get the single-threaded speedup?
 
-No. If upgrading from pymarc, install pymrrc and existing code benefits
+No. If upgrading from pymarc, install mrrc and existing code benefits
 automatically.
 
 ### Do I need to change my code for multi-threading?
@@ -89,13 +89,13 @@ files, use `ProducerConsumerPipeline`.
 
 ## Upgrade Considerations
 
-### When pymrrc provides clear benefit:
+### When mrrc provides clear benefit:
 
 - Processing large files (100k+ records)
 - MARC processing is a bottleneck in your workflow
 - You need multi-threading for parallel file processing
 
-### When pymrrc may not be necessary:
+### When mrrc may not be necessary:
 
 - Pure Python environment required (no C extensions)
 - Deeply integrated custom code with pymarc internals
@@ -129,7 +129,7 @@ Global Interpreter Lock. Python's mechanism to make the interpreter
 thread-safe. Only one thread can execute Python bytecode at a time. When one
 thread releases the GIL, other threads can run.
 
-### Does pymrrc release the GIL?
+### Does mrrc release the GIL?
 
 Yes. During record parsing, the GIL is released via `py.detach()`. This
 happens automatically with every `read_record()` call.
@@ -162,7 +162,7 @@ ThreadPoolExecutor().map(read_all, ["file1.mrc", "file2.mrc", "file3.mrc", "file
 
 ## Performance Tuning
 
-### How can I make pymrrc faster?
+### How can I make mrrc faster?
 
 1. **File path input:** Pass file paths directly instead of file objects
 2. **Multi-threading:** Use `ThreadPoolExecutor` for multiple files,
@@ -176,12 +176,12 @@ Minimally. Throughput stays consistent regardless of record size.
 
 ### Does Python version matter?
 
-Only for availability. pymrrc supports Python 3.10+. Performance is similar
+Only for availability. mrrc supports Python 3.10+. Performance is similar
 across versions.
 
 ### Does OS matter?
 
-Only for binary compatibility. pymrrc provides wheels for Linux, macOS, and
+Only for binary compatibility. mrrc provides wheels for Linux, macOS, and
 Windows. Performance is similar across platforms.
 
 ---

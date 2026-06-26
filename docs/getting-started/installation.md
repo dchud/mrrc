@@ -27,13 +27,13 @@ Pre-built wheels are available for:
 
 | Platform | Architectures |
 |----------|---------------|
-| Linux | x86_64, aarch64 |
+| Linux | x86_64, aarch64, i686 |
 | macOS | x86_64 (Intel), arm64 (Apple Silicon) |
 | Windows | x64 |
 
 ## Rust
 
-**Requirements**: Rust 1.87+ (the crate's declared MSRV, `rust-version` in `Cargo.toml`)
+**Requirements**: Rust 1.88+ (the crate's declared MSRV, `rust-version` in `Cargo.toml`)
 
 Add to your `Cargo.toml`:
 
