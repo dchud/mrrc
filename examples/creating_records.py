@@ -39,11 +39,10 @@ def simple_record():
     print("=" * 70 + "\n")
     
     # Create a leader for a bibliographic record
-    leader = Leader(
-        record_type='a',           # 'a' = language material
-        bibliographic_level='m',   # 'm' = monograph
-        character_coding=' ',      # ' ' = MARC-8, 'a' = UTF-8
-    )
+    leader = Leader()
+    leader.record_type = 'a'           # 'a' = language material
+    leader.bibliographic_level = 'm'   # 'm' = monograph
+    leader.character_coding = ' '      # ' ' = MARC-8, 'a' = UTF-8
 
     # Build record with inline fields using subfields= and indicators= kwargs
     record = Record(leader, fields=[
@@ -70,7 +69,7 @@ def simple_record():
     
     # Display results
     print(f"Record Type:    {record.leader.record_type}")
-    print(f"Control Number: {record.get_control_field('001')}")
+    print(f"Control Number: {record.control_field('001')}")
     print(f"Title:          {record.title}")
     print(f"Author:         {record.author}")
     print(f"Subjects:       {', '.join(record.subjects)}")
@@ -92,11 +91,10 @@ def record_with_complex_fields():
     print("2. RECORD WITH COMPLEX FIELD STRUCTURES")
     print("=" * 70 + "\n")
     
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding='a',  # UTF-8
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
+    leader.character_coding = 'a'  # UTF-8
     
     record = Record(leader)
     
@@ -152,13 +150,13 @@ def record_with_complex_fields():
     # Display results
     print(f"Title:        {record.title}")
     print(f"Author:       {record.author}")
-    print(f"ISBN:         {', '.join(record.isbns())}")
-    
-    if record.publication_info():
-        pub = record.publication_info()
-        print(f"Published:    {pub.date} in {pub.place}")
-        if pub.publisher:
-            print(f"Publisher:    {pub.publisher}")
+    print(f"ISBN:         {', '.join(f['a'] for f in record.get_fields('020') if f['a'])}")
+
+    pub = record.get_field('260')
+    if pub:
+        print(f"Published:    {pub['c']} in {pub['a']}")
+        if pub['b']:
+            print(f"Publisher:    {pub['b']}")
     
     print(f"\nSubjects:")
     for subject in record.subjects:
@@ -180,10 +178,9 @@ def record_with_multiple_entries():
     print("3. RECORD WITH MULTIPLE ENTRIES AND CONTRIBUTORS")
     print("=" * 70 + "\n")
     
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
     
     record = Record(leader)
     
@@ -242,7 +239,7 @@ def record_with_multiple_entries():
     print(f"Main Author:     {record.author}")
     
     print(f"\nAll Authors and Contributors:")
-    all_authors = record.authors()
+    all_authors = [f['a'] for f in record.get_fields('100', '700') if f['a']]
     for author in all_authors:
         print(f"  - {author}")
     
@@ -253,8 +250,8 @@ def record_with_multiple_entries():
     print(f"\nGenre/Form:")
     if '655' in record:
         for field in record.get_fields('655'):
-            if field.get_subfield('a'):
-                print(f"  - {field.get_subfield('a')}")
+            if field['a']:
+                print(f"  - {field['a']}")
     print()
 
 
@@ -275,7 +272,9 @@ def writing_records():
     records = []
     
     for i in range(3):
-        leader = Leader(record_type='a', bibliographic_level='m')
+        leader = Leader()
+        leader.record_type = 'a'
+        leader.bibliographic_level = 'm'
         record = Record(leader)
         
         record.add_control_field('001', f'test{i:05d}')
@@ -334,9 +333,11 @@ def format_conversions():
     print("5. FORMAT CONVERSIONS")
     print("=" * 70 + "\n")
     
-    leader = Leader(record_type='a', bibliographic_level='m')
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
     record = Record(leader)
-    
+
     record.add_control_field('001', 'test123')
     record.add_control_field('008', '200101s2020    xxu||||||||||||||||eng||')
     
@@ -428,7 +429,9 @@ def main():
 
 4. RECOMMENDED PATTERN:
    ```python
-   leader = Leader(record_type='a', bibliographic_level='m')
+   leader = Leader()
+   leader.record_type = 'a'
+   leader.bibliographic_level = 'm'
    record = Record(leader, fields=[
        Field('245', indicators=['1', '0'], subfields=[
            Subfield('a', 'main text'),

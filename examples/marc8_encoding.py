@@ -66,11 +66,10 @@ def detect_encoding_from_leader():
     
     # Example 1: MARC-8 encoded record
     print("Example 1: MARC-8 Encoded Record")
-    leader_marc8 = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding=' ',  # Space = MARC-8
-    )
+    leader_marc8 = Leader()
+    leader_marc8.record_type = 'a'
+    leader_marc8.bibliographic_level = 'm'
+    leader_marc8.character_coding = ' '  # Space = MARC-8
     
     print(f"  Leader position 9: '{leader_marc8.character_coding}'")
     print(f"  Encoding: MARC-8 (escape sequences)")
@@ -79,11 +78,10 @@ def detect_encoding_from_leader():
     
     # Example 2: UTF-8 encoded record
     print("Example 2: UTF-8 Encoded Record")
-    leader_utf8 = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding='a',  # 'a' = UTF-8
-    )
+    leader_utf8 = Leader()
+    leader_utf8.record_type = 'a'
+    leader_utf8.bibliographic_level = 'm'
+    leader_utf8.character_coding = 'a'  # 'a' = UTF-8
     
     print(f"  Leader position 9: '{leader_utf8.character_coding}'")
     print(f"  Encoding: UTF-8")
@@ -100,11 +98,10 @@ def create_utf8_encoded_record():
     print("=" * 70 + "\n")
     
     # Create UTF-8 record
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding='a',  # UTF-8
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
+    leader.character_coding = 'a'  # UTF-8
     
     record = Record(leader)
     
@@ -154,15 +151,15 @@ def create_utf8_encoded_record():
     
     print("Language Information:")
     if '546' in record:
-        note = record['546'].get_subfield('a')
+        note = record['546']['a']
         if note:
             print(f"  {note}")
     print()
     
     print("Variant Forms (880 fields):")
     for field in record.get_fields('880'):
-        variant_a = field.get_subfield('a')
-        link = field.get_subfield('6')
+        variant_a = field['a']
+        link = field['6']
         if variant_a:
             print(f"  Script variant: {variant_a}")
             print(f"  Links to: field {link}")

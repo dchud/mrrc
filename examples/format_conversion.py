@@ -35,11 +35,10 @@ except ImportError:
 
 def create_sample_record():
     """Create a sample record for format conversion demonstrations."""
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding='a',  # UTF-8
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
+    leader.character_coding = 'a'  # UTF-8
     
     record = Record(leader)
     
@@ -112,13 +111,13 @@ def demonstrate_record_structure(record):
     
     print(f"Title:           {record.title}")
     print(f"Author:          {record.author}")
-    print(f"All Authors:     {', '.join(record.authors())}")
-    print(f"ISBN:            {', '.join(record.isbns())}")
+    print(f"All Authors:     {', '.join(f['a'] for f in record.get_fields('100', '700') if f['a'])}")
+    print(f"ISBN:            {', '.join(f['a'] for f in record.get_fields('020') if f['a'])}")
     print(f"Subjects:        {', '.join(record.subjects[:2])}... ({len(record.subjects)} total)")
-    
-    if record.publication_info():
-        pub = record.publication_info()
-        print(f"Published:       {pub.date} by {pub.publisher} in {pub.place}")
+
+    pub = record.get_field('260')
+    if pub:
+        print(f"Published:       {pub['c']} by {pub['b']} in {pub['a']}")
     
     print()
 

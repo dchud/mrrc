@@ -50,21 +50,21 @@ def basic_field_access(record):
     # Get title (245 field, subfield 'a')
     if '245' in record:
         title_field = record['245']
-        if title_field.get_subfield('a'):
-            print(f"Title: {title_field.get_subfield('a')}")
+        if title_field['a']:
+            print(f"Title: {title_field['a']}")
     
     # Get author (100 field, subfield 'a')
     if '100' in record:
         author_field = record['100']
-        if author_field.get_subfield('a'):
-            print(f"Author: {author_field.get_subfield('a')}")
+        if author_field['a']:
+            print(f"Author: {author_field['a']}")
     
     # Get all subject headings (650 fields)
     if '650' in record:
         subjects = record.get_fields('650')
         print(f"\nSubject headings ({len(subjects)} found):")
         for field in subjects:
-            subfield_a = field.get_subfield('a')
+            subfield_a = field['a']
             if subfield_a:
                 print(f"  - {subfield_a}")
     
@@ -101,7 +101,7 @@ def convenience_methods(record):
             print(f"  - {subject}")
 
     # Authors (plural) convenience method
-    authors = record.authors()
+    authors = [f['a'] for f in record.get_fields('100', '700') if f['a']]
     if authors:
         print(f"\nAll authors (via method, {len(authors)} found):")
         for author in authors:
@@ -121,8 +121,8 @@ def working_with_indicators(record):
     # Title field indicators
     if '245' in record:
         title_field = record['245']
-        ind1 = title_field.indicators[0] if title_field.indicators else ' '
-        ind2 = title_field.indicators[1] if len(title_field.indicators) > 1 else ' '
+        ind1 = title_field.indicators[0]
+        ind2 = title_field.indicators[1]
         print(f"245 field indicators: '{ind1}' '{ind2}'")
         print(f"  Indicator 1 (='{ind1}'): Title main entry {'added' if ind1 == '0' else 'traced differently'}")
         print(f"  Indicator 2 (='{ind2}'): {ind2} characters to skip for filing")
@@ -131,7 +131,7 @@ def working_with_indicators(record):
     print("\nSubject field (650) indicators:")
     if '650' in record:
         for i, field in enumerate(record.get_fields('650')[:2]):  # Show first 2
-            ind2 = field.indicators[1] if len(field.indicators) > 1 else ' '
+            ind2 = field.indicators[1]
             source = 'LCSH' if ind2 == '0' else 'Other'
             print(f"  Field {i}: source='{source}'")
     
@@ -155,17 +155,17 @@ def working_with_subfields(record):
     print("\nSubjects with subdivisions:")
     if '650' in record:
         for field in record.get_fields('650'):
-            main = field.get_subfield('a')
+            main = field['a']
             if main:
                 print(f"  {main}")
                 
                 # Check for subdivisions
-                if field.get_subfield('x'):
-                    print(f"    -- {field.get_subfield('x')} (topical)")
-                if field.get_subfield('y'):
-                    print(f"    -- {field.get_subfield('y')} (chronological)")
-                if field.get_subfield('z'):
-                    print(f"    -- {field.get_subfield('z')} (geographic)")
+                if field['x']:
+                    print(f"    -- {field['x']} (topical)")
+                if field['y']:
+                    print(f"    -- {field['y']} (chronological)")
+                if field['z']:
+                    print(f"    -- {field['z']} (geographic)")
     
     print()
 
@@ -201,8 +201,8 @@ def advanced_queries(record):
     # Find fields containing a specific subfield
     print("\nFields with subfield 'e' (relator term):")
     for field in record.fields():
-        if field.get_subfield('e'):
-            print(f"  {field.tag}: {field.get_subfield('a')} -- {field.get_subfield('e')}")
+        if field['e']:
+            print(f"  {field.tag}: {field['a']} -- {field['e']}")
     
     print()
 
@@ -259,11 +259,10 @@ def main():
         # If no test file, create a simple record to demonstrate
         from mrrc import Record, Field, Leader
         
-        leader = Leader(
-            record_type='a',
-            bibliographic_level='m',
-            character_coding=' ',
-        )
+        leader = Leader()
+        leader.record_type = 'a'
+        leader.bibliographic_level = 'm'
+        leader.character_coding = ' '
         
         record = Record(leader)
         record.add_control_field('001', 'ocm12345678')
@@ -306,7 +305,7 @@ def main():
 KEY COMPATIBILITY FEATURES:
 1. Dictionary-style field access: record['245']['a']
 2. Field existence checking: '245' in record
-3. Subfield methods: field.get_subfield('a')
+3. Subfield methods: field['a']
 4. Convenience properties: record.title, record.author
 5. Iterator support: for record in reader:
 6. Indicator access: field.indicators[0]

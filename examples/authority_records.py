@@ -42,11 +42,10 @@ def create_authority_record():
     print("=" * 70 + "\n")
     
     # Authority records use record type 'z'
-    leader = Leader(
-        record_type='z',  # 'z' = Authority data
-        bibliographic_level='a',  # Authority record
-        character_coding=' ',  # MARC-8
-    )
+    leader = Leader()
+    leader.record_type = 'z'  # 'z' = Authority data
+    leader.bibliographic_level = 'a'  # Authority record
+    leader.character_coding = ' '  # MARC-8
     
     record = Record(leader)
     
@@ -90,24 +89,24 @@ def create_authority_record():
     
     # Display the authority record
     print(f"Record Type:        {record.leader.record_type} (Authority)")
-    print(f"Control Number:     {record.get_control_field('001')}")
+    print(f"Control Number:     {record.control_field('001')}")
     print(f"\nAuthorized Heading (100):")
     if '100' in record:
         field = record['100']
-        if field.get_subfield('a'):
-            print(f"  Name: {field.get_subfield('a')}")
-        if field.get_subfield('d'):
-            print(f"  Dates: {field.get_subfield('d')}")
+        if field['a']:
+            print(f"  Name: {field['a']}")
+        if field['d']:
+            print(f"  Dates: {field['d']}")
     
     print(f"\nVariant Names (400 - See from tracings):")
     for field in record.get_fields('400'):
-        name = field.get_subfield('a')
+        name = field['a']
         if name:
             print(f"  - {name}")
     
     print(f"\nRelated Headings (500 - See also tracings):")
     for field in record.get_fields('500'):
-        name = field.get_subfield('a')
+        name = field['a']
         if name:
             print(f"  - {name}")
     
@@ -127,11 +126,10 @@ def create_holdings_record():
     print("=" * 70 + "\n")
     
     # Holdings records use record types 'x', 'y', 'v', or 'u'
-    leader = Leader(
-        record_type='x',  # 'x' = Physical characteristics
-        bibliographic_level='y',  # Analytical or bibliographic
-        character_coding=' ',  # MARC-8
-    )
+    leader = Leader()
+    leader.record_type = 'x'  # 'x' = Physical characteristics
+    leader.bibliographic_level = 'y'  # Analytical or bibliographic
+    leader.character_coding = ' '  # MARC-8
     
     record = Record(leader)
     
@@ -172,17 +170,17 @@ def create_holdings_record():
     
     # Display the holdings record
     print(f"Record Type:        {record.leader.record_type} (Holdings)")
-    print(f"Holdings Control #: {record.get_control_field('001')}")
-    print(f"Bibliographic #:    {record.get_control_field('004')}")
+    print(f"Holdings Control #: {record.control_field('001')}")
+    print(f"Bibliographic #:    {record.control_field('004')}")
     
     print(f"\nLocation and Call Number (852):")
     if '852' in record:
         field = record['852']
-        location = field.get_subfield('b')
+        location = field['b']
         call_num = ''.join([
-            field.get_subfield('h') or '',
-            field.get_subfield('i') or '',
-            field.get_subfield('k') or '',
+            field['h'] or '',
+            field['i'] or '',
+            field['k'] or '',
         ])
         if location:
             print(f"  Location: {location}")
@@ -191,8 +189,8 @@ def create_holdings_record():
     
     print(f"\nItems Held (876):")
     for field in record.get_fields('876'):
-        barcode = field.get_subfield('a')
-        status = field.get_subfield('j')
+        barcode = field['a']
+        status = field['j']
         if barcode:
             print(f"  - Barcode: {barcode} ({status or 'Unknown status'})")
     
@@ -209,11 +207,10 @@ def authority_control_example():
     print("=" * 70 + "\n")
     
     # Create a bibliographic record that uses authorized headings
-    leader = Leader(
-        record_type='a',
-        bibliographic_level='m',
-        character_coding=' ',
-    )
+    leader = Leader()
+    leader.record_type = 'a'
+    leader.bibliographic_level = 'm'
+    leader.character_coding = ' '
     
     record = Record(leader)
     
@@ -259,12 +256,12 @@ def authority_control_example():
     print(f"Author: {record.author}")
     
     print(f"\nAuthority-Controlled Headings:")
-    print(f"  Author authority #: {record['100'].get_subfield('0') if '100' in record else 'N/A'}")
+    print(f"  Author authority #: {record['100']['0'] if '100' in record else 'N/A'}")
     
     print(f"\nSubject Headings (with LCSH authority numbers):")
     for field in record.get_fields('650'):
-        subject = field.get_subfield('a')
-        auth_num = field.get_subfield('0')
+        subject = field['a']
+        auth_num = field['0']
         if subject:
             print(f"  - {subject}")
             if auth_num:
@@ -272,7 +269,7 @@ def authority_control_example():
     
     print(f"\nGeographic Headings:")
     for field in record.get_fields('651'):
-        geogr_name = field.get_subfield('a')
+        geogr_name = field['a']
         if geogr_name:
             print(f"  - {geogr_name}")
     

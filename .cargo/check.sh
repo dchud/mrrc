@@ -132,6 +132,20 @@ if [ "$QUICK" = false ]; then
     uv run python -m pytest tests/python/ -m "not benchmark" -q
 
     echo ""
+    echo "=== Run Python examples ==="
+    # The Rust examples are compiled above, but the Python examples are
+    # dynamic — import/API drift only surfaces at runtime, so a stale example
+    # can ship silently (compiling proves nothing for Python). Run each against
+    # the freshly built extension; none take required arguments. A non-zero
+    # exit fails the check.
+    for example in examples/*.py examples/python/*.py; do
+        [ -f "$example" ] || continue
+        uv run python "$example" > /dev/null \
+            || { echo "ERROR: Python example failed: $example"; exit 1; }
+        echo "  ok: $example"
+    done
+
+    echo ""
     echo "=== Error-code source-of-truth reconciliation ==="
     # Asserts every MarcError code is documented in error-codes.md, has a
     # wired case in error_coverage.toml, and is constructed in production
