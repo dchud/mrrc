@@ -186,10 +186,16 @@ impl Record {
 
     /// Add a data field
     pub fn add_field(&mut self, field: Field) {
-        self.fields
-            .entry(field.tag.clone())
-            .or_default()
-            .push(field);
+        // Look up by the field's own tag before allocating a key clone: the
+        // common read-path case is a tag already present (repeated 6xx/8xx
+        // fields), where `entry(field.tag.clone())` would clone the tag string
+        // on every call only to discard it. Clone only when inserting a new
+        // tag, which genuinely needs an owned key.
+        if let Some(existing) = self.fields.get_mut(&field.tag) {
+            existing.push(field);
+        } else {
+            self.fields.insert(field.tag.clone(), vec![field]);
+        }
     }
 
     /// Get all fields with a given tag
