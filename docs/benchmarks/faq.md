@@ -4,8 +4,8 @@
 
 ### Is mrrc faster than pymarc?
 
-Yes. On a realistic corpus the Python wrapper reads roughly 7× faster than
-pymarc per record, and ~30× through the parallel batch path; the native Rust
+Yes. On a realistic corpus the Python wrapper reads roughly 8× faster than
+pymarc per record, and ~35× through the parallel batch path; the native Rust
 crate is faster still. The speedup is structural: each record is parsed by
 compiled Rust instead of interpreted Python. See [Results](results.md) for the
 full three-way comparison and how to measure it on your own workload.
