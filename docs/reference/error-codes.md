@@ -48,7 +48,7 @@ Two rules, non-negotiable:
 2. **Codes never get renumbered.** URLs that users paste into chat have
    to keep resolving.
 
-See `CONTRIBUTING.md` for the full policy.
+See **Adding a code** below for the procedure when introducing a new code.
 
 ## Code ranges
 
@@ -62,6 +62,20 @@ See `CONTRIBUTING.md` for the full policy.
 | `Wxxx` | Warnings (pymarc parity) |
 
 Each range reserves ~80 slots for future growth.
+
+## Adding a code
+
+- Pick the next available number in the appropriate range (see **Code ranges** above).
+- Add a `## Exxx — \`slug\` { #Exxx }` section to this file with the full entry
+  shape (Context, Applies to, Populates, Common causes, How to recover, Python
+  class).
+- Add the variant's `code()` and `slug()` arms in `src/error.rs`.
+- Add the matching `code` / `slug` class constants on the Python exception class
+  in `mrrc/exceptions.py`.
+- Add the `(class, code, slug)` tuple to `_CODE_TABLE` in
+  `tests/python/test_errors.py` so the unique-codes / unique-slugs assertions
+  catch any duplicates.
+- Add a `CHANGELOG.md` entry under `[Unreleased]` listing the new code.
 
 ---
 
