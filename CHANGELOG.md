@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `ProducerConsumerPipeline` sends parsed records to its consumer one batch per
+  file chunk instead of one record at a time. Its `channel_capacity` argument now
+  counts batches (each one parsed file chunk) rather than records, and defaults
+  to 4; callers that set it explicitly should adjust.
+
 ### Fixed
 
 - The binary writers now reject a single field whose serialized length exceeds
