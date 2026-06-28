@@ -102,7 +102,7 @@ Thread 2: Waiting... → Waiting... → Waiting...
 Result: Threading provides no speedup (1.0x)
 ```
 
-**With GIL Release (pymrrc)**:
+**With GIL Release (mrrc)**:
 ```
 Thread 1: Read (GIL) → Parse (GIL RELEASED) → Convert
 Thread 2:                Read (GIL) → Parse (GIL RELEASED) → Convert

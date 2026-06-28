@@ -309,7 +309,7 @@ impl<R: Read> MarcReader<R> {
 /// buffer is moved into a shared handle that both the parser and the
 /// error-diagnostics context borrow from.
 ///
-/// Each call parses one record with fresh per-record state, exactly like
+/// Each call parses one record with fresh per-record state, like
 /// constructing a [`MarcReader`] over the bytes and reading once — minus
 /// the copies. Use [`MarcReader`] for streams; use this for bytes you
 /// already hold (one record per call).
@@ -318,7 +318,11 @@ impl<R: Read> MarcReader<R> {
 /// attached to the returned record's `errors`, matching
 /// [`MarcReader::read_record`].
 ///
-/// Returns `Ok(None)` for an empty buffer.
+/// An empty buffer returns `Ok(None)`. One deliberate difference from the
+/// streaming reader: a non-empty buffer too short to hold the 24-byte leader
+/// is a `TruncatedRecord` error here (in `Strict` mode), whereas
+/// [`MarcReader`] treats a partial leader at end of input as end of stream
+/// and returns `Ok(None)`.
 ///
 /// # Errors
 ///

@@ -44,20 +44,23 @@ See Also
 - MARCWriter: Low-level writer class
 """
 
-from mrrc import MARCReader, MARCWriter, Record
+from mrrc import MARCReader, MARCWriter
+from mrrc import _wrap_record as _wrap_rust_record
 
 __all__ = ["MARCReader", "MARCWriter", "read", "write"]
 
 
 def _wrap_record(record):
-    """Wrap a raw Rust record in a Python Record if needed."""
+    """Return a Python ``Record`` for ``record``.
+
+    Passes through a record that is already wrapped; otherwise delegates to
+    the shared wrapper helper, which bypasses the ``Record``/``Leader``
+    constructors instead of allocating a throwaway inner object.
+    """
     if hasattr(record, "_sync_leader"):
-        # Already a wrapped Record
+        # Already a wrapped Record.
         return record
-    # Raw Rust record - wrap it
-    wrapper = Record()
-    wrapper._inner = record
-    return wrapper
+    return _wrap_rust_record(record)
 
 
 def read(source):
