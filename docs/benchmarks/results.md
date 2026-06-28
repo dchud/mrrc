@@ -15,10 +15,10 @@ run-to-run on a busy machine.
 
 | Operation | pymarc (rec/s) | mrrc Python (rec/s) | mrrc Rust (rec/s) | Python vs pymarc | Rust vs pymarc |
 |-----------|---------------:|--------------------:|------------------:|-----------------:|---------------:|
-| `read` | ~32k | ~225k | ~289k | **~7×** | **~9×** |
-| `read_bulk` | ~32k | ~977k | ~1.10M | **~31×** | **~35×** |
-| `extract` | ~27k | ~44k | ~255k | **~1.6×** | **~9×** |
-| `roundtrip` | ~21k | ~138k | ~184k | **~6.5×** | **~8.5×** |
+| `read` | ~32k | ~262k | ~302k | **~8×** | **~9.5×** |
+| `read_bulk` | ~31k | ~1.09M | ~1.11M | **~35×** | **~36×** |
+| `extract` | ~27k | ~46k | ~269k | **~1.7×** | **~10×** |
+| `roundtrip` | ~21k | ~190k | ~241k | **~9×** | **~11.5×** |
 
 - `read` — per-record iteration (`for r in reader`), no field access.
 - `read_bulk` — mrrc's parallel `parse_batch_parallel` against pymarc's
@@ -30,17 +30,17 @@ run-to-run on a busy machine.
 do different work.** pymarc and mrrc (Python) both parse and hand back Python
 objects, so *Python vs pymarc* is a like-for-like speedup. mrrc (Rust) parses to
 Rust records and stops — it never builds Python objects — so *Rust vs pymarc* is
-the native ceiling. The distance between the two multipliers (`~7×` vs `~9×` for
+the native ceiling. The distance between the two multipliers (`~8×` vs `~9.5×` for
 `read`) is the cost of the Python binding: crossing the PyO3 boundary and
 materializing `Record`/`Field` objects, not extra parsing work.
 
 That distance is the useful part. For `read`, `read_bulk`, and `roundtrip` the
-two multipliers sit close together — the wrapper captures roughly 75–88% of the
+two multipliers sit close together — the wrapper captures roughly 80–98% of the
 native throughput, because field handles are lazy and the bulk path is a thin
 shim over the same parallel Rust parse, so a Python user gives up little.
 `extract` is the exception: touching every field's value crosses the boundary
-per field, so the wrapper reaches only `~1.6×` against `~9×` native — pure Rust
-pulls roughly 5–6× ahead. If per-field access dominates your workload and you
+per field, so the wrapper reaches only `~1.7×` against `~10×` native — pure Rust
+pulls roughly 6× ahead. If per-field access dominates your workload and you
 need the ceiling, that is the case for reaching for the Rust crate directly.
 
 pymarc remains the reference implementation: mature, flexible, pure Python. The
@@ -49,8 +49,10 @@ object construction, not a verdict on pymarc — for many Python codebases the
 wrapper's drop-in compatibility with it is the whole point.
 
 Context: Apple M4 (10 cores, 24 GiB), macOS 26.5, Python 3.14, rustc 1.95, a
-**release** build of mrrc 0.9.0, pymarc 5.3.1, over a 2,000-record realistic
-fixture (`tests/data/fixtures/realistic.mrc`, ~1.1 KB/record). The build profile
+**release** build of mrrc (0.9.0 plus the unreleased read/write hot-path
+improvements on `main`, re-measured 2026-06-27), pymarc 5.3.1, over a
+2,000-record realistic fixture (`tests/data/fixtures/realistic.mrc`,
+~1.1 KB/record). The build profile
 matters — a debug build is several times slower, so a release build
 (`maturin develop --release`, or any published wheel) is required to reproduce
 these.
