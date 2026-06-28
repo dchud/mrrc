@@ -13,7 +13,7 @@ use pyo3::prelude::*;
 /// Design:
 /// - **Producer:** Background thread reading file chunks, scanning boundaries, parsing in parallel
 /// - **Consumer:** Main thread iterating over parsed records
-/// - **Backpressure:** Channel capacity limits buffer to 1000 records
+/// - **Backpressure:** Channel holds a few parsed batches (each batch is one file chunk)
 ///
 /// # Example
 ///
@@ -51,7 +51,8 @@ impl PyProducerConsumerPipeline {
     ///
     /// * `path` - Path to MARC file
     /// * `buffer_size` - Optional: File I/O buffer size (default: 512 KB)
-    /// * `channel_capacity` - Optional: Channel capacity in records (default: 1000)
+    /// * `channel_capacity` - Optional: Channel capacity in parsed batches, each
+    ///   one file chunk (default: 4)
     ///
     /// # Raises
     ///
@@ -68,7 +69,7 @@ impl PyProducerConsumerPipeline {
     /// pipeline = ProducerConsumerPipeline.from_file(
     ///     "records.mrc",
     ///     buffer_size=1024*1024,  # 1 MB
-    ///     channel_capacity=500    # 500 records
+    ///     channel_capacity=8      # up to 8 parsed batches
     /// )
     /// ```
     #[staticmethod]
@@ -80,7 +81,7 @@ impl PyProducerConsumerPipeline {
     ) -> PyResult<Self> {
         let config = PipelineConfig {
             buffer_size: buffer_size.unwrap_or(512 * 1024),
-            channel_capacity: channel_capacity.unwrap_or(1000),
+            channel_capacity: channel_capacity.unwrap_or(4),
             batch_size: 100, // Fixed at 100 per spec
         };
 
