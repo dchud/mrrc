@@ -1,8 +1,8 @@
 # Contributing to MRRC
 
-The contributor guide lives in [`docs/contributing/`](docs/contributing/index.md)
-(published at <https://dchud.github.io/mrrc/>). Start there. This file covers only
-the essentials GitHub surfaces directly.
+The contributor guide is published at
+<https://dchud.github.io/mrrc/contributing/> (source in `docs/contributing/`).
+Start there. This file covers only the essentials GitHub surfaces directly.
 
 ## Reporting
 
@@ -12,15 +12,16 @@ the essentials GitHub surfaces directly.
 
 ## Where to look
 
-- [Development setup](docs/contributing/development-setup.md) — toolchain, build,
-  tests, IDE.
-- [Testing](docs/contributing/testing.md) — running the suite, fixtures, coverage.
-- [Project layout](docs/contributing/project-layout.md) and
-  [Architecture](docs/contributing/architecture.md) — how the Rust core, PyO3
-  bindings, and Python wrapper fit together.
-- [Release procedure](docs/contributing/release-procedure.md).
-- [Error codes](docs/reference/error-codes.md) — the `Exxx`/`Wxxx` catalog, the
-  stability rules, and how to add a code.
+- [Development setup](https://dchud.github.io/mrrc/contributing/development-setup/)
+  — toolchain, build, tests, code style, IDE.
+- [Testing](https://dchud.github.io/mrrc/contributing/testing/)
+  — running the suite, fixtures, coverage, memory-safety checks.
+- [Project layout](https://dchud.github.io/mrrc/contributing/project-layout/) and
+  [Architecture](https://dchud.github.io/mrrc/contributing/architecture/)
+  — how the Rust core, PyO3 bindings, and Python wrapper fit together.
+- [Release procedure](https://dchud.github.io/mrrc/contributing/release-procedure/).
+- [Error codes](https://dchud.github.io/mrrc/reference/error-codes/)
+  — the `Exxx`/`Wxxx` catalog, the stability rules, and how to add a code.
 
 ## Workflow
 

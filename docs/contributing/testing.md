@@ -149,6 +149,17 @@ def test_read_simple_record():
         assert record.title is not None
 ```
 
+## Memory safety checks
+
+`.cargo/check.sh --memory-checks` runs the library tests under AddressSanitizer
+(ASAN) to catch use-after-free, leaks, heap buffer overflows, and data races. It
+needs a nightly toolchain; known or expected reports are suppressed via
+`.cargo/asan_suppressions.txt`.
+
+Run it after changes to memory-critical code, when updating dependencies, or as
+part of pre-release validation. CI runs the same ASAN pass nightly via
+`.github/workflows/memory-safety.yml`.
+
 ## CI Integration
 
 Tests run automatically on:
