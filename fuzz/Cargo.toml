@@ -10,6 +10,10 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+# Used by write_arbitrary_records to build arbitrary Record values directly
+# from fuzz input (Unstructured). Fuzz-workspace-only — not a dependency of
+# the mrrc crate.
+arbitrary = "1"
 # The JSON readers take a parsed `serde_json::Value`, so the parse_json and
 # parse_marcjson targets parse the raw fuzz bytes into a Value before
 # handing off to mrrc. serde_json is not re-exported from the crate root,
@@ -43,6 +47,13 @@ bench = false
 [[bin]]
 name = "roundtrip_binary"
 path = "fuzz_targets/roundtrip_binary.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "write_arbitrary_records"
+path = "fuzz_targets/write_arbitrary_records.rs"
 test = false
 doc = false
 bench = false
