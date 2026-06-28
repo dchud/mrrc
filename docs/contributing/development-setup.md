@@ -147,6 +147,43 @@ mrrc/
 └── .cargo/                 # Cargo configuration and scripts
 ```
 
+## Code style
+
+- **Formatting:** `cargo fmt`.
+- **Linting:** clippy clean (`cargo clippy --all --all-targets -- -D warnings`); the
+  workspace enables the pedantic group.
+- **Documentation:** every public item carries a doc comment, and public functions
+  include a doc-comment example.
+- **Error handling:** return `Result<T>` and use `?`; avoid `unwrap()`/`expect()` in
+  library code.
+
+### Doc comment template
+
+````rust
+/// Brief one-line description.
+///
+/// More detail: what it does, when to use it, and any notable behavior.
+///
+/// # Examples
+///
+/// ```
+/// # use mrrc::{Record, Leader};
+/// let record = Record::builder(Leader::default()).build();
+/// assert_eq!(record.fields().count(), 0);
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if [condition].
+///
+/// # Panics
+///
+/// Panics if [unlikely condition].
+pub fn my_function() -> Result<()> {
+    // ...
+}
+````
+
 ## Common Tasks
 
 ### Adding a New Feature
