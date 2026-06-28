@@ -34,6 +34,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "parse_record_from_bytes"
+path = "fuzz_targets/parse_record_from_bytes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "roundtrip_binary"
 path = "fuzz_targets/roundtrip_binary.rs"
 test = false
