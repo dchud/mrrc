@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   previously produced a malformed 13-byte entry; it now returns a `WriterError`
   naming the offending tag. Affects the bibliographic, authority, and holdings
   writers.
+- `parse_batch_parallel` (Rust and the Python extension) now returns a
+  `MarcError` instead of panicking when given record boundaries whose
+  `offset + length` exceeds the buffer or overflows `usize`. The function takes
+  caller-supplied boundaries; values from `RecordBoundaryScanner` are always in
+  range, so this only affects callers passing boundaries directly.
 
 ### Performance
 
