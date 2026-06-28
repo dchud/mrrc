@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New cargo-fuzz targets covering the in-memory byte-source parse entry points
+  (`parse_record_from_bytes` / `parse_record_from_shared_bytes`) and the three
+  ISO 2709 writers (`write_arbitrary_records`, over arbitrary records), run
+  nightly alongside the existing binary-MARC targets.
+
 ### Changed
 
 - `ProducerConsumerPipeline` sends parsed records to its consumer one batch per
