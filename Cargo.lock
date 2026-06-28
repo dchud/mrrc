@@ -582,7 +582,7 @@ dependencies = [
 
 [[package]]
 name = "mrrc"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "codspeed-criterion-compat",
@@ -609,7 +609,7 @@ dependencies = [
 
 [[package]]
 name = "mrrc-python"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "mrrc",
  "pyo3",
