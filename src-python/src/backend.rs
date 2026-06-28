@@ -9,6 +9,7 @@ use crate::chunked_py_reader::ChunkedPyFileReader;
 use crate::parse_error::ParseError;
 use mrrc::RecoveryMode;
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 use std::fs::File;
 use std::io::{BufReader, Cursor, Read};
 
@@ -46,7 +47,8 @@ impl RecordByteSource for ReaderBackend {
 ///
 /// Supports 8 input types:
 /// - str, pathlib.Path → `RustFile`
-/// - bytes, bytearray → `CursorBackend`
+/// - bytes → `PyBytesBuffer` (borrowed)
+/// - bytearray → `CursorBackend`
 /// - file object, `BytesIO`, socket.socket → `PythonFile`
 ///
 /// The backend carries the active [`RecoveryMode`] so that short body
@@ -66,8 +68,19 @@ enum BackendKind {
     /// Input: str path or pathlib.Path
     RustFile(BufReader<File>),
 
-    /// In-memory reads from bytes via `std::io::Cursor`
-    /// Input: bytes or bytearray
+    /// Zero-copy in-memory reads from an immutable Python `bytes` object.
+    /// Input: bytes
+    /// Holds the `bytes` alive and slices each record out of its borrowed
+    /// buffer, avoiding a full-dataset copy at reader construction. The
+    /// borrow is taken only while the GIL is held (per-record read phase);
+    /// the per-record bytes are still copied into owned `Vec`s that feed
+    /// the GIL-released parse phase, so parallelism is unchanged. Reports
+    /// the `"cursor"` backend kind for diagnostics, like `CursorBackend`.
+    PyBytesBuffer { obj: Py<PyBytes>, pos: usize },
+
+    /// In-memory reads from an owned byte buffer via `std::io::Cursor`
+    /// Input: bytearray (a mutable buffer, copied to a snapshot at
+    /// construction) and other buffer-like inputs that extract to `Vec<u8>`
     /// Enables thread-safe parallel parsing without Python interaction
     CursorBackend(Cursor<Vec<u8>>),
 
@@ -84,9 +97,10 @@ impl ReaderBackend {
     /// Type detection order:
     /// 1. str → `RustFile`
     /// 2. pathlib.Path → `RustFile`
-    /// 3. bytes/bytearray → `CursorBackend`
-    /// 4. Object with .`read()` method → `PythonFile`
-    /// 5. Unknown type → `TypeError`
+    /// 3. bytes → `PyBytesBuffer` (borrowed, no whole-buffer copy)
+    /// 4. bytearray (and other `Vec<u8>`-extractable buffers) → `CursorBackend`
+    /// 5. Object with .`read()` method → `PythonFile`
+    /// 6. Unknown type → `TypeError`
     ///
     /// # Arguments
     /// * `source` - Python object (str, Path, bytes, bytearray, or file-like)
@@ -163,12 +177,25 @@ impl ReaderBackend {
             };
         }
 
-        // 3. Try bytes/bytearray
+        // 3. Try bytes (immutable): borrow the buffer instead of copying the
+        // whole input into an owned Vec. The data is immutable for the life of
+        // the object, so holding the `Py<PyBytes>` and slicing records out of
+        // its borrowed bytes is sound; each record is still copied per-record
+        // by the read loop.
+        if let Ok(py_bytes) = source.cast::<PyBytes>() {
+            return Ok(BackendKind::PyBytesBuffer {
+                obj: py_bytes.clone().unbind(),
+                pos: 0,
+            });
+        }
+
+        // 4. Try bytearray (and other buffer-like inputs): a bytearray is
+        // mutable, so snapshot it into an owned Vec at construction.
         if let Ok(bytes_data) = source.extract::<Vec<u8>>() {
             return Ok(BackendKind::CursorBackend(Cursor::new(bytes_data)));
         }
 
-        // 4. Try file-like object with .read() method
+        // 5. Try file-like object with .read() method
         let read_method = source.getattr("read");
         if let Ok(method) = read_method
             && method.is_callable()
@@ -180,7 +207,7 @@ impl ReaderBackend {
             )?));
         }
 
-        // 5. Unknown type - fail fast with descriptive error
+        // 6. Unknown type - fail fast with descriptive error
         let type_name = source.get_type().name()?;
         Err(pyo3::exceptions::PyTypeError::new_err(format!(
             "Unsupported input type: {type_name}. Supported types: str (file path), pathlib.Path, \
@@ -194,7 +221,9 @@ impl ReaderBackend {
     pub fn backend_type(&self) -> &'static str {
         match &self.kind {
             BackendKind::RustFile(_) => "rust_file",
-            BackendKind::CursorBackend(_) => "cursor",
+            // Both in-memory byte backends report "cursor"; the borrowed
+            // `bytes` path is an implementation detail of the same kind.
+            BackendKind::PyBytesBuffer { .. } | BackendKind::CursorBackend(_) => "cursor",
             BackendKind::PythonFile(_) => "python_file",
         }
     }
@@ -215,6 +244,23 @@ impl ReaderBackend {
         let recovery_mode = self.recovery_mode;
         match &mut self.kind {
             BackendKind::RustFile(file) => Self::read_record_bytes_from_reader(file, recovery_mode),
+            BackendKind::PyBytesBuffer { obj, pos } => {
+                // The GIL is held in this per-record read phase, so borrowing
+                // the immutable `bytes` buffer is sound. Slice the next record
+                // out of the remaining tail; `read_record_bytes_from_reader`
+                // copies it into an owned Vec (the buffer that later feeds the
+                // GIL-released parse phase). No whole-input copy is taken.
+                let bound = obj.bind(py);
+                let buf = bound.as_bytes();
+                let mut cursor = Cursor::new(&buf[*pos..]);
+                let result = Self::read_record_bytes_from_reader(&mut cursor, recovery_mode);
+                // The cursor advances within a borrowed slice, so its position
+                // is bounded by that slice's length and always fits in usize.
+                let consumed = usize::try_from(cursor.position())
+                    .expect("cursor position is bounded by the borrowed slice length");
+                *pos += consumed;
+                result
+            },
             BackendKind::CursorBackend(cursor) => {
                 Self::read_record_bytes_from_reader(cursor, recovery_mode)
             },

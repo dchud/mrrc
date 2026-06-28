@@ -48,7 +48,7 @@ class TestTypeDetectionSupportedTypes:
             os.unlink(temp_path)
 
     def test_type_bytes_creates_reader(self):
-        """Type 3/8: bytes → CursorBackend"""
+        """Type 3/8: bytes → PyBytesBuffer (borrowed)"""
         data = b""
         reader = mrrc.MARCReader(data)
         assert reader is not None

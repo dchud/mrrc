@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   field maps now hash with `foldhash` instead of the standard library's
   `SipHash`, dropping cryptographic-hash overhead that was unnecessary for short,
   trusted MARC tags. Record output and field ordering are unchanged.
+- Constructing a reader from a Python `bytes` object no longer copies the whole
+  buffer up front: the reader borrows the immutable `bytes` and slices records
+  out of it, avoiding a full-dataset copy at construction for large in-memory
+  inputs. `bytearray` input is unchanged (still snapshotted to an owned buffer).
 
 ### Documentation
 
