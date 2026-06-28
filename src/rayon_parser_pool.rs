@@ -68,13 +68,16 @@ pub fn parse_batch_parallel(
 ) -> Result<Vec<Record>> {
     use rayon::prelude::*;
 
-    // Validate all boundaries are within buffer
+    // Validate all boundaries are within buffer. Use checked_add so an
+    // offset near usize::MAX cannot wrap past the bounds check and panic on
+    // the slice below; an overflowing sum is treated as out of bounds.
     for (offset, length) in record_boundaries {
-        if offset + length > buffer.len() {
+        let exceeds = offset
+            .checked_add(*length)
+            .is_none_or(|end| end > buffer.len());
+        if exceeds {
             return Err(MarcError::invalid_field_msg(format!(
-                "Record boundary ({}, {}) exceeds buffer size {}",
-                offset,
-                length,
+                "Record boundary ({offset}, {length}) exceeds buffer size {}",
                 buffer.len()
             )));
         }
@@ -277,6 +280,24 @@ mod tests {
 
         let result = parse_batch_parallel(&boundaries, &buffer);
         assert!(result.is_err());
+        let err_msg = format!("{}", result.unwrap_err());
+        assert!(err_msg.contains("exceed") || err_msg.contains("bound"));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_parse_batch_parallel_offset_length_overflow_is_error() {
+        let buffer = vec![1, 2, 3];
+        // An offset near usize::MAX makes offset + length wrap. The guard must
+        // reject it cleanly rather than overflowing (debug) or wrapping past
+        // the check and panicking on the slice (release).
+        let boundaries = vec![(usize::MAX, 1)];
+
+        let result = parse_batch_parallel(&boundaries, &buffer);
+        assert!(
+            result.is_err(),
+            "an overflowing boundary must return an error, not panic"
+        );
         let err_msg = format!("{}", result.unwrap_err());
         assert!(err_msg.contains("exceed") || err_msg.contains("bound"));
     }
