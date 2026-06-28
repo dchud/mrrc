@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Performance
+
+### Documentation
+
+## [0.9.1] - 2026-06-28
+
+### Added
+
 - New cargo-fuzz targets covering the in-memory byte-source parse entry points
   (`parse_record_from_bytes` / `parse_record_from_shared_bytes`) and the three
   ISO 2709 writers (`write_arbitrary_records`, over arbitrary records), run
@@ -50,8 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   buffer up front: the reader borrows the immutable `bytes` and slices records
   out of it, avoiding a full-dataset copy at construction for large in-memory
   inputs. `bytearray` input is unchanged (still snapshotted to an owned buffer).
-
-### Documentation
 
 ## [0.9.0] - 2026-06-26
 

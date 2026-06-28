@@ -15,7 +15,7 @@ A Rust library for reading, writing, and manipulating MARC bibliographic records
 - Python bindings with pymarc-compatible API (minor differences documented)
 - Multiple serialization formats: JSON, MARCXML, MARCJSON, CSV, Dublin Core, MODS, BIBFRAME
 - MARC-8 and UTF-8 character encoding support
-- Rust-core parsing with GIL release for multi-threaded Python workloads — roughly 8× pymarc on per-record reads in a recent single-host comparison; see [benchmarks](docs/benchmarks/) for the current three-way figures
+- Rust-core parsing with GIL release for multi-threaded Python workloads — roughly 8× pymarc on per-record reads in a recent single-host comparison; see [benchmarks](https://dchud.github.io/mrrc/benchmarks/) for the current three-way figures
 
 ## Installation
 
@@ -105,7 +105,7 @@ Pre-built Python wheels are available for:
 
 ## Roadmap
 
-Version 0.9.0 is suitable for testing but remains experimental. Before a 1.0 release, we plan to complete:
+Version 0.9.1 is suitable for testing but remains experimental. Before a 1.0 release, we plan to complete:
 
 1. **Real-world data testing** — Validate against large-scale MARC datasets from LOC, Internet Archive, and other sources to discover edge cases
 2. **Code review** — Thorough review of the codebase, particularly the Rust core and `PyO3` bindings
