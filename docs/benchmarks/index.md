@@ -27,10 +27,10 @@ mrrc's performance comes from two design decisions:
 2. **GIL release during parsing** - the Python bindings release the GIL while
    Rust parses, so multi-threaded workloads can parse in parallel
 
-On a realistic corpus the Python wrapper reads roughly 8× faster than pymarc
-per record and ~35× through the parallel batch path, and the native Rust crate
-is faster still. See [Results](results.md) for the full three-way comparison
-and how to benchmark mrrc on your own hardware and data.
+On a realistic corpus the Python wrapper reads substantially faster than pymarc
+— both per record and, further, through the parallel batch path — and the
+native Rust crate is faster still. See [Results](results.md) for the measured
+three-way figures and how to benchmark mrrc on your own hardware and data.
 
 ## Benchmark Infrastructure
 
