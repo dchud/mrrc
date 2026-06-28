@@ -14,6 +14,8 @@ playbook for investigating CI findings.
 |--------|-------------|--------|
 | `parse_record` | `MarcReader::read_record` over the full ISO 2709 reader | Active |
 | `roundtrip_binary` | Parse → serialize → parse-again coupling | Active |
+| `parse_record_from_bytes` | In-memory byte-source entry points (`parse_record_from_bytes` / `parse_record_from_shared_bytes`) | Active |
+| `write_arbitrary_records` | The three ISO 2709 writers over arbitrary records | Active |
 | `error_classification` | Strict-mode reader with per-input behavioral assertions | Active |
 | `recovery_mode_consistency` | Cross-mode behavioral consistency across strict / lenient / permissive | Active |
 | `decode_marc8` | MARC-8 encoding state machine | Active |
@@ -96,6 +98,21 @@ default strict mode (stopping at the first malformed record) and
 this is the only target exercising the salvage path across a stream:
 per-record error accumulation, skip-ahead to the next record boundary,
 and the error-cap bookkeeping.
+
+`parse_record_from_bytes` drives the in-memory byte-source entry points —
+`parse_record_from_bytes` and `parse_record_from_shared_bytes` — across every
+recovery mode and validation level. These run the divergent
+`parse_iso2709_record_from_bytes` path (its own leader-length guard,
+truncated-body copy, and data-area slice) that the reader-driven targets never
+reach; `parse_record_from_shared_bytes` is the production Python read path.
+
+`write_arbitrary_records` is the write-side analogue: it builds arbitrary
+`Record` / `AuthorityRecord` / `HoldingsRecord` values and runs each through its
+ISO 2709 writer, asserting the output is either a clean `WriterError` or parses
+back through the matching reader. Reader-gated targets like `roundtrip_binary`
+only ever see records the reader produced, so they never reach writer behavior
+that manifests only on API-constructed records (the class of bug behind the
+9999-byte directory-entry fix).
 
 ## Installing cargo-fuzz
 

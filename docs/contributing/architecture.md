@@ -254,7 +254,7 @@ for record in pipeline:
 
 **How it works:**
 - Background producer thread reads file in 512 KB chunks
-- Bounded channel provides backpressure (1000 records)
+- Bounded channel provides backpressure (a few parsed batches, one per file chunk)
 - Rayon parses batches in parallel on all CPU cores
 - Producer runs without GIL, eliminating contention
 

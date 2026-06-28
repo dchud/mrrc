@@ -109,7 +109,7 @@ from mrrc import ProducerConsumerPipeline
 pipeline = ProducerConsumerPipeline.from_file(
     'large_file.mrc',
     buffer_size=1024*1024,    # File I/O buffer size (default: 512 KB)
-    channel_capacity=500       # Channel capacity in records (default: 1000)
+    channel_capacity=8         # Parsed batches buffered, one per chunk (default: 4)
 )
 ```
 
@@ -124,14 +124,17 @@ difference on your own files with the timing pattern in the
 ### Memory Considerations
 
 ```python
-# Memory usage = channel_capacity * avg_record_size + buffer_size
-# For 1000 records @ 2KB each + 512KB buffer = ~2.5MB
+# Each channel slot holds one parsed batch — the records from a single
+# buffer_size file chunk — so buffered memory grows with
+# channel_capacity * (records per chunk) + buffer_size. The defaults
+# (channel_capacity=4, buffer_size=512 KB) keep a few chunks in flight.
 
-# Reduce memory for constrained environments
+# Reduce memory for constrained environments: smaller chunks (smaller
+# batches) and fewer batches buffered.
 pipeline = ProducerConsumerPipeline.from_file(
     'large_file.mrc',
-    buffer_size=64*1024,     # 64KB I/O buffer
-    channel_capacity=100      # Smaller channel
+    buffer_size=64*1024,     # 64KB I/O buffer -> smaller chunks -> smaller batches
+    channel_capacity=2       # fewer batches buffered
 )
 ```
 
