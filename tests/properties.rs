@@ -422,6 +422,50 @@ fn assert_iso2709_framing(buffer: &[u8]) -> Result<(), TestCaseError> {
     Ok(())
 }
 
+/// Shared assertions for the field-length boundary properties across all
+/// three writers. A field whose serialized length is over the 9999-byte
+/// directory-entry limit must be rejected (`WriterError`); one in range must
+/// emit well-formed framing and round-trip its value intact. The caller
+/// supplies the write outcome, the emitted bytes, and a `read_back` closure
+/// that parses the bytes with the matching reader and returns the first
+/// subfield 'a' value. (Each record type has its own writer/reader, so the
+/// type-specific setup stays at the call site; only the boundary contract is
+/// shared here — mirroring `assert_iso2709_framing`.)
+///
+/// For one subfield the field length is `5 + value_len` (2 indicators +
+/// delimiter + code + value + terminator), so `value_len == 9994` is the
+/// largest that fits in the 4-digit directory length field.
+fn assert_field_length_boundary(
+    value: &str,
+    write_result: Result<(), MarcError>,
+    buffer: &[u8],
+    read_back: impl FnOnce(&[u8]) -> Option<String>,
+) -> Result<(), TestCaseError> {
+    let field_length = 5 + value.len();
+    if field_length > 9_999 {
+        // Over the directory limit: the writer must refuse it rather than
+        // emit a corrupt 13-byte directory entry.
+        let err = write_result
+            .expect_err("field longer than 9999 bytes must be rejected, not serialized");
+        prop_assert!(
+            matches!(err, MarcError::WriterError { .. }),
+            "expected WriterError, got {:?}",
+            err
+        );
+    } else {
+        // In range: framing must be well-formed and the value round-trip.
+        prop_assert!(
+            write_result.is_ok(),
+            "in-range field rejected: {:?}",
+            write_result.err()
+        );
+        assert_iso2709_framing(buffer)?;
+        let round_tripped = read_back(buffer);
+        prop_assert_eq!(round_tripped.as_deref(), Some(value));
+    }
+    Ok(())
+}
+
 // ============================================================================
 // Property tests
 // ============================================================================
@@ -491,16 +535,12 @@ proptest! {
         prop_assert!(next.is_none(), "expected exactly one record in buffer");
     }
 
-    /// A single field whose serialized length straddles the 9999-byte ISO
-    /// 2709 directory-entry length limit must be handled cleanly: the writer
-    /// either rejects it (`WriterError`) or, when it fits, emits well-formed
-    /// framing that round-trips. It must never emit a corrupt 13-byte
-    /// directory entry. The default generators cap field sizes far below this
-    /// boundary, so this property feeds a value sized around it directly.
-    ///
-    /// For one subfield the field length is `5 + value_len` (2 indicators +
-    /// delimiter + code + value + terminator), so `value_len == 9994` is the
-    /// largest that fits in the 4-digit length field.
+    /// The bibliographic writer must handle a single field whose serialized
+    /// length straddles the 9999-byte ISO 2709 directory-entry length limit:
+    /// reject it when over the limit, round-trip it when in range, never emit
+    /// a corrupt 13-byte directory entry. The default generators cap field
+    /// sizes far below this boundary, so this property feeds a value sized
+    /// around it directly. See `assert_field_length_boundary`.
     #[test]
     fn writer_field_length_boundary(
         leader in arb_leader(),
@@ -512,35 +552,18 @@ proptest! {
         field.add_subfield('a', value.clone());
         record.add_field(field);
 
-        let field_length = 5 + value_len;
-
         let mut buffer = Vec::new();
         let result = MarcWriter::new(&mut buffer).write_record(&record);
 
-        if field_length > 9_999 {
-            // Over the directory limit: the writer must refuse it rather than
-            // emit a corrupt directory.
-            let err = result.expect_err(
-                "field longer than 9999 bytes must be rejected, not serialized",
-            );
-            prop_assert!(
-                matches!(err, MarcError::WriterError { .. }),
-                "expected WriterError, got {:?}",
-                err
-            );
-        } else {
-            // In range: framing must be well-formed (12-byte directory entries
-            // tiling the data area) and the value must round-trip intact.
-            prop_assert!(result.is_ok(), "in-range field rejected: {:?}", result.err());
-            assert_iso2709_framing(&buffer)?;
-            let mut reader = MarcReader::new(Cursor::new(&buffer));
+        assert_field_length_boundary(&value, result, &buffer, |buf| {
+            let mut reader = MarcReader::new(Cursor::new(buf));
             let parsed = reader
                 .read_record()
                 .expect("read should succeed")
                 .expect("should get a record");
             let fields = parsed.get_fields("245").expect("245 should be present");
-            prop_assert_eq!(fields[0].get_subfield('a'), Some(value.as_str()));
-        }
+            fields[0].get_subfield('a').map(String::from)
+        })?;
     }
 
     /// Serialization should always produce valid bytes (no panic, no error).
@@ -1476,5 +1499,62 @@ proptest! {
     fn holdings_writer_emits_valid_iso2709_framing(record in arb_holdings_record()) {
         let buffer = emit_holdings_binary(&record);
         assert_iso2709_framing(&buffer)?;
+    }
+
+    /// The authority writer must handle the 9999-byte directory-entry length
+    /// boundary exactly like the bibliographic writer
+    /// (see `writer_field_length_boundary`), exercising the shared
+    /// directory-length check on the authority path.
+    #[test]
+    fn authority_writer_field_length_boundary(
+        leader in arb_authority_leader(),
+        value_len in 9_990usize..=10_010,
+    ) {
+        let value = "a".repeat(value_len);
+        let mut record = AuthorityRecord::new(leader);
+        let mut field = Field::new("100".to_string(), '1', '0');
+        field.add_subfield('a', value.clone());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        let result = AuthorityMarcWriter::new(&mut buffer).write_record(&record);
+
+        assert_field_length_boundary(&value, result, &buffer, |buf| {
+            let mut reader = AuthorityMarcReader::new(Cursor::new(buf));
+            let parsed = reader
+                .read_record()
+                .expect("read should succeed")
+                .expect("should get a record");
+            let fields = parsed.get_fields("100").expect("100 should be present");
+            fields[0].get_subfield('a').map(String::from)
+        })?;
+    }
+
+    /// The holdings writer must handle the 9999-byte directory-entry length
+    /// boundary the same way (see `writer_field_length_boundary`), exercising
+    /// the shared directory-length check on the holdings path.
+    #[test]
+    fn holdings_writer_field_length_boundary(
+        leader in arb_holdings_leader(),
+        value_len in 9_990usize..=10_010,
+    ) {
+        let value = "a".repeat(value_len);
+        let mut record = HoldingsRecord::new(leader);
+        let mut field = Field::new("852".to_string(), '1', '0');
+        field.add_subfield('a', value.clone());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        let result = HoldingsMarcWriter::new(&mut buffer).write_record(&record);
+
+        assert_field_length_boundary(&value, result, &buffer, |buf| {
+            let mut reader = HoldingsMarcReader::new(Cursor::new(buf));
+            let parsed = reader
+                .read_record()
+                .expect("read should succeed")
+                .expect("should get a record");
+            let fields = parsed.get_fields("852").expect("852 should be present");
+            fields[0].get_subfield('a').map(String::from)
+        })?;
     }
 }
