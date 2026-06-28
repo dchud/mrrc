@@ -179,6 +179,30 @@ writer.write_record(&record)?;
 | `new(writer)` | `MarcWriter<W>` | Create from any `Write` |
 | `write_record(record)` | `Result<()>` | Write a record |
 
+### Parsing a single record from bytes
+
+When you already hold one record's bytes in memory, parse it directly without
+constructing a reader:
+
+```rust
+use mrrc::{parse_record_from_bytes, RecoveryMode, ValidationLevel};
+
+let bytes: Vec<u8> = std::fs::read("one_record.mrc")?;
+let record = parse_record_from_bytes(
+    bytes,
+    RecoveryMode::Strict,
+    ValidationLevel::Structural,
+)?;
+```
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `parse_record_from_bytes(bytes, recovery, validation)` | `Result<Option<Record>>` | Parse one record from an owned `Vec<u8>` |
+| `parse_record_from_shared_bytes(&Arc<Vec<u8>>, recovery, validation)` | `Result<Option<Record>>` | Same, but borrows a shared buffer instead of taking ownership |
+
+Unlike the streaming reader, a non-empty buffer shorter than the 24-byte leader
+is a `TruncatedRecord` error here rather than end-of-stream.
+
 ## Specialized Record Types
 
 ### AuthorityRecord
