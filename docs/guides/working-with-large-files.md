@@ -1,21 +1,24 @@
 # Working with Large Files
 
-This guide covers large file handling and memory optimization for processing MARC collections.
+This guide covers large file handling and memory optimization for processing
+MARC collections.
 
 ## Overview
 
-MARC collections can range from hundreds to millions of records. MRRC provides several strategies for efficient processing:
+MARC collections can range from hundreds to millions of records. MRRC provides
+several strategies for efficient processing:
 
-| Strategy | Memory | Speed | Use Case |
-|----------|--------|-------|----------|
-| **Iterator (default)** | O(1) | Good | Most workloads |
-| **Batch loading** | O(n) | Better | Analytics, sorting |
-| **ProducerConsumerPipeline** | O(buffer) | Best | Large single files |
-| **Parallel file processing** | O(workers) | Best | Multiple files |
+| Strategy                     | Memory     | Speed  | Use Case           |
+| ---------------------------- | ---------- | ------ | ------------------ |
+| **Iterator (default)**       | O(1)       | Good   | Most workloads     |
+| **Batch loading**            | O(n)       | Better | Analytics, sorting |
+| **ProducerConsumerPipeline** | O(buffer)  | Best   | Large single files |
+| **Parallel file processing** | O(workers) | Best   | Multiple files     |
 
 ## Iterator-Based Processing
 
-The default reader processes one record at a time, using constant memory regardless of file size.
+The default reader processes one record at a time, using constant memory
+regardless of file size.
 
 ### Python
 
@@ -44,6 +47,7 @@ while let Some(record) = reader.read_record()? {
 ## When to Load All Records
 
 Sometimes you need all records in memory:
+
 - Sorting by field values
 - Cross-record analysis
 - Building indexes
@@ -85,7 +89,9 @@ let records: Vec<_> = reader
 
 ## ProducerConsumerPipeline (Python)
 
-For maximum throughput when processing a single large file, use the `ProducerConsumerPipeline`. It runs a background producer thread that reads and parses records, while the main thread processes them.
+For maximum throughput when processing a single large file, use the
+`ProducerConsumerPipeline`. It runs a background producer thread that reads and
+parses records, while the main thread processes them.
 
 ### Basic Usage
 
@@ -140,7 +146,8 @@ pipeline = ProducerConsumerPipeline.from_file(
 
 ## Batch Processing
 
-For operations that benefit from batching (database inserts, bulk API calls), process records in chunks.
+For operations that benefit from batching (database inserts, bulk API calls),
+process records in chunks.
 
 ### Python
 
@@ -247,7 +254,8 @@ fn process_files_parallel(paths: &[&str]) -> mrrc::Result<usize> {
 
 ## Record Boundary Scanner (Rust)
 
-For advanced parallel processing within a single file, use the boundary scanner to find record boundaries, then parse sections in parallel.
+For advanced parallel processing within a single file, use the boundary scanner
+to find record boundaries, then parse sections in parallel.
 
 ```rust
 use mrrc::boundary_scanner::RecordBoundaryScanner;
@@ -285,16 +293,16 @@ Different formats have different characteristics for processing large files.
 
 ### Best for Large Files
 
-| Format | Why |
-|--------|-----|
+| Format       | Why                                         |
+| ------------ | ------------------------------------------- |
 | **ISO 2709** | Self-delimiting records, efficient scanning |
 
 ### Requires Buffering
 
-| Format | Why |
-|--------|-----|
-| **JSON** | Must parse complete object |
-| **XML** | DOM parsing common, SAX available |
+| Format   | Why                               |
+| -------- | --------------------------------- |
+| **JSON** | Must parse complete object        |
+| **XML**  | DOM parsing common, SAX available |
 
 ## Memory Profiling
 
@@ -320,6 +328,7 @@ tracemalloc.stop()
 ```
 
 Expected output for streaming:
+
 ```
 Processed 100000 records
 Current memory: 0.5 MB
@@ -327,6 +336,7 @@ Peak memory: 2.1 MB
 ```
 
 If peak memory grows with record count, check for:
+
 - Accumulating records in a list
 - Growing data structures
 - Unclosed file handles
@@ -353,6 +363,7 @@ If peak memory grows with record count, check for:
 ### High Memory Usage
 
 1. Check for list accumulation:
+
    ```python
    # Bad: accumulates all records
    records = [r for r in mrrc.read("file.mrc")]
@@ -363,6 +374,7 @@ If peak memory grows with record count, check for:
    ```
 
 2. Check for closures capturing records:
+
    ```python
    # Bad: closure captures record
    results = []
@@ -373,6 +385,7 @@ If peak memory grows with record count, check for:
 ### Slow Processing
 
 1. Use file paths instead of file objects in Python:
+
    ```python
    # Slower: file object requires GIL for reads
    with open("file.mrc", "rb") as f:
