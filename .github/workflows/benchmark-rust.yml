@@ -56,7 +56,7 @@ jobs:
         run: cargo codspeed build --bench marc_benchmarks --bench error_handling_benchmarks
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v4.17.5
+        uses: CodSpeedHQ/action@v4.17.6
         with:
           run: cargo codspeed run
           mode: simulation
