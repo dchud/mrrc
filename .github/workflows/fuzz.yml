@@ -59,7 +59,7 @@ jobs:
           tool: cargo-fuzz
 
       - name: Cache cargo + fuzz target
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -70,7 +70,7 @@ jobs:
             ${{ runner.os }}-cargo-fuzz-
 
       - name: Cache fuzz corpus
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: fuzz/corpus/${{ matrix.target }}
           # The run-scoped key never matches an existing entry, so every
