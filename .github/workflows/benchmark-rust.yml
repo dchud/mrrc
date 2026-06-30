@@ -37,7 +37,7 @@ jobs:
     # Dependency bumps don't need the CodSpeed perf gate; skip for dependabot.
     if: github.actor != 'dependabot[bot]'
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.0
 
       - name: Setup Rust toolchain
         uses: moonrepo/setup-rust@v1

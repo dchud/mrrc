@@ -48,7 +48,7 @@ jobs:
         target: [parse_record, roundtrip_binary, error_classification, recovery_mode_consistency, parse_json, parse_marcjson, parse_marcxml, parse_mods, decode_marc8, parse_authority, parse_holdings, parse_bibframe, parse_lenient]
 
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.0
 
       - name: Install nightly Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
