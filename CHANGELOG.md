@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+### Security
+
+- Bump quick-xml to 0.41.0, fixing the RUSTSEC-2026-0194/0195 DoS advisories on the MARCXML path.
+
 ### Dependencies
 
 - Bump pytest from 9.1.0 to 9.1.1
