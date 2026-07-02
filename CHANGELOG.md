@@ -17,6 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+### Dependencies
+
+- Bump pytest from 9.1.0 to 9.1.1
+- Bump ruff from 0.15.17 to 0.15.18
+- Bump pymdown-extensions from 10.21.3 to 11.0
+- Bump foldhash from 0.1.5 to 0.2.0
+- Bump CodSpeedHQ/action from 4.17.5 to 4.17.6
+- Bump softprops/action-gh-release from 3.0.0 to 3.0.1
+- Bump actions/checkout from 6.0.3 to 7.0.0
+- Bump actions/cache from 5 to 6.1.0
+
 ## [0.9.1] - 2026-06-28
 
 ### Added
