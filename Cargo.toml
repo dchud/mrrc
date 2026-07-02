@@ -96,7 +96,7 @@ indexmap = { version = "2.2", features = ["serde"] }
 
 # Fast non-cryptographic hasher for the tag-keyed record maps (see
 # `TagIndexMap` in src/record.rs).
-foldhash = "0.1.5"
+foldhash = "0.2.0"
 
 # Error handling
 thiserror = "2.0"
