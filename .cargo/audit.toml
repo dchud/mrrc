@@ -11,4 +11,16 @@ ignore = [
                          # Issue: Creator marked project as unmaintained, but no security vulnerability
                          # Status: Upstream apache/arrow-rs#7598 tracking fix
                          # Resolution: No actual risk; crate is stable and functional
+    "RUSTSEC-2026-0194", # quick-xml quadratic-time duplicate-attribute check (DoS)
+                         # Advisory: https://rustsec.org/advisories/RUSTSEC-2026-0194
+                         # Dependency chain: quick-xml 0.37 -> oxrdfxml -> oxrdfio -> mrrc (transitive, bibframe feature)
+                         # Issue: fixed in quick-xml >=0.41.0; mrrc's direct dep is on 0.41.0, but oxrdfxml still pins 0.37
+                         # Status: tracked in bd-7u63; awaiting an oxrdfxml release built on quick-xml >=0.41
+                         # Resolution: DoS-class, RDF serialization path only; remove when the transitive edge clears
+    "RUSTSEC-2026-0195", # quick-xml unbounded NsReader namespace-decl allocation (DoS)
+                         # Advisory: https://rustsec.org/advisories/RUSTSEC-2026-0195
+                         # Dependency chain: quick-xml 0.37 -> oxrdfxml -> oxrdfio -> mrrc (transitive, bibframe feature)
+                         # Issue: fixed in quick-xml >=0.41.0; mrrc's direct dep is on 0.41.0, but oxrdfxml still pins 0.37
+                         # Status: tracked in bd-7u63; awaiting an oxrdfxml release built on quick-xml >=0.41
+                         # Resolution: DoS-class, RDF serialization path only; remove when the transitive edge clears
 ]
