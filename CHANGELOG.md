@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - Bump quick-xml to 0.41.0, fixing the RUSTSEC-2026-0194/0195 DoS advisories on the MARCXML path.
+- Bump crossbeam-epoch to 0.9.20, fixing the RUSTSEC-2026-0204 invalid-pointer-dereference
+  advisory (reached transitively through rayon).
 
 ### Dependencies
 
