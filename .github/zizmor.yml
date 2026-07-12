@@ -1,0 +1,20 @@
+# zizmor configuration — https://docs.zizmor.sh/configuration/
+#
+# dtolnay/rust-toolchain and taiki-e/install-action encode a parameter in their
+# git ref: @stable/@nightly/@master selects the Rust toolchain, and
+# @<tool-name> (e.g. @cargo-audit) selects the tool to install. Pinning either
+# to a bare commit SHA drops that selection, so they are allowed to keep a ref
+# pin. Every other action must be pinned to a full-length commit SHA.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        dtolnay/rust-toolchain: ref-pin
+        taiki-e/install-action: ref-pin
+        "*": hash-pin
+  superfluous-actions:
+    # softprops/action-gh-release is a deliberate, pinned choice for the
+    # release step; keeping it rather than rewriting it as a `gh release`
+    # script (informational-only finding).
+    ignore:
+      - python-release.yml
