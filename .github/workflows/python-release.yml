@@ -286,6 +286,15 @@ jobs:
     needs: [test-release-wheels, validate-cross-wheels, smoke-test-cross-wheels, test-sdist]
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Publishing waits on a reviewer approving the `publish-to-pypi`
+    # environment. The gate applies to real (tag-push) publishes and to
+    # TestPyPI rehearsals alike, since it sits at the job level. The
+    # environment must exist with a required reviewer in repo settings;
+    # without it GitHub auto-creates an unprotected environment and the
+    # gate does nothing.
+    environment:
+      name: publish-to-pypi
+      url: https://pypi.org/p/mrrc
     permissions:
       id-token: write
     steps:
