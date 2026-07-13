@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   advisory (reached transitively through rayon).
 - Bump anyhow to 1.0.103, resolving the RUSTSEC-2026-0190 unsoundness advisory in
   `Error::downcast_mut()`.
+- Gate PyPI publishing behind a required-reviewer GitHub environment, so a release cannot
+  upload without maintainer approval.
+- Harden the CI and release workflows: pin all third-party actions to commit SHAs, disable
+  git-credential persistence in checkouts, scope job token permissions to least privilege,
+  and add a zizmor workflow-security scan to CI.
 
 ### Dependencies
 

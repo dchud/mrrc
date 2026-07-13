@@ -37,10 +37,12 @@ jobs:
     # Dependency bumps don't need the CodSpeed perf gate; skip for dependabot.
     if: github.actor != 'dependabot[bot]'
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Setup Rust toolchain
-        uses: moonrepo/setup-rust@v1
+        uses: moonrepo/setup-rust@abb2d32350334249b178c401e5ec5836e0cd88d3 # v1.3.0
         with:
           channel: stable
           cache-target: release
@@ -56,7 +58,7 @@ jobs:
         run: cargo codspeed build --bench marc_benchmarks --bench error_handling_benchmarks
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v4.18.1
+        uses: CodSpeedHQ/action@a4a36bb07c0638b0b4ca52bf1f3dad1b4289e52f # v4.18.1
         with:
           run: cargo codspeed run
           mode: simulation
