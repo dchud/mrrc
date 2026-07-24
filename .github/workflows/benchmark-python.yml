@@ -62,7 +62,7 @@ jobs:
           uv pip install --system pytest pytest-benchmark pytest-codspeed
 
       - name: Run benchmarks with Codspeed (1k/10k only)
-        uses: CodSpeedHQ/action@4e969336ab9acd4f6f8d025fdd793292b0835df0 # v4.18.2
+        uses: CodSpeedHQ/action@f99becdce5e5d51fd556489ebef684f4ecfd6286 # v4.18.5
         with:
           # NOTE: Only enabled if CODSPEED_TOKEN is set as a repo secret
           token: ${{ secrets.CODSPEED_TOKEN }}
