@@ -19,11 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Bump quick-xml to 0.41.0, fixing the RUSTSEC-2026-0194/0195 DoS advisories on the MARCXML path.
+- Bump quick-xml to 0.41.0, fixing the RUSTSEC-2026-0194/0195 DoS advisories on the MARCXML
+  read/write path. The BIBFRAME/RDF path is **not** covered: `oxrdfxml` pins `quick-xml ^0.37`
+  and still resolves to the affected 0.37.5. Since `bibframe` is a default feature (and is
+  always enabled in the Python wheel), a default build still contains the affected code on the
+  RDF serialization path. Both advisories are DoS-class.
 - Bump crossbeam-epoch to 0.9.20, fixing the RUSTSEC-2026-0204 invalid-pointer-dereference
   advisory (reached transitively through rayon).
-- Bump anyhow to 1.0.103, resolving the RUSTSEC-2026-0190 unsoundness advisory in
-  `Error::downcast_mut()`.
 - Gate PyPI publishing behind a required-reviewer GitHub environment, so a release cannot
   upload without maintainer approval.
 - Harden the CI and release workflows: pin all third-party actions to commit SHAs, disable
@@ -50,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump astral-sh/setup-uv from 8.2.0 to 8.3.2
 - Bump actions/setup-python from 6.2.0 to 6.3.0
 - Bump docker/setup-qemu-action from 4.1.0 to 4.2.0
+- Bump anyhow from 1.0.102 to 1.0.103 (dev-dependency, used by examples only; picks up the
+  RUSTSEC-2026-0190 `Error::downcast_mut()` unsoundness fix, which does not affect the
+  published library or wheel)
 
 ## [0.9.1] - 2026-06-28
 
