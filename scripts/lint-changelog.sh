@@ -7,7 +7,11 @@
 #        - `### Added — foo` twice (same topic) → fail
 #        - Bare `### Added` mixed with `### Added — <topic>` → fail
 #   2. Keep-a-Changelog ordering. Canonical order:
-#        Breaking, Added, Changed, Deprecated, Removed, Fixed, Security, Dependencies
+#        Breaking, Added, Changed, Deprecated, Removed, Fixed, Performance,
+#        Documentation, Security, Dependencies
+#      Performance and Documentation are mrrc additions to the Keep-a-Changelog
+#      set, placed after Fixed to match the [Unreleased] template in
+#      docs/contributing/release-procedure.md and existing release sections.
 #      Topic-grouped `### Added — <topic>` all rank as Added.
 #   3. Line length. Lines over 100 cols fail (fenced code blocks exempt).
 #   4. Non-canonical heading names. Warns; does not fail.
@@ -29,7 +33,7 @@ if [ -z "$BLOCK" ]; then
   exit 2
 fi
 
-CANONICAL="Breaking Added Changed Deprecated Removed Fixed Security Dependencies"
+CANONICAL="Breaking Added Changed Deprecated Removed Fixed Performance Documentation Security Dependencies"
 fail=0
 
 # 1. Duplicate subsection headings.
