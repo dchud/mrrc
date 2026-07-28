@@ -33,15 +33,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependencies
 
 - Bump pytest from 9.1.0 to 9.1.1
-- Bump ruff from 0.15.17 to 0.15.20
-- Bump pymdown-extensions from 10.21.3 to 11.0
+- Bump ruff from 0.15.17 to 0.15.21
+- Bump pymdown-extensions from 10.21.3 to 11.0.1
 - Bump foldhash from 0.1.5 to 0.2.0
-- Bump CodSpeedHQ/action from 4.17.5 to 4.18.1
-- Bump softprops/action-gh-release from 3.0.0 to 3.0.1
+- Bump CodSpeedHQ/action from 4.17.5 to 4.18.5
+- Bump softprops/action-gh-release from 3.0.0 to 3.0.2
 - Bump actions/checkout from 6.0.3 to 7.0.0
 - Bump actions/cache from 5 to 6.1.0
 - Bump pyright from 1.1.410 to 1.1.411
-- Bump syrupy from 5.3.2 to 5.3.4
+- Bump syrupy from 5.3.2 to 5.5.3
+- Bump regex from 1.12.4 to 1.13.0
+- Bump memchr from 2.8.2 to 2.8.3
+- Bump crossbeam-channel from 0.5.15 to 0.5.16
+- Bump mypy from 2.1.0 to 2.3.0
+- Bump pymarc from 5.3.1 to 5.4.0
+- Bump astral-sh/setup-uv from 8.2.0 to 8.3.2
+- Bump actions/setup-python from 6.2.0 to 6.3.0
+- Bump docker/setup-qemu-action from 4.1.0 to 4.2.0
 
 ## [0.9.1] - 2026-06-28
 
