@@ -669,7 +669,8 @@ class TestLeaderProperties:
         assert leader.record_type == "a"
         assert leader.bibliographic_level == "m"
         assert leader.record_status == "n"
-        assert leader.character_coding == " "
+        # 'a' (Unicode), not blank (MARC-8): mrrc writes field values as UTF-8.
+        assert leader.character_coding == "a"
 
     def test_leader_modification(self):
         """Test modifying leader properties."""
