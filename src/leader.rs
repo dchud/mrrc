@@ -384,6 +384,11 @@ impl Default for Leader {
     /// level `m` (monograph), the standard indicator and subfield-code counts
     /// of 2, and the reserved `4500`. Undetermined positions are left blank.
     ///
+    /// Character coding is `a` (Unicode), not blank (MARC-8), because mrrc
+    /// holds field values as Rust `String`s and [`MarcWriter`] serializes them
+    /// as UTF-8. A blank here would declare an encoding the writer never
+    /// produces.
+    ///
     /// `record_length` and `data_base_address` are zero because neither is
     /// known until the record is serialized; [`MarcWriter`] computes both when
     /// it writes the record. A default leader therefore does not satisfy
@@ -398,7 +403,7 @@ impl Default for Leader {
     /// use mrrc::Leader;
     ///
     /// let leader = Leader::default();
-    /// assert_eq!(leader.to_string(), "00000nam  2200000   4500");
+    /// assert_eq!(leader.to_string(), "00000nam a2200000   4500");
     /// ```
     fn default() -> Self {
         Self {
@@ -407,7 +412,7 @@ impl Default for Leader {
             record_type: 'a',
             bibliographic_level: 'm',
             control_record_type: ' ',
-            character_coding: ' ',
+            character_coding: 'a',
             indicator_count: 2,
             subfield_code_count: 2,
             data_base_address: 0,
@@ -473,7 +478,14 @@ mod tests {
         assert_eq!(leader.indicator_count, 2);
         assert_eq!(leader.subfield_code_count, 2);
         assert_eq!(leader.reserved, "4500");
-        assert_eq!(leader.to_string(), "00000nam  2200000   4500");
+        assert_eq!(leader.to_string(), "00000nam a2200000   4500");
+    }
+
+    /// The writer emits field values as UTF-8 unconditionally, so a default
+    /// leader must declare Unicode rather than MARC-8.
+    #[test]
+    fn test_leader_default_declares_unicode_coding() {
+        assert_eq!(Leader::default().character_coding, 'a');
     }
 
     #[test]
