@@ -88,3 +88,6 @@ tools/
 
 # Project-local scratch directory (use this rather than system /tmp).
 tmp/
+
+# Playwright MCP session data (traces, downloads, browser profile).
+.playwright-mcp/
