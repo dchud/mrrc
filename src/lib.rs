@@ -21,8 +21,9 @@
 //!
 //! ### Reading MARC Records
 //!
-//! ```ignore
+//! ```no_run
 //! use mrrc::MarcReader;
+//! use mrrc::RecordHelpers;
 //! use std::fs::File;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +41,7 @@
 //!
 //! ### Creating and Writing MARC Records
 //!
-//! ```ignore
+//! ```
 //! use mrrc::{MarcWriter, Record, Field, Leader};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -62,8 +63,8 @@
 //!
 //! ### Using Helper Methods
 //!
-//! ```ignore
-//! use mrrc::{Record, Leader, Field};
+//! ```
+//! use mrrc::{Record, Leader, Field, RecordHelpers};
 //!
 //! let mut record = Record::new(Leader::default());
 //!

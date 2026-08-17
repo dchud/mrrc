@@ -16,9 +16,10 @@
 //!
 //! ## Reading Records
 //!
-//! ```ignore
+//! ```no_run
 //! use mrrc::formats::{FormatReader, iso2709::Iso2709Reader};
 //! use std::fs::File;
+//! # use mrrc::RecordHelpers;
 //!
 //! let file = File::open("records.mrc")?;
 //! let mut reader = Iso2709Reader::new(file);
@@ -31,9 +32,11 @@
 //!
 //! ## Writing Records
 //!
-//! ```ignore
+//! ```
 //! use mrrc::formats::{FormatWriter, iso2709::Iso2709Writer};
 //! use mrrc::Record;
+//! # use mrrc::Leader;
+//! # let record = Record::new(Leader::default());
 //!
 //! let mut buffer = Vec::new();
 //! let mut writer = Iso2709Writer::new(&mut buffer);
@@ -45,7 +48,7 @@
 //!
 //! ## Format-Agnostic Processing
 //!
-//! ```ignore
+//! ```
 //! use mrrc::formats::{FormatReader, FormatWriter};
 //!
 //! fn convert<R: FormatReader, W: FormatWriter>(

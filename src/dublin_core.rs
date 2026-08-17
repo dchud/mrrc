@@ -30,7 +30,7 @@
 //! # Examples
 //!
 //! Direct XML conversion (convenience function):
-//! ```ignore
+//! ```
 //! use mrrc::{Record, Field, Leader, dublin_core};
 //!
 //! let mut record = Record::new(Leader::default());
@@ -44,7 +44,7 @@
 //! ```
 //!
 //! Intermediate struct (for programmatic access):
-//! ```ignore
+//! ```
 //! use mrrc::{Record, Field, Leader, dublin_core};
 //!
 //! let mut record = Record::new(Leader::default());
@@ -107,7 +107,7 @@ pub struct DublinCoreRecord {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, dublin_core};
 ///
 /// let mut record = Record::new(Leader::default());
@@ -152,7 +152,7 @@ pub fn record_to_dublin_core(record: &Record) -> Result<DublinCoreRecord> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, dublin_core};
 ///
 /// let mut record = Record::new(Leader::default());

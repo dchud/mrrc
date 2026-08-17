@@ -47,7 +47,7 @@ static LINKAGE_RE: LazyLock<Regex> =
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::field_linkage::LinkageInfo;
 ///
 /// let info = LinkageInfo::parse("100-01").unwrap();
@@ -84,7 +84,8 @@ impl LinkageInfo {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::LinkageInfo;
     /// // Standard linkage (field 100, occurrence 01)
     /// let info = LinkageInfo::parse("100-01").unwrap();
     /// assert_eq!(info.occurrence, "01");
@@ -150,7 +151,8 @@ impl LinkageInfo {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::LinkageInfo;
     /// let info = LinkageInfo::parse("100-01").unwrap();
     /// let occurrence = info.for_reverse_link();
     /// // occurrence = "01"

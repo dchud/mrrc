@@ -9,9 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Leader` now implements `Default`, so `Record::new(Leader::default())` compiles. The defaults
+  match what Python's `mrrc.Leader()` has always produced (`n`/`a`/`m`, indicator and subfield
+  code counts of 2, reserved `4500`), and the Python binding now delegates to it.
+
 ### Changed
 
 ### Fixed
+
+- Compile-check the Rust doc examples: 119 of the 120 previously ignored examples now build
+  under `cargo test --doc`. Several of them documented methods that do not exist or take
+  different arguments than shown; those are corrected.
 
 ### Performance
 

@@ -7,10 +7,10 @@
 //!
 //! # Examples
 //!
-//! ```ignore
-//! use mrrc::{Record, RecordHelpers};
+//! ```
+//! use mrrc::{Leader, Record, RecordHelpers};
 //!
-//! let record = Record::new(leader);
+//! let record = Record::new(Leader::default());
 //! if let Some(title) = record.title() {
 //!     println!("Title: {}", title);
 //! }
@@ -53,7 +53,9 @@ pub trait RecordHelpers: MarcRecord {
     /// Get the main title from field 245, subfield 'a'
     ///
     /// # Examples
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record, RecordHelpers};
+    /// # let record = Record::new(Leader::default());
     /// if let Some(title) = record.title() {
     ///     println!("Title: {}", title);
     /// }
@@ -268,9 +270,13 @@ pub trait RecordHelpers: MarcRecord {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record, RecordHelpers};
+    /// # let record = Record::new(Leader::default());
     /// if let Some(info) = record.publication_info() {
-    ///     println!("Published in {} by {}", info.place.unwrap_or("unknown"), info.publisher.unwrap_or("unknown"));
+    ///     let place = info.place.as_deref().unwrap_or("unknown");
+    ///     let publisher = info.publisher.as_deref().unwrap_or("unknown");
+    ///     println!("Published in {} by {}", place, publisher);
     ///     if let Some(year) = info.publication_year() {
     ///         println!("Year: {}", year);
     ///     }
