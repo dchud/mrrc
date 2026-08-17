@@ -6,7 +6,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```
 //! use mrrc::{Record, Field, Leader, json};
 //!
 //! let mut record = Record::new(Leader::default());
@@ -34,7 +34,7 @@ use serde_json::{Value, json};
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, json};
 ///
 /// let mut record = Record::new(Leader::default());
@@ -98,7 +98,7 @@ pub fn record_to_json(record: &Record) -> Result<Value> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, json};
 ///
 /// let mut record = Record::new(Leader::default());

@@ -15,7 +15,7 @@ use crate::marc_record::MarcRecord;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{GenericRecordBuilder, Record, AuthorityRecord, Leader, Field};
 ///
 /// // Build a bibliographic Record
@@ -40,7 +40,7 @@ impl<T: MarcRecord> GenericRecordBuilder<T> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::{GenericRecordBuilder, Record, Leader};
     ///
     /// let record = Record::new(Leader::default());
@@ -55,7 +55,7 @@ impl<T: MarcRecord> GenericRecordBuilder<T> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::{GenericRecordBuilder, Record, Leader};
     ///
     /// let builder = GenericRecordBuilder::new(Record::new(Leader::default()))
@@ -75,7 +75,7 @@ impl<T: MarcRecord> GenericRecordBuilder<T> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::{GenericRecordBuilder, Record, Leader, Field};
     ///
     /// let field = Field::new("245".to_string(), '1', '0');
@@ -96,7 +96,7 @@ impl<T: MarcRecord> GenericRecordBuilder<T> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::{GenericRecordBuilder, Record, Leader};
     ///
     /// let record = GenericRecordBuilder::new(Record::new(Leader::default()))

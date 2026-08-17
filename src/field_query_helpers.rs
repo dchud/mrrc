@@ -6,18 +6,21 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```
 //! use mrrc::field_query_helpers::FieldQueryHelpers;
+//! # use mrrc::{Leader, Record};
+//! # let record = Record::new(Leader::default());
 //!
 //! // Find subjects with a specific subdivision
 //! for subject in record.subjects_with_subdivision('x', "History") {
-//!     println!("Subject: {}", subject);
+//!     println!("Subject: {:?}", subject);
 //! }
 //!
 //! // Find all ISBNs matching a pattern
-//! for isbn in record.isbns_matching(r"^978-.*") {
-//!     println!("ISBN: {}", isbn);
+//! for isbn in record.isbns_matching(r"^978-.*")? {
+//!     println!("ISBN: {:?}", isbn);
 //! }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
 use crate::field_query::{SubfieldPatternQuery, SubfieldValueQuery};
@@ -43,10 +46,12 @@ pub trait FieldQueryHelpers {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{FieldQueryHelpers, Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// // Find all subjects with "History" subdivision
     /// for subject in record.subjects_with_subdivision('x', "History") {
-    ///     println!("Subject: {}", subject);
+    ///     println!("Subject: {:?}", subject);
     /// }
     /// ```
     fn subjects_with_subdivision(&self, code: char, value: &str) -> Vec<&Field> {
@@ -75,7 +80,9 @@ pub trait FieldQueryHelpers {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{FieldQueryHelpers, Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// // Find all ISBNs starting with 978
     /// if let Ok(isbns) = record.isbns_matching(r"^978-.*") {
     ///     for isbn in isbns {
@@ -99,7 +106,9 @@ pub trait FieldQueryHelpers {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{FieldQueryHelpers, Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// // Find all added entry names (700, 710, 711)
     /// for name in record.names_in_range("700", "711") {
     ///     println!("Name: {:?}", name);
@@ -113,7 +122,9 @@ pub trait FieldQueryHelpers {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{FieldQueryHelpers, Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// for (name, dates) in record.authors_with_dates() {
     ///     println!("{}: {}", name, dates);
     /// }
@@ -128,7 +139,9 @@ pub trait FieldQueryHelpers {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{FieldQueryHelpers, Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// for subject in record.subjects_with_note("Medieval") {
     ///     println!("Subject: {:?}", subject);
     /// }

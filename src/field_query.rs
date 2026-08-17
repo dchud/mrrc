@@ -7,8 +7,10 @@
 //!
 //! ## Query by indicators
 //!
-//! ```ignore
+//! ```
 //! use mrrc::field_query::FieldQuery;
+//! # use mrrc::{Leader, Record};
+//! # let record = Record::new(Leader::default());
 //!
 //! // Find all 650 fields with indicator2 = '0' (LCSH)
 //! for field in record.fields_by_indicator("650", None, Some('0')) {
@@ -18,7 +20,9 @@
 //!
 //! ## Query by tag range
 //!
-//! ```ignore
+//! ```
+//! # use mrrc::{Leader, Record};
+//! # let record = Record::new(Leader::default());
 //! // Find all subject-related fields (600-699)
 //! for field in record.fields_in_range("600", "699") {
 //!     println!("Subject field: {}", field.tag);
@@ -27,13 +31,15 @@
 //!
 //! ## Query with builder pattern
 //!
-//! ```ignore
+//! ```
+//! # use mrrc::{FieldQuery, Leader, Record};
+//! # let record = Record::new(Leader::default());
 //! let query = FieldQuery::new()
 //!     .tag("650")
-//!     .indicator2('0')
+//!     .indicator2(Some('0'))
 //!     .has_subfield('a');
 //!
-//! for field in record.matching_fields(&query) {
+//! for field in record.fields_matching(&query) {
 //!     println!("LCSH heading: {:?}", field);
 //! }
 //! ```
@@ -48,7 +54,9 @@ use regex::Regex;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
+/// # use mrrc::{FieldQuery, Leader, Record};
+/// # let record = Record::new(Leader::default());
 /// let query = FieldQuery::new()
 ///     .tag("650")
 ///     .indicator1(None)  // Match any character
@@ -140,7 +148,8 @@ impl FieldQuery {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::FieldQuery;
     /// // Match all subject fields (600-699)
     /// let query = FieldQuery::new().tag_range("600", "699");
     /// ```
@@ -250,12 +259,16 @@ impl TagRangeQuery {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
+/// # use mrrc::{Leader, Record};
+/// # use mrrc::field_query::SubfieldPatternQuery;
+/// # let record = Record::new(Leader::default());
 /// // Find all ISBNs that start with 978
-/// let query = SubfieldPatternQuery::new("020", 'a', "^978-.*");
+/// let query = SubfieldPatternQuery::new("020", 'a', "^978-.*")?;
 /// for field in record.fields_matching_pattern(&query) {
 ///     println!("ISBN: {:?}", field);
 /// }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone)]
 #[non_exhaustive]
@@ -289,8 +302,10 @@ impl SubfieldPatternQuery {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::field_query::SubfieldPatternQuery;
     /// let query = SubfieldPatternQuery::new("650", 'a', r"^[A-Z]")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn new(
         tag: impl Into<String>,

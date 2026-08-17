@@ -16,7 +16,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```
 //! use mrrc::{Record, Field, Leader, mods};
 //!
 //! let mut record = Record::new(Leader::default());
@@ -55,7 +55,7 @@ use crate::record::{Field, Record};
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, mods};
 ///
 /// let mut record = Record::new(Leader::default());

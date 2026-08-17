@@ -9,7 +9,7 @@
 //!
 //! Create a record with the builder API:
 //!
-//! ```ignore
+//! ```
 //! use mrrc::{Record, Field, Leader};
 //!
 //! let leader = Leader {
@@ -40,7 +40,9 @@
 //!
 //! Iterate over fields:
 //!
-//! ```ignore
+//! ```
+//! # use mrrc::{Leader, Record};
+//! # let record = Record::new(Leader::default());
 //! for field in record.fields_by_tag("650") {
 //!     for value in field.subfields_by_code('a') {
 //!         println!("Subject: {}", value);
@@ -252,7 +254,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// for field in record.fields_by_tag("650") {
     ///     if let Some(subject) = field.get_subfield('a') {
     ///         println!("Subject: {}", subject);
@@ -289,7 +293,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// // Find all 650 fields with indicator2='0' (LCSH)
     /// for field in record.fields_by_indicator("650", None, Some('0')) {
     ///     println!("LCSH: {:?}", field);
@@ -325,7 +331,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// // Find all subject-related fields (600-699)
     /// for field in record.fields_in_range("600", "699") {
     ///     println!("Subject field: {}", field.tag);
@@ -348,7 +356,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// // Find all fields with subfield 'a'
     /// for field in record.fields_with_subfield("650", 'a') {
     ///     println!("Field: {}", field.tag);
@@ -367,7 +377,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// // Find all 650 fields with both 'a' and 'x' subfields
     /// for field in record.fields_with_subfields("650", &['a', 'x']) {
     ///     println!("Subject: {:?}", field);
@@ -386,7 +398,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// use mrrc::FieldQuery;
     ///
     /// let query = FieldQuery::new()
@@ -409,7 +423,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// use mrrc::TagRangeQuery;
     ///
     /// let query = TagRangeQuery {
@@ -440,7 +456,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// use mrrc::field_query::SubfieldPatternQuery;
     ///
     /// // Find all ISBNs starting with 978
@@ -448,6 +466,7 @@ impl Record {
     /// for field in record.fields_matching_pattern(&query) {
     ///     println!("ISBN: {:?}", field);
     /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn fields_matching_pattern<'a>(
         &'a self,
@@ -465,7 +484,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// use mrrc::field_query::SubfieldValueQuery;
     ///
     /// // Find exact match
@@ -511,7 +532,12 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Field, Leader, Record};
+    /// # let mut record = Record::new(Leader::default());
+    /// # let mut heading = Field::new("100".to_string(), '1', ' ');
+    /// # heading.add_subfield('a', "Tolstoy, Leo".to_string());
+    /// # record.add_field(heading);
     /// let field_100 = record.get_field("100").unwrap();
     /// if let Some(field_880) = record.get_linked_field(field_100) {
     ///     println!("Original: {}", field_100.get_subfield('a').unwrap());
@@ -623,7 +649,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// for field_880 in record.get_all_880_fields() {
     ///     println!("880 field: {:?}", field_880);
     /// }
@@ -644,7 +672,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// for (orig, linked_880) in record.get_field_pairs("100") {
     ///     let name = orig.get_subfield('a').unwrap_or("unknown");
     ///     if let Some(field_880) = linked_880 {
@@ -679,7 +709,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let record = Record::new(Leader::default());
     /// let fields = record.find_linked_by_occurrence("01");
     /// // Returns both original field and its 880 counterpart, if both exist
     /// ```
@@ -723,7 +755,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let mut record = Record::new(Leader::default());
     /// for field in record.fields_by_tag_mut("650") {
     ///     field.indicator2 = '0';
     /// }
@@ -747,7 +781,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let mut record = Record::new(Leader::default());
     /// let removed = record.remove_fields_by_tag("852");  // Remove holdings
     /// ```
     pub fn remove_fields_by_tag(&mut self, tag: &str) -> Vec<Field> {
@@ -760,7 +796,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let mut record = Record::new(Leader::default());
     /// let removed = record.remove_fields_where(|field| field.tag == "852");
     /// ```
     pub fn remove_fields_where<F>(&mut self, predicate: F) -> Vec<Field>
@@ -789,7 +827,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let mut record = Record::new(Leader::default());
     /// record.update_fields_where(
     ///     |field| field.tag == "245",
     ///     |field| field.indicator2 = '0'
@@ -813,7 +853,9 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let mut record = Record::new(Leader::default());
     /// // Update all authority codes in 650 fields
     /// record.update_subfield_values("650", 'd', "updated-value");
     /// ```
@@ -833,10 +875,12 @@ impl Record {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::{Leader, Record};
+    /// # let mut record = Record::new(Leader::default());
     /// record.update_subfields_where(
     ///     |field| field.tag == "650",
-    ///     |subfield| subfield.code == 'd',
+    ///     'd',
     ///     "updated-value"
     /// );
     /// ```
@@ -961,7 +1005,12 @@ impl crate::field_query_helpers::FieldQueryHelpers for Record {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
+/// # use mrrc::{Field, Leader, Record};
+/// # let mut record = Record::new(Leader::default());
+/// # let mut title = Field::new("245".to_string(), '1', '0');
+/// # title.add_subfield('a', "The Great Gatsby".to_string());
+/// # record.add_field(title);
 /// let field = &record["245"];
 /// ```
 impl Index<&str> for Record {
@@ -976,7 +1025,7 @@ impl Index<&str> for Record {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Leader, Field};
 ///
 /// let record = Record::builder(Leader::default())
@@ -1092,7 +1141,10 @@ impl Field {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::Field;
+    /// # let mut field = Field::new("245".to_string(), '1', '0');
+    /// # field.add_subfield('a', "The Great Gatsby".to_string());
     /// for subfield in field.subfields() {
     ///     println!("Code: {}, Value: {}", subfield.code, subfield.value);
     /// }
@@ -1105,7 +1157,10 @@ impl Field {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::Field;
+    /// # let mut field = Field::new("100".to_string(), '1', ' ');
+    /// # field.add_subfield('a', "Fitzgerald, F. Scott".to_string());
     /// for value in field.subfields_by_code('a') {
     ///     println!("Author: {}", value);
     /// }
@@ -1124,8 +1179,11 @@ impl Field {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let values = field.get_subfields('a', 'b', 'c');
+    /// ```
+    /// # use mrrc::Field;
+    /// # let mut field = Field::new("245".to_string(), '1', '0');
+    /// # field.add_subfield('a', "The Great Gatsby".to_string());
+    /// let values = field.get_subfields(&['a', 'b', 'c']);
     /// ```
     #[must_use]
     pub fn get_subfields(&self, codes: &[char]) -> Vec<&str> {
@@ -1144,7 +1202,10 @@ impl Field {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::Field;
+    /// # let mut field = Field::new("245".to_string(), '1', '0');
+    /// # field.add_subfield('a', "The Great Gatsby".to_string());
     /// let subfields = field.subfields_as_dict();
     /// for (code, values) in subfields {
     ///     println!("Code {}: {:?}", code, values);
@@ -1168,7 +1229,10 @@ impl Field {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::Field;
+    /// # let mut field = Field::new("245".to_string(), '1', '0');
+    /// # field.add_subfield('a', "The Great Gatsby".to_string());
     /// let value_str = field.value();
     /// ```
     #[must_use]
@@ -1188,7 +1252,11 @@ impl Field {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::Field;
+    /// # let mut field = Field::new("650".to_string(), ' ', '0');
+    /// # field.add_subfield('a', "Subject".to_string());
+    /// # field.add_subfield('x', "Subdivision".to_string());
     /// let formatted = field.format_field();
     /// // For 650 (subject): "Subject -- Subdivision -- Geographic"
     /// ```
@@ -1286,7 +1354,10 @@ impl Field {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use mrrc::Field;
+    /// # let mut field = Field::new("245".to_string(), '1', '0');
+    /// # field.add_subfield('a', "The Great Gatsby".to_string());
     /// field.update_subfield_values('a', "new value");
     /// ```
     pub fn update_subfield_values(&mut self, code: char, new_value: &str) {
@@ -1322,7 +1393,10 @@ impl Field {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
+/// # use mrrc::Field;
+/// # let mut field = Field::new("245".to_string(), '1', '0');
+/// # field.add_subfield('a', "The Great Gatsby".to_string());
 /// let title = &field['a'];
 /// ```
 impl Index<char> for Field {
