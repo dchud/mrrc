@@ -59,7 +59,8 @@ pub const DIRECTORY_ENTRY_LEN: usize = 12;
 ///
 /// A typical reader loop looks like:
 ///
-/// ```ignore
+/// ```no_run
+/// # use mrrc::iso2709::ParseContext;
 /// let mut ctx = ParseContext::new().with_source_name("harvest.mrc");
 /// loop {
 ///     ctx.begin_record();

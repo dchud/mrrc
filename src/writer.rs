@@ -8,7 +8,7 @@
 //!
 //! Writing records to a file:
 //!
-//! ```ignore
+//! ```no_run
 //! use mrrc::{MarcWriter, Record, Field, Leader};
 //! use std::fs::File;
 //!
@@ -28,7 +28,7 @@
 //!
 //! Writing to a buffer:
 //!
-//! ```ignore
+//! ```
 //! use mrrc::{MarcWriter, Record, Leader};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -59,7 +59,7 @@ const RECORD_TERMINATOR: u8 = 0x1D;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{MarcWriter, Record, Leader};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -122,7 +122,7 @@ impl<W: Write> MarcWriter<W> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::{MarcWriter, Record, Field, Leader};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {

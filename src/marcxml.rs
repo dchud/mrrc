@@ -12,7 +12,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```
 //! use mrrc::{Record, Field, Leader, marcxml};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -361,7 +361,7 @@ fn attr_value(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
 /// # use mrrc::{Record, Field, Leader, marcxml};
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let mut record = Record::new(Leader::default());
@@ -448,7 +448,7 @@ pub fn record_to_marcxml(record: &Record) -> Result<String> {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
 /// # use mrrc::marcxml;
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let xml_str = r#"<record><leader>01234nam a2200289 a 4500</leader></record>"#;

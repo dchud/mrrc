@@ -62,7 +62,7 @@ impl RdfFormat {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::bibframe::{BibframeConfig, RdfFormat};
 ///
 /// // Default configuration (blank nodes, JSON-LD output)

@@ -17,31 +17,33 @@
 //!
 //! ## MARC to BIBFRAME
 //!
-//! ```ignore
-//! use mrrc::{MarcReader, bibframe::{marc_to_bibframe, BibframeConfig}};
+//! ```no_run
+//! use mrrc::{MarcReader, bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat}};
 //!
-//! let reader = MarcReader::from_path("records.mrc")?;
-//! for record in reader {
-//!     let graph = marc_to_bibframe(&record?, &BibframeConfig::default())?;
-//!     println!("{}", graph.to_string()?);
+//! let mut reader = MarcReader::from_path("records.mrc")?;
+//! while let Some(record) = reader.read_record()? {
+//!     let graph = marc_to_bibframe(&record, &BibframeConfig::default());
+//!     println!("{}", graph.serialize(RdfFormat::Turtle)?);
 //! }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
 //! ## BIBFRAME to MARC
 //!
-//! ```ignore
+//! ```no_run
 //! use mrrc::bibframe::{bibframe_to_marc, RdfGraph, RdfFormat};
 //!
 //! let rdf_data = std::fs::read_to_string("record.rdf")?;
 //! let graph = RdfGraph::parse(&rdf_data, RdfFormat::RdfXml)?;
 //! let record = bibframe_to_marc(&graph)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
 //! # Configuration
 //!
 //! Use [`BibframeConfig`] to control conversion behavior:
 //!
-//! ```ignore
+//! ```
 //! use mrrc::bibframe::{BibframeConfig, RdfFormat};
 //!
 //! let config = BibframeConfig::new()
@@ -88,10 +90,10 @@ use crate::record::Record;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Leader, bibframe::{marc_to_bibframe, BibframeConfig}};
 ///
-/// let record = Record::new(/* leader */);
+/// let record = Record::new(Leader::default());
 /// let graph = marc_to_bibframe(&record, &BibframeConfig::default());
 /// println!("Created {} triples", graph.len());
 /// ```
@@ -120,12 +122,13 @@ pub fn marc_to_bibframe(record: &Record, config: &BibframeConfig) -> RdfGraph {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
 /// use mrrc::bibframe::{bibframe_to_marc, RdfGraph, RdfFormat};
 ///
 /// let rdf_data = std::fs::read_to_string("record.jsonld")?;
 /// let graph = RdfGraph::parse(&rdf_data, RdfFormat::JsonLd)?;
 /// let record = bibframe_to_marc(&graph)?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn bibframe_to_marc(graph: &RdfGraph) -> Result<Record> {
     reverse_converter::convert_bibframe_to_marc(graph)

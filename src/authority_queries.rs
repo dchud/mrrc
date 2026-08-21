@@ -22,8 +22,9 @@ pub trait AuthorityQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auth_record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityQueries, AuthorityRecord, Leader};
+    /// let auth_record = AuthorityRecord::new(Leader::default());
     /// for see_from in auth_record.get_see_from_headings() {
     ///     if let Some(label) = see_from.get_subfield('a') {
     ///         println!("See from: {}", label);
@@ -44,8 +45,9 @@ pub trait AuthorityQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auth_record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityQueries, AuthorityRecord, Leader};
+    /// let auth_record = AuthorityRecord::new(Leader::default());
     /// for see_also in auth_record.get_see_also_headings() {
     ///     if let Some(label) = see_also.get_subfield('a') {
     ///         println!("See also: {}", label);
@@ -66,8 +68,9 @@ pub trait AuthorityQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auth_record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityQueries, AuthorityRecord, Leader};
+    /// let auth_record = AuthorityRecord::new(Leader::default());
     /// for rel in auth_record.get_relationship_fields() {
     ///     if let Some(label) = rel.get_subfield('a') {
     ///         println!("Related: {}", label);
@@ -88,8 +91,9 @@ pub trait AuthorityQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auth_record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityQueries, AuthorityRecord, Leader};
+    /// let auth_record = AuthorityRecord::new(Leader::default());
     /// for reference in auth_record.get_authority_references() {
     ///     if let Some(label) = reference.get_subfield('a') {
     ///         println!("Reference: {} (tag: {})", label, reference.tag);
@@ -114,8 +118,9 @@ pub trait AuthorityQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auth_record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityQueries, AuthorityRecord, Leader};
+    /// let auth_record = AuthorityRecord::new(Leader::default());
     /// if let Some(primary) = auth_record.heading() {
     ///     if let Some(related) = auth_record.find_related_heading(primary) {
     ///         println!("Related to: {}", related.tag);
@@ -140,10 +145,12 @@ pub trait AuthorityQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auth_record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityQueries, AuthorityRecord, Leader};
+    /// let auth_record = AuthorityRecord::new(Leader::default());
     /// if let Some(field) = auth_record.heading() {
-    ///     if let Some(label) = AuthorityQueries::extract_authority_label(field) {
+    ///     let extract = <AuthorityRecord as AuthorityQueries>::extract_authority_label;
+    ///     if let Some(label) = extract(field) {
     ///         println!("Label: {}", label);
     ///     }
     /// }
@@ -168,11 +175,13 @@ pub trait AuthorityQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auth_record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityQueries, AuthorityRecord, Leader};
+    /// let auth_record = AuthorityRecord::new(Leader::default());
     /// if let Some(fields) = auth_record.get_fields("650") {
     ///     for field in fields {
-    ///         let subdivisions = AuthorityQueries::get_subdivisions(field);
+    ///         let subdivisions =
+    ///             <AuthorityRecord as AuthorityQueries>::get_subdivisions(field);
     ///         for sub in subdivisions {
     ///             println!("Subdivision: {}", sub);
     ///         }

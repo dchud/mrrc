@@ -9,9 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Leader` now implements `Default`, so `Record::new(Leader::default())` compiles: a new
+  monograph record (`n`/`a`/`m`, indicator and subfield code counts of 2, reserved `4500`).
+  The Python binding delegates to it.
+
 ### Changed
 
 ### Fixed
+
+- A default leader now declares Unicode (position 09 = `a`) instead of MARC-8. `MarcWriter`
+  serializes field values as UTF-8, so records built from `Leader::default()` or Python's
+  `mrrc.Leader()` previously went out claiming an encoding they were not in.
+- Compile-check the Rust doc examples: 119 of the 120 previously ignored examples now build
+  under `cargo test --doc`. Several of them documented methods that do not exist or take
+  different arguments than shown; those are corrected.
 
 ### Performance
 
