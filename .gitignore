@@ -91,3 +91,5 @@ tools/
 
 # Project-local scratch directory (use this rather than system /tmp).
 tmp/
+# br doctor per-run artifacts
+.doctor/
