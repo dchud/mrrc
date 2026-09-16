@@ -86,5 +86,8 @@ tools/
 # Claude Code local data (user-specific permissions, memory, worktrees)
 .claude/
 
+# Playwright MCP session output (console logs, page snapshots)
+.playwright-mcp/
+
 # Project-local scratch directory (use this rather than system /tmp).
 tmp/
