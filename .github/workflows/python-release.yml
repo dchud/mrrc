@@ -107,18 +107,19 @@ jobs:
           command: sdist
           args: --out dist
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: "3.12"
+          # This workflow publishes artifacts built at runtime, so a restored
+          # cache is an untrusted input on the release path.
+          enable-cache: false
 
       - name: Validate PyPI metadata and README rendering
         # PyPI renders the long description once, at upload, and the result is
         # immutable for that version: broken markup cannot be repaired without
         # cutting a new release. --strict promotes rendering warnings to
         # failures, which is the only reason to run this at all.
-        run: |
-          pip install twine
-          twine check --strict dist/*
+        run: uvx twine@7.0.0 check --strict dist/*
 
       - name: Upload sdist
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
