@@ -2,7 +2,7 @@
 
 **Status**: Executable reference for humans and coding agents  
 **Estimated Duration**: 30-45 minutes for a standard release  
-**Last Updated**: 2026-02-10
+**Last Updated**: 2026-07-27
 
 This document provides a step-by-step, executable procedure for preparing, testing, and publishing a new release of MRRC. Follow these steps sequentially to ensure nothing is missed.
 
@@ -276,8 +276,9 @@ The script fails if:
   `### Added` mixed with `### Added — <topic>` entries is flagged as
   drift (this is the shape the lint was written to prevent).
 - Subsections are out of Keep-a-Changelog order. Canonical order is
-  `Breaking, Added, Changed, Deprecated, Removed, Fixed, Security,
-  Dependencies`; `### Added — <topic>` variants all rank as `Added`.
+  `Breaking, Added, Changed, Deprecated, Removed, Fixed, Performance,
+  Documentation, Security, Dependencies`; `### Added — <topic>` variants
+  all rank as `Added`.
 - Any line in `[Unreleased]` exceeds 100 columns (fenced code blocks
   excepted). The working target is ~72–80 columns for bullet content,
   matching the existing wrap style.
@@ -362,22 +363,32 @@ Update the `version` field in the `[workspace.package]` section:
 echo "=== Current workspace version ==="
 sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version'
 
-# Update version (using sed)
-sed -i.bak '/^\[workspace\.package\]/,/^\[/{
-  s/^version = .*/version = "'$VERSION'"/
-}' Cargo.toml
+# Update the version line inside [workspace.package].
+# Uses awk, not sed: the multi-line `/range/{s/../../}` form is a GNU sed
+# extension. BSD sed (macOS) rejects it, prints "bad flag in substitute
+# command", and still exits 0 — so a sed-based bump fails SILENTLY on macOS
+# and leaves the old version in place.
+awk -v ver="$VERSION" '
+  /^\[/ { inws = ($0 == "[workspace.package]") }
+  inws && /^version[[:space:]]*=/ { print "version = \"" ver "\""; next }
+  { print }
+' Cargo.toml > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
 
 # Refresh the committed Cargo.lock so it records the new crate versions
 cargo update --workspace --quiet
 
-# Verify
-echo "=== Updated workspace version ==="
-sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version'
+# Verify — this MUST fail loudly rather than let a silent no-op through
+WS_VER=$(sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml \
+  | grep '^version' | sed 's/.*"\([^"]*\)".*/\1/')
+[ "$WS_VER" = "$VERSION" ] \
+  && echo "=== Updated workspace version: $WS_VER ===" \
+  || { echo "ERROR: version bump did not apply — Cargo.toml still at $WS_VER"; exit 1; }
 ```
 
 **Checklist**:
 
 - [ ] `[workspace.package]` shows `version = "X.Y.Z"` where X.Y.Z matches $VERSION
+- [ ] The verification step above printed the new version and did **not** error
 - [ ] No other section's version was changed
 - [ ] Cargo.lock shows both `mrrc` and `mrrc-python` at the new version
 
@@ -433,7 +444,10 @@ should follow these conventions so `scripts/lint-changelog.sh` (wired into
 
 - **Subsection order** (within any version block):
   `Breaking` (optional top callout), `Added`, `Changed`, `Deprecated`,
-  `Removed`, `Fixed`, `Security`, `Dependencies`.
+  `Removed`, `Fixed`, `Performance`, `Documentation`, `Security`,
+  `Dependencies`. `Performance` and `Documentation` are mrrc additions to
+  the Keep-a-Changelog set; they sit after `Fixed` and are what the
+  `[Unreleased]` template in Section 4.2 seeds.
 - **Topic-grouped Added sections** are allowed: `### Added — <topic>`
   (e.g., `### Added — expanded property-test suite`). Use them when a
   single release has multiple distinct feature areas that each warrant
@@ -733,12 +747,16 @@ git checkout -b "release/v$VERSION"
 Stage and commit the updated files:
 
 ```bash
-# Stage the exact files we modified
-git add Cargo.toml Cargo.lock CHANGELOG.md
+# Stage the exact files we modified. README.md is included because Section 3.3
+# updates the roadmap line that names the current release; drop it from this
+# list only if that sweep genuinely changed nothing.
+git add Cargo.toml Cargo.lock CHANGELOG.md README.md
 
-# Verify staging
+# Verify staging — confirm nothing unexpected crept in
 echo "=== Staged changes ==="
 git diff --cached --stat
+echo "=== Unstaged leftovers (should be empty) ==="
+git diff --stat
 
 # Commit with clear message
 git commit -m "chore(release): v$VERSION
@@ -754,7 +772,8 @@ git log --oneline -1
 
 **Checklist**:
 
-- [ ] Only these 3 files staged: Cargo.toml, Cargo.lock, CHANGELOG.md
+- [ ] Only these files staged: Cargo.toml, Cargo.lock, CHANGELOG.md, and README.md
+      if Section 3.3 changed it
 - [ ] Commit message includes version number
 - [ ] `git log --oneline -1` shows the new commit
 - [ ] Git status shows nothing to commit
@@ -933,11 +952,16 @@ Should see your new release with:
 
 On a fresh machine or in a new virtual environment:
 
+Scratch goes in the repo's gitignored `tmp/`, not a system temp directory.
+
 ```bash
-python -m venv /tmp/test_mrrc
-source /tmp/test_mrrc/bin/activate
-pip install mrrc
-python -c "import mrrc; print(mrrc.__version__)"
+cd "$REPO_ROOT"
+rm -rf tmp/verify_pypi
+python3 -m venv tmp/verify_pypi
+tmp/verify_pypi/bin/pip install --quiet mrrc
+tmp/verify_pypi/bin/pip show mrrc | grep -E '^(Name|Version)'
+tmp/verify_pypi/bin/python -c "import mrrc; print(mrrc.__version__)"
+rm -rf tmp/verify_pypi
 ```
 
 Should print the new version (if `__version__` is exposed; if not, just verify import succeeds).
@@ -952,15 +976,56 @@ Should print the new version (if `__version__` is exposed; if not, just verify i
 
 In a test Rust project:
 
+Do **not** use `cargo init` here, and do declare an empty `[workspace]` table
+in the test project. `cargo init` inside the repo has two damaging effects:
+
+1. It **edits the repo's own root `Cargo.toml`**, appending the test project
+   to the workspace `members` list, and pulls the published crate into the
+   root `Cargo.lock`. Deleting the test directory does not undo either — the
+   edits stay behind and will be committed if you are not watching
+   `git status`.
+2. The project becomes a member of the mrrc workspace, inheriting workspace
+   lints and sharing the root `Cargo.lock`, so it no longer resolves
+   dependencies the way a downstream consumer would. The check silently
+   stops proving anything.
+
+Writing the manifest by hand with `[workspace]` avoids both. Run
+`git status` afterward regardless, and revert any `Cargo.toml` /
+`Cargo.lock` changes this step introduced.
+
 ```bash
-cargo init /tmp/test_mrrc_rust
-cd /tmp/test_mrrc_rust
-cargo add mrrc@X.Y.Z
-cargo check
+cd "$REPO_ROOT"
+rm -rf tmp/verify_crates && mkdir -p tmp/verify_crates/src
+cat > tmp/verify_crates/Cargo.toml <<EOF
+[workspace]
+
+[package]
+name = "verify_crates"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mrrc = "$VERSION"
+EOF
+echo 'fn main() { println!("{}", std::mem::size_of::<mrrc::Record>()); }' \
+  > tmp/verify_crates/src/main.rs
+
+cd tmp/verify_crates
+cargo generate-lockfile -q
+# Confirm it resolved the PUBLISHED crate, not the local path
+cargo metadata --format-version 1 \
+  | jq -r '.packages[] | select(.name=="mrrc") | "mrrc source=\(.source // "LOCAL PATH")"'
+cargo run --quiet
+cd "$REPO_ROOT" && rm -rf tmp/verify_crates
 ```
+
+The `cargo metadata` line must report a `registry+https://...` source. If it
+says `LOCAL PATH`, the isolation failed and the check is meaningless.
 
 **Checklist**:
 
+- [ ] `cargo metadata` reports a `registry+https://...` source for mrrc, not
+      `LOCAL PATH` (proves the test project is isolated from the workspace)
 - [ ] Crate installs from crates.io
 - [ ] Compilation succeeds
 - [ ] Dependency resolution is correct
