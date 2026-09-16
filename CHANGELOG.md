@@ -28,6 +28,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+### Dependencies
+
+- Bump actions/checkout from 7.0.0 to 7.0.1
+- Bump actions/deploy-pages from 5.0.0 to 5.0.1
+- Bump actions/setup-python from 6.3.0 to 7.0.0
+- Bump anyhow from 1.0.103 to 1.0.104
+- Bump astral-sh/setup-uv from 8.3.2 to 10.0.1
+- Bump CodSpeedHQ/action from 4.18.5 to 5.2.1
+- Bump crossbeam-channel from 0.5.16 to 0.5.17
+- Bump docker/setup-qemu-action from 4.2.0 to 4.3.0
+- Bump flate2 from 1.1.9 to 1.1.10
+- Bump indexmap from 2.14.0 to 2.14.2
+- Bump mkdocs-material from 9.7.6 to 9.7.7
+- Bump mypy from 2.3.0 to 2.3.1
+- Bump oxrdfio from 0.2.5 to 0.2.6
+- Bump pymdown-extensions from 11.0.1 to 11.0.2
+- Bump pyo3 from 0.29.0 to 0.29.2
+- Bump pypa/gh-action-pypi-publish from 1.14.0 to 1.14.2
+- Bump pytest-benchmark from 5.2.3 to 5.3.0
+- Bump regex from 1.13.0 to 1.13.1
+- Bump ruff from 0.15.21 to 0.16.6
+- Bump serde from 1.0.228 to 1.0.229
+- Bump serde_json from 1.0.150 to 1.0.151
+- Bump smallvec from 1.15.2 to 1.16.0
+- Bump softprops/action-gh-release from 3.0.2 to 3.0.3
+- Bump Swatinem/rust-cache to a newer v2 commit
+- Bump syrupy from 5.5.3 to 6.0.0
+- Bump thiserror from 2.0.18 to 2.0.20
+- Bump toml from 1.1.2+spec-1.1.0 to 1.1.5+spec-1.1.0
+
 ## [0.9.2] - 2026-07-27
 
 ### Security
