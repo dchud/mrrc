@@ -2,6 +2,10 @@
 # package ecosystems to update and where the package manifests are located.
 # Please see the documentation for all configuration options:
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Minor and patch updates are grouped into one pull request per ecosystem per
+# week. Major updates stay ungrouped so a breaking change always arrives on its
+# own and gets reviewed on its own.
 
 version: 2
 updates:
@@ -11,15 +15,43 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
+    groups:
+      cargo-minor-and-patch:
+        patterns:
+          - "*"
+        # Dependabot labels a 0.x -> 0.(x+1) bump "minor", but for a pre-1.0
+        # crate that is the breaking-change slot. These three have each needed a
+        # dedicated upgrade investigation, so they keep arriving individually.
+        exclude-patterns:
+          - "pyo3"
+          - "quick-xml"
+          - "oxrdf*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 7
+    groups:
+      python-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 7
+    groups:
+      actions-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
