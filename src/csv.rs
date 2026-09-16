@@ -12,7 +12,7 @@
 //! # Examples
 //!
 //! Single record:
-//! ```ignore
+//! ```
 //! use mrrc::{Record, Field, Leader, csv};
 //!
 //! let mut record = Record::new(Leader::default());
@@ -26,7 +26,7 @@
 //! ```
 //!
 //! Batch records:
-//! ```ignore
+//! ```
 //! use mrrc::{Record, Field, Leader, csv};
 //!
 //! let mut record = Record::new(Leader::default());
@@ -57,7 +57,7 @@ use crate::record::Record;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, csv};
 ///
 /// let mut record = Record::new(Leader::default());
@@ -92,7 +92,7 @@ pub fn record_to_csv(record: &Record) -> Result<String> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, csv};
 ///
 /// let mut record = Record::new(Leader::default());
@@ -163,7 +163,7 @@ pub fn records_to_csv(records: &[Record]) -> Result<String> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, csv};
 ///
 /// let mut record = Record::new(Leader::default());

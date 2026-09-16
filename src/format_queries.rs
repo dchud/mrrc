@@ -24,8 +24,9 @@ pub trait BibliographicQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = Record::new(leader);
+    /// ```
+    /// # use mrrc::{BibliographicQueries, Leader, Record};
+    /// let record = Record::new(Leader::default());
     /// for title_field in record.get_titles() {
     ///     if let Some(title) = title_field.get_subfield('a') {
     ///         println!("Title: {}", title);
@@ -53,8 +54,9 @@ pub trait BibliographicQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = Record::new(leader);
+    /// ```
+    /// # use mrrc::{BibliographicQueries, Leader, Record};
+    /// let record = Record::new(Leader::default());
     /// for subject in record.get_all_subjects() {
     ///     if let Some(label) = subject.get_subfield('a') {
     ///         println!("Subject: {}", label);
@@ -74,8 +76,9 @@ pub trait BibliographicQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = Record::new(leader);
+    /// ```
+    /// # use mrrc::{BibliographicQueries, Leader, Record};
+    /// let record = Record::new(Leader::default());
     /// for subject in record.get_topical_subjects() {
     ///     if let Some(term) = subject.get_subfield('a') {
     ///         println!("Topic: {}", term);
@@ -95,8 +98,9 @@ pub trait BibliographicQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = Record::new(leader);
+    /// ```
+    /// # use mrrc::{BibliographicQueries, Leader, Record};
+    /// let record = Record::new(Leader::default());
     /// for subject in record.get_geographic_subjects() {
     ///     if let Some(place) = subject.get_subfield('a') {
     ///         println!("Place: {}", place);
@@ -123,8 +127,9 @@ pub trait BibliographicQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = Record::new(leader);
+    /// ```
+    /// # use mrrc::{BibliographicQueries, Leader, Record};
+    /// let record = Record::new(Leader::default());
     /// for name in record.get_all_names() {
     ///     if let Some(label) = name.get_subfield('a') {
     ///         println!("Name: {}", label);
@@ -149,8 +154,9 @@ pub trait BibliographicQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = Record::new(leader);
+    /// ```
+    /// # use mrrc::{BibliographicQueries, Leader, Record};
+    /// let record = Record::new(Leader::default());
     /// for (original, linked_880) in record.get_linked_field_pairs("100") {
     ///     if let Some(name) = original.get_subfield('a') {
     ///         println!("Name: {}", name);
@@ -176,8 +182,9 @@ pub trait BibliographicQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = Record::new(leader);
+    /// ```
+    /// # use mrrc::{BibliographicQueries, Leader, Record};
+    /// let record = Record::new(Leader::default());
     /// for field_880 in record.get_all_880_fields() {
     ///     println!("Alternate graphical: {:?}", field_880);
     /// }
@@ -250,8 +257,9 @@ pub trait AuthoritySpecificQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityRecord, AuthoritySpecificQueries, Leader};
+    /// let record = AuthorityRecord::new(Leader::default());
     /// if let Some(heading) = record.get_preferred_heading() {
     ///     if let Some(label) = heading.get_subfield('a') {
     ///         println!("Preferred heading: {}", label);
@@ -272,8 +280,9 @@ pub trait AuthoritySpecificQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityRecord, AuthoritySpecificQueries, Leader};
+    /// let record = AuthorityRecord::new(Leader::default());
     /// for variant in record.get_variant_headings() {
     ///     if let Some(label) = variant.get_subfield('a') {
     ///         println!("Variant: {}", label);
@@ -294,8 +303,9 @@ pub trait AuthoritySpecificQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityRecord, AuthoritySpecificQueries, Leader};
+    /// let record = AuthorityRecord::new(Leader::default());
     /// for related in record.get_broader_related_headings() {
     ///     if let Some(label) = related.get_subfield('a') {
     ///         println!("Related: {}", label);
@@ -315,8 +325,9 @@ pub trait AuthoritySpecificQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = AuthorityRecord::new(leader);
+    /// ```
+    /// # use mrrc::{AuthorityRecord, AuthoritySpecificQueries, Leader};
+    /// let record = AuthorityRecord::new(Leader::default());
     /// if let Some(note) = record.get_scope_note() {
     ///     println!("Scope: {}", note);
     /// }
@@ -361,8 +372,9 @@ pub trait HoldingsSpecificQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = HoldingsRecord::new(leader);
+    /// ```
+    /// # use mrrc::{HoldingsRecord, HoldingsSpecificQueries, Leader};
+    /// let record = HoldingsRecord::new(Leader::default());
     /// if let Some(call_num) = record.get_call_number() {
     ///     println!("Call number: {}", call_num);
     /// }
@@ -380,8 +392,9 @@ pub trait HoldingsSpecificQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = HoldingsRecord::new(leader);
+    /// ```
+    /// # use mrrc::{HoldingsRecord, HoldingsSpecificQueries, Leader};
+    /// let record = HoldingsRecord::new(Leader::default());
     /// if let Some(location) = record.get_holding_location() {
     ///     println!("Location: {}", location);
     /// }
@@ -399,8 +412,9 @@ pub trait HoldingsSpecificQueries {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let record = HoldingsRecord::new(leader);
+    /// ```
+    /// # use mrrc::{HoldingsRecord, HoldingsSpecificQueries, Leader};
+    /// let record = HoldingsRecord::new(Leader::default());
     /// for note in record.get_holding_notes() {
     ///     println!("Note: {}", note);
     /// }

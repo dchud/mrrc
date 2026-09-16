@@ -17,7 +17,7 @@ use crate::record::Field;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{MarcRecord, Record, AuthorityRecord, Leader};
 ///
 /// fn print_record_type<T: MarcRecord>(record: &T) {
@@ -49,11 +49,15 @@ pub trait MarcRecord {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::{MarcRecord, Record, Leader};
     ///
+    /// fn stamp_id<T: MarcRecord>(record: &mut T) {
+    ///     record.add_control_field("001", "12345");
+    /// }
+    ///
     /// let mut record = Record::new(Leader::default());
-    /// record.add_control_field("001", "12345");
+    /// stamp_id(&mut record);
     /// ```
     fn add_control_field(&mut self, tag: impl Into<String>, value: impl Into<String>);
 
@@ -67,12 +71,16 @@ pub trait MarcRecord {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::{MarcRecord, Record, Leader};
     ///
+    /// fn id_of<T: MarcRecord>(record: &T) -> Option<&str> {
+    ///     record.get_control_field("001")
+    /// }
+    ///
     /// let mut record = Record::new(Leader::default());
-    /// record.add_control_field("001", "12345");
-    /// assert_eq!(record.get_control_field("001"), Some("12345"));
+    /// record.add_control_field("001".to_string(), "12345".to_string());
+    /// assert_eq!(id_of(&record), Some("12345"));
     /// ```
     fn get_control_field(&self, tag: &str) -> Option<&str>;
 

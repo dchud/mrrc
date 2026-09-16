@@ -13,7 +13,9 @@
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// # use mrrc::define_field_accessors;
+/// # use mrrc::record::Field;
 /// pub struct MyRecord {
 ///     my_fields: Vec<Field>,
 /// }
@@ -45,8 +47,13 @@ macro_rules! define_field_accessors {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// # use mrrc::filtered_field_accessor;
+/// # use mrrc::record::Field;
+/// # pub struct MyRecord { notes: Vec<Field> }
+/// # impl MyRecord {
 /// filtered_field_accessor!(notes, "670", source_data_found);
+/// # }
 /// ```
 #[macro_export]
 macro_rules! filtered_field_accessor {

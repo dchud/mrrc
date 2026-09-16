@@ -14,7 +14,7 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```
 //! use mrrc::formats::{FormatReader, FormatWriter};
 //! use mrrc::Record;
 //!
@@ -122,8 +122,9 @@ pub trait FormatReader: std::fmt::Debug {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
 /// use mrrc::formats::FormatWriter;
+/// # use mrrc::Record;
 ///
 /// fn write_records<W: FormatWriter>(writer: &mut W, records: &[Record]) -> mrrc::Result<()> {
 ///     writer.write_batch(records)?;
@@ -197,7 +198,7 @@ pub trait FormatReaderExt: FormatReader {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```
     /// use mrrc::formats::{FormatReader, FormatReaderExt};
     ///
     /// fn count_records<R: FormatReader>(mut reader: R) -> mrrc::Result<usize> {

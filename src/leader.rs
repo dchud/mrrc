@@ -376,6 +376,54 @@ impl Leader {
     }
 }
 
+impl Default for Leader {
+    /// A leader for a new, unwritten MARC 21 bibliographic record.
+    ///
+    /// Positions carry the conventional values for a new monograph: record
+    /// status `n` (new), record type `a` (language material), bibliographic
+    /// level `m` (monograph), the standard indicator and subfield-code counts
+    /// of 2, and the reserved `4500`. Undetermined positions are left blank.
+    ///
+    /// Character coding is `a` (Unicode), not blank (MARC-8), because mrrc
+    /// holds field values as Rust `String`s and [`MarcWriter`] serializes them
+    /// as UTF-8. A blank here would declare an encoding the writer never
+    /// produces.
+    ///
+    /// `record_length` and `data_base_address` are zero because neither is
+    /// known until the record is serialized; [`MarcWriter`] computes both when
+    /// it writes the record. A default leader therefore does not satisfy
+    /// [`Leader::validate_for_reading`], which is a check for leaders that
+    /// came off the wire, not for ones being built.
+    ///
+    /// [`MarcWriter`]: crate::MarcWriter
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mrrc::Leader;
+    ///
+    /// let leader = Leader::default();
+    /// assert_eq!(leader.to_string(), "00000nam a2200000   4500");
+    /// ```
+    fn default() -> Self {
+        Self {
+            record_length: 0,
+            record_status: 'n',
+            record_type: 'a',
+            bibliographic_level: 'm',
+            control_record_type: ' ',
+            character_coding: 'a',
+            indicator_count: 2,
+            subfield_code_count: 2,
+            data_base_address: 0,
+            encoding_level: ' ',
+            cataloging_form: ' ',
+            multipart_level: ' ',
+            reserved: "4500".to_string(),
+        }
+    }
+}
+
 impl std::fmt::Display for Leader {
     /// Render the leader in its 24-character MARC 21 string form, e.g.
     /// `00136nam a2200061   4500`.
@@ -419,6 +467,35 @@ fn parse_digits(bytes: &[u8]) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_leader_default_is_a_new_bibliographic_monograph() {
+        let leader = Leader::default();
+
+        assert_eq!(leader.record_status, 'n');
+        assert_eq!(leader.record_type, 'a');
+        assert_eq!(leader.bibliographic_level, 'm');
+        assert_eq!(leader.indicator_count, 2);
+        assert_eq!(leader.subfield_code_count, 2);
+        assert_eq!(leader.reserved, "4500");
+        assert_eq!(leader.to_string(), "00000nam a2200000   4500");
+    }
+
+    /// The writer emits field values as UTF-8 unconditionally, so a default
+    /// leader must declare Unicode rather than MARC-8.
+    #[test]
+    fn test_leader_default_declares_unicode_coding() {
+        assert_eq!(Leader::default().character_coding, 'a');
+    }
+
+    #[test]
+    fn test_leader_default_round_trips_through_bytes() {
+        let leader = Leader::default();
+        let bytes = leader.as_bytes().unwrap();
+
+        assert_eq!(bytes.len(), 24);
+        assert_eq!(Leader::from_bytes(&bytes).unwrap(), leader);
+    }
 
     #[test]
     fn test_leader_from_bytes() {

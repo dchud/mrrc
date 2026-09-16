@@ -22,7 +22,7 @@ use serde_json::{Value, json};
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use mrrc::{Record, Field, Leader, marcjson};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
