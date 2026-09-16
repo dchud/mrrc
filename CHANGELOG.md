@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `Leader` now implements `Default`, so `Record::new(Leader::default())` compiles: a new
   monograph record (`n`/`a`/`m`, indicator and subfield code counts of 2, reserved `4500`).
-  The Python binding delegates to it.
+  The Python binding delegates to it. Reported by @fredericd (#447).
 
 ### Changed
 
