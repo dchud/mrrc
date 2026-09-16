@@ -14,6 +14,7 @@ bd.sock
 sync-state.json
 last-touched
 .write.lock
+.br-*.lock
 
 # Local version tracking (prevents upgrade notification spam after git ops)
 .local_version
@@ -39,6 +40,9 @@ export-state/
 
 # History snapshots (local-only, generated during br sync)
 .br_history/
+
+# Recovery bundles (local-only, generated during br doctor schema migrations)
+.br_recovery/
 
 # Sync state (local-only, per-machine)
 # These files are machine-specific and should not be shared across clones
