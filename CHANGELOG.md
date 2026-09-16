@@ -47,7 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump pyo3 from 0.29.0 to 0.29.2
 - Bump pypa/gh-action-pypi-publish from 1.14.0 to 1.14.2
 - Bump pytest-benchmark from 5.2.3 to 5.3.0
-- Bump quick-xml from 0.41.0 to 0.42.0
 - Bump regex from 1.13.0 to 1.13.1
 - Bump ruff from 0.15.21 to 0.16.6
 - Bump serde from 1.0.228 to 1.0.229
