@@ -34,6 +34,11 @@ jobs:
         with:
           components: rustfmt
 
+      - name: Check Cargo.lock is up to date
+        # Fails when the committed lockfile does not satisfy Cargo.toml,
+        # instead of letting cargo silently re-resolve and rewrite it.
+        run: cargo metadata --locked --format-version 1 >/dev/null
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 

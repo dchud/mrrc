@@ -41,6 +41,14 @@ done
 export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 
 
+echo "=== Lockfile check ==="
+# Runs first: every other cargo invocation below silently rewrites an
+# out-of-date Cargo.lock, which is how a lockfile entry that the manifest
+# could not satisfy once sat on main unnoticed. --locked turns that into a
+# failure. Resolves without building, so it costs seconds.
+cargo metadata --locked --format-version 1 >/dev/null
+
+echo ""
 echo "=== Rustfmt check ==="
 cargo fmt --all -- --check
 
