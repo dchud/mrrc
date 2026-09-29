@@ -388,3 +388,55 @@ class TestHoldingsSyntheticAccessors:
         assert len(locations) == 2
         values = [f.subfields_by_code("b")[0] for f in locations]
         assert values == ["Main Library", "Branch Library"]
+
+
+def _first_authority():
+    return next(iter(mrrc.AuthorityMARCReader(AUTHORITY_FIXTURE)))
+
+
+def _first_holdings():
+    return next(iter(mrrc.HoldingsMARCReader(HOLDINGS_FIXTURE)))
+
+
+READ_RECORD = {"authority": _first_authority, "holdings": _first_holdings}
+
+
+@pytest.mark.parametrize("kind", sorted(READ_RECORD))
+class TestLeaderEdits:
+    """Edits made through ``record.leader`` stay on the record."""
+
+    def test_leader_is_the_same_object_each_time(self, kind):
+        record = READ_RECORD[kind]()
+        assert record.leader is record.leader
+
+    def test_attribute_edit_persists(self, kind):
+        record = READ_RECORD[kind]()
+        record.leader.record_status = "c"
+        assert record.leader.record_status == "c"
+
+    def test_record_type_reflects_leader_edit(self, kind):
+        record = READ_RECORD[kind]()
+        record.leader.record_type = "q"
+        assert record.record_type() == "q"
+        assert "type=q" in repr(record)
+
+    def test_assign_extension_leader(self, kind):
+        record = READ_RECORD[kind]()
+        leader = mrrc._mrrc.Leader()
+        leader.record_status = "d"
+        record.leader = leader
+        assert record.leader is leader
+        assert record.leader.record_status == "d"
+
+    def test_assign_python_leader(self, kind):
+        record = READ_RECORD[kind]()
+        leader = mrrc.Leader("00000dz  a2200000n  4500")
+        record.leader = leader
+        assert record.leader.record_status == "d"
+        leader.record_status = "c"
+        assert record.leader.record_status == "c"
+
+    def test_assign_non_leader_raises(self, kind):
+        record = READ_RECORD[kind]()
+        with pytest.raises(TypeError, match="Leader"):
+            record.leader = "00000dz  a2200000n  4500"

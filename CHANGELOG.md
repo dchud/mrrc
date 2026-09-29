@@ -44,6 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MARC-8 decoding uses the Library of Congress code tables: ANSEL was off by one position,
   the Hebrew, Arabic, Cyrillic, and Greek tables were incomplete, and combining marks came
   out before their base character.
+- Python: edits to an `AuthorityRecord` or `HoldingsRecord` leader were silently discarded, since
+  `record.leader` returned a new copy on every access. It now returns the same object, which
+  `record_type()` and the repr read, and it can be assigned.
 
 ### Performance
 

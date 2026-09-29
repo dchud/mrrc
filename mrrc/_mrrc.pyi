@@ -433,7 +433,15 @@ class Record:
 class AuthorityRecord:
     """A MARC authority record. Returned by ``AuthorityMARCReader``."""
     @property
-    def leader(self) -> Leader: ...
+    def leader(self) -> Leader:
+        """The record leader. The same object is returned on every access,
+        so edits made through it stay on the record."""
+        ...
+    @leader.setter
+    def leader(self, value: Any) -> None:
+        """Replace the leader with a ``Leader`` (the extension's, or
+        ``mrrc.Leader``)."""
+        ...
     @property
     def errors(self) -> list[Exception]:
         """Non-fatal errors accumulated while parsing this record.
@@ -478,7 +486,15 @@ class AuthorityRecord:
 class HoldingsRecord:
     """A MARC holdings record. Returned by ``HoldingsMARCReader``."""
     @property
-    def leader(self) -> Leader: ...
+    def leader(self) -> Leader:
+        """The record leader. The same object is returned on every access,
+        so edits made through it stay on the record."""
+        ...
+    @leader.setter
+    def leader(self, value: Any) -> None:
+        """Replace the leader with a ``Leader`` (the extension's, or
+        ``mrrc.Leader``)."""
+        ...
     @property
     def errors(self) -> list[Exception]:
         """Non-fatal errors accumulated while parsing this record.
