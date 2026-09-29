@@ -1835,10 +1835,10 @@ class MARCReader:
             swallows shape).
         validation_level: What counts as an error during parsing — orthogonal
             to ``recovery_mode``. ``"structural"`` (default) fires only ISO
-            2709 structural errors; UTF-8 and MARC-8 decoding are lossy
-            across all readers. ``"strict_marc"`` adds universal byte-level
-            MARC 21 checks (E201 indicator, E202 subfield code, E301 strict
-            UTF-8, E302 strict MARC-8).
+            2709 structural errors, and MARC-8 decoding is lossy.
+            ``"strict_marc"`` adds universal byte-level MARC 21 checks
+            (E201 indicator, E202 subfield code, E302 strict MARC-8).
+            Invalid UTF-8 is governed by ``utf8_handling`` instead.
         max_errors: Optional cap on accumulated recovered errors in
             lenient/permissive mode. ``None`` (default) disables the
             wrapper-level cap. ``0`` matches the Rust API's
@@ -1856,6 +1856,13 @@ class MARCReader:
             records whose leader still says MARC-8. Combining
             ``force_utf8=True`` with ``"leader"`` or ``"detect"`` raises
             ``ValueError``.
+        utf8_handling: pymarc's option for invalid UTF-8 in a record decoded
+            as UTF-8. ``"strict"`` (the default, as in pymarc) makes it an
+            E301 ``EncodingError``, handled by ``recovery_mode`` like any other
+            error: the default recovery drops the field and records the error
+            on ``record.errors``, and ``permissive=True`` yields ``None`` with
+            the error in ``current_exception``, as pymarc does.
+            ``"replace"`` substitutes U+FFFD and ``"ignore"`` drops the bytes.
     """
 
     def __init__(
@@ -1868,6 +1875,7 @@ class MARCReader:
         max_errors: int | None = None,
         force_utf8: bool = False,
         character_coding: str | None = None,
+        utf8_handling: str = "strict",
     ):
         """Create a new MARC reader."""
         if not to_unicode:
@@ -1899,6 +1907,7 @@ class MARCReader:
             max_errors=max_errors,
             character_coding=character_coding,
             force_utf8=force_utf8,
+            utf8_handling=utf8_handling,
         )
         # pymarc-compat accessors fed by __next__. `current_exception` is
         # the typed mrrc exception caught from the most recent parse attempt,
