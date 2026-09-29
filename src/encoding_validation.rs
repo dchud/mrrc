@@ -34,14 +34,19 @@ pub struct EncodingValidator;
 impl EncodingValidator {
     /// Analyze the encoding of a MARC record
     ///
-    /// Attempts to detect if the record uses mixed encodings by examining
-    /// field data and comparing it to the declared encoding in the leader.
+    /// The primary encoding is the one leader position 09 declares, by the
+    /// readers' rule ([`MarcEncoding::declared_by_leader`]). The record's
+    /// values have already been decoded, so the only mismatch visible in
+    /// them is a MARC-8 escape sequence (ESC, 0x1B) left in a record
+    /// decoded as UTF-8: MARC-8 data whose leader says UTF-8. UTF-8 data
+    /// whose leader says MARC-8 has been decoded as MARC-8 by the time it
+    /// reaches here; read such files with [`crate::CharacterCoding::Detect`].
     ///
     /// # Errors
     ///
-    /// Returns an error if encoding analysis fails.
+    /// This function does not return an error.
     pub fn analyze_encoding(record: &Record) -> Result<EncodingAnalysis> {
-        let primary_encoding = MarcEncoding::from_leader_char(record.leader.character_coding)?;
+        let primary_encoding = MarcEncoding::declared_by_leader(record.leader.character_coding);
 
         let mut mixed_encodings = Vec::new();
         let mut inconsistent_field_count = 0usize;
@@ -91,31 +96,17 @@ impl EncodingValidator {
         }
     }
 
-    /// Check if a field's data is consistent with the expected encoding
-    ///
-    /// Returns true if the field appears to use a different encoding than expected.
+    /// Check if a decoded value shows signs of an encoding other than the
+    /// one it was decoded in.
     fn is_likely_different_encoding(data: &str, expected: MarcEncoding) -> bool {
         match expected {
-            MarcEncoding::Utf8 => {
-                // Check for patterns that suggest UTF-8 vs MARC-8
-                // UTF-8 would have multi-byte sequences for non-ASCII characters
-                // MARC-8 would use escape sequences
-                contains_escape_sequences(data) && !contains_valid_utf8_multibyte(data)
-            },
-            MarcEncoding::Marc8 => {
-                // Check for patterns that suggest valid UTF-8 encoding of non-ASCII
-                // Count high bytes (0x80-0xFF) that form valid UTF-8 sequences
-                let high_byte_count = data.as_bytes().iter().filter(|&&b| b >= 0x80).count();
-                let total_bytes = data.len();
-
-                // If we have significant high bytes but they don't form valid UTF-8
-                // escape sequences, this is likely UTF-8
-                if high_byte_count > total_bytes / 10 {
-                    contains_valid_utf8_multibyte(data)
-                } else {
-                    false
-                }
-            },
+            // MARC-8 escape sequences survive decoding as UTF-8 (ESC is
+            // ASCII), while the MARC-8 diacritics around them become U+FFFD.
+            MarcEncoding::Utf8 => contains_escape_sequences(data),
+            // Decoded MARC-8 legitimately holds non-ASCII characters, and the
+            // decoder consumes escape sequences, so nothing in the text can
+            // reveal a different encoding.
+            MarcEncoding::Marc8 => false,
         }
     }
 
@@ -184,21 +175,6 @@ fn contains_escape_sequences(s: &str) -> bool {
     s.as_bytes().contains(&0x1B)
 }
 
-/// Check if a string contains valid UTF-8 multibyte sequences
-fn contains_valid_utf8_multibyte(s: &str) -> bool {
-    let bytes = s.as_bytes();
-    for i in 0..bytes.len() {
-        let b = bytes[i];
-        if b >= 0xC0 {
-            let len = utf8_sequence_length(b);
-            if len > 1 && i + len <= bytes.len() && is_valid_utf8_sequence(&bytes[i..i + len]) {
-                return true;
-            }
-        }
-    }
-    false
-}
-
 /// Get the expected length of a UTF-8 sequence from the first byte
 fn utf8_sequence_length(first_byte: u8) -> usize {
     match first_byte {
@@ -244,6 +220,54 @@ fn count_utf8_indicators(bytes: &[u8]) -> usize {
 mod tests {
     use super::*;
 
+    fn record_with(position_09: char, title: &str) -> Record {
+        let mut record = Record::new(crate::Leader {
+            character_coding: position_09,
+            ..crate::Leader::default()
+        });
+        let mut field = crate::Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', title.to_string());
+        record.add_field(field);
+        record
+    }
+
+    #[test]
+    fn test_decoded_marc8_record_with_diacritics_is_consistent() {
+        // The readers decode MARC-8 into Unicode, so a MARC-8 record's values
+        // legitimately hold non-ASCII characters.
+        let record = record_with(' ', "Caf\u{e9} \u{41c}\u{438}\u{440}");
+        assert_eq!(
+            EncodingValidator::analyze_encoding(&record).unwrap(),
+            EncodingAnalysis::Consistent(MarcEncoding::Marc8)
+        );
+    }
+
+    #[test]
+    fn test_position_09_other_than_a_is_marc8() {
+        // The readers' rule, from pymarc: only `a` means UTF-8.
+        let record = record_with('q', "Title");
+        assert_eq!(
+            EncodingValidator::analyze_encoding(&record).unwrap(),
+            EncodingAnalysis::Consistent(MarcEncoding::Marc8)
+        );
+    }
+
+    #[test]
+    fn test_utf8_record_with_escape_sequences_is_mixed() {
+        // MARC-8 bytes read as UTF-8 keep their ESC, which marks the value
+        // as MARC-8.
+        // A diacritic in the same record comes out as U+FFFD, which is
+        // valid multibyte UTF-8 and must not hide the escape sequences.
+        let record = record_with('a', "Caf\u{fffd}e H\x1Bb2\x1BsO");
+        assert!(matches!(
+            EncodingValidator::analyze_encoding(&record).unwrap(),
+            EncodingAnalysis::Mixed {
+                primary: MarcEncoding::Utf8,
+                ..
+            }
+        ));
+    }
+
     #[test]
     fn test_utf8_sequence_length() {
         assert_eq!(utf8_sequence_length(0x41), 1); // 'A'
@@ -265,12 +289,6 @@ mod tests {
     fn test_contains_escape_sequences() {
         assert!(contains_escape_sequences("test\x1Btest"));
         assert!(!contains_escape_sequences("test"));
-    }
-
-    #[test]
-    fn test_contains_valid_utf8_multibyte() {
-        assert!(contains_valid_utf8_multibyte("café")); // Has é in UTF-8
-        assert!(!contains_valid_utf8_multibyte("test")); // All ASCII
     }
 
     #[test]
