@@ -19,11 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   also accept pymarc's `force_utf8`; Rust readers use `with_character_coding`.
 - New error code E302 `marc8_invalid` (`Marc8Error`, a subclass of `EncodingError`): a MARC-8
   value that doesn't decode, raised under `validation_level="strict_marc"`.
+- Readers take pymarc's `utf8_handling` option: `"strict"` (default), `"replace"` (U+FFFD), or
+  `"ignore"` (drop the bytes). Rust readers use `with_utf8_handling`.
 
 ### Changed
 
 - Records whose leader says MARC-8 are decoded as MARC-8, as pymarc does. A file of UTF-8
   records mislabelled MARC-8 now needs `character_coding="utf-8"` (or `force_utf8=True`).
+- Invalid UTF-8 in a record decoded as UTF-8 is an error (E301) by default, as in pymarc, at
+  every validation level; it was replaced with U+FFFD unless `validation_level="strict_marc"`.
+  The default Python recovery drops the field and records E301 on `record.errors`, and
+  `permissive=True` yields `None`. Pass `utf8_handling="replace"` for the previous decoding.
 
 ### Fixed
 

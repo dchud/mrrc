@@ -29,10 +29,10 @@
 //! ```
 
 use crate::authority_record::AuthorityRecord;
-use crate::encoding::{CharacterCoding, MarcEncoding};
+use crate::encoding::{CharacterCoding, Utf8Handling};
 use crate::error::Result;
-use crate::iso2709::{DataFieldParseConfig, DecodeMode, ParseContext, decode_field_value};
-use crate::iso2709_skeleton::{Iso2709Builder, parse_iso2709_record};
+use crate::iso2709::{DataFieldParseConfig, ParseContext, decode_field_value};
+use crate::iso2709_skeleton::{Iso2709Builder, ParseOptions, parse_iso2709_record};
 use crate::leader::Leader;
 use crate::record::Field;
 use crate::recovery::{RecoveryCap, RecoveryMode, ValidationLevel};
@@ -53,9 +53,7 @@ use std::io::Read;
 #[derive(Debug)]
 pub struct AuthorityMarcReader<R: Read> {
     reader: R,
-    recovery_mode: RecoveryMode,
-    validation_level: ValidationLevel,
-    character_coding: CharacterCoding,
+    options: ParseOptions,
     ctx: ParseContext,
     cap: RecoveryCap,
 }
@@ -70,9 +68,7 @@ impl<R: Read> AuthorityMarcReader<R> {
     pub fn new(reader: R) -> Self {
         AuthorityMarcReader {
             reader,
-            recovery_mode: RecoveryMode::Strict,
-            validation_level: ValidationLevel::default(),
-            character_coding: CharacterCoding::default(),
+            options: ParseOptions::default(),
             ctx: ParseContext::new(),
             cap: RecoveryCap::new(),
         }
@@ -87,7 +83,7 @@ impl<R: Read> AuthorityMarcReader<R> {
     /// - `Permissive`: Be very lenient, accepting partial data
     #[must_use]
     pub fn with_recovery_mode(mut self, mode: RecoveryMode) -> Self {
-        self.recovery_mode = mode;
+        self.options.recovery_mode = mode;
         self
     }
 
@@ -95,7 +91,7 @@ impl<R: Read> AuthorityMarcReader<R> {
     /// for semantics.
     #[must_use]
     pub fn with_validation_level(mut self, level: ValidationLevel) -> Self {
-        self.validation_level = level;
+        self.options.validation_level = level;
         self
     }
 
@@ -103,7 +99,15 @@ impl<R: Read> AuthorityMarcReader<R> {
     /// [`crate::MarcReader::with_character_coding`] for semantics.
     #[must_use]
     pub fn with_character_coding(mut self, coding: CharacterCoding) -> Self {
-        self.character_coding = coding;
+        self.options.character_coding = coding;
+        self
+    }
+
+    /// Set what the reader does with invalid UTF-8 in a record decoded as
+    /// UTF-8. See [`crate::MarcReader::with_utf8_handling`] for semantics.
+    #[must_use]
+    pub fn with_utf8_handling(mut self, handling: Utf8Handling) -> Self {
+        self.options.utf8_handling = handling;
         self
     }
 
@@ -161,9 +165,7 @@ impl<R: Read> AuthorityMarcReader<R> {
             &mut self.reader,
             &mut self.ctx,
             &mut self.cap,
-            self.recovery_mode,
-            self.validation_level,
-            self.character_coding,
+            self.options,
             &mut errors,
         )?;
         Ok(result.map(|mut record| {
@@ -240,17 +242,13 @@ impl Iso2709Builder for AuthorityBuilder {
     /// Authority control fields trim a trailing `SUBFIELD_DELIMITER`
     /// (0x1F) in addition to the usual `FIELD_TERMINATOR` (0x1E) — a
     /// historical quirk in real-world authority data preserved here for
-    /// bytewise compatibility. Decoding strictness follows `level`:
-    /// [`ValidationLevel::Structural`] decodes lossily;
-    /// [`ValidationLevel::StrictMarc`] raises
-    /// [`crate::MarcError::EncodingError`] or [`crate::MarcError::Marc8Error`]
-    /// on bytes that don't decode in `encoding`.
+    /// bytewise compatibility. Decodes under `config` like the trait
+    /// default.
     fn decode_control_field_value(
         field_bytes: &[u8],
         tag: &str,
         ctx: &ParseContext,
-        level: ValidationLevel,
-        encoding: MarcEncoding,
+        config: DataFieldParseConfig,
     ) -> Result<String> {
         // Strip both the field terminator (last byte) and any further
         // trailing 0x1E/0x1F bytes before decoding.
@@ -261,9 +259,7 @@ impl Iso2709Builder for AuthorityBuilder {
             }
             &field_bytes[..end]
         };
-        decode_field_value(raw, encoding, DecodeMode::for_level(level), ctx, || {
-            format!("control field {tag}")
-        })
+        decode_field_value(raw, config, ctx, || format!("control field {tag}"))
     }
 
     /// Authority skips data fields shorter than 2 bytes (can't read

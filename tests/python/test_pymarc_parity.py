@@ -295,3 +295,29 @@ def test_marc8_decoding_matches_pymarc_for_every_mapping() -> None:
         if ours["245"]["a"] != theirs["245"]["a"]:
             mismatched.append(hex(final))
     assert mismatched == []
+
+
+@pytest.mark.parametrize("handling", ["strict", "replace", "ignore"])
+def test_invalid_utf8_matches_pymarc(handling) -> None:
+    """For a record whose leader says UTF-8 and whose 245$a holds an
+    invalid byte, each utf8_handling value gives pymarc's result: strict
+    rejects the record (pymarc yields None; mrrc does under
+    permissive=True, its pymarc-shaped mode), replace and ignore decode
+    the same text."""
+    pymarc = pytest.importorskip("pymarc")
+    field = b"10\x1faCaf\xffe\x1e"
+    directory = b"245" + b"%04d%05d" % (len(field), 0) + b"\x1e"
+    base = 24 + len(directory)
+    leader = b"%05dnam a22%05d   4500" % (base + len(field) + 1, base)
+    data = leader + directory + field + b"\x1d"
+
+    (ours,) = list(
+        mrrc.MARCReader(data, permissive=True, utf8_handling=handling)
+    )
+    (theirs,) = list(
+        pymarc.MARCReader(io.BytesIO(data), utf8_handling=handling)
+    )
+    if theirs is None:
+        assert ours is None
+    else:
+        assert ours["245"]["a"] == theirs["245"]["a"]

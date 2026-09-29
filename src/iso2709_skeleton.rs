@@ -28,17 +28,31 @@
 //! [`AuthorityMarcReader`]: crate::AuthorityMarcReader
 //! [`HoldingsMarcReader`]: crate::HoldingsMarcReader
 
-use crate::encoding::{CharacterCoding, MarcEncoding};
+use crate::encoding::{CharacterCoding, Utf8Handling};
 use crate::error::{MarcError, Result};
 use crate::iso2709::{
-    self, DataFieldParseConfig, DecodeMode, FIELD_TERMINATOR, LEADER_LEN, ParseContext,
-    decode_field_value, is_control_field_tag, parse_4digits, parse_5digits, parse_data_field,
-    read_leader_bytes, read_record_data,
+    self, DataFieldParseConfig, FIELD_TERMINATOR, LEADER_LEN, ParseContext, decode_field_value,
+    is_control_field_tag, parse_4digits, parse_5digits, parse_data_field, read_leader_bytes,
+    read_record_data,
 };
 use crate::leader::Leader;
 use crate::record::Field;
 use crate::recovery::{RecoveryCap, RecoveryMode, ValidationLevel};
 use std::io::Read;
+
+/// A reader's parse settings, passed through the skeleton to the decode
+/// sites. The defaults are the Rust readers' defaults.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ParseOptions {
+    /// What to do when an error fires.
+    pub recovery_mode: RecoveryMode,
+    /// What counts as an error.
+    pub validation_level: ValidationLevel,
+    /// How each record's encoding is chosen.
+    pub character_coding: CharacterCoding,
+    /// What to do with invalid UTF-8.
+    pub utf8_handling: Utf8Handling,
+}
 
 /// Per-type policy + per-record builder for the shared ISO 2709 parse
 /// skeleton. Implemented by a small adapter type inside each public reader
@@ -102,32 +116,27 @@ pub trait Iso2709Builder: Sized {
     /// captions, etc.).
     fn add_data_field(&mut self, field: Field);
 
-    /// Decode a control field's bytes into its string value in the record's
-    /// `encoding`. The default strips the trailing `FIELD_TERMINATOR` byte;
-    /// bytes that don't decode are replaced under
-    /// [`ValidationLevel::Structural`] and raise under
-    /// [`ValidationLevel::StrictMarc`]. Authority overrides to also strip a
-    /// trailing `SUBFIELD_DELIMITER`; holdings overrides for its stricter
-    /// byte-count guard but decodes the same way.
+    /// Decode a control field's bytes into its string value with
+    /// [`iso2709::decode_field_value`] under `config` (the record's encoding,
+    /// the reader's UTF-8 handling, and the MARC-8 strictness its validation
+    /// level selects). The default strips the trailing `FIELD_TERMINATOR`
+    /// byte. Authority overrides to also strip a trailing
+    /// `SUBFIELD_DELIMITER`; holdings overrides for its stricter byte-count
+    /// guard but decodes the same way.
     ///
     /// # Errors
     ///
-    /// When `level` is [`ValidationLevel::StrictMarc`], returns
-    /// `MarcError::EncodingError` for invalid UTF-8 and
-    /// `MarcError::Marc8Error` for undecodable MARC-8. The lossy path never
-    /// errors.
+    /// The error [`iso2709::decode_field_value`] returns for bytes that don't
+    /// decode.
     #[inline]
     fn decode_control_field_value(
         field_bytes: &[u8],
         tag: &str,
         ctx: &ParseContext,
-        level: ValidationLevel,
-        encoding: MarcEncoding,
+        config: DataFieldParseConfig,
     ) -> Result<String> {
         let raw = &field_bytes[..field_bytes.len().saturating_sub(1)];
-        decode_field_value(raw, encoding, DecodeMode::for_level(level), ctx, || {
-            format!("control field {tag}")
-        })
+        decode_field_value(raw, config, ctx, || format!("control field {tag}"))
     }
 
     /// Per-reader minimum data-field byte count guard. Returning `Err`
@@ -196,15 +205,18 @@ pub fn parse_iso2709_record<R, B>(
     reader: &mut R,
     ctx: &mut ParseContext,
     cap: &mut RecoveryCap,
-    recovery_mode: RecoveryMode,
-    validation_level: ValidationLevel,
-    character_coding: CharacterCoding,
+    options: ParseOptions,
     errors: &mut Vec<MarcError>,
 ) -> Result<Option<B::Output>>
 where
     R: Read,
     B: Iso2709Builder,
 {
+    let ParseOptions {
+        recovery_mode,
+        validation_level,
+        ..
+    } = options;
     if cap.is_exhausted() {
         return Ok(None);
     }
@@ -247,9 +259,7 @@ where
         bytes_read,
         ctx,
         cap,
-        recovery_mode,
-        validation_level,
-        character_coding,
+        options,
         errors,
     )
 }
@@ -328,11 +338,14 @@ pub fn parse_iso2709_record_from_bytes<B: Iso2709Builder>(
     record_bytes: &std::sync::Arc<Vec<u8>>,
     ctx: &mut ParseContext,
     cap: &mut RecoveryCap,
-    recovery_mode: RecoveryMode,
-    validation_level: ValidationLevel,
-    character_coding: CharacterCoding,
+    options: ParseOptions,
     errors: &mut Vec<MarcError>,
 ) -> Result<Option<B::Output>> {
+    let ParseOptions {
+        recovery_mode,
+        validation_level,
+        ..
+    } = options;
     if cap.is_exhausted() || record_bytes.is_empty() {
         return Ok(None);
     }
@@ -384,9 +397,7 @@ pub fn parse_iso2709_record_from_bytes<B: Iso2709Builder>(
             body_len,
             ctx,
             cap,
-            recovery_mode,
-            validation_level,
-            character_coding,
+            options,
             errors,
         );
     }
@@ -402,9 +413,7 @@ pub fn parse_iso2709_record_from_bytes<B: Iso2709Builder>(
         expected_data_len,
         ctx,
         cap,
-        recovery_mode,
-        validation_level,
-        character_coding,
+        options,
         errors,
     )
 }
@@ -428,11 +437,15 @@ fn parse_record_body<B: Iso2709Builder>(
     bytes_read: usize,
     ctx: &mut ParseContext,
     cap: &mut RecoveryCap,
-    recovery_mode: RecoveryMode,
-    validation_level: ValidationLevel,
-    character_coding: CharacterCoding,
+    options: ParseOptions,
     errors: &mut Vec<MarcError>,
 ) -> Result<Option<B::Output>> {
+    let ParseOptions {
+        recovery_mode,
+        validation_level,
+        character_coding,
+        utf8_handling,
+    } = options;
     let record_length = leader.record_length as usize;
     let base_address = leader.data_base_address as usize;
     let directory_size = base_address - 24;
@@ -488,7 +501,9 @@ fn parse_record_body<B: Iso2709Builder>(
     // Choose the record's encoding while the leader is still in hand; the
     // builder takes it next.
     let encoding = character_coding.resolve(leader.character_coding, data);
-    let data_field_config = B::parse_config(validation_level).with_encoding(encoding);
+    let data_field_config = B::parse_config(validation_level)
+        .with_encoding(encoding)
+        .with_utf8_handling(utf8_handling);
 
     let mut builder = B::new_for(leader);
 
@@ -617,13 +632,9 @@ fn parse_record_body<B: Iso2709Builder>(
                 let field_data = &data[start_position..available_end];
                 if tag != "LDR" {
                     if is_control_field_tag(&tag) {
-                        if let Ok(value) = B::decode_control_field_value(
-                            field_data,
-                            &tag,
-                            ctx,
-                            validation_level,
-                            encoding,
-                        ) {
+                        if let Ok(value) =
+                            B::decode_control_field_value(field_data, &tag, ctx, data_field_config)
+                        {
                             if tag == "001" {
                                 ctx.record_control_number = Some(value.clone());
                             }
@@ -650,23 +661,18 @@ fn parse_record_body<B: Iso2709Builder>(
         }
 
         if is_control_field_tag(&tag) {
-            let value = match B::decode_control_field_value(
-                field_data,
-                &tag,
-                ctx,
-                validation_level,
-                encoding,
-            ) {
-                Ok(v) => v,
-                Err(e) => {
-                    if recovery_mode == RecoveryMode::Strict {
-                        return Err(e);
-                    }
-                    errors.push(e);
-                    cap.note(ctx)?;
-                    continue;
-                },
-            };
+            let value =
+                match B::decode_control_field_value(field_data, &tag, ctx, data_field_config) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        if recovery_mode == RecoveryMode::Strict {
+                            return Err(e);
+                        }
+                        errors.push(e);
+                        cap.note(ctx)?;
+                        continue;
+                    },
+                };
             if tag == "001" {
                 ctx.record_control_number = Some(value.clone());
             }

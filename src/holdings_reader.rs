@@ -26,11 +26,11 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::encoding::{CharacterCoding, MarcEncoding};
+use crate::encoding::{CharacterCoding, Utf8Handling};
 use crate::error::Result;
 use crate::holdings_record::HoldingsRecord;
-use crate::iso2709::{DataFieldParseConfig, DecodeMode, ParseContext, decode_field_value};
-use crate::iso2709_skeleton::{Iso2709Builder, parse_iso2709_record};
+use crate::iso2709::{DataFieldParseConfig, ParseContext, decode_field_value};
+use crate::iso2709_skeleton::{Iso2709Builder, ParseOptions, parse_iso2709_record};
 use crate::leader::Leader;
 use crate::record::Field;
 use crate::recovery::{RecoveryCap, RecoveryMode, ValidationLevel};
@@ -51,9 +51,7 @@ use std::io::Read;
 #[derive(Debug)]
 pub struct HoldingsMarcReader<R: Read> {
     reader: R,
-    recovery_mode: RecoveryMode,
-    validation_level: ValidationLevel,
-    character_coding: CharacterCoding,
+    options: ParseOptions,
     ctx: ParseContext,
     cap: RecoveryCap,
 }
@@ -68,9 +66,7 @@ impl<R: Read> HoldingsMarcReader<R> {
     pub fn new(reader: R) -> Self {
         HoldingsMarcReader {
             reader,
-            recovery_mode: RecoveryMode::Strict,
-            validation_level: ValidationLevel::default(),
-            character_coding: CharacterCoding::default(),
+            options: ParseOptions::default(),
             ctx: ParseContext::new(),
             cap: RecoveryCap::new(),
         }
@@ -85,7 +81,7 @@ impl<R: Read> HoldingsMarcReader<R> {
     /// - `Permissive`: Be very lenient, accepting partial data
     #[must_use]
     pub fn with_recovery_mode(mut self, mode: RecoveryMode) -> Self {
-        self.recovery_mode = mode;
+        self.options.recovery_mode = mode;
         self
     }
 
@@ -93,7 +89,7 @@ impl<R: Read> HoldingsMarcReader<R> {
     /// for semantics.
     #[must_use]
     pub fn with_validation_level(mut self, level: ValidationLevel) -> Self {
-        self.validation_level = level;
+        self.options.validation_level = level;
         self
     }
 
@@ -101,7 +97,15 @@ impl<R: Read> HoldingsMarcReader<R> {
     /// [`crate::MarcReader::with_character_coding`] for semantics.
     #[must_use]
     pub fn with_character_coding(mut self, coding: CharacterCoding) -> Self {
-        self.character_coding = coding;
+        self.options.character_coding = coding;
+        self
+    }
+
+    /// Set what the reader does with invalid UTF-8 in a record decoded as
+    /// UTF-8. See [`crate::MarcReader::with_utf8_handling`] for semantics.
+    #[must_use]
+    pub fn with_utf8_handling(mut self, handling: Utf8Handling) -> Self {
+        self.options.utf8_handling = handling;
         self
     }
 
@@ -159,9 +163,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             &mut self.reader,
             &mut self.ctx,
             &mut self.cap,
-            self.recovery_mode,
-            self.validation_level,
-            self.character_coding,
+            self.options,
             &mut errors,
         )?;
         Ok(result.map(|mut record| {
@@ -232,24 +234,17 @@ impl Iso2709Builder for HoldingsBuilder {
         }
     }
 
-    /// Decoding strictness follows `level`: lossy under
-    /// [`ValidationLevel::Structural`], strict (raising
-    /// [`crate::MarcError::EncodingError`] or [`crate::MarcError::Marc8Error`]
-    /// on bytes that don't decode in `encoding`) under
-    /// [`ValidationLevel::StrictMarc`].
+    /// Decodes under `config` like the trait default.
     fn decode_control_field_value(
         field_bytes: &[u8],
         tag: &str,
         ctx: &ParseContext,
-        level: ValidationLevel,
-        encoding: MarcEncoding,
+        config: DataFieldParseConfig,
     ) -> Result<String> {
         let raw = field_bytes
             .get(..field_bytes.len().saturating_sub(1))
             .unwrap_or(&[]);
-        decode_field_value(raw, encoding, DecodeMode::for_level(level), ctx, || {
-            format!("control field {tag}")
-        })
+        decode_field_value(raw, config, ctx, || format!("control field {tag}"))
     }
 
     /// Holdings rejects data fields shorter than 3 bytes (must hold both
