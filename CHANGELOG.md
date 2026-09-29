@@ -14,8 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The Python binding delegates to it. Reported by @fredericd (#447).
 - Python `Leader` accepts pymarc's property names (`type_of_record`, `coding_scheme`,
   `base_address`, `multipart_ressource`, and the rest), reading and writing the same positions.
+- Readers take a `character_coding` option: `"leader"` (default), `"utf-8"`, or `"detect"`,
+  which reads files mixing MARC-8 records with UTF-8 records labelled MARC-8. Python readers
+  also accept pymarc's `force_utf8`; Rust readers use `with_character_coding`.
+- New error code E302 `marc8_invalid` (`Marc8Error`, a subclass of `EncodingError`): a MARC-8
+  value that doesn't decode, raised under `validation_level="strict_marc"`.
 
 ### Changed
+
+- Records whose leader says MARC-8 are decoded as MARC-8, as pymarc does. A file of UTF-8
+  records mislabelled MARC-8 now needs `character_coding="utf-8"` (or `force_utf8=True`).
 
 ### Fixed
 
@@ -31,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python: edits made through `record.leader` now reach every serializer. On records built with
   `Record()` they were dropped on write, and `to_xml()`, `to_json()`, `to_marcjson()`,
   `to_marc21()`, and the `record_to_*` functions ignored them on any record.
+- The ISO 2709 readers decode MARC-8. Every record was decoded as UTF-8, so MARC-8 diacritics
+  and non-Latin text came back as U+FFFD (or E301 under `strict_marc`).
+- MARC-8 decoding uses the Library of Congress code tables: ANSEL was off by one position,
+  the Hebrew, Arabic, Cyrillic, and Greek tables were incomplete, and combining marks came
+  out before their base character.
 
 ### Performance
 

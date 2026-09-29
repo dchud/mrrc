@@ -420,7 +420,10 @@ past the offending record under `strict_marc`.
 
 ### E301 — `utf8_invalid` { #E301 }
 
-A subfield value or control field contains bytes that are not valid UTF-8.
+A subfield value or control field in a record decoded as UTF-8 contains
+bytes that are not valid UTF-8. A record is decoded as UTF-8 when its leader
+position 09 is `a`, or when the reader's `character_coding` says so (see
+[Character encoding](encoding.md)).
 
 **Context:** Parse-side (or wherever a string conversion runs).
 **Applies to:** Bibliographic, authority, and holdings readers — fired
@@ -441,6 +444,35 @@ that valid in MARC-8 but not in UTF-8.
 and don't need byte-perfect fidelity.
 
 **Python class:** `mrrc.EncodingError`.
+
+### E302 — `marc8_invalid` { #E302 }
+
+A subfield value or control field in a record decoded as MARC-8 contains a
+character with no mapping in the active MARC-8 character set, or an escape
+sequence cut off by the end of the value.
+
+**Context:** Parse-side (or wherever a string conversion runs).
+**Applies to:** Bibliographic, authority, and holdings readers — fired
+uniformly when `validation_level="strict_marc"` and a MARC-8 value doesn't
+decode. At the default `validation_level="structural"` each undecodable
+character becomes `U+FFFD` and this code isn't surfaced (pymarc substitutes
+a space and never raises).
+**Populates:** `record_index`. May also populate: `field_tag`,
+`byte_offset`, `source`, `record_control_number`. The `message` attribute
+says how many characters could not be decoded and in which field.
+
+**Common causes.** A record whose leader position 09 says MARC-8 (any value
+other than `a`) but whose data is UTF-8 or another encoding; MARC-8 data
+damaged in transfer, such as a truncated escape sequence; bytes from a
+vendor-specific character set.
+
+**How to recover.** If the data is really UTF-8, read with
+`character_coding="utf-8"` (pymarc's `force_utf8=True`), or with
+`character_coding="detect"` when a file mixes MARC-8 and UTF-8 records. Set
+`validation_level="structural"` to accept `U+FFFD` substitutions.
+
+**Python class:** `mrrc.Marc8Error`, a subclass of `mrrc.EncodingError`, so
+`except mrrc.EncodingError:` catches both E301 and E302.
 
 ---
 

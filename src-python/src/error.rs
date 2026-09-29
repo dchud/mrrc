@@ -130,6 +130,10 @@ fn describe<'py>(py: Python<'py>, err: &MarcError) -> PyResult<(&'static str, Bo
             kwargs.set_item("message", message)?;
             "EncodingError"
         },
+        MarcError::Marc8Error { message, .. } => {
+            kwargs.set_item("message", message)?;
+            "Marc8Error"
+        },
         MarcError::FieldNotFound { .. } => "FieldNotFound",
         MarcError::XmlError { cause, .. } => {
             kwargs.set_item("message", cause.to_string())?;

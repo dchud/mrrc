@@ -7,6 +7,7 @@
 use crate::backend::FILE_READ_BUF_CAPACITY;
 use crate::reader_helpers;
 use crate::wrappers::PyAuthorityRecord;
+use mrrc::CharacterCoding;
 use mrrc::authority_reader::AuthorityMarcReader;
 use mrrc::recovery::{RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
@@ -34,6 +35,7 @@ pub struct PyAuthorityMARCReader {
     backend: Option<AuthorityReaderBackend>,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    character_coding: CharacterCoding,
 }
 
 #[pymethods]
@@ -48,26 +50,42 @@ impl PyAuthorityMARCReader {
     ///   to strict for explicit-error-handling parity with Rust idiom.
     /// * `validation_level` - What counts as an error during parsing:
     ///   'structural' (default) or '`strict_marc`'.
+    /// * `character_coding` - How each record's encoding is chosen:
+    ///   'leader' (the default: leader position 09, as pymarc does),
+    ///   'utf-8', or 'detect'.
+    /// * `force_utf8` - pymarc's spelling of `character_coding='utf-8'`.
     #[new]
-    #[pyo3(signature = (source, *, recovery_mode = "permissive", validation_level = "structural"))]
+    #[pyo3(signature = (
+        source,
+        *,
+        recovery_mode = "permissive",
+        validation_level = "structural",
+        character_coding = None,
+        force_utf8 = false,
+    ))]
     pub fn new(
         source: &Bound<'_, PyAny>,
         recovery_mode: &str,
         validation_level: &str,
+        character_coding: Option<&str>,
+        force_utf8: bool,
     ) -> PyResult<Self> {
         let rec_mode = reader_helpers::parse_recovery_mode(recovery_mode)?;
         let val_level = reader_helpers::parse_validation_level(validation_level)?;
+        let coding = reader_helpers::parse_character_coding(character_coding, force_utf8)?;
 
         // Try file path (str or pathlib.Path)
         if let Some(file) = reader_helpers::try_open_as_path(source)? {
             let file = BufReader::with_capacity(FILE_READ_BUF_CAPACITY, file);
             let reader = AuthorityMarcReader::new(file)
                 .with_recovery_mode(rec_mode)
-                .with_validation_level(val_level);
+                .with_validation_level(val_level)
+                .with_character_coding(coding);
             return Ok(PyAuthorityMARCReader {
                 backend: Some(AuthorityReaderBackend::RustFile(reader)),
                 recovery_mode: rec_mode,
                 validation_level: val_level,
+                character_coding: coding,
             });
         }
 
@@ -75,11 +93,13 @@ impl PyAuthorityMARCReader {
         if let Some(bytes) = reader_helpers::try_extract_bytes(source)? {
             let reader = AuthorityMarcReader::new(Cursor::new(bytes))
                 .with_recovery_mode(rec_mode)
-                .with_validation_level(val_level);
+                .with_validation_level(val_level)
+                .with_character_coding(coding);
             return Ok(PyAuthorityMARCReader {
                 backend: Some(AuthorityReaderBackend::CursorBackend(reader)),
                 recovery_mode: rec_mode,
                 validation_level: val_level,
+                character_coding: coding,
             });
         }
 
@@ -89,6 +109,7 @@ impl PyAuthorityMARCReader {
                 backend: Some(AuthorityReaderBackend::PythonFile(py_obj)),
                 recovery_mode: rec_mode,
                 validation_level: val_level,
+                character_coding: coding,
             });
         }
 
@@ -138,7 +159,8 @@ impl PyAuthorityMARCReader {
                         let cursor = Cursor::new(bytes);
                         let mut parser = AuthorityMarcReader::new(cursor)
                             .with_recovery_mode(self.recovery_mode)
-                            .with_validation_level(self.validation_level);
+                            .with_validation_level(self.validation_level)
+                            .with_character_coding(self.character_coding);
                         match parser.read_record() {
                             Ok(Some(record)) => {
                                 self.backend = Some(AuthorityReaderBackend::PythonFile(py_obj));

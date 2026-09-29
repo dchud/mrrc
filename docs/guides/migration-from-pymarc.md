@@ -410,6 +410,30 @@ happens in the Rust parsing layer and cannot be disabled. The `to_unicode`
 kwarg is accepted for compatibility so existing scripts work unchanged.
 Passing `to_unicode=False` emits a warning but has no effect.
 
+### MARC-8 Decoding and force_utf8
+
+mrrc chooses each record's encoding the way pymarc does: leader position 09
+`a` means UTF-8 and any other value means MARC-8. `force_utf8=True` decodes
+every record as UTF-8 whatever the leader says, as in pymarc. For every
+character in the MARC-8 tables, mrrc and pymarc produce the same text.
+
+Differences:
+
+- A MARC-8 character with no mapping becomes `U+FFFD`; pymarc substitutes a
+  space and prints a warning to stderr. Under `validation_level="strict_marc"`
+  mrrc raises `Marc8Error` (E302), a subclass of `EncodingError`.
+- A character set designated into the half it isn't normally used in (Basic
+  Cyrillic as G1, for example) is read correctly; pymarc substitutes spaces.
+- An escape sequence immediately after `ESC s` is recognised. pymarc 5.3.1
+  reads the byte after `ESC s` as a character, so it emits the rest of that
+  sequence as text.
+
+mrrc also offers `character_coding="detect"`, which reads a record as UTF-8
+when its field data is valid UTF-8 containing non-ASCII bytes and otherwise
+follows the leader. It suits files that mix MARC-8 records with UTF-8 records
+whose leader still says MARC-8, where `force_utf8=True` would misread the
+MARC-8 ones. See [Character Encoding](../reference/encoding.md#choosing-the-encoding).
+
 ### Recovery Mode (mrrc-specific)
 
 mrrc also offers a `recovery_mode` kwarg that goes beyond pymarc's permissive mode. Instead of skipping bad records entirely, recovery mode attempts to salvage valid fields from damaged records:

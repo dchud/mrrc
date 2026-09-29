@@ -257,10 +257,12 @@ for record in MARCReader(data):
 | Kwarg | Type | Default | Description |
 |-------|------|---------|-------------|
 | `to_unicode` | `bool` | `True` | Accepted for pymarc compatibility. mrrc always converts MARC-8 to UTF-8; passing `False` emits a warning but has no effect. |
+| `force_utf8` | `bool` | `False` | pymarc's option: when `True`, decode every record as UTF-8 whatever leader position 09 says. The same as `character_coding="utf-8"`. |
 | `permissive` | `bool` | `False` | When `True`, yields `None` for records that fail to parse instead of raising, matching pymarc's permissive behavior. |
 | `recovery_mode` | `str` | `None` | Controls how malformed records are handled (see below). When not given, resolves to `"permissive"` — or `"strict"` if `permissive=True` (the inner reader raises so the outer wrapper can swallow). Cannot be combined explicitly with `permissive=True` unless `"strict"`. |
-| `validation_level` | `str` | `"structural"` | What counts as an error during parsing, orthogonal to `recovery_mode`. `"structural"` fires only ISO 2709 structural errors; `"strict_marc"` adds byte-level MARC 21 checks (indicators, subfield codes, strict UTF-8). See [Validation level vs recovery mode](error-handling.md#validation-level-vs-recovery-mode). |
+| `validation_level` | `str` | `"structural"` | What counts as an error during parsing, orthogonal to `recovery_mode`. `"structural"` fires only ISO 2709 structural errors; `"strict_marc"` adds byte-level MARC 21 checks (indicators, subfield codes, strict UTF-8 and MARC-8 decoding). See [Validation level vs recovery mode](error-handling.md#validation-level-vs-recovery-mode). |
 | `max_errors` | `int` | `None` | Cap on accumulated recovered errors in lenient/permissive mode; exceeding it raises `FatalReaderError`. `None` or `0` disables the cap. See [Capping recovered errors](error-handling.md#capping-recovered-errors-with-max_errors). |
+| `character_coding` | `str` | `None` | How each record's character encoding is chosen. `"leader"` (what `None` means unless `force_utf8=True`) follows leader position 09 as pymarc does: `a` is UTF-8, any other value MARC-8. `"utf-8"` decodes every record as UTF-8. `"detect"` decodes a record as UTF-8 when its field data is valid UTF-8 with non-ASCII bytes, and otherwise follows the leader. Combining `force_utf8=True` with `"leader"` or `"detect"` raises `ValueError`. See [Character encoding](encoding.md). |
 
 **Recovery Modes:**
 
@@ -313,7 +315,7 @@ with MARCWriter("output.mrc") as writer:
 
 ### AuthorityMARCReader
 
-Reads MARC **authority** records, yielding [`AuthorityRecord`](#authorityrecord). Same ISO 2709 binary format and iteration protocol as [`MARCReader`](#marcreader), with a smaller keyword set. The record source (path, bytes, or file object) is positional; `recovery_mode` and `validation_level` are keyword-only and follow the [MARCReader recovery modes](#marcreader), except `recovery_mode` defaults to `"permissive"` here rather than `"strict"`.
+Reads MARC **authority** records, yielding [`AuthorityRecord`](#authorityrecord). Same ISO 2709 binary format and iteration protocol as [`MARCReader`](#marcreader), with a smaller keyword set. The record source (path, bytes, or file object) is positional; `recovery_mode`, `validation_level`, `character_coding`, and `force_utf8` are keyword-only and behave as in [MARCReader](#marcreader), except `recovery_mode` defaults to `"permissive"` here rather than `"strict"`.
 
 ```python
 from mrrc import AuthorityMARCReader
