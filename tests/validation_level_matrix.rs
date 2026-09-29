@@ -6,9 +6,13 @@
 //!
 //! Single rule under test: `structural` is lossy across every reader,
 //! `strict_marc` is strict across every reader. At `Structural`,
-//! E201/E202/E301 do not fire on the bad-byte fixtures. At
+//! E201/E202/E302 do not fire on the bad-byte fixtures. At
 //! `StrictMarc`, they do, and the recovery axis selects how the parser
 //! responds (raise / recover / swallow).
+//!
+//! Invalid UTF-8 (E301) is outside the validation level: it follows
+//! `Utf8Handling`, whose default (`Strict`, as in pymarc) makes it an
+//! error at both levels, and `Replace` / `Ignore` suppress it at both.
 //!
 //! The fixtures are reused from the error-coverage harness
 //! (`tests/error_coverage.rs` / `tests/error_coverage.toml`) so this
@@ -24,7 +28,7 @@ use std::fs;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
-use mrrc::{MarcReader, RecoveryMode, ValidationLevel};
+use mrrc::{MarcReader, RecoveryMode, Utf8Handling, ValidationLevel};
 
 /// One entry in the 2x3 matrix. `expect_strict_error_code` is `Some(code)`
 /// when `(strict_marc, strict)` is expected to raise — set per-fixture
@@ -51,9 +55,19 @@ fn drain(
     validation: ValidationLevel,
     recovery: RecoveryMode,
 ) -> Result<usize, String> {
+    drain_with_utf8(bytes, validation, recovery, Utf8Handling::default())
+}
+
+fn drain_with_utf8(
+    bytes: &[u8],
+    validation: ValidationLevel,
+    recovery: RecoveryMode,
+    utf8: Utf8Handling,
+) -> Result<usize, String> {
     let mut reader = MarcReader::new(Cursor::new(bytes.to_vec()))
         .with_recovery_mode(recovery)
-        .with_validation_level(validation);
+        .with_validation_level(validation)
+        .with_utf8_handling(utf8);
     let mut count = 0usize;
     loop {
         match reader.read_record() {
@@ -192,7 +206,34 @@ fn matrix_e202_bad_subfield_code() {
 
 #[test]
 fn matrix_e301_invalid_utf8() {
-    run_matrix("e301_invalid_utf8_in_subfield.bin", "E301");
+    // Under the default strict UTF-8 handling, E301 fires at both
+    // validation levels, like any other recoverable per-field error.
+    run_strict_only_matrix("e301_invalid_utf8_in_subfield.bin", "E301");
+}
+
+#[test]
+fn matrix_e301_suppressed_by_lenient_utf8_handling() {
+    let bytes = fixture_bytes("e301_invalid_utf8_in_subfield.bin");
+    for utf8 in [Utf8Handling::Replace, Utf8Handling::Ignore] {
+        for validation in [ValidationLevel::Structural, ValidationLevel::StrictMarc] {
+            for recovery in [
+                RecoveryMode::Strict,
+                RecoveryMode::Lenient,
+                RecoveryMode::Permissive,
+            ] {
+                let outcome = drain_with_utf8(&bytes, validation, recovery, utf8);
+                assert!(
+                    outcome.is_ok(),
+                    "({utf8:?}, {validation:?}, {recovery:?}): expected clean iteration, got {outcome:?}",
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn matrix_e302_undecodable_marc8() {
+    run_matrix("e302_undecodable_marc8_in_subfield.bin", "E302");
 }
 
 #[test]
