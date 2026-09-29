@@ -8,6 +8,7 @@ The Python wrapper aims for API compatibility with pymarc.
 """
 
 import contextlib
+import weakref
 from typing import Any, ClassVar, Optional, Union
 
 from . import _mrrc
@@ -907,10 +908,13 @@ class Leader:
 
         The Rust record holds its own copy of the leader, so every edit made
         here is pushed to it immediately; serializers that read the Rust
-        record then see the edit without any later sync step.
+        record then see the edit without any later sync step. The record is
+        held by weak reference, so the pair forms no reference cycle and the
+        record is freed as soon as nothing else refers to it.
         """
-        if self._parent_record is not None:
-            self._parent_record._inner.set_leader(self._rust_leader)
+        record = self._parent_record() if self._parent_record else None
+        if record is not None:
+            record._inner.set_leader(self._rust_leader)
 
     def __getitem__(self, index: int | slice) -> str | str | None:
         """Get leader character(s) by position (pymarc compatibility).
@@ -1034,6 +1038,9 @@ class Leader:
 class Record:
     """Enhanced Record wrapper with pymarc-compatible API."""
 
+    # None until ``leader`` is first accessed on a record from a reader.
+    _leader: Leader | None
+
     def __init__(
         self,
         leader: Leader | None = None,
@@ -1054,7 +1061,7 @@ class Record:
             wrapped._rust_leader = leader
             leader = wrapped
         self._inner = _Record(leader._rust_leader)
-        leader._parent_record = self
+        leader._parent_record = weakref.ref(self)
         self._leader = leader
         if fields:
             for field in fields:
@@ -1703,12 +1710,15 @@ class Record:
     @property
     def leader(self) -> Leader:
         """The record leader (attribute, matching pymarc's record.leader)."""
-        if not hasattr(self, "_leader") or self._leader is None:
-            leader = Leader()
+        leader = getattr(self, "_leader", None)
+        if leader is None:
+            # Built on first access; bypasses Leader() so no throwaway inner
+            # Rust leader is allocated.
+            leader = object.__new__(Leader)
             leader._rust_leader = self._inner.leader
-            leader._parent_record = self
+            leader._parent_record = weakref.ref(self)
             self._leader = leader
-        return self._leader
+        return leader
 
     @leader.setter
     def leader(self, value: Union["Leader", str]) -> None:
@@ -1720,7 +1730,7 @@ class Record:
             raise TypeError(
                 f"leader must be a Leader or 24-character string, got {type(value).__name__}"
             )
-        value._parent_record = self
+        value._parent_record = weakref.ref(self)
         self._leader = value
         value._write_through()
 
@@ -2010,17 +2020,15 @@ class MARCWriter:
 def _wrap_record(rust_record) -> Record:
     """Wrap a raw Rust PyRecord in the Python Record wrapper.
 
-    Uses ``__new__`` to bypass the ``Record`` and ``Leader`` constructors,
-    which would each build a throwaway inner Rust object (``_Record`` and
-    ``_Leader``) only to have it discarded here. This wrapping runs once per
-    record on the read hot path, so the saved allocations matter.
+    Uses ``__new__`` to bypass the ``Record`` constructor, which would build
+    a throwaway inner Rust ``_Record`` only to have it discarded here. The
+    leader wrapper is left for ``Record.leader`` to build on first access.
+    This wrapping runs once per record on the read hot path, so the saved
+    allocations matter.
     """
     wrapper = Record.__new__(Record)
     wrapper._inner = rust_record
-    leader = object.__new__(Leader)
-    leader._rust_leader = rust_record.leader
-    leader._parent_record = wrapper
-    wrapper._leader = leader
+    wrapper._leader = None
     return wrapper
 
 
