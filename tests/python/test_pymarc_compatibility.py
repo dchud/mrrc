@@ -10,9 +10,11 @@ the mrrc wrapper is a drop-in replacement for pymarc. It includes:
 - Edge cases and error handling
 """
 
+import gc
 import io
 import json
 import re
+import weakref
 from pathlib import Path
 
 import pytest
@@ -986,6 +988,39 @@ class TestLeaderEditsAreSerialized:
         record.leader.character_coding = " "
         record.add_field(create_field("650", " ", "0", a="Café"))
         assert SERIALIZED_LEADER[entry_point](record)[9] == "a"
+
+
+class TestLeaderDoesNotKeepRecordAlive:
+    """A record is freed when its last reference goes, without waiting for
+    the cycle collector: its leader must not hold it in a reference cycle."""
+
+    @pytest.fixture(autouse=True)
+    def _no_cycle_collector(self):
+        gc.disable()
+        yield
+        gc.enable()
+
+    @pytest.mark.parametrize("origin", sorted(RECORD_ORIGINS))
+    def test_record_is_freed_by_reference_counting(self, origin):
+        record = RECORD_ORIGINS[origin]()
+        ref = weakref.ref(record)
+        del record
+        assert ref() is None
+
+    @pytest.mark.parametrize("origin", sorted(RECORD_ORIGINS))
+    def test_record_with_accessed_leader_is_freed(self, origin):
+        record = RECORD_ORIGINS[origin]()
+        record.leader.record_status = "c"
+        ref = weakref.ref(record)
+        del record
+        assert ref() is None
+
+    def test_leader_outliving_its_record_accepts_edits(self):
+        record = _constructed_record()
+        leader = record.leader
+        del record
+        leader.record_status = "c"
+        assert leader.record_status == "c"
 
 
 class TestEncoding:
