@@ -58,7 +58,12 @@ jobs:
 
       - name: Install mrrc and dependencies
         run: |
-          uv pip install --system --no-index --find-links dist mrrc
+          # Install the wheel just built by its path. Installing by name
+          # (--find-links dist mrrc) lets uv satisfy the version from its
+          # restored cache, which then benchmarks an older build of the same
+          # version instead of this commit.
+          WHEEL=$(ls dist/*.whl | head -1)
+          uv pip install --system "${WHEEL}"
           uv pip install --system pytest pytest-benchmark pytest-codspeed
 
       - name: Run benchmarks with Codspeed (1k/10k only)
