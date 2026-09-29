@@ -165,8 +165,9 @@ A MARC-8 character with no mapping in the active character set, or an escape
 sequence cut off by the end of a value, becomes `U+FFFD` under the default
 `validation_level="structural"` (pymarc substitutes a space). Under
 `validation_level="strict_marc"` it raises
-[E302 `marc8_invalid`](error-codes.md#E302) instead, as invalid UTF-8 raises
-[E301](error-codes.md#E301).
+[E302 `marc8_invalid`](error-codes.md#E302) instead. Invalid UTF-8 is handled
+separately, by `utf8_handling` (pymarc's option), whose default `"strict"`
+raises [E301](error-codes.md#E301) at every validation level.
 
 ## Writing
 
