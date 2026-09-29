@@ -750,6 +750,26 @@ class Leader:
         "u": "Unknown",
     }
 
+    # pymarc's Leader property names that differ from mrrc's, mapped to the
+    # mrrc attribute holding the same position.
+    _PYMARC_ALIASES: ClassVar[dict[str, str]] = {
+        "type_of_record": "record_type",
+        "type_of_control": "control_record_type",
+        "coding_scheme": "character_coding",
+        "base_address": "data_base_address",
+        "descriptive_cataloging_form": "cataloging_form",
+        "multipart_ressource": "multipart_level",
+        "multipart_resource_record_level": "multipart_level",
+    }
+
+    # pymarc's names for single positions inside mrrc's 4-character
+    # ``reserved`` attribute (positions 20-23).
+    _PYMARC_POSITIONS: ClassVar[dict[str, int]] = {
+        "length_of_field_length": 20,
+        "starting_character_position_length": 21,
+        "implementation_defined_length": 22,
+    }
+
     @classmethod
     def get_valid_values(cls, position: int) -> dict | None:
         """Get dictionary of valid values for a leader position.
@@ -854,14 +874,12 @@ class Leader:
         return instance
 
     def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access, handling aliases."""
-        # Aliases for pymarc compatibility
-        if name == "descriptive_cataloging_form":
-            return self._rust_leader.cataloging_form
-        elif name == "multipart_resource_record_level":
-            return self._rust_leader.multipart_level
-        # Delegate everything else
-        return getattr(self._rust_leader, name)
+        """Delegate attribute access, resolving pymarc's property names."""
+        if name in Leader._PYMARC_POSITIONS:
+            return self[Leader._PYMARC_POSITIONS[name]]
+        return getattr(
+            self._rust_leader, Leader._PYMARC_ALIASES.get(name, name)
+        )
 
     def __deepcopy__(self, memo: dict) -> "Leader":
         """Return an independent copy of this leader, detached from any record."""
@@ -872,33 +890,27 @@ class Leader:
         return new
 
     def __setattr__(self, name: str, value: Any) -> None:
-        """Delegate attribute setting, handling aliases."""
+        """Delegate attribute setting, resolving pymarc's property names."""
         if name in ("_rust_leader", "_parent_record"):
             object.__setattr__(self, name, value)
-        elif name == "descriptive_cataloging_form":
-            self._rust_leader.cataloging_form = value
-            # Mark parent record as having modified leader
-            if (
-                hasattr(self, "_parent_record")
-                and self._parent_record is not None
-            ):
-                self._parent_record._leader_modified = True
-        elif name == "multipart_resource_record_level":
-            self._rust_leader.multipart_level = value
-            # Mark parent record as having modified leader
-            if (
-                hasattr(self, "_parent_record")
-                and self._parent_record is not None
-            ):
-                self._parent_record._leader_modified = True
-        else:
-            setattr(self._rust_leader, name, value)
-            # Mark parent record as having modified leader
-            if (
-                hasattr(self, "_parent_record")
-                and self._parent_record is not None
-            ):
-                self._parent_record._leader_modified = True
+            return
+        if name in Leader._PYMARC_POSITIONS:
+            self[Leader._PYMARC_POSITIONS[name]] = value
+            return
+        setattr(
+            self._rust_leader, Leader._PYMARC_ALIASES.get(name, name), value
+        )
+        self._write_through()
+
+    def _write_through(self) -> None:
+        """Copy this leader into the record it belongs to, if any.
+
+        The Rust record holds its own copy of the leader, so every edit made
+        here is pushed to it immediately; serializers that read the Rust
+        record then see the edit without any later sync step.
+        """
+        if self._parent_record is not None:
+            self._parent_record._inner.set_leader(self._rust_leader)
 
     def __getitem__(self, index: int | slice) -> str | str | None:
         """Get leader character(s) by position (pymarc compatibility).
@@ -992,10 +1004,7 @@ class Leader:
         self._rust_leader.cataloging_form = leader_str[18]
         self._rust_leader.multipart_level = leader_str[19]
         self._rust_leader.reserved = leader_str[20:24]
-
-        # Mark parent record as having modified leader
-        if hasattr(self, "_parent_record") and self._parent_record is not None:
-            self._parent_record._leader_modified = True
+        self._write_through()
 
     def __str__(self) -> str:
         """The 24-character MARC 21 leader string (pymarc-compatible)."""
@@ -1039,11 +1048,13 @@ class Record:
         """
         if leader is None:
             leader = Leader()
-        # Get the inner Rust leader
-        rust_leader = (
-            leader._rust_leader if isinstance(leader, Leader) else leader
-        )
-        self._inner = _Record(rust_leader)
+        elif not isinstance(leader, Leader):
+            # A bare Rust leader: wrap it so edits reach this record.
+            wrapped = Leader()
+            wrapped._rust_leader = leader
+            leader = wrapped
+        self._inner = _Record(leader._rust_leader)
+        leader._parent_record = self
         self._leader = leader
         if fields:
             for field in fields:
@@ -1062,7 +1073,6 @@ class Record:
         ``copy.deepcopy`` clones the underlying Rust record so the two
         records share no state, matching pymarc.
         """
-        self._sync_leader()
         new = Record.__new__(Record)
         new._inner = self._inner.__deepcopy__(memo)
         memo[id(self)] = new
@@ -1693,13 +1703,10 @@ class Record:
     @property
     def leader(self) -> Leader:
         """The record leader (attribute, matching pymarc's record.leader)."""
-        # Ensure _leader is initialized and synced
         if not hasattr(self, "_leader") or self._leader is None:
             leader = Leader()
             leader._rust_leader = self._inner.leader
             leader._parent_record = self
-            # Track that we haven't modified the leader
-            self._leader_modified = False
             self._leader = leader
         return self._leader
 
@@ -1715,53 +1722,7 @@ class Record:
             )
         value._parent_record = self
         self._leader = value
-        self._leader_modified = True
-
-    def _sync_leader(self) -> None:
-        """Sync the Python leader back to the Rust record if it was modified."""
-        # Only sync if the leader was actually accessed/modified
-        if not getattr(self, "_leader_modified", False):
-            return
-
-        if hasattr(self, "_leader") and self._leader is not None:
-            # Just directly replace the inner leader with our modified one
-            try:
-                self._inner.set_leader(self._leader._rust_leader)
-            except RuntimeError as e:
-                # If we get a borrowing error, it means the leader is still borrowed
-                # In that case, we need to sync properties individually
-                if "Already borrowed" in str(e):
-                    # Get the inner leader and sync all properties
-                    inner_leader = self._inner.leader
-                    rust_leader = self._leader._rust_leader
-
-                    # Sync all properties
-                    inner_leader.record_length = rust_leader.record_length
-                    inner_leader.record_status = rust_leader.record_status
-                    inner_leader.record_type = rust_leader.record_type
-                    inner_leader.bibliographic_level = (
-                        rust_leader.bibliographic_level
-                    )
-                    inner_leader.control_record_type = (
-                        rust_leader.control_record_type
-                    )
-                    inner_leader.character_coding = (
-                        rust_leader.character_coding
-                    )
-                    inner_leader.indicator_count = rust_leader.indicator_count
-                    inner_leader.subfield_code_count = (
-                        rust_leader.subfield_code_count
-                    )
-                    inner_leader.data_base_address = (
-                        rust_leader.data_base_address
-                    )
-                    inner_leader.encoding_level = rust_leader.encoding_level
-                    inner_leader.cataloging_form = rust_leader.cataloging_form
-                    inner_leader.multipart_level = rust_leader.multipart_level
-                    inner_leader.reserved = rust_leader.reserved
-                    # Note: set_leader will still be called implicitly
-                else:
-                    raise
+        value._write_through()
 
     def as_dict(self) -> dict:
         """Return pymarc-compatible MARC-in-JSON dict (code4lib schema)."""
@@ -1792,7 +1753,6 @@ class Record:
 
     def as_marc(self) -> bytes:
         """Serialize record to ISO 2709 binary MARC (pymarc compatibility)."""
-        self._sync_leader()
         return bytes(self._inner.to_marc21())
 
     def as_marc21(self) -> bytes:
@@ -2027,8 +1987,6 @@ class MARCWriter:
 
     def write(self, record: Record) -> None:
         """Write a record."""
-        # Sync any modifications to the leader before writing
-        record._sync_leader()
         self._inner.write_record(record._inner)
 
     def write_record(self, record: Record) -> None:
@@ -2063,7 +2021,6 @@ def _wrap_record(rust_record) -> Record:
     leader._rust_leader = rust_record.leader
     leader._parent_record = wrapper
     wrapper._leader = leader
-    wrapper._leader_modified = False
     return wrapper
 
 

@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Leader` now implements `Default`, so `Record::new(Leader::default())` compiles: a new
   monograph record (`n`/`a`/`m`, indicator and subfield code counts of 2, reserved `4500`).
   The Python binding delegates to it. Reported by @fredericd (#447).
+- Python `Leader` accepts pymarc's property names (`type_of_record`, `coding_scheme`,
+  `base_address`, `multipart_ressource`, and the rest), reading and writing the same positions.
 
 ### Changed
 
@@ -26,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The ISO 2709 writers (bibliographic, authority, holdings) set leader position 09 to `a` on
   output, since they always write UTF-8. A record whose leader said MARC-8 was previously
   written with UTF-8 bytes and a MARC-8 label.
+- Python: edits made through `record.leader` now reach every serializer. On records built with
+  `Record()` they were dropped on write, and `to_xml()`, `to_json()`, `to_marcjson()`,
+  `to_marc21()`, and the `record_to_*` functions ignored them on any record.
 
 ### Performance
 
