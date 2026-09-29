@@ -44,7 +44,7 @@ See Also
 - MARCWriter: Low-level writer class
 """
 
-from mrrc import MARCReader, MARCWriter
+from mrrc import MARCReader, MARCWriter, Record
 from mrrc import _wrap_record as _wrap_rust_record
 
 __all__ = ["MARCReader", "MARCWriter", "read", "write"]
@@ -57,8 +57,7 @@ def _wrap_record(record):
     the shared wrapper helper, which bypasses the ``Record``/``Leader``
     constructors instead of allocating a throwaway inner object.
     """
-    if hasattr(record, "_sync_leader"):
-        # Already a wrapped Record.
+    if isinstance(record, Record):
         return record
     return _wrap_rust_record(record)
 

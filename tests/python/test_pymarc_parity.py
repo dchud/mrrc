@@ -158,3 +158,66 @@ def test_permissive_iteration_shape_matches_pymarc() -> None:
         "pymarc shape diverged from the corpus pattern"
     )
     assert mrrc_shape == pymarc_shape
+
+
+_LEADER = "00714cjm a2200205 i 4500"
+
+
+def _leader_property_names(leader_class) -> list[str]:
+    return sorted(
+        name
+        for name, value in vars(leader_class).items()
+        if isinstance(value, property)
+    )
+
+
+def test_leader_exposes_every_pymarc_property() -> None:
+    """Every property on pymarc's Leader exists on mrrc's Leader."""
+    pymarc = pytest.importorskip("pymarc")
+    leader = mrrc.Leader(_LEADER)
+    missing = [
+        name
+        for name in _leader_property_names(pymarc.Leader)
+        if not hasattr(leader, name)
+    ]
+    assert missing == []
+
+
+def test_leader_pymarc_properties_read_the_same_positions() -> None:
+    """pymarc's Leader property names read the same leader positions.
+
+    mrrc returns the numeric positions (record length, indicator and
+    subfield code counts, base address) as ints where pymarc returns
+    zero-padded strings, so values are compared in pymarc's string form.
+    """
+    pymarc = pytest.importorskip("pymarc")
+    ours, theirs = mrrc.Leader(_LEADER), pymarc.Leader(_LEADER)
+    mismatched = {}
+    for name in _leader_property_names(pymarc.Leader):
+        expected = getattr(theirs, name)
+        actual = str(getattr(ours, name, None)).zfill(len(expected))
+        if actual != expected:
+            mismatched[name] = (actual, expected)
+    assert mismatched == {}
+
+
+def test_leader_pymarc_properties_write_the_same_positions() -> None:
+    """Setting a single-character position through pymarc's property name
+    changes the same byte of the leader in both libraries."""
+    pymarc = pytest.importorskip("pymarc")
+    mismatched = {}
+    for name in _leader_property_names(pymarc.Leader):
+        if len(getattr(pymarc.Leader(_LEADER), name)) != 1:
+            continue
+        ours, theirs = mrrc.Leader(_LEADER), pymarc.Leader(_LEADER)
+        if not isinstance(getattr(ours, name, ""), str):
+            continue  # numeric positions are ints in mrrc
+        try:
+            setattr(ours, name, "z")
+        except AttributeError as e:
+            mismatched[name] = repr(e)
+            continue
+        setattr(theirs, name, "z")
+        if str(ours) != str(theirs):
+            mismatched[name] = (str(ours), str(theirs))
+    assert mismatched == {}

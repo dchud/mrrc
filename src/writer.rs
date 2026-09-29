@@ -42,6 +42,7 @@
 //! # }
 //! ```
 
+use crate::encoding::MarcEncoding;
 use crate::error::{MarcError, Result};
 use crate::formats::FormatWriter;
 use crate::iso2709::{check_directory_field_length, push_zero_padded, validate_directory_tag};
@@ -261,6 +262,9 @@ impl<W: Write> MarcWriter<W> {
                 record_control_number: rcn(),
                 message: format!("Base address exceeds 4GB limit ({base_address} bytes)"),
             })?;
+        // Field values are written as UTF-8 bytes above, so declare UTF-8
+        // whatever position 09 held in memory.
+        leader.character_coding = MarcEncoding::Utf8.as_leader_char();
 
         // Serialize the leader into the reused buffer (no per-record Vec) and
         // write leader, directory, data area, and record terminator.
@@ -355,6 +359,23 @@ mod tests {
         // Record length: 24 (leader) + 13 (directory: 245 + 0015 + 00000 + terminator) + 15 (field data) + 1 (record term) = 53
         assert_eq!(&buffer[0..5], b"00053"); // Record length
         assert_eq!(buffer[24], b'2'); // Start of directory (tag '245')
+    }
+
+    #[test]
+    fn test_write_declares_utf8_in_leader() {
+        // Values are serialized as UTF-8 whatever position 09 holds in memory,
+        // so the emitted leader must declare UTF-8.
+        let mut leader = make_test_leader();
+        leader.character_coding = ' ';
+        let mut record = Record::new(leader);
+        let mut field = Field::new("245".to_string(), '1', '0');
+        field.add_subfield('a', "Café".to_string());
+        record.add_field(field);
+
+        let mut buffer = Vec::new();
+        MarcWriter::new(&mut buffer).write_record(&record).unwrap();
+
+        assert_eq!(buffer[9], b'a');
     }
 
     #[test]

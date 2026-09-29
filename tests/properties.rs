@@ -490,12 +490,14 @@ proptest! {
             .expect("should get a record");
 
         // Compare leader fields (skip record_length and data_base_address
-        // since those are computed by the writer and not part of the input)
+        // since those are computed by the writer and not part of the input).
+        // The writer serializes UTF-8, so it declares UTF-8 whatever the input
+        // leader held at position 09.
         prop_assert_eq!(record.leader.record_status, parsed.leader.record_status);
         prop_assert_eq!(record.leader.record_type, parsed.leader.record_type);
         prop_assert_eq!(record.leader.bibliographic_level, parsed.leader.bibliographic_level);
         prop_assert_eq!(record.leader.control_record_type, parsed.leader.control_record_type);
-        prop_assert_eq!(record.leader.character_coding, parsed.leader.character_coding);
+        prop_assert_eq!(parsed.leader.character_coding, 'a');
         prop_assert_eq!(record.leader.indicator_count, parsed.leader.indicator_count);
         prop_assert_eq!(record.leader.subfield_code_count, parsed.leader.subfield_code_count);
         prop_assert_eq!(record.leader.encoding_level, parsed.leader.encoding_level);
@@ -1422,13 +1424,15 @@ fn emit_holdings_binary(record: &HoldingsRecord) -> Vec<u8> {
     buffer
 }
 
-/// Clone a leader with the writer-computed positions zeroed
-/// (`record_length`, `data_base_address`) so leaders can be compared
-/// before and after a round-trip.
+/// Clone a leader with the writer-set positions normalized
+/// (`record_length`, `data_base_address`, and `character_coding`, which the
+/// writer always sets to `a` because it serializes UTF-8) so leaders can be
+/// compared before and after a round-trip.
 fn leader_ignoring_computed(leader: &Leader) -> Leader {
     Leader {
         record_length: 0,
         data_base_address: 0,
+        character_coding: 'a',
         ..leader.clone()
     }
 }
@@ -1451,6 +1455,7 @@ proptest! {
             .expect("read should succeed")
             .expect("should get a record");
 
+        prop_assert_eq!(parsed.leader.character_coding, 'a');
         prop_assert_eq!(
             leader_ignoring_computed(&record.leader),
             leader_ignoring_computed(&parsed.leader)
@@ -1482,6 +1487,7 @@ proptest! {
             .expect("read should succeed")
             .expect("should get a record");
 
+        prop_assert_eq!(parsed.leader.character_coding, 'a');
         prop_assert_eq!(
             leader_ignoring_computed(&record.leader),
             leader_ignoring_computed(&parsed.leader)

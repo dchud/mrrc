@@ -12,6 +12,7 @@ the mrrc wrapper is a drop-in replacement for pymarc. It includes:
 
 import io
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,9 @@ from mrrc import (
     MARCWriter,
     Record,
     Subfield,
+    record_to_json,
+    record_to_marcjson,
+    record_to_xml,
 )
 
 # Test data directory relative to this file
@@ -874,6 +878,114 @@ class TestLeader:
         # Position 0: No descriptions
         desc = Leader.get_value_description(0, "5")
         assert desc is None
+
+
+def _written_leader(record):
+    buffer = io.BytesIO()
+    MARCWriter(buffer).write(record)
+    return buffer.getvalue()[:24].decode("ascii")
+
+
+def _xml_leader(xml):
+    return re.search(r"<leader>(.{24})</leader>", xml).group(1)
+
+
+# Every entry point that serializes a Record, each returning the 24-character
+# leader it emitted.
+SERIALIZED_LEADER = {
+    "as_marc": lambda r: r.as_marc()[:24].decode("ascii"),
+    "to_marc21": lambda r: bytes(r.to_marc21())[:24].decode("ascii"),
+    "MARCWriter": _written_leader,
+    "to_xml": lambda r: _xml_leader(r.to_xml()),
+    "record_to_xml": lambda r: _xml_leader(record_to_xml(r)),
+    "to_json": lambda r: json.loads(r.to_json())[0]["leader"],
+    "record_to_json": lambda r: json.loads(record_to_json(r))[0]["leader"],
+    "to_marcjson": lambda r: json.loads(r.to_marcjson())[0]["leader"],
+    "record_to_marcjson": lambda r: json.loads(record_to_marcjson(r))[0][
+        "leader"
+    ],
+    "as_json": lambda r: json.loads(r.as_json())["leader"],
+}
+
+BINARY_ENTRY_POINTS = ["as_marc", "to_marc21", "MARCWriter"]
+
+
+def _constructed_record():
+    record = Record()
+    record.add_field(create_field("245", "1", "0", a="Title"))
+    return record
+
+
+def _constructed_record_with_leader():
+    record = Record(Leader())
+    record.add_field(create_field("245", "1", "0", a="Title"))
+    return record
+
+
+def _read_record():
+    return next(iter(MARCReader(str(TEST_DATA_DIR / "simple_book.mrc"))))
+
+
+RECORD_ORIGINS = {
+    "Record()": _constructed_record,
+    "Record(Leader())": _constructed_record_with_leader,
+    "MARCReader": _read_record,
+}
+
+
+class TestLeaderEditsAreSerialized:
+    """Edits made through ``record.leader`` reach every serializer."""
+
+    @pytest.mark.parametrize("entry_point", sorted(SERIALIZED_LEADER))
+    @pytest.mark.parametrize("origin", sorted(RECORD_ORIGINS))
+    def test_attribute_edit(self, origin, entry_point):
+        record = RECORD_ORIGINS[origin]()
+        record.leader.record_status = "c"
+        assert SERIALIZED_LEADER[entry_point](record)[5] == "c"
+
+    @pytest.mark.parametrize("entry_point", sorted(SERIALIZED_LEADER))
+    @pytest.mark.parametrize("origin", sorted(RECORD_ORIGINS))
+    def test_positional_edit(self, origin, entry_point):
+        record = RECORD_ORIGINS[origin]()
+        record.leader[5] = "c"
+        assert SERIALIZED_LEADER[entry_point](record)[5] == "c"
+
+    @pytest.mark.parametrize("entry_point", sorted(SERIALIZED_LEADER))
+    def test_pymarc_property_name_edit(self, entry_point):
+        record = _constructed_record()
+        record.leader.type_of_record = "j"
+        record.leader.implementation_defined_length = "1"
+        serialized = SERIALIZED_LEADER[entry_point](record)
+        assert serialized[6] == "j"
+        assert serialized[22] == "1"
+
+    @pytest.mark.parametrize("entry_point", sorted(SERIALIZED_LEADER))
+    def test_leader_passed_to_constructor_stays_attached(self, entry_point):
+        leader = Leader()
+        record = Record(leader)
+        record.add_field(create_field("245", "1", "0", a="Title"))
+        leader.record_status = "c"
+        assert record.leader is leader
+        assert SERIALIZED_LEADER[entry_point](record)[5] == "c"
+
+    @pytest.mark.parametrize("entry_point", sorted(SERIALIZED_LEADER))
+    def test_assigned_leader_and_later_edits(self, entry_point):
+        record = _constructed_record()
+        record.leader = Leader("00000cam a2200000   4500")
+        record.leader.encoding_level = "7"
+        serialized = SERIALIZED_LEADER[entry_point](record)
+        assert serialized[5] == "c"
+        assert serialized[17] == "7"
+
+    @pytest.mark.parametrize("entry_point", BINARY_ENTRY_POINTS)
+    @pytest.mark.parametrize("origin", sorted(RECORD_ORIGINS))
+    def test_binary_output_declares_utf8(self, origin, entry_point):
+        # Field values are always serialized as UTF-8, so the binary leader
+        # declares UTF-8 even when position 09 says MARC-8 in memory.
+        record = RECORD_ORIGINS[origin]()
+        record.leader.character_coding = " "
+        record.add_field(create_field("650", " ", "0", a="Café"))
+        assert SERIALIZED_LEADER[entry_point](record)[9] == "a"
 
 
 class TestEncoding:

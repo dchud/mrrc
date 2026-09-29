@@ -5,6 +5,7 @@
 //! records but with different content organization.
 
 use crate::authority_record::AuthorityRecord;
+use crate::encoding::MarcEncoding;
 use crate::error::{MarcError, Result};
 use crate::iso2709::{check_directory_field_length, push_zero_padded, validate_directory_tag};
 use std::io::Write;
@@ -131,6 +132,9 @@ impl<W: Write> AuthorityMarcWriter<W> {
             leader.record_length = record_length as u32;
             leader.data_base_address = base_address as u32;
         }
+        // Field values are written as UTF-8 bytes above, so declare UTF-8
+        // whatever position 09 held in memory.
+        leader.character_coding = MarcEncoding::Utf8.as_leader_char();
 
         // Write leader
         let leader_bytes = leader.as_bytes()?;
@@ -187,6 +191,34 @@ mod tests {
         let output = writer.writer;
         assert!(!output.is_empty());
         assert!(output.len() > 24); // At least leader + directory terminator + record terminator
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_declares_utf8_in_leader() -> Result<()> {
+        // Position 09 is ' ' (MARC-8) in memory; the writer serializes values
+        // as UTF-8, so the emitted leader must say so.
+        let leader = Leader {
+            record_length: 0,
+            record_status: 'n',
+            record_type: 'z',
+            bibliographic_level: '|',
+            control_record_type: ' ',
+            character_coding: ' ',
+            indicator_count: 2,
+            subfield_code_count: 2,
+            data_base_address: 0,
+            encoding_level: 'n',
+            cataloging_form: 'a',
+            multipart_level: ' ',
+            reserved: "4500".to_string(),
+        };
+        let record = AuthorityRecord::new(leader);
+        let mut writer = AuthorityMarcWriter::new(Vec::new());
+
+        writer.write_record(&record)?;
+
+        assert_eq!(writer.writer[9], b'a');
         Ok(())
     }
 
