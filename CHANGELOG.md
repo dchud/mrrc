@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Compile-check the Rust doc examples: 119 of the 120 previously ignored examples now build
   under `cargo test --doc`. Several of them documented methods that do not exist or take
   different arguments than shown; those are corrected.
+- The ISO 2709 writers (bibliographic, authority, holdings) set leader position 09 to `a` on
+  output, since they always write UTF-8. A record whose leader said MARC-8 was previously
+  written with UTF-8 bytes and a MARC-8 label.
 
 ### Performance
 

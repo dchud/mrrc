@@ -4,6 +4,7 @@
 //! to ISO 2709 binary format. Holdings records use the same binary format as bibliographic
 //! and authority records but with different content organization.
 
+use crate::encoding::MarcEncoding;
 use crate::error::{MarcError, Result};
 use crate::holdings_record::HoldingsRecord;
 use crate::iso2709::{check_directory_field_length, push_zero_padded, validate_directory_tag};
@@ -133,6 +134,9 @@ impl<W: Write> HoldingsMarcWriter<W> {
             leader.record_length = record_length as u32;
             leader.data_base_address = base_address as u32;
         }
+        // Field values are written as UTF-8 bytes above, so declare UTF-8
+        // whatever position 09 held in memory.
+        leader.character_coding = MarcEncoding::Utf8.as_leader_char();
         let leader_bytes = leader.as_bytes()?;
         self.writer.write_all(&leader_bytes)?;
 
@@ -184,6 +188,20 @@ mod tests {
         let result = writer.write_record(&record);
         assert!(result.is_ok());
         assert!(!buffer.is_empty());
+    }
+
+    #[test]
+    fn test_write_declares_utf8_in_leader() {
+        // create_test_leader() sets position 09 to ' ' (MARC-8); the writer
+        // serializes values as UTF-8, so the emitted leader must say so.
+        let record = HoldingsRecord::new(create_test_leader());
+
+        let mut buffer = Vec::new();
+        HoldingsMarcWriter::new(&mut buffer)
+            .write_record(&record)
+            .unwrap();
+
+        assert_eq!(buffer[9], b'a');
     }
 
     #[test]
