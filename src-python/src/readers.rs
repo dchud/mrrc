@@ -114,6 +114,10 @@ impl PyMARCReader {
     ///   record is parsed by an ephemeral reader, so the Rust core's
     ///   per-record `DEFAULT_MAX_ERRORS` never accumulates across the
     ///   stream — this wrapper cap is the only cross-stream limit.)
+    /// * `character_coding` - How each record's encoding is chosen:
+    ///   'leader' (the default: leader position 09, as pymarc does),
+    ///   'utf-8', or 'detect'.
+    /// * `force_utf8` - pymarc's spelling of `character_coding='utf-8'`.
     #[new]
     #[pyo3(signature = (
         source,
@@ -121,15 +125,20 @@ impl PyMARCReader {
         recovery_mode = "permissive",
         validation_level = "structural",
         max_errors = None,
+        character_coding = None,
+        force_utf8 = false,
     ))]
     pub fn new(
         source: &Bound<'_, PyAny>,
         recovery_mode: &str,
         validation_level: &str,
         max_errors: Option<usize>,
+        character_coding: Option<&str>,
+        force_utf8: bool,
     ) -> PyResult<Self> {
         let rec_mode = crate::reader_helpers::parse_recovery_mode(recovery_mode)?;
         let val_level = crate::reader_helpers::parse_validation_level(validation_level)?;
+        let coding = crate::reader_helpers::parse_character_coding(character_coding, force_utf8)?;
 
         // One backend handles every source: str/path → RustFile, bytes →
         // Cursor, any .read() object → chunked Python-file. A bad path or
@@ -137,7 +146,7 @@ impl PyMARCReader {
         // …) here at construction.
         let backend = ReaderBackend::from_python(source, source.py(), rec_mode)?;
         Ok(PyMARCReader {
-            reader: Some(BatchedReader::new(backend, rec_mode, val_level)),
+            reader: Some(BatchedReader::new(backend, rec_mode, val_level, coding)),
             max_errors,
             accumulated_errors: 0,
             records_yielded: 0,

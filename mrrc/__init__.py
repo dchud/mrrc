@@ -96,6 +96,7 @@ from .exceptions import (  # noqa: F401
     InvalidField,
     InvalidIndicator,
     JsonError,
+    Marc8Error,
     MrrcException,
     RecordDirectoryInvalid,
     RecordLeaderInvalid,
@@ -1816,6 +1817,9 @@ class MARCReader:
         file_obj: File path (str), pathlib.Path, bytes/bytearray, or file-like object.
         to_unicode: Accepted for pymarc compatibility. mrrc always converts
             MARC-8 to UTF-8; passing ``False`` emits a warning.
+        force_utf8: pymarc's option: when ``True``, decode every record as
+            UTF-8 whatever leader position 09 says. The same as
+            ``character_coding="utf-8"``.
         permissive: When ``True``, yields ``None`` for records that fail to
             parse instead of raising, matching pymarc's ``permissive`` behavior.
             Setting this flag implicitly defaults ``recovery_mode`` back to
@@ -1831,9 +1835,10 @@ class MARCReader:
             swallows shape).
         validation_level: What counts as an error during parsing — orthogonal
             to ``recovery_mode``. ``"structural"`` (default) fires only ISO
-            2709 structural errors; UTF-8 decode is lossy across all readers.
-            ``"strict_marc"`` adds universal byte-level MARC 21 checks
-            (E201 indicator, E202 subfield code, E301 strict UTF-8).
+            2709 structural errors; UTF-8 and MARC-8 decoding are lossy
+            across all readers. ``"strict_marc"`` adds universal byte-level
+            MARC 21 checks (E201 indicator, E202 subfield code, E301 strict
+            UTF-8, E302 strict MARC-8).
         max_errors: Optional cap on accumulated recovered errors in
             lenient/permissive mode. ``None`` (default) disables the
             wrapper-level cap. ``0`` matches the Rust API's
@@ -1841,6 +1846,16 @@ class MARCReader:
             :class:`mrrc.FatalReaderError` (E099) once recovered errors
             across records exceed ``N``. Observationally inert in strict
             mode (the first error fires before any recovery accumulates).
+        character_coding: How each record's character encoding is chosen.
+            ``"leader"`` (the default when ``force_utf8`` is ``False``)
+            follows leader position 09 as pymarc does: ``a`` is UTF-8 and any
+            other value is MARC-8. ``"utf-8"`` decodes every record as UTF-8.
+            ``"detect"`` decodes a record as UTF-8 when its field data is
+            valid UTF-8 containing non-ASCII bytes and otherwise follows the
+            leader, which reads files that mix MARC-8 records with UTF-8
+            records whose leader still says MARC-8. Combining
+            ``force_utf8=True`` with ``"leader"`` or ``"detect"`` raises
+            ``ValueError``.
     """
 
     def __init__(
@@ -1851,6 +1866,8 @@ class MARCReader:
         recovery_mode: str | None = None,
         validation_level: str = "structural",
         max_errors: int | None = None,
+        force_utf8: bool = False,
+        character_coding: str | None = None,
     ):
         """Create a new MARC reader."""
         if not to_unicode:
@@ -1880,6 +1897,8 @@ class MARCReader:
             recovery_mode=recovery_mode,
             validation_level=validation_level,
             max_errors=max_errors,
+            character_coding=character_coding,
+            force_utf8=force_utf8,
         )
         # pymarc-compat accessors fed by __next__. `current_exception` is
         # the typed mrrc exception caught from the most recent parse attempt,

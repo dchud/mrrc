@@ -28,10 +28,12 @@
 //! [`AuthorityMarcReader`]: crate::AuthorityMarcReader
 //! [`HoldingsMarcReader`]: crate::HoldingsMarcReader
 
+use crate::encoding::{CharacterCoding, MarcEncoding};
 use crate::error::{MarcError, Result};
 use crate::iso2709::{
-    self, DataFieldParseConfig, FIELD_TERMINATOR, LEADER_LEN, ParseContext, is_control_field_tag,
-    parse_4digits, parse_5digits, parse_data_field, read_leader_bytes, read_record_data,
+    self, DataFieldParseConfig, DecodeMode, FIELD_TERMINATOR, LEADER_LEN, ParseContext,
+    decode_field_value, is_control_field_tag, parse_4digits, parse_5digits, parse_data_field,
+    read_leader_bytes, read_record_data,
 };
 use crate::leader::Leader;
 use crate::record::Field;
@@ -100,35 +102,32 @@ pub trait Iso2709Builder: Sized {
     /// captions, etc.).
     fn add_data_field(&mut self, field: Field);
 
-    /// Decode a control field's bytes into its string value. The
-    /// default strips the trailing `FIELD_TERMINATOR` byte and dispatches
-    /// on `level`: lossy under [`ValidationLevel::Structural`], strict
-    /// (raising [`crate::MarcError::EncodingError`]) under
-    /// [`ValidationLevel::StrictMarc`]. Authority overrides to also
-    /// strip a trailing `SUBFIELD_DELIMITER`; holdings overrides for its
-    /// stricter byte-count guard but uses the same level dispatch.
+    /// Decode a control field's bytes into its string value in the record's
+    /// `encoding`. The default strips the trailing `FIELD_TERMINATOR` byte;
+    /// bytes that don't decode are replaced under
+    /// [`ValidationLevel::Structural`] and raise under
+    /// [`ValidationLevel::StrictMarc`]. Authority overrides to also strip a
+    /// trailing `SUBFIELD_DELIMITER`; holdings overrides for its stricter
+    /// byte-count guard but decodes the same way.
     ///
     /// # Errors
     ///
-    /// Returns `MarcError::EncodingError` when `level` is
-    /// [`ValidationLevel::StrictMarc`] and the bytes aren't valid UTF-8.
-    /// The lossy path never errors.
+    /// When `level` is [`ValidationLevel::StrictMarc`], returns
+    /// `MarcError::EncodingError` for invalid UTF-8 and
+    /// `MarcError::Marc8Error` for undecodable MARC-8. The lossy path never
+    /// errors.
     #[inline]
     fn decode_control_field_value(
         field_bytes: &[u8],
         tag: &str,
         ctx: &ParseContext,
         level: ValidationLevel,
+        encoding: MarcEncoding,
     ) -> Result<String> {
         let raw = &field_bytes[..field_bytes.len().saturating_sub(1)];
-        match level {
-            ValidationLevel::Structural => Ok(String::from_utf8_lossy(raw).to_string()),
-            ValidationLevel::StrictMarc => {
-                std::str::from_utf8(raw).map(str::to_string).map_err(|e| {
-                    ctx.err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}"))
-                })
-            },
-        }
+        decode_field_value(raw, encoding, DecodeMode::for_level(level), ctx, || {
+            format!("control field {tag}")
+        })
     }
 
     /// Per-reader minimum data-field byte count guard. Returning `Err`
@@ -199,6 +198,7 @@ pub fn parse_iso2709_record<R, B>(
     cap: &mut RecoveryCap,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    character_coding: CharacterCoding,
     errors: &mut Vec<MarcError>,
 ) -> Result<Option<B::Output>>
 where
@@ -249,6 +249,7 @@ where
         cap,
         recovery_mode,
         validation_level,
+        character_coding,
         errors,
     )
 }
@@ -329,6 +330,7 @@ pub fn parse_iso2709_record_from_bytes<B: Iso2709Builder>(
     cap: &mut RecoveryCap,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    character_coding: CharacterCoding,
     errors: &mut Vec<MarcError>,
 ) -> Result<Option<B::Output>> {
     if cap.is_exhausted() || record_bytes.is_empty() {
@@ -384,6 +386,7 @@ pub fn parse_iso2709_record_from_bytes<B: Iso2709Builder>(
             cap,
             recovery_mode,
             validation_level,
+            character_coding,
             errors,
         );
     }
@@ -401,6 +404,7 @@ pub fn parse_iso2709_record_from_bytes<B: Iso2709Builder>(
         cap,
         recovery_mode,
         validation_level,
+        character_coding,
         errors,
     )
 }
@@ -426,6 +430,7 @@ fn parse_record_body<B: Iso2709Builder>(
     cap: &mut RecoveryCap,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    character_coding: CharacterCoding,
     errors: &mut Vec<MarcError>,
 ) -> Result<Option<B::Output>> {
     let record_length = leader.record_length as usize;
@@ -479,6 +484,11 @@ fn parse_record_body<B: Iso2709Builder>(
     } else {
         &[]
     };
+
+    // Choose the record's encoding while the leader is still in hand; the
+    // builder takes it next.
+    let encoding = character_coding.resolve(leader.character_coding, data);
+    let data_field_config = B::parse_config(validation_level).with_encoding(encoding);
 
     let mut builder = B::new_for(leader);
 
@@ -607,9 +617,13 @@ fn parse_record_body<B: Iso2709Builder>(
                 let field_data = &data[start_position..available_end];
                 if tag != "LDR" {
                     if is_control_field_tag(&tag) {
-                        if let Ok(value) =
-                            B::decode_control_field_value(field_data, &tag, ctx, validation_level)
-                        {
+                        if let Ok(value) = B::decode_control_field_value(
+                            field_data,
+                            &tag,
+                            ctx,
+                            validation_level,
+                            encoding,
+                        ) {
                             if tag == "001" {
                                 ctx.record_control_number = Some(value.clone());
                             }
@@ -618,12 +632,8 @@ fn parse_record_body<B: Iso2709Builder>(
                     } else if B::validate_data_field_bytes(field_data, &tag, ctx).is_ok() {
                         ctx.current_field_tag = tag.as_bytes().try_into().ok();
                         ctx.stream_byte_offset = record_data_offset + data_start + start_position;
-                        if let Ok(field) = parse_data_field(
-                            field_data,
-                            tag,
-                            B::parse_config(validation_level),
-                            ctx,
-                        ) {
+                        if let Ok(field) = parse_data_field(field_data, tag, data_field_config, ctx)
+                        {
                             builder.add_data_field(field);
                         }
                         ctx.current_field_tag = None;
@@ -640,8 +650,13 @@ fn parse_record_body<B: Iso2709Builder>(
         }
 
         if is_control_field_tag(&tag) {
-            let value = match B::decode_control_field_value(field_data, &tag, ctx, validation_level)
-            {
+            let value = match B::decode_control_field_value(
+                field_data,
+                &tag,
+                ctx,
+                validation_level,
+                encoding,
+            ) {
                 Ok(v) => v,
                 Err(e) => {
                     if recovery_mode == RecoveryMode::Strict {
@@ -683,7 +698,7 @@ fn parse_record_body<B: Iso2709Builder>(
 
         // Data field. Move the owned tag into the parser (and thence the
         // field) rather than re-allocating it there.
-        let parsed = parse_data_field(field_data, tag, B::parse_config(validation_level), ctx);
+        let parsed = parse_data_field(field_data, tag, data_field_config, ctx);
         ctx.current_field_tag = None;
         match parsed {
             Ok(field) => builder.add_data_field(field),

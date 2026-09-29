@@ -17,7 +17,7 @@
 
 use crate::backend::RecordByteSource;
 use crate::parse_error::ParseError;
-use mrrc::{MarcError, Record, RecoveryMode, ValidationLevel};
+use mrrc::{CharacterCoding, MarcError, Record, RecoveryMode, ValidationLevel};
 use std::collections::VecDeque;
 use std::sync::Arc;
 
@@ -67,6 +67,7 @@ pub struct BatchedReader<S: RecordByteSource> {
     eof: bool,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    character_coding: CharacterCoding,
     /// Count of records successfully read from the source so far. Used to
     /// stamp `record_index` (1-based) onto a source error.
     records_read: usize,
@@ -78,13 +79,19 @@ pub struct BatchedReader<S: RecordByteSource> {
 
 impl<S: RecordByteSource> BatchedReader<S> {
     /// Wrap a record-byte source with batching and parsing.
-    pub fn new(source: S, recovery_mode: RecoveryMode, validation_level: ValidationLevel) -> Self {
+    pub fn new(
+        source: S,
+        recovery_mode: RecoveryMode,
+        validation_level: ValidationLevel,
+        character_coding: CharacterCoding,
+    ) -> Self {
         BatchedReader {
             source,
             queue: VecDeque::new(),
             eof: false,
             recovery_mode,
             validation_level,
+            character_coding,
             records_read: 0,
             bytes_consumed: 0,
         }
@@ -153,6 +160,7 @@ impl<S: RecordByteSource> BatchedReader<S> {
         // === Phase 2: parse the whole batch in one GIL release ===
         let recovery_mode = self.recovery_mode;
         let validation_level = self.validation_level;
+        let character_coding = self.character_coding;
         let parsed: Vec<Result<Option<Record>, Box<MarcError>>> = if batch_bytes.is_empty() {
             Vec::new()
         } else {
@@ -160,8 +168,13 @@ impl<S: RecordByteSource> BatchedReader<S> {
                 batch_bytes
                     .iter()
                     .map(|bytes| {
-                        mrrc::parse_record_from_shared_bytes(bytes, recovery_mode, validation_level)
-                            .map_err(Box::new)
+                        mrrc::parse_record_from_shared_bytes_with_character_coding(
+                            bytes,
+                            recovery_mode,
+                            validation_level,
+                            character_coding,
+                        )
+                        .map_err(Box::new)
                     })
                     .collect()
             })

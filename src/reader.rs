@@ -33,6 +33,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+use crate::encoding::CharacterCoding;
 use crate::error::Result;
 use crate::formats::FormatReader;
 use crate::iso2709::{DataFieldParseConfig, ParseContext};
@@ -76,6 +77,7 @@ pub struct MarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    character_coding: CharacterCoding,
     records_read: usize,
     ctx: ParseContext,
     cap: RecoveryCap,
@@ -103,6 +105,7 @@ impl<R: Read> MarcReader<R> {
             reader,
             recovery_mode: RecoveryMode::Strict,
             validation_level: ValidationLevel::default(),
+            character_coding: CharacterCoding::default(),
             records_read: 0,
             ctx: ParseContext::new(),
             cap: RecoveryCap::new(),
@@ -144,7 +147,7 @@ impl<R: Read> MarcReader<R> {
     ///   subfield-code byte validation are skipped.
     /// - [`ValidationLevel::StrictMarc`]: adds universal byte-level
     ///   MARC 21 checks (E201 indicator, E202 subfield code, E301
-    ///   strict UTF-8).
+    ///   strict UTF-8, E302 strict MARC-8).
     ///
     /// # Examples
     ///
@@ -160,6 +163,28 @@ impl<R: Read> MarcReader<R> {
     #[must_use]
     pub fn with_validation_level(mut self, level: ValidationLevel) -> Self {
         self.validation_level = level;
+        self
+    }
+
+    /// Set how the reader chooses each record's character encoding.
+    ///
+    /// The default, [`CharacterCoding::Leader`], follows leader position 09
+    /// as pymarc does: `a` is UTF-8 and any other value is MARC-8.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mrrc::{CharacterCoding, MarcReader};
+    /// use std::io::Cursor;
+    ///
+    /// let data = vec![];
+    /// let cursor = Cursor::new(data);
+    /// let mut reader = MarcReader::new(cursor)
+    ///     .with_character_coding(CharacterCoding::Detect);
+    /// ```
+    #[must_use]
+    pub fn with_character_coding(mut self, coding: CharacterCoding) -> Self {
+        self.character_coding = coding;
         self
     }
 
@@ -247,6 +272,7 @@ impl<R: Read> MarcReader<R> {
             &mut self.cap,
             self.recovery_mode,
             self.validation_level,
+            self.character_coding,
             &mut errors,
         )?;
         let result = result.map(|mut record| {
@@ -374,6 +400,27 @@ pub fn parse_record_from_shared_bytes(
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
 ) -> Result<Option<Record>> {
+    parse_record_from_shared_bytes_with_character_coding(
+        record_bytes,
+        recovery_mode,
+        validation_level,
+        CharacterCoding::default(),
+    )
+}
+
+/// [`parse_record_from_shared_bytes`] with an explicit [`CharacterCoding`],
+/// for the Python bindings' reader.
+///
+/// # Errors
+///
+/// Same as [`parse_record_from_shared_bytes`].
+#[doc(hidden)]
+pub fn parse_record_from_shared_bytes_with_character_coding(
+    record_bytes: &std::sync::Arc<Vec<u8>>,
+    recovery_mode: RecoveryMode,
+    validation_level: ValidationLevel,
+    character_coding: CharacterCoding,
+) -> Result<Option<Record>> {
     let mut ctx = ParseContext::new();
     let mut cap = RecoveryCap::new();
     let mut errors = Vec::new();
@@ -383,6 +430,7 @@ pub fn parse_record_from_shared_bytes(
         &mut cap,
         recovery_mode,
         validation_level,
+        character_coding,
         &mut errors,
     )?;
     Ok(result.map(|mut record| {

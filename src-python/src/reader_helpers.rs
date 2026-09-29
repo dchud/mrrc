@@ -4,6 +4,7 @@
 //! for common operations: recovery mode parsing, source file opening, and
 //! reading raw record bytes from Python file objects.
 
+use mrrc::CharacterCoding;
 use mrrc::recovery::{RecoveryMode, ValidationLevel};
 use pyo3::prelude::*;
 use std::fs::File;
@@ -31,6 +32,38 @@ pub fn parse_validation_level(level: &str) -> PyResult<ValidationLevel> {
         "strict_marc" => Ok(ValidationLevel::StrictMarc),
         _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
             "Invalid validation_level '{level}': must be 'structural' or 'strict_marc'"
+        ))),
+    }
+}
+
+/// Resolve the `character_coding` and `force_utf8` reader options into a
+/// `CharacterCoding`. `force_utf8=True` is pymarc's spelling of
+/// `character_coding="utf-8"`; combining it with another coding is an error.
+///
+/// Returns `PyValueError` for an unknown coding or a conflicting pair.
+pub fn parse_character_coding(
+    character_coding: Option<&str>,
+    force_utf8: bool,
+) -> PyResult<CharacterCoding> {
+    let coding = match character_coding {
+        None => None,
+        Some("leader") => Some(CharacterCoding::Leader),
+        Some("utf-8") => Some(CharacterCoding::Utf8),
+        Some("detect") => Some(CharacterCoding::Detect),
+        Some(other) => {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "Invalid character_coding '{other}': must be 'leader', 'utf-8', or 'detect'"
+            )));
+        },
+    };
+    match (coding, force_utf8) {
+        (None, false) => Ok(CharacterCoding::Leader),
+        (None | Some(CharacterCoding::Utf8), true) => Ok(CharacterCoding::Utf8),
+        (Some(coding), false) => Ok(coding),
+        (Some(_), true) => Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "force_utf8=True conflicts with character_coding='{}'; \
+             force_utf8=True means character_coding='utf-8'",
+            character_coding.unwrap_or_default()
         ))),
     }
 }

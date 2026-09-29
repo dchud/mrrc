@@ -11,7 +11,9 @@ MRRC supports both MARC-8 (legacy) and UTF-8 character encodings, with automatic
 
 **MRRC handles encoding automatically:**
 
-- Detects encoding from leader position 09
+- Chooses each record's encoding from leader position 09, as pymarc does:
+  `a` is UTF-8 and any other value is MARC-8 (see
+  [Choosing the Encoding](#choosing-the-encoding) to override this)
 - Converts MARC-8 to UTF-8 when reading
 - Stores all strings internally as UTF-8
 - Writes UTF-8 (MARC-8 output is not currently supported)
@@ -123,11 +125,55 @@ Check a record's declared encoding via the leader:
     }
     ```
 
+## Choosing the Encoding
+
+By default each record is decoded in the encoding its leader position 09
+declares, which is pymarc's rule. Files in the wild don't always get position
+09 right, most often a UTF-8 record whose leader still says MARC-8, so the
+readers take a `character_coding` option:
+
+| `character_coding` | Behavior |
+|---|---|
+| `"leader"` (default) | Position 09 `a` is UTF-8; any other value is MARC-8. |
+| `"utf-8"` | Every record is UTF-8, whatever position 09 says. pymarc spells this `force_utf8=True`, which mrrc also accepts. |
+| `"detect"` | A record whose field data is valid UTF-8 containing non-ASCII bytes is UTF-8; otherwise position 09 decides. Suited to files that mix MARC-8 records with mislabelled UTF-8 ones, since MARC-8 text almost never forms valid multibyte UTF-8. |
+
+=== "Python"
+
+    ```python
+    from mrrc import MARCReader
+
+    # pymarc's spelling
+    reader = MARCReader("records.mrc", force_utf8=True)
+
+    # A file mixing MARC-8 records with UTF-8 records labelled MARC-8
+    reader = MARCReader("records.mrc", character_coding="detect")
+    ```
+
+=== "Rust"
+
+    ```rust
+    use mrrc::{CharacterCoding, MarcReader};
+
+    let mut reader = MarcReader::new(file).with_character_coding(CharacterCoding::Detect);
+    ```
+
+`AuthorityMARCReader` and `HoldingsMARCReader` (and their Rust counterparts)
+take the same option.
+
+A MARC-8 character with no mapping in the active character set, or an escape
+sequence cut off by the end of a value, becomes `U+FFFD` under the default
+`validation_level="structural"` (pymarc substitutes a space). Under
+`validation_level="strict_marc"` it raises
+[E302 `marc8_invalid`](error-codes.md#E302) instead, as invalid UTF-8 raises
+[E301](error-codes.md#E301).
+
 ## Writing
 
-MRRC writes UTF-8. Records read from MARC-8 sources are converted to UTF-8 on
-the way in, so written output is always UTF-8 regardless of the source encoding.
-Writing MARC-8 output is not currently supported.
+MRRC writes UTF-8 and sets leader position 09 to `a` on output. Records read
+from MARC-8 sources are converted to UTF-8 on the way in, so written output is
+always UTF-8 regardless of the source encoding. Writing MARC-8 output is not
+currently supported.
 
 ## Mixed Encoding Handling
 
@@ -152,7 +198,7 @@ match analysis {
 }
 ```
 
-In Python, MRRC handles encoding conversion automatically when reading records. If you encounter encoding issues, check the leader's `character_coding` property and compare it with the actual content.
+In Python, MRRC handles encoding conversion automatically when reading records. For a file that mixes MARC-8 records with UTF-8 records labelled MARC-8, read with `character_coding="detect"` (see [Choosing the Encoding](#choosing-the-encoding)). If you encounter other encoding issues, check the leader's `character_coding` property and compare it with the actual content.
 
 ## Common Issues
 
@@ -164,7 +210,7 @@ If you see garbled text like `Ã©` instead of `é`, the encoding may be misdete
 - Record declares MARC-8 but contains UTF-8
 - File was saved with wrong encoding
 
-**Solution**: Check the leader position 9 and verify it matches the actual data.
+**Solution**: Check the leader position 9 and verify it matches the actual data. If the data is UTF-8 but the leader says MARC-8, read with `character_coding="utf-8"` (pymarc's `force_utf8=True`), or with `character_coding="detect"` when only some records are affected.
 
 ### Missing Characters
 
@@ -174,11 +220,14 @@ If characters display as `?` or `\uFFFD`:
 - The character may be from an unsupported script
 - The data may be corrupted
 
+Under `validation_level="strict_marc"`, an undecodable MARC-8 character raises
+[E302](error-codes.md#E302) rather than becoming `\uFFFD`.
+
 ### East Asian Text (CJK)
 
 MARC-8 uses EACC (East Asian Character Code) for Chinese, Japanese, and Korean:
 
-- Uses 3-byte sequences (escape + 2 bytes)
+- Each character is 3 bytes, after the `ESC $ 1` escape sequence
 - MRRC supports 15,000+ EACC characters
 - Modern records should use UTF-8 for CJK
 

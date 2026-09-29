@@ -700,7 +700,8 @@ wired = true
 # E301 authority CONTROL field invalid UTF-8 at strict_marc. The
 # fixture's leader is the simple_authority.mrc leader with position 18
 # (punctuation policy) set to ' ' so it conforms to the MARC 21 Authority
-# Format allowed-value sets; the per-record-type leader validators in
+# Format allowed-value sets, and position 09 set to 'a' so the record is
+# decoded as UTF-8; the per-record-type leader validators in
 # `RecordStructureValidator` let the parse proceed past the leader and
 # fire E301 on the corrupted control-field byte (0xFF at offset 73).
 [[case]]
@@ -710,7 +711,23 @@ variant = "EncodingError"
 slug = "utf8_invalid"
 trigger_kind = "parse_authority"
 trigger_fixture = "tests/data/error_fixtures/e301_invalid_utf8_in_authority_control_field.bin"
-description = "Byte 73 (first byte of first control field in simple_authority.mrc) replaced with 0xFF; leader position 18 set to ' ' so the MARC 21 Authority Format allowed-value sets accept the leader at strict_marc."
+description = "Byte 73 (first byte of first control field in simple_authority.mrc) replaced with 0xFF; leader position 18 set to ' ' so the MARC 21 Authority Format allowed-value sets accept the leader at strict_marc, and position 09 set to 'a' (UTF-8)."
+expected_context = ["record_index"]
+recovery_modes = ["strict"]
+validation_level = "strict_marc"
+wired = true
+
+# E302: a MARC-8 subfield value contains a byte with no mapping in the
+# active character set. Fires from the shared field decoder at
+# strict_marc; structural substitutes U+FFFD instead.
+[[case]]
+id = "e302_undecodable_marc8_in_subfield"
+code = "E302"
+variant = "Marc8Error"
+slug = "marc8_invalid"
+trigger_kind = "parse_iso2709"
+trigger_fixture = "tests/data/error_fixtures/e302_undecodable_marc8_in_subfield.bin"
+description = "Leader byte 9 set to ' ' (MARC-8) and byte 70 (inside the 100$a 'Fitzgerald' subfield value) replaced with 0xAF, which has no mapping in ANSEL."
 expected_context = ["record_index"]
 recovery_modes = ["strict"]
 validation_level = "strict_marc"

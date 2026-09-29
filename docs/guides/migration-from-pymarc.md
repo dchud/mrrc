@@ -391,11 +391,13 @@ for record in reader:
 For pymarc-equivalent error handling, use `permissive=True`. Two
 documented differences from pymarc's defaults:
 
-- **Encoding strictness:** mrrc raises `EncodingError` (and swallows it via
-  `current_exception` under `permissive=True`) on invalid UTF-8 in subfield
-  values; pymarc applies lossy substitution silently. The shape of the
-  iteration is unchanged (the bad record yields as `None` either way), so
-  callers using `except Exception:` keep working.
+- **Invalid UTF-8:** In a record whose leader says UTF-8, pymarc's default
+  `utf8_handling="strict"` rejects the record: it yields `None` and
+  `current_exception` holds the `UnicodeDecodeError`. mrrc substitutes
+  `U+FFFD` for the invalid bytes and yields the record, as pymarc does with
+  `utf8_handling="replace"`. To reject such records instead, pass
+  `validation_level="strict_marc"`; with `permissive=True` the record then
+  yields as `None` and `current_exception` holds an `EncodingError` (E301).
 - **`current_chunk` on byte-read errors:** When the underlying read of the
   next record's bytes fails before parsing begins (truncated stream, I/O
   error), `current_chunk` may be `None` even though `current_exception` is
@@ -409,6 +411,30 @@ UTF-8. mrrc always converts MARC-8 to UTF-8 automatically — the conversion
 happens in the Rust parsing layer and cannot be disabled. The `to_unicode`
 kwarg is accepted for compatibility so existing scripts work unchanged.
 Passing `to_unicode=False` emits a warning but has no effect.
+
+### MARC-8 Decoding and force_utf8
+
+mrrc chooses each record's encoding the way pymarc does: leader position 09
+`a` means UTF-8 and any other value means MARC-8. `force_utf8=True` decodes
+every record as UTF-8 whatever the leader says, as in pymarc. For every
+character in the MARC-8 tables, mrrc and pymarc produce the same text.
+
+Differences:
+
+- A MARC-8 character with no mapping becomes `U+FFFD`; pymarc substitutes a
+  space and prints a warning to stderr. Under `validation_level="strict_marc"`
+  mrrc raises `Marc8Error` (E302), a subclass of `EncodingError`.
+- A character set designated into the half it isn't normally used in (Basic
+  Cyrillic as G1, for example) is read correctly; pymarc substitutes spaces.
+- An escape sequence immediately after `ESC s` is recognised. pymarc 5.3.1
+  reads the byte after `ESC s` as a character, so it emits the rest of that
+  sequence as text.
+
+mrrc also offers `character_coding="detect"`, which reads a record as UTF-8
+when its field data is valid UTF-8 containing non-ASCII bytes and otherwise
+follows the leader. It suits files that mix MARC-8 records with UTF-8 records
+whose leader still says MARC-8, where `force_utf8=True` would misread the
+MARC-8 ones. See [Character Encoding](../reference/encoding.md#choosing-the-encoding).
 
 ### Recovery Mode (mrrc-specific)
 

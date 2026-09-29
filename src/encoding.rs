@@ -12,7 +12,7 @@
 //! support for MARC-8 escape sequences and character set switching.
 
 use crate::error::{MarcError, Result};
-use crate::marc8_tables::{CharacterSetId, get_charset_table};
+use crate::marc8_tables::{CharacterMapping, CharacterSetId, get_charset_table};
 
 /// Character encoding for MARC records.
 ///
@@ -54,6 +54,52 @@ impl MarcEncoding {
     }
 }
 
+/// How the ISO 2709 readers choose the character encoding of a record's field
+/// data.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CharacterCoding {
+    /// Follow leader position 09: `a` is UTF-8 and any other value is MARC-8.
+    /// This is pymarc's rule.
+    #[default]
+    Leader,
+    /// Decode as UTF-8 whatever position 09 says, like pymarc's
+    /// `force_utf8=True`.
+    Utf8,
+    /// Decode a record as UTF-8 when its field data is valid UTF-8 containing
+    /// non-ASCII bytes, and otherwise follow position 09. This reads files
+    /// that mix MARC-8 records with UTF-8 records whose leader still says
+    /// MARC-8, which a MARC-8 byte sequence is very unlikely to imitate.
+    Detect,
+}
+
+impl CharacterCoding {
+    /// The encoding to decode a record's field data in, given leader position
+    /// 09 and the record's field data (directory excluded).
+    #[must_use]
+    pub(crate) fn resolve(self, position_09: char, field_data: &[u8]) -> MarcEncoding {
+        let from_leader = if position_09 == 'a' {
+            MarcEncoding::Utf8
+        } else {
+            MarcEncoding::Marc8
+        };
+        match self {
+            CharacterCoding::Leader => from_leader,
+            CharacterCoding::Utf8 => MarcEncoding::Utf8,
+            CharacterCoding::Detect => {
+                if from_leader == MarcEncoding::Marc8
+                    && !field_data.is_ascii()
+                    && std::str::from_utf8(field_data).is_ok()
+                {
+                    MarcEncoding::Utf8
+                } else {
+                    from_leader
+                }
+            },
+        }
+    }
+}
+
 /// Decode bytes using the specified encoding
 ///
 /// # Errors
@@ -63,7 +109,7 @@ pub fn decode_bytes(bytes: &[u8], encoding: MarcEncoding) -> Result<String> {
     match encoding {
         MarcEncoding::Utf8 => String::from_utf8(bytes.to_vec())
             .map_err(|e| MarcError::encoding_msg(format!("Invalid UTF-8: {e}"))),
-        MarcEncoding::Marc8 => decode_marc8(bytes),
+        MarcEncoding::Marc8 => Ok(decode_marc8_lossy(bytes).text),
     }
 }
 
@@ -79,230 +125,202 @@ pub fn encode_string(s: &str, encoding: MarcEncoding) -> Result<Vec<u8>> {
     }
 }
 
-/// MARC-8 decoder state machine
-/// Tracks the current G0 and G1 character sets and handles escape sequence parsing
-#[derive(Debug, Clone)]
-struct Marc8Decoder {
-    /// Current G0 character set (used for low bytes 0x20-0x7F)
-    g0: CharacterSetId,
-    /// Current G1 character set (used for high bytes 0xA0-0xFE)
-    g1: CharacterSetId,
+/// MARC-8 decoding result: the decoded text and how many characters could
+/// not be decoded (no mapping in the active character set, or a sequence cut
+/// off by the end of the value) and were replaced with U+FFFD.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Marc8Decoded {
+    pub(crate) text: String,
+    pub(crate) unmapped: usize,
 }
 
-impl Marc8Decoder {
-    /// Create a new decoder with default character sets
-    /// G0 = Basic Latin (ASCII)
-    /// G1 = ANSEL Extended Latin
-    fn new() -> Self {
-        Marc8Decoder {
-            g0: CharacterSetId::BasicLatin,
-            g1: CharacterSetId::AnselExtendedLatin,
+const ESC: u8 = 0x1B;
+
+/// Resolve an escape-sequence final byte to a character set. Besides the
+/// finals [`CharacterSetId::from_byte`] knows, this accepts the finals of the
+/// three MARC-specific sets (`b` subscripts, `p` superscripts, `g` Greek
+/// symbols), as pymarc does.
+fn charset_for_final(final_byte: u8) -> Option<CharacterSetId> {
+    match final_byte {
+        0x62 => Some(CharacterSetId::Subscript),
+        0x70 => Some(CharacterSetId::Superscript),
+        0x67 => Some(CharacterSetId::GreekSymbols),
+        _ => CharacterSetId::from_byte(final_byte),
+    }
+}
+
+/// Look up one byte in a single-byte character set. The tables key each set
+/// at the positions the MARC-8 code tables assign (0x21-0x7E for sets normally
+/// designated as G0, 0xA1-0xFE for ANSEL and the extended sets); a set
+/// designated into the other half occupies the same positions with the high
+/// bit flipped, so a miss is retried there.
+fn lookup_single_byte(charset: CharacterSetId, byte: u8) -> Option<CharacterMapping> {
+    if charset == CharacterSetId::EACC {
+        return None;
+    }
+    let table = get_charset_table(charset);
+    table
+        .get(&byte)
+        .or_else(|| table.get(&(byte ^ 0x80)))
+        .copied()
+}
+
+/// Accumulates decoded characters, holding combining marks until their base
+/// character arrives.
+#[derive(Default)]
+struct Marc8Output {
+    text: String,
+    pending_combining: Vec<char>,
+    unmapped: usize,
+}
+
+impl Marc8Output {
+    fn push(&mut self, mapping: Option<CharacterMapping>) {
+        match mapping.and_then(|(cp, combining)| Some((char::from_u32(cp)?, combining))) {
+            Some((c, true)) => self.pending_combining.push(c),
+            Some((c, false)) => self.push_base(c),
+            None => {
+                self.unmapped += 1;
+                self.push_base('\u{FFFD}');
+            },
         }
     }
 
-    /// Check if a character set uses multibyte encoding
-    fn is_multibyte(charset: CharacterSetId) -> bool {
-        charset == CharacterSetId::EACC
+    /// MARC-8 stores combining marks before their base character; Unicode
+    /// stores them after it.
+    fn push_base(&mut self, c: char) {
+        self.text.push(c);
+        self.text.extend(self.pending_combining.drain(..));
+    }
+
+    fn finish(mut self) -> Marc8Decoded {
+        use unicode_normalization::UnicodeNormalization;
+        // Combining marks with no base character left to attach to.
+        self.text.extend(self.pending_combining.drain(..));
+        Marc8Decoded {
+            text: self.text.nfc().collect(),
+            unmapped: self.unmapped,
+        }
     }
 }
 
-/// Decode MARC-8 bytes to UTF-8 string
-/// MARC-8 uses ISO 2022 escape sequences to switch between character sets.
-/// This implementation handles:
-/// - Character set switching via escape sequences
-/// - Combining marks (diacritics)
-/// - Multi-byte character sets (EACC/CJK)
-#[allow(
-    clippy::too_many_lines,
-    clippy::cognitive_complexity,
-    clippy::unnecessary_wraps,
-    clippy::items_after_statements
-)]
-fn decode_marc8(bytes: &[u8]) -> Result<String> {
-    let mut decoder = Marc8Decoder::new();
-    let mut result = String::new();
-    let mut combining_chars: Vec<char> = Vec::new();
+/// Which graphic set an escape sequence designates.
+enum Designation {
+    G0,
+    G1,
+}
+
+/// What an ESC byte starts.
+enum Escape {
+    /// A designation of `set` by `final_byte`, `len` bytes long.
+    Designates(Designation, u8, usize),
+    /// Not a designation; the ESC is dropped.
+    Other,
+    /// A designation cut off by the end of the value.
+    Truncated,
+}
+
+/// Classify the escape sequence starting at `bytes[0]`, an ESC.
+fn parse_escape(bytes: &[u8]) -> Escape {
+    let designation = |set, final_at: usize, len| match bytes.get(final_at) {
+        Some(&f) => Escape::Designates(set, f, len),
+        None => Escape::Truncated,
+    };
+    match bytes.get(1).copied() {
+        None => Escape::Truncated,
+        // ESC ( F and ESC , F designate G0; ESC ) F and ESC - F designate G1.
+        Some(b'(' | b',') => designation(Designation::G0, 2, 3),
+        Some(b')' | b'-') => designation(Designation::G1, 2, 3),
+        // ESC $ F and ESC $ , F designate a multibyte G0; ESC $ ) F and
+        // ESC $ - F a multibyte G1.
+        Some(b'$') => match bytes.get(2).copied() {
+            None => Escape::Truncated,
+            Some(b',') => designation(Designation::G0, 3, 4),
+            Some(b')' | b'-') => designation(Designation::G1, 3, 4),
+            Some(f) => Escape::Designates(Designation::G0, f, 3),
+        },
+        // ESC s returns G0 to Basic Latin.
+        Some(b's') => Escape::Designates(Designation::G0, CharacterSetId::BasicLatin as u8, 2),
+        // ESC F with a set's final byte designates G0 directly (ESC b, ESC p,
+        // and ESC g for the MARC-specific sets).
+        Some(f) if charset_for_final(f).is_some() => Escape::Designates(Designation::G0, f, 2),
+        Some(_) => Escape::Other,
+    }
+}
+
+/// Decode MARC-8 bytes to Unicode, normalized to NFC.
+///
+/// Follows pymarc's `MARC8ToUnicode.translate`: ISO 2022 escape sequences
+/// switch the G0 and G1 character sets; bytes 0x21-0x7E (or 3-byte groups
+/// while G0 is EACC) are read from G0 and bytes 0xA1-0xFE from G1; control
+/// bytes are dropped; and combining marks, which MARC-8 stores before their
+/// base character, are emitted after it. Two differences from pymarc: a
+/// character with no mapping becomes U+FFFD rather than a space and is counted
+/// in [`Marc8Decoded::unmapped`], and a set designated into the half it is not
+/// normally used in is still read correctly.
+pub(crate) fn decode_marc8_lossy(bytes: &[u8]) -> Marc8Decoded {
+    // Printable ASCII with no escape sequences decodes to itself, and makes up
+    // most MARC-8 field values.
+    if bytes.iter().all(|b| (0x20..=0x7E).contains(b)) {
+        return Marc8Decoded {
+            text: String::from_utf8_lossy(bytes).into_owned(),
+            unmapped: 0,
+        };
+    }
+
+    let mut g0 = Some(CharacterSetId::BasicLatin);
+    let mut g1 = Some(CharacterSetId::AnselExtendedLatin);
+    let mut out = Marc8Output {
+        text: String::with_capacity(bytes.len()),
+        ..Marc8Output::default()
+    };
     let mut i = 0;
 
     while i < bytes.len() {
-        // Check for escape sequence (0x1B = ESC)
-        if bytes[i] == 0x1B {
-            if i + 1 >= bytes.len() {
-                // Incomplete escape sequence at end
-                result.push('\u{FFFD}');
-                break;
-            }
-
-            let next_byte = bytes[i + 1];
-
-            // Check if this is a character set designation escape sequence
-            match next_byte {
-                // ESC ( - Designate G0 character set (single-byte)
-                0x28 => {
-                    if i + 2 >= bytes.len() {
-                        result.push('\u{FFFD}');
-                        break;
-                    }
-                    let final_char = bytes[i + 2];
-                    if let Some(charset) = CharacterSetId::from_byte(final_char) {
-                        decoder.g0 = charset;
-                    }
-                    i += 3;
-                    continue;
-                },
-                // ESC ) - Designate G1 character set (single-byte)
-                0x29 => {
-                    if i + 2 >= bytes.len() {
-                        result.push('\u{FFFD}');
-                        break;
-                    }
-                    let final_char = bytes[i + 2];
-                    if let Some(charset) = CharacterSetId::from_byte(final_char) {
-                        decoder.g1 = charset;
-                    }
-                    i += 3;
-                    continue;
-                },
-                // ESC $ - Designate multi-byte character set
-                0x24 => {
-                    if i + 2 >= bytes.len() {
-                        result.push('\u{FFFD}');
-                        break;
-                    }
-                    let modifier = bytes[i + 2];
-                    if modifier == 0x31 {
-                        // ESC $ 1 - EACC (East Asian Character Code)
-                        decoder.g0 = CharacterSetId::EACC;
-                        i += 3;
-                        continue;
-                    } else if i + 3 < bytes.len() {
-                        let final_char = bytes[i + 3];
-                        if let Some(charset) = CharacterSetId::from_byte(final_char) {
-                            decoder.g0 = charset;
-                        }
-                        i += 4;
-                        continue;
-                    }
-                    i += 3;
-                    continue;
-                },
-                // ESC s - Reset G0 to Basic Latin (ASCII)
-                0x73 => {
-                    decoder.g0 = CharacterSetId::BasicLatin;
-                    i += 2;
-                    continue;
-                },
-                // Custom MARC-8 escape sequences (locking, non-ISO 2022)
-                // ESC g - Greek Symbols (deprecated - mapping difficulties)
-                0x67 => {
-                    decoder.g0 = CharacterSetId::GreekSymbols;
-                    i += 2;
-                    continue;
-                },
-                // ESC b - Subscripts (custom MARC set)
-                0x62 => {
-                    decoder.g0 = CharacterSetId::Subscript;
-                    i += 2;
-                    continue;
-                },
-                // ESC p - Superscripts (custom MARC set)
-                0x70 => {
-                    decoder.g0 = CharacterSetId::Superscript;
-                    i += 2;
-                    continue;
-                },
-                _ => {
-                    // Unknown escape sequence - skip it
-                    i += 2;
-                    continue;
-                },
-            }
-        }
-
-        // Regular character handling (not an escape sequence)
         let byte = bytes[i];
 
-        // Control characters (0x00-0x1F, 0x7F) - pass through or skip
-        if byte < 0x20 || byte == 0x7F {
-            // Skip control characters in output (except LF, CR)
-            if byte == 0x0A || byte == 0x0D {
-                result.push(byte as char);
+        if byte == ESC {
+            match parse_escape(&bytes[i..]) {
+                Escape::Designates(Designation::G0, f, len) => {
+                    g0 = charset_for_final(f);
+                    i += len;
+                },
+                Escape::Designates(Designation::G1, f, len) => {
+                    g1 = charset_for_final(f);
+                    i += len;
+                },
+                Escape::Other => i += 1,
+                Escape::Truncated => {
+                    out.push(None);
+                    break;
+                },
             }
-            i += 1;
             continue;
         }
 
-        // Determine which character set to use
-        let (charset, byte_value) = if byte >= 0xA0 {
-            // High byte range (0xA0-0xFE) - use G1 set
-            (decoder.g1, byte)
-        } else {
-            // Low byte range (0x20-0x7E) - use G0 set
-            (decoder.g0, byte)
-        };
-
-        // Handle multibyte character sets
-        if Marc8Decoder::is_multibyte(charset) {
-            if i + 2 < bytes.len() {
-                // EACC: 3-byte sequence
-                // Concatenate 3 bytes into a u32 key for lookup
-                let key = (u32::from(bytes[i]) << 16)
-                    | (u32::from(bytes[i + 1]) << 8)
-                    | u32::from(bytes[i + 2]);
-
-                if let Some((unicode_point, is_combining)) =
-                    crate::marc8_tables::get_eacc_character(key)
-                {
-                    let ch = char::from_u32(unicode_point).unwrap_or('\u{FFFD}');
-                    if is_combining {
-                        combining_chars.push(ch);
-                    } else {
-                        for combining_ch in combining_chars.drain(..) {
-                            result.push(combining_ch);
-                        }
-                        result.push(ch);
-                    }
-                } else {
-                    // Character not in EACC table - use replacement
-                    result.push('\u{FFFD}');
-                }
-                i += 3;
-                continue;
-            }
-            i += 1;
+        if g0 == Some(CharacterSetId::EACC) && (0x21..=0x7E).contains(&byte) {
+            let Some(group) = bytes.get(i..i + 3) else {
+                out.push(None);
+                break;
+            };
+            let key = u32::from(group[0]) << 16 | u32::from(group[1]) << 8 | u32::from(group[2]);
+            out.push(crate::marc8_tables::get_eacc_character(key));
+            i += 3;
             continue;
-        }
-
-        // Single-byte character lookup
-        let table = get_charset_table(charset);
-        if let Some((unicode_point, is_combining)) = table.get(&byte_value) {
-            let ch = char::from_u32(*unicode_point).unwrap_or('\u{FFFD}');
-            if *is_combining {
-                // Combining marks are stored and applied to the next base character
-                combining_chars.push(ch);
-            } else {
-                // Base character - output combining marks first, then the base
-                for combining_ch in combining_chars.drain(..) {
-                    result.push(combining_ch);
-                }
-                result.push(ch);
-            }
-        } else {
-            // Character not found in table - use replacement character
-            result.push('\u{FFFD}');
         }
 
         i += 1;
+        match byte {
+            // Space is the same in every set and in either half.
+            0x20 | 0xA0 => out.push(Some((0x20, false))),
+            // Control bytes, including the non-sort markers 0x88 and 0x89.
+            0x00..=0x1F | 0x7F..=0x9F => {},
+            0x21..=0x7E => out.push(g0.and_then(|set| lookup_single_byte(set, byte))),
+            _ => out.push(g1.and_then(|set| lookup_single_byte(set, byte))),
+        }
     }
 
-    // Handle any remaining combining characters at end of string
-    for combining_ch in combining_chars {
-        result.push(combining_ch);
-    }
-
-    // Normalize to NFC form (combining characters)
-    use unicode_normalization::UnicodeNormalization;
-    Ok(result.nfc().collect())
+    out.finish()
 }
 
 /// Encode UTF-8 string to MARC-8 bytes
@@ -362,9 +380,9 @@ fn encode_marc8(s: &str) -> Result<Vec<u8>> {
                         bytes.push(0x33);
                     },
                     CharacterSetId::ExtendedArabic => {
-                        // ESC ( 4 - Switch G0 to Extended Arabic
+                        // ESC ) 4 - Switch G1 to Extended Arabic
                         bytes.push(0x1B);
-                        bytes.push(0x28);
+                        bytes.push(0x29);
                         bytes.push(0x34);
                     },
                     CharacterSetId::BasicCyrillic => {
@@ -374,9 +392,9 @@ fn encode_marc8(s: &str) -> Result<Vec<u8>> {
                         bytes.push(0x4E);
                     },
                     CharacterSetId::ExtendedCyrillic => {
-                        // ESC ( Q - Switch G0 to Extended Cyrillic
+                        // ESC ) Q - Switch G1 to Extended Cyrillic
                         bytes.push(0x1B);
-                        bytes.push(0x28);
+                        bytes.push(0x29);
                         bytes.push(0x51);
                     },
                     CharacterSetId::BasicGreek => {
@@ -515,6 +533,82 @@ mod tests {
         assert_eq!(decoded, "Test");
     }
 
+    fn marc8(bytes: &[u8]) -> String {
+        decode_bytes(bytes, MarcEncoding::Marc8).unwrap()
+    }
+
+    #[test]
+    fn test_marc8_combining_mark_follows_its_base_character() {
+        // MARC-8 stores a combining mark before its base character; Unicode
+        // stores it after. ANSEL 0xE2 is the combining acute accent.
+        assert_eq!(marc8(b"Caf\xE2e"), "Caf\u{e9}");
+    }
+
+    #[test]
+    fn test_marc8_multiple_combining_marks_keep_their_order() {
+        // Acute (0xE2) then diaeresis (0xE8) before 'a'.
+        assert_eq!(marc8(b"\xE2\xE8a"), "\u{e1}\u{308}");
+    }
+
+    #[test]
+    fn test_marc8_ansel_spacing_letters() {
+        assert_eq!(marc8(b"\xA5\xB5"), "\u{c6}\u{e6}");
+    }
+
+    #[test]
+    fn test_marc8_basic_cyrillic_as_g0() {
+        assert_eq!(marc8(b"\x1B(NmIR\x1Bs"), "\u{41c}\u{438}\u{440}");
+    }
+
+    #[test]
+    fn test_marc8_basic_cyrillic_as_g1() {
+        // A 94-character set occupies the same positions in either half, so
+        // designating it as G1 reads the same letters from the high bytes.
+        assert_eq!(marc8(b"\x1B)N\xED\xC9\xD2\x1B)E"), "\u{41c}\u{438}\u{440}");
+    }
+
+    #[test]
+    fn test_marc8_basic_greek_as_g0() {
+        assert_eq!(marc8(b"\x1B(Sabd\x1Bs"), "\u{3b1}\u{3b2}\u{3b3}");
+    }
+
+    #[test]
+    fn test_marc8_basic_hebrew_as_g0() {
+        assert_eq!(marc8(b"\x1B(2ylem\x1Bs"), "\u{5e9}\u{5dc}\u{5d5}\u{5dd}");
+    }
+
+    #[test]
+    fn test_marc8_basic_arabic_as_g0() {
+        assert_eq!(marc8(b"\x1B(3SdGe\x1Bs"), "\u{633}\u{644}\u{627}\u{645}");
+    }
+
+    #[test]
+    fn test_marc8_extended_cyrillic_as_g1() {
+        assert_eq!(marc8(b"\x1B)Q\xC0\x1B)E"), "\u{491}");
+    }
+
+    #[test]
+    fn test_marc8_subscript_and_superscript() {
+        assert_eq!(marc8(b"H\x1Bb2\x1BsO"), "H\u{2082}O");
+        assert_eq!(marc8(b"x\x1Bp2\x1Bs"), "x\u{b2}");
+    }
+
+    #[test]
+    fn test_marc8_space_in_non_latin_g0() {
+        assert_eq!(marc8(b"\x1B(Nm I\x1Bs"), "\u{41c} \u{438}");
+    }
+
+    #[test]
+    fn test_marc8_eacc() {
+        assert_eq!(marc8(b"\x1B$1\x21\x30\x21\x1B(B"), "\u{4e00}");
+    }
+
+    #[test]
+    fn test_marc8_unmapped_byte_is_replacement_character() {
+        // 0xAF has no mapping in ANSEL.
+        assert_eq!(marc8(b"a\xAFb"), "a\u{fffd}b");
+    }
+
     #[test]
     fn test_marc8_ansel_extended_with_combining() {
         // ANSEL combining marks (0xE0-0xFE) should be marked as combining
@@ -532,6 +626,19 @@ mod tests {
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
         // The string should be properly decoded
         assert!(decoded.contains("caf"));
+    }
+
+    #[test]
+    fn test_marc8_encode_extended_sets_roundtrip() {
+        // Extended Cyrillic and Extended Arabic are keyed in the high half, so
+        // the encoder must designate them as G1 for the decoder to read them.
+        for original in ["\u{491}", "\u{6FD}"] {
+            let encoded = encode_string(original, MarcEncoding::Marc8).unwrap();
+            assert_eq!(
+                decode_bytes(&encoded, MarcEncoding::Marc8).unwrap(),
+                original
+            );
+        }
     }
 
     #[test]
@@ -643,13 +750,11 @@ mod tests {
 
     #[test]
     fn test_marc8_replacement_char_on_unknown() {
-        // Unknown escape sequences should be skipped
+        // An ESC that starts no designation is dropped; 0xFF has no mapping in
+        // ANSEL (the default G1), so it becomes the replacement character.
         let bytes = b"\x1B\xFF";
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
-        // Unknown sequences are skipped in parsing
-        // The 0xFF byte is a control character, so it's also skipped
-        // Result should be empty or just whitespace
-        assert!(decoded.is_empty() || decoded.chars().all(char::is_whitespace));
+        assert_eq!(decoded, "\u{FFFD}");
     }
 
     #[test]
@@ -776,9 +881,9 @@ mod tests {
     #[test]
     fn test_marc8_hebrew_text() {
         // Test Basic Hebrew character set - ESC ) 2 (designate as G1)
-        // Using Hebrew letters: alef (0xA1), bet (0xA2), gimel (0xA3)
-        // ESC ) 2 designates Hebrew as G1 set, so high bytes (0xA1-0xFE) use Hebrew
-        let bytes = b"\x1B\x292\xA1\xA2\xA3\x1B\x29\x45"; // Designate Hebrew to G1, 3 Hebrew letters, designate ANSEL to G1 (reset)
+        // Using Hebrew letters: alef (0x60), bet (0x61), gimel (0x62), read
+        // from the high half (0xE0-0xE2) because ESC ) 2 designates Hebrew as G1
+        let bytes = b"\x1B\x292\xE0\xE1\xE2\x1B\x29\x45"; // Designate Hebrew to G1, 3 Hebrew letters, designate ANSEL to G1 (reset)
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
         assert!(decoded.contains('א'), "Should contain Hebrew alef");
         assert!(decoded.contains('ב'), "Should contain Hebrew bet");
@@ -788,8 +893,9 @@ mod tests {
     #[test]
     fn test_marc8_arabic_text() {
         // Test Basic Arabic character set - ESC ) 3 (designate as G1)
-        // Using Arabic letters: hamza (0xA1), alef with madda (0xA2), alef with hamza above (0xA3)
-        let bytes = b"\x1B\x293\xA1\xA2\xA3\x1B\x29\x45"; // Designate Arabic to G1, 3 Arabic letters, designate ANSEL to G1 (reset)
+        // Using Arabic letters: hamza (0x41), alef with madda (0x42), alef with
+        // hamza above (0x43), read from the high half (0xC1-0xC3) as G1
+        let bytes = b"\x1B\x293\xC1\xC2\xC3\x1B\x29\x45"; // Designate Arabic to G1, 3 Arabic letters, designate ANSEL to G1 (reset)
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
         assert!(decoded.contains('ء'), "Should contain Arabic hamza");
         assert!(
@@ -816,8 +922,8 @@ mod tests {
     fn test_marc8_mixed_ltr_rtl() {
         // Test mixed left-to-right (ASCII) and right-to-left (Hebrew) text
         // "Hello" in ASCII (default), then switch to Hebrew for "שלום" (Shalom)
-        // ESC ) 2 designates Hebrew to G1, then shin(0xB5)+lamed(0xAC)+vav(0xA6)+final_mem(0xB8)
-        let bytes = b"Hello\x1B\x292\xB5\xAC\xA6\xB8\x1B\x29\x45!"; // "Hello", designate Hebrew to G1, Hebrew text, reset to ANSEL, "!"
+        // ESC ) 2 designates Hebrew to G1, then shin(0xF9)+lamed(0xEC)+vav(0xE5)+final_mem(0xED)
+        let bytes = b"Hello\x1B\x292\xF9\xEC\xE5\xED\x1B\x29\x45!"; // "Hello", designate Hebrew to G1, Hebrew text, reset to ANSEL, "!"
         let decoded = decode_bytes(bytes, MarcEncoding::Marc8).unwrap();
         assert!(
             decoded.starts_with("Hello"),

@@ -5,8 +5,8 @@ The pymarc-named classes (``RecordLengthInvalid``, ``RecordLeaderInvalid``,
 ``EndOfRecordNotFound``, ``FieldNotFound``, ``FatalReaderError``) preserve
 pymarc's names and parent relationships. mrrc-specific subclasses
 (``InvalidIndicator``, ``BadSubfieldCode``, ``InvalidField``,
-``TruncatedRecord``, ``EncodingError``, ``XmlError``, ``JsonError``,
-``WriterError``) extend the closest pymarc parent so existing
+``TruncatedRecord``, ``EncodingError``, ``Marc8Error``, ``XmlError``,
+``JsonError``, ``WriterError``) extend the closest pymarc parent so existing
 ``except RecordDirectoryInvalid:`` style catches still trigger for the new
 subclasses, while mrrc-aware code can opt into the more specific subclass.
 
@@ -596,6 +596,21 @@ class EncodingError(MrrcException):
         return "encoding error"
 
 
+class Marc8Error(EncodingError):
+    """A MARC-8 value could not be decoded: a character with no mapping in
+    the active character set, or an escape sequence cut off by the end of
+    the value. Subclasses ``EncodingError`` so ``except EncodingError:``
+    also catches it."""
+
+    code = "E302"
+    slug = "marc8_invalid"
+
+    def _body_text(self) -> str:
+        if self.message:
+            return f"MARC-8 decoding error: {self.message}"
+        return "MARC-8 decoding error"
+
+
 class XmlError(MrrcException):
     """An error occurred during MARCXML parsing."""
 
@@ -657,6 +672,7 @@ __all__ = [
     "InvalidField",
     "InvalidIndicator",
     "JsonError",
+    "Marc8Error",
     "MrrcException",
     "RecordDirectoryInvalid",
     "RecordLeaderInvalid",

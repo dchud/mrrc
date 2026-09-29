@@ -221,3 +221,77 @@ def test_leader_pymarc_properties_write_the_same_positions() -> None:
         if str(ours) != str(theirs):
             mismatched[name] = (str(ours), str(theirs))
     assert mismatched == {}
+
+
+# MARC-8 designation escapes for each character set, keyed by final byte.
+# Sets keyed in the low half are designated as G0, ANSEL and the extended
+# sets as G1; ESC ) E and then ESC s restore the defaults afterwards. (That
+# order matters for pymarc 5.3.1, which reads the byte after ESC s as a
+# character, so an escape sequence right after ESC s is not recognised.)
+_MARC8_DESIGNATIONS = {
+    0x42: b"\x1b(B",
+    0x45: b"\x1b)E",
+    0x32: b"\x1b(2",
+    0x33: b"\x1b(3",
+    0x34: b"\x1b)4",
+    0x4E: b"\x1b(N",
+    0x51: b"\x1b)Q",
+    0x53: b"\x1b(S",
+    0x62: b"\x1bb",
+    0x67: b"\x1bg",
+    0x70: b"\x1bp",
+    0x31: b"\x1b$1",
+}
+_MARC8_RESET = b"\x1b)E\x1bs"
+
+
+def _marc8_values(codesets) -> list[tuple[int, bytes]]:
+    """(final byte, MARC-8 value) pairs covering every mapping in every
+    character set. A combining mark is followed by a base character from
+    the same set (or ASCII 'a' when G0 is still Basic Latin), and EACC is
+    split into values that fit an ISO 2709 field."""
+    values = []
+    for final, table in sorted(codesets.items()):
+        multibyte = final == 0x31
+        g1 = not multibyte and min(table) >= 0x80
+        if g1 or final == 0x42:
+            base = b"a"
+        else:
+            first = min(
+                k for k, (_, comb) in table.items() if not comb and k > 0x20
+            )
+            base = first.to_bytes(3 if multibyte else 1, "big")
+        chars = []
+        for key, (_, combining) in sorted(table.items()):
+            if key < 0x20 or 0x7F <= key < 0xA0:
+                continue  # controls: not graphic characters
+            code = key.to_bytes(3, "big") if multibyte else bytes([key])
+            chars.append(code + (base if combining else b""))
+        chunk = 900 if multibyte else len(chars)
+        for i in range(0, len(chars), chunk):
+            body = b"".join(chars[i : i + chunk])
+            values.append(
+                (final, _MARC8_DESIGNATIONS[final] + body + _MARC8_RESET)
+            )
+    return values
+
+
+def test_marc8_decoding_matches_pymarc_for_every_mapping() -> None:
+    """Every character in every MARC-8 character set, read from a record
+    whose leader says MARC-8, decodes to the same text in mrrc and pymarc."""
+    pymarc = pytest.importorskip("pymarc")
+    from pymarc import marc8_mapping
+
+    mismatched = []
+    for final, value in _marc8_values(marc8_mapping.CODESETS):
+        field = b"10\x1fa" + value + b"\x1e"
+        directory = b"245" + b"%04d%05d" % (len(field), 0) + b"\x1e"
+        base = 24 + len(directory)
+        total = base + len(field) + 1
+        leader = b"%05dnam  22%05d   4500" % (total, base)
+        data = leader + directory + field + b"\x1d"
+        (ours,) = list(mrrc.MARCReader(data))
+        (theirs,) = list(pymarc.MARCReader(io.BytesIO(data)))
+        if ours["245"]["a"] != theirs["245"]["a"]:
+            mismatched.append(hex(final))
+    assert mismatched == []

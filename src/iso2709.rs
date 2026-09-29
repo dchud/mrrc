@@ -19,6 +19,7 @@
 //! decoding, error vs skip on unrecognized bytes) that have not been
 //! unified.
 
+use crate::encoding::MarcEncoding;
 use crate::error::{BytesNear, MarcError, Result};
 use crate::record::{Field, Subfield};
 use crate::recovery::RecoveryMode;
@@ -312,6 +313,21 @@ impl ParseContext {
     #[must_use]
     pub fn err_encoding(&self, message: impl Into<String>) -> MarcError {
         MarcError::EncodingError {
+            record_index: self.record_index_opt(),
+            byte_offset: Some(self.stream_byte_offset),
+            source_name: self.source_name.clone(),
+            record_control_number: self.record_control_number.clone(),
+            field_tag: self.field_tag_as_string(),
+            message: message.into(),
+            bytes_near: self.capture_bytes_near(),
+        }
+    }
+
+    /// Construct an [`MarcError::Marc8Error`] inheriting the current
+    /// stream/record positional state.
+    #[must_use]
+    pub fn err_marc8(&self, message: impl Into<String>) -> MarcError {
+        MarcError::Marc8Error {
             record_index: self.record_index_opt(),
             byte_offset: Some(self.stream_byte_offset),
             source_name: self.source_name.clone(),
@@ -695,15 +711,65 @@ pub enum SubfieldStructureMode {
     Permissive,
 }
 
-/// How to convert subfield value bytes into a `String`.
+/// How to handle field value bytes that don't decode in the record's
+/// encoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Utf8DecodeMode {
-    /// Replace invalid UTF-8 sequences with the Unicode replacement
-    /// character. Selected by [`crate::ValidationLevel::Structural`].
+pub enum DecodeMode {
+    /// Replace invalid UTF-8 sequences and undecodable MARC-8 characters
+    /// with the Unicode replacement character. Selected by
+    /// [`crate::ValidationLevel::Structural`].
     Lossy,
-    /// Raise an error if subfield value bytes are not valid UTF-8.
-    /// Selected by [`crate::ValidationLevel::StrictMarc`].
+    /// Raise [`MarcError::EncodingError`] (E301) for invalid UTF-8 and
+    /// [`MarcError::Marc8Error`] (E302) for undecodable MARC-8. Selected by
+    /// [`crate::ValidationLevel::StrictMarc`].
     Strict,
+}
+
+impl DecodeMode {
+    /// The decode mode a [`crate::ValidationLevel`] selects.
+    #[must_use]
+    pub const fn for_level(level: crate::ValidationLevel) -> Self {
+        match level {
+            crate::ValidationLevel::Structural => DecodeMode::Lossy,
+            crate::ValidationLevel::StrictMarc => DecodeMode::Strict,
+        }
+    }
+}
+
+/// Decode a field value's bytes in the record's `encoding`, handling bytes
+/// that don't decode as `mode` directs. `what` names the value for error
+/// messages, such as "subfield value" or "control field 001".
+///
+/// # Errors
+///
+/// Under [`DecodeMode::Strict`], returns [`MarcError::EncodingError`] for
+/// invalid UTF-8 and [`MarcError::Marc8Error`] for undecodable MARC-8.
+#[inline]
+pub fn decode_field_value(
+    bytes: &[u8],
+    encoding: MarcEncoding,
+    mode: DecodeMode,
+    ctx: &ParseContext,
+    what: impl FnOnce() -> String,
+) -> Result<String> {
+    match (encoding, mode) {
+        (MarcEncoding::Utf8, DecodeMode::Lossy) => Ok(String::from_utf8_lossy(bytes).into_owned()),
+        (MarcEncoding::Utf8, DecodeMode::Strict) => std::str::from_utf8(bytes)
+            .map(str::to_owned)
+            .map_err(|e| ctx.err_encoding(format!("Invalid UTF-8 in {}: {e}", what()))),
+        (MarcEncoding::Marc8, mode) => {
+            let decoded = crate::encoding::decode_marc8_lossy(bytes);
+            if mode == DecodeMode::Strict && decoded.unmapped > 0 {
+                let n = decoded.unmapped;
+                let noun = if n == 1 { "character" } else { "characters" };
+                return Err(ctx.err_marc8(format!(
+                    "{n} MARC-8 {noun} could not be decoded in {}",
+                    what()
+                )));
+            }
+            Ok(decoded.text)
+        },
+    }
 }
 
 /// How to handle indicator bytes that aren't an ASCII digit (`0`-`9`)
@@ -742,8 +808,13 @@ pub enum SubfieldCodeMode {
 pub struct DataFieldParseConfig {
     /// How to handle unrecognized bytes between subfields.
     pub structure: SubfieldStructureMode,
-    /// How to decode subfield value bytes.
-    pub utf8: Utf8DecodeMode,
+    /// How to handle subfield value bytes that don't decode.
+    pub decode: DecodeMode,
+    /// The encoding subfield values are decoded in: the record's, as
+    /// resolved from leader position 09 and the reader's
+    /// [`crate::CharacterCoding`]. The per-reader constructors default to
+    /// UTF-8; the parser sets it per record with [`Self::with_encoding`].
+    pub encoding: MarcEncoding,
     /// How to handle out-of-range indicator bytes.
     pub indicator: IndicatorMode,
     /// How to handle out-of-range subfield-code bytes.
@@ -752,20 +823,20 @@ pub struct DataFieldParseConfig {
 
 impl DataFieldParseConfig {
     /// Translate a [`crate::ValidationLevel`] into the
-    /// validation-level-driven mode triple (`utf8`, `indicator`,
+    /// validation-level-driven mode triple (`decode`, `indicator`,
     /// `subfield_code`). The `structure` mode is owned by the per-reader
     /// constructor below.
     const fn modes_for(
         level: crate::ValidationLevel,
-    ) -> (Utf8DecodeMode, IndicatorMode, SubfieldCodeMode) {
+    ) -> (DecodeMode, IndicatorMode, SubfieldCodeMode) {
         match level {
             crate::ValidationLevel::Structural => (
-                Utf8DecodeMode::Lossy,
+                DecodeMode::Lossy,
                 IndicatorMode::Lossy,
                 SubfieldCodeMode::Lossy,
             ),
             crate::ValidationLevel::StrictMarc => (
-                Utf8DecodeMode::Strict,
+                DecodeMode::Strict,
                 IndicatorMode::Strict,
                 SubfieldCodeMode::Strict,
             ),
@@ -776,10 +847,11 @@ impl DataFieldParseConfig {
     /// should be a subfield delimiter but isn't raises an error).
     #[must_use]
     pub const fn bibliographic(level: crate::ValidationLevel) -> Self {
-        let (utf8, indicator, subfield_code) = Self::modes_for(level);
+        let (decode, indicator, subfield_code) = Self::modes_for(level);
         Self {
             structure: SubfieldStructureMode::Strict,
-            utf8,
+            decode,
+            encoding: MarcEncoding::Utf8,
             indicator,
             subfield_code,
         }
@@ -789,10 +861,11 @@ impl DataFieldParseConfig {
     /// between subfields are silently skipped).
     #[must_use]
     pub const fn authority(level: crate::ValidationLevel) -> Self {
-        let (utf8, indicator, subfield_code) = Self::modes_for(level);
+        let (decode, indicator, subfield_code) = Self::modes_for(level);
         Self {
             structure: SubfieldStructureMode::Permissive,
-            utf8,
+            decode,
+            encoding: MarcEncoding::Utf8,
             indicator,
             subfield_code,
         }
@@ -802,13 +875,20 @@ impl DataFieldParseConfig {
     /// between subfields are silently skipped).
     #[must_use]
     pub const fn holdings(level: crate::ValidationLevel) -> Self {
-        let (utf8, indicator, subfield_code) = Self::modes_for(level);
+        let (decode, indicator, subfield_code) = Self::modes_for(level);
         Self {
             structure: SubfieldStructureMode::Permissive,
-            utf8,
+            decode,
+            encoding: MarcEncoding::Utf8,
             indicator,
             subfield_code,
         }
+    }
+
+    /// The same config, decoding subfield values in `encoding`.
+    #[must_use]
+    pub const fn with_encoding(self, encoding: MarcEncoding) -> Self {
+        Self { encoding, ..self }
     }
 }
 
@@ -831,9 +911,9 @@ impl DataFieldParseConfig {
 ///
 /// Returns [`MarcError::InvalidField`] if `field_data` is shorter than 2
 /// bytes (insufficient for indicators), [`MarcError::BadSubfieldCode`] (when
-/// applicable in future enrichment work), or [`MarcError::EncodingError`] if
-/// `config.utf8` is [`Utf8DecodeMode::Strict`] and a subfield value contains
-/// invalid UTF-8.
+/// applicable in future enrichment work), or, when `config.decode` is
+/// [`DecodeMode::Strict`], [`MarcError::EncodingError`] or
+/// [`MarcError::Marc8Error`] for a subfield value that doesn't decode.
 // Forced inline: removing this regresses read-hot-path throughput
 // ~15% (see CHANGELOG v0.8 perf restoration entry). Pairs with the
 // compact `current_field_tag: Option<[u8; 3]>` in `ParseContext`.
@@ -890,17 +970,18 @@ fn is_valid_indicator(b: u8) -> bool {
 /// indicator bytes) and produce a vector of [`Subfield`]s.
 ///
 /// Behavior on unrecognized bytes between subfields is controlled by
-/// `config.structure`; UTF-8 decoding of subfield values is controlled by
-/// `config.utf8`. See [`DataFieldParseConfig`] for the mappings to the
-/// per-reader historical behaviors.
+/// `config.structure`; subfield values are decoded in `config.encoding`,
+/// with bytes that don't decode handled per `config.decode`. See
+/// [`DataFieldParseConfig`] for the mappings to the per-reader historical
+/// behaviors.
 ///
 /// # Errors
 ///
 /// Returns [`MarcError::InvalidField`] if `config.structure` is
 /// [`SubfieldStructureMode::Strict`] and an unrecognized byte is encountered
-/// where a subfield delimiter was expected. Returns
-/// [`MarcError::EncodingError`] if `config.utf8` is
-/// [`Utf8DecodeMode::Strict`] and a subfield value contains invalid UTF-8.
+/// where a subfield delimiter was expected. When `config.decode` is
+/// [`DecodeMode::Strict`], returns [`MarcError::EncodingError`] or
+/// [`MarcError::Marc8Error`] for a subfield value that doesn't decode.
 pub fn parse_subfields(
     bytes: &[u8],
     config: DataFieldParseConfig,
@@ -948,12 +1029,9 @@ pub fn parse_subfields(
             end += 1;
         }
         let value_bytes = &bytes[pos..end];
-        let value = match config.utf8 {
-            Utf8DecodeMode::Lossy => String::from_utf8_lossy(value_bytes).to_string(),
-            Utf8DecodeMode::Strict => std::str::from_utf8(value_bytes)
-                .map_err(|e| ctx.err_encoding(format!("Invalid UTF-8 in subfield value: {e}")))?
-                .to_string(),
-        };
+        let value = decode_field_value(value_bytes, config.encoding, config.decode, ctx, || {
+            "subfield value".to_string()
+        })?;
         subfields.push(Subfield { code, value });
         pos = end;
     }

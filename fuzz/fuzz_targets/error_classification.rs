@@ -46,7 +46,7 @@ use std::io::Cursor;
 /// the manifest. Either way: docs-vs-code drift that needs triage.
 const DOCUMENTED_CODES: &[&str] = &[
     "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E099", "E101", "E105", "E106",
-    "E201", "E202", "E301", "E401", "E402", "E404",
+    "E201", "E202", "E301", "E302", "E401", "E402", "E404",
 ];
 
 fuzz_target!(|data: &[u8]| {

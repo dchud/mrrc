@@ -206,6 +206,15 @@ def build_fixtures(base: bytes) -> list[tuple[str, str, bytes]]:
             "after the indicators is not a subfield delimiter.",
             mutate(base, 63, b"X"),
         ),
+        # ----- E302 ---------------------------------------------------------
+        (
+            "e302_undecodable_marc8_in_subfield.bin",
+            "Leader byte 9 (character coding) set to ' ' (MARC-8) and byte "
+            "70 (inside the 100$a 'Fitzgerald' subfield value) replaced "
+            "with 0xAF, which has no mapping in ANSEL, the default MARC-8 "
+            "G1 set. Fires E302 at strict_marc.",
+            mutate(mutate(base, 9, b" "), 70, b"\xaf"),
+        ),
     ]
 
 

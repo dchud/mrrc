@@ -105,7 +105,7 @@ pub struct ErrorMetadata<'a> {
     /// Field tag involved, when known.
     pub field_tag: Option<&'a str>,
     /// Variant-specific human-readable message, when the variant exposes one
-    /// (`InvalidField`, `EncodingError`, `WriterError`).
+    /// (`InvalidField`, `EncodingError`, `Marc8Error`, `WriterError`).
     pub message: Option<&'a str>,
     /// Indicator position (0 or 1); `InvalidIndicator` only.
     pub indicator_position: Option<u8>,
@@ -364,6 +364,26 @@ pub enum MarcError {
     /// A character encoding conversion failed.
     #[non_exhaustive]
     EncodingError {
+        /// 1-based record index in the stream, when known.
+        record_index: Option<usize>,
+        /// Absolute byte offset within the stream, when known.
+        byte_offset: Option<usize>,
+        /// Source filename or stream identifier, when known.
+        source_name: Option<String>,
+        /// 001 control number, when already extracted.
+        record_control_number: Option<String>,
+        /// Field tag involved, when applicable.
+        field_tag: Option<String>,
+        /// Human-readable description of the problem.
+        message: String,
+        /// Byte window captured near the error offset, for hex-dump rendering.
+        bytes_near: Option<BytesNear>,
+    },
+
+    /// A MARC-8 value contained a character with no mapping in the active
+    /// character set, or an escape sequence cut off by the end of the value.
+    #[non_exhaustive]
+    Marc8Error {
         /// 1-based record index in the stream, when known.
         record_index: Option<usize>,
         /// Absolute byte offset within the stream, when known.
@@ -690,6 +710,23 @@ impl Clone for MarcError {
                 message,
                 bytes_near,
             } => MarcError::EncodingError {
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.clone(),
+                record_control_number: record_control_number.clone(),
+                field_tag: field_tag.clone(),
+                message: message.clone(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::Marc8Error {
+                record_index,
+                byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                message,
+                bytes_near,
+            } => MarcError::Marc8Error {
                 record_index: *record_index,
                 byte_offset: *byte_offset,
                 source_name: source_name.clone(),
@@ -1062,6 +1099,27 @@ impl MarcError {
                 bytes_near: bytes_near.as_ref(),
                 ..ErrorMetadata::default()
             },
+            MarcError::Marc8Error {
+                record_index,
+                byte_offset,
+                source_name,
+                record_control_number,
+                field_tag,
+                message,
+                bytes_near,
+            } => ErrorMetadata {
+                code: "E302",
+                slug: "marc8_invalid",
+                kind: "Marc8Error",
+                record_index: *record_index,
+                byte_offset: *byte_offset,
+                source_name: source_name.as_deref(),
+                record_control_number: record_control_number.as_deref(),
+                field_tag: field_tag.as_deref(),
+                message: Some(message),
+                bytes_near: bytes_near.as_ref(),
+                ..ErrorMetadata::default()
+            },
             MarcError::FieldNotFound {
                 record_index,
                 record_control_number,
@@ -1238,6 +1296,13 @@ impl MarcError {
                 ..
             }
             | MarcError::EncodingError {
+                record_index,
+                byte_offset,
+                source_name,
+                bytes_near,
+                ..
+            }
+            | MarcError::Marc8Error {
                 record_index,
                 byte_offset,
                 source_name,
@@ -1676,6 +1741,7 @@ impl MarcError {
             },
             MarcError::InvalidField { message, .. } => format!("invalid field: {message}"),
             MarcError::EncodingError { message, .. } => format!("encoding error: {message}"),
+            MarcError::Marc8Error { message, .. } => format!("MARC-8 decoding error: {message}"),
             MarcError::FieldNotFound { field_tag, .. } => {
                 format!("field {field_tag} not found")
             },
@@ -2211,6 +2277,7 @@ mod tests {
         ("E201", "invalid_indicator"),
         ("E202", "bad_subfield_code"),
         ("E301", "utf8_invalid"),
+        ("E302", "marc8_invalid"),
         ("E401", "marcxml_invalid"),
         ("E402", "marcjson_invalid"),
         ("E404", "record_too_large_for_iso2709"),
@@ -2722,6 +2789,15 @@ mod tests {
                 record_control_number: Some("rec0001".into()),
                 field_tag: Some("245".into()),
                 message: "invalid utf-8".into(),
+                bytes_near: bytes_near.clone(),
+            },
+            MarcError::Marc8Error {
+                record_index: Some(1),
+                byte_offset: Some(50),
+                source_name: Some("a".into()),
+                record_control_number: Some("rec0001".into()),
+                field_tag: Some("245".into()),
+                message: "1 unmapped MARC-8 character".into(),
                 bytes_near: bytes_near.clone(),
             },
             MarcError::FieldNotFound {
