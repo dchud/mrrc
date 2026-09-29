@@ -26,9 +26,10 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+use crate::encoding::{CharacterCoding, MarcEncoding};
 use crate::error::Result;
 use crate::holdings_record::HoldingsRecord;
-use crate::iso2709::{DataFieldParseConfig, ParseContext};
+use crate::iso2709::{DataFieldParseConfig, DecodeMode, ParseContext, decode_field_value};
 use crate::iso2709_skeleton::{Iso2709Builder, parse_iso2709_record};
 use crate::leader::Leader;
 use crate::record::Field;
@@ -52,6 +53,7 @@ pub struct HoldingsMarcReader<R: Read> {
     reader: R,
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
+    character_coding: CharacterCoding,
     ctx: ParseContext,
     cap: RecoveryCap,
 }
@@ -68,6 +70,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             reader,
             recovery_mode: RecoveryMode::Strict,
             validation_level: ValidationLevel::default(),
+            character_coding: CharacterCoding::default(),
             ctx: ParseContext::new(),
             cap: RecoveryCap::new(),
         }
@@ -91,6 +94,14 @@ impl<R: Read> HoldingsMarcReader<R> {
     #[must_use]
     pub fn with_validation_level(mut self, level: ValidationLevel) -> Self {
         self.validation_level = level;
+        self
+    }
+
+    /// Set how the reader chooses each record's character encoding. See
+    /// [`crate::MarcReader::with_character_coding`] for semantics.
+    #[must_use]
+    pub fn with_character_coding(mut self, coding: CharacterCoding) -> Self {
+        self.character_coding = coding;
         self
     }
 
@@ -150,6 +161,7 @@ impl<R: Read> HoldingsMarcReader<R> {
             &mut self.cap,
             self.recovery_mode,
             self.validation_level,
+            self.character_coding,
             &mut errors,
         )?;
         Ok(result.map(|mut record| {
@@ -220,27 +232,24 @@ impl Iso2709Builder for HoldingsBuilder {
         }
     }
 
-    /// UTF-8 strictness follows `level`: lossy under
+    /// Decoding strictness follows `level`: lossy under
     /// [`ValidationLevel::Structural`], strict (raising
-    /// [`crate::MarcError::EncodingError`]) under
+    /// [`crate::MarcError::EncodingError`] or [`crate::MarcError::Marc8Error`]
+    /// on bytes that don't decode in `encoding`) under
     /// [`ValidationLevel::StrictMarc`].
     fn decode_control_field_value(
         field_bytes: &[u8],
         tag: &str,
         ctx: &ParseContext,
         level: ValidationLevel,
+        encoding: MarcEncoding,
     ) -> Result<String> {
         let raw = field_bytes
             .get(..field_bytes.len().saturating_sub(1))
             .unwrap_or(&[]);
-        match level {
-            ValidationLevel::Structural => Ok(String::from_utf8_lossy(raw).to_string()),
-            ValidationLevel::StrictMarc => {
-                std::str::from_utf8(raw).map(str::to_string).map_err(|e| {
-                    ctx.err_encoding(format!("Invalid UTF-8 in control field {tag}: {e}"))
-                })
-            },
-        }
+        decode_field_value(raw, encoding, DecodeMode::for_level(level), ctx, || {
+            format!("control field {tag}")
+        })
     }
 
     /// Holdings rejects data fields shorter than 3 bytes (must hold both

@@ -54,6 +54,52 @@ impl MarcEncoding {
     }
 }
 
+/// How the ISO 2709 readers choose the character encoding of a record's field
+/// data.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CharacterCoding {
+    /// Follow leader position 09: `a` is UTF-8 and any other value is MARC-8.
+    /// This is pymarc's rule.
+    #[default]
+    Leader,
+    /// Decode as UTF-8 whatever position 09 says, like pymarc's
+    /// `force_utf8=True`.
+    Utf8,
+    /// Decode a record as UTF-8 when its field data is valid UTF-8 containing
+    /// non-ASCII bytes, and otherwise follow position 09. This reads files
+    /// that mix MARC-8 records with UTF-8 records whose leader still says
+    /// MARC-8, which a MARC-8 byte sequence is very unlikely to imitate.
+    Detect,
+}
+
+impl CharacterCoding {
+    /// The encoding to decode a record's field data in, given leader position
+    /// 09 and the record's field data (directory excluded).
+    #[must_use]
+    pub(crate) fn resolve(self, position_09: char, field_data: &[u8]) -> MarcEncoding {
+        let from_leader = if position_09 == 'a' {
+            MarcEncoding::Utf8
+        } else {
+            MarcEncoding::Marc8
+        };
+        match self {
+            CharacterCoding::Leader => from_leader,
+            CharacterCoding::Utf8 => MarcEncoding::Utf8,
+            CharacterCoding::Detect => {
+                if from_leader == MarcEncoding::Marc8
+                    && !field_data.is_ascii()
+                    && std::str::from_utf8(field_data).is_ok()
+                {
+                    MarcEncoding::Utf8
+                } else {
+                    from_leader
+                }
+            },
+        }
+    }
+}
+
 /// Decode bytes using the specified encoding
 ///
 /// # Errors
@@ -79,8 +125,9 @@ pub fn encode_string(s: &str, encoding: MarcEncoding) -> Result<Vec<u8>> {
     }
 }
 
-/// MARC-8 decoding result: the decoded text and how many characters had no
-/// mapping in the active character set and were replaced with U+FFFD.
+/// MARC-8 decoding result: the decoded text and how many characters could
+/// not be decoded (no mapping in the active character set, or a sequence cut
+/// off by the end of the value) and were replaced with U+FFFD.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Marc8Decoded {
     pub(crate) text: String,
@@ -212,6 +259,15 @@ fn parse_escape(bytes: &[u8]) -> Escape {
 /// in [`Marc8Decoded::unmapped`], and a set designated into the half it is not
 /// normally used in is still read correctly.
 pub(crate) fn decode_marc8_lossy(bytes: &[u8]) -> Marc8Decoded {
+    // Printable ASCII with no escape sequences decodes to itself, and makes up
+    // most MARC-8 field values.
+    if bytes.iter().all(|b| (0x20..=0x7E).contains(b)) {
+        return Marc8Decoded {
+            text: String::from_utf8_lossy(bytes).into_owned(),
+            unmapped: 0,
+        };
+    }
+
     let mut g0 = Some(CharacterSetId::BasicLatin);
     let mut g1 = Some(CharacterSetId::AnselExtendedLatin);
     let mut out = Marc8Output {
