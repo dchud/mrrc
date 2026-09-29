@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MARC-8 decoding uses the Library of Congress code tables: ANSEL was off by one position,
   the Hebrew, Arabic, Cyrillic, and Greek tables were incomplete, and combining marks came
   out before their base character.
+- `EncodingValidator::analyze_encoding` follows the readers' leader position 09 rule instead of
+  failing on values other than space and `a`, no longer reports correctly decoded MARC-8 records
+  with non-ASCII text as mixed, and flags MARC-8 escape sequences in a UTF-8 record even when it
+  also holds `U+FFFD`. `MarcEncoding::declared_by_leader` exposes the position 09 rule.
 
 ### Performance
 
