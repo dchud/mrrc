@@ -391,11 +391,13 @@ for record in reader:
 For pymarc-equivalent error handling, use `permissive=True`. Two
 documented differences from pymarc's defaults:
 
-- **Encoding strictness:** mrrc raises `EncodingError` (and swallows it via
-  `current_exception` under `permissive=True`) on invalid UTF-8 in subfield
-  values; pymarc applies lossy substitution silently. The shape of the
-  iteration is unchanged (the bad record yields as `None` either way), so
-  callers using `except Exception:` keep working.
+- **Invalid UTF-8:** In a record whose leader says UTF-8, pymarc's default
+  `utf8_handling="strict"` rejects the record: it yields `None` and
+  `current_exception` holds the `UnicodeDecodeError`. mrrc substitutes
+  `U+FFFD` for the invalid bytes and yields the record, as pymarc does with
+  `utf8_handling="replace"`. To reject such records instead, pass
+  `validation_level="strict_marc"`; with `permissive=True` the record then
+  yields as `None` and `current_exception` holds an `EncodingError` (E301).
 - **`current_chunk` on byte-read errors:** When the underlying read of the
   next record's bytes fails before parsing begins (truncated stream, I/O
   error), `current_chunk` may be `None` even though `current_exception` is
