@@ -4,8 +4,8 @@
 //! for common operations: recovery mode parsing, source file opening, and
 //! reading raw record bytes from Python file objects.
 
-use mrrc::CharacterCoding;
 use mrrc::recovery::{RecoveryMode, ValidationLevel};
+use mrrc::{CharacterCoding, Utf8Handling};
 use pyo3::prelude::*;
 use std::fs::File;
 
@@ -32,6 +32,20 @@ pub fn parse_validation_level(level: &str) -> PyResult<ValidationLevel> {
         "strict_marc" => Ok(ValidationLevel::StrictMarc),
         _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
             "Invalid validation_level '{level}': must be 'structural' or 'strict_marc'"
+        ))),
+    }
+}
+
+/// Parse a `utf8_handling` string (pymarc's option) into a `Utf8Handling`.
+///
+/// Returns `PyValueError` for invalid values.
+pub fn parse_utf8_handling(handling: &str) -> PyResult<Utf8Handling> {
+    match handling {
+        "strict" => Ok(Utf8Handling::Strict),
+        "replace" => Ok(Utf8Handling::Replace),
+        "ignore" => Ok(Utf8Handling::Ignore),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "Invalid utf8_handling '{handling}': must be 'strict', 'replace', or 'ignore'"
         ))),
     }
 }

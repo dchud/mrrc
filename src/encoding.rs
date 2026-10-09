@@ -73,6 +73,22 @@ pub enum CharacterCoding {
     Detect,
 }
 
+/// What the ISO 2709 readers do with invalid UTF-8 in a record decoded as
+/// UTF-8. The values and their meanings are pymarc's `utf8_handling`.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Utf8Handling {
+    /// Invalid UTF-8 is an error, [`crate::MarcError::EncodingError`]
+    /// (E301), which the reader's recovery mode then handles like any other.
+    /// pymarc's default.
+    #[default]
+    Strict,
+    /// Replace each invalid sequence with U+FFFD.
+    Replace,
+    /// Drop the invalid bytes.
+    Ignore,
+}
+
 impl CharacterCoding {
     /// The encoding to decode a record's field data in, given leader position
     /// 09 and the record's field data (directory excluded).

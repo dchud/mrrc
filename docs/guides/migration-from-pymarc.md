@@ -388,16 +388,9 @@ for record in reader:
     print(record.title)
 ```
 
-For pymarc-equivalent error handling, use `permissive=True`. Two
-documented differences from pymarc's defaults:
+For pymarc-equivalent error handling, use `permissive=True`. One
+documented difference from pymarc's defaults:
 
-- **Invalid UTF-8:** In a record whose leader says UTF-8, pymarc's default
-  `utf8_handling="strict"` rejects the record: it yields `None` and
-  `current_exception` holds the `UnicodeDecodeError`. mrrc substitutes
-  `U+FFFD` for the invalid bytes and yields the record, as pymarc does with
-  `utf8_handling="replace"`. To reject such records instead, pass
-  `validation_level="strict_marc"`; with `permissive=True` the record then
-  yields as `None` and `current_exception` holds an `EncodingError` (E301).
 - **`current_chunk` on byte-read errors:** When the underlying read of the
   next record's bytes fails before parsing begins (truncated stream, I/O
   error), `current_chunk` may be `None` even though `current_exception` is
@@ -411,6 +404,17 @@ UTF-8. mrrc always converts MARC-8 to UTF-8 automatically — the conversion
 happens in the Rust parsing layer and cannot be disabled. The `to_unicode`
 kwarg is accepted for compatibility so existing scripts work unchanged.
 Passing `to_unicode=False` emits a warning but has no effect.
+
+### utf8_handling
+
+mrrc accepts pymarc's `utf8_handling` with the same values and default. In
+a record whose leader says UTF-8, `"strict"` (the default) makes invalid
+UTF-8 an error, `"replace"` substitutes `U+FFFD`, and `"ignore"` drops the
+bytes. Under `permissive=True`, a record rejected by `"strict"` yields
+`None` with an `EncodingError` (E301) in `current_exception`, where pymarc
+holds a `UnicodeDecodeError`. Under mrrc's default recovery mode the field
+holding the bad bytes is dropped and the error recorded on `record.errors`,
+as for any other recoverable error.
 
 ### MARC-8 Decoding and force_utf8
 
