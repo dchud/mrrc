@@ -1404,25 +1404,84 @@ impl PyRecord {
     }
 }
 
+/// Accept a leader assigned from Python: the extension's `Leader`, or the
+/// `mrrc.Leader` wrapper, which holds one as `_rust_leader` (so later edits
+/// through the wrapper also reach the record).
+fn extract_leader(obj: &Bound<'_, PyAny>) -> PyResult<Py<PyLeader>> {
+    if let Ok(leader) = obj.cast::<PyLeader>() {
+        return Ok(leader.clone().unbind());
+    }
+    if let Ok(inner) = obj.getattr("_rust_leader")
+        && let Ok(leader) = inner.cast::<PyLeader>()
+    {
+        return Ok(leader.clone().unbind());
+    }
+    Err(pyo3::exceptions::PyTypeError::new_err(format!(
+        "leader must be a Leader, got {}",
+        obj.get_type().name()?
+    )))
+}
+
 /// Python wrapper for a MARC Authority Record (Type Z)
 ///
 /// Authority records are used to maintain authorized access points (names, subjects, etc.)
 /// They use the same ISO 2709 binary format as bibliographic records but are organized
 /// by functional role (heading, tracings, notes, etc.).
-#[pyclass(name = "AuthorityRecord", from_py_object)]
-#[derive(Clone, Debug)]
+#[pyclass(name = "AuthorityRecord")]
+#[derive(Debug)]
 pub struct PyAuthorityRecord {
     pub inner: AuthorityRecord,
+    /// The `Leader` object the `leader` attribute returns, created on first
+    /// access and returned every time after, so edits made through it stay
+    /// on the record. Once it exists it is the record's leader; until then
+    /// `inner.leader` is.
+    leader: Option<Py<PyLeader>>,
+}
+
+impl From<AuthorityRecord> for PyAuthorityRecord {
+    fn from(inner: AuthorityRecord) -> Self {
+        PyAuthorityRecord {
+            inner,
+            leader: None,
+        }
+    }
+}
+
+impl PyAuthorityRecord {
+    /// Read the record's current leader value.
+    fn with_leader<R>(&self, py: Python<'_>, f: impl FnOnce(&Leader) -> R) -> R {
+        match &self.leader {
+            Some(leader) => f(&leader.borrow(py).inner),
+            None => f(&self.inner.leader),
+        }
+    }
 }
 
 #[pymethods]
 impl PyAuthorityRecord {
-    /// Get the leader
+    /// The record leader. The same object is returned on every access, so
+    /// edits made through it stay on the record.
     #[getter]
-    pub fn leader(&self) -> PyLeader {
-        PyLeader {
-            inner: self.inner.leader.clone(),
+    pub fn leader(&mut self, py: Python<'_>) -> PyResult<Py<PyLeader>> {
+        if let Some(leader) = &self.leader {
+            return Ok(leader.clone_ref(py));
         }
+        let leader = Py::new(
+            py,
+            PyLeader {
+                inner: self.inner.leader.clone(),
+            },
+        )?;
+        self.leader = Some(leader.clone_ref(py));
+        Ok(leader)
+    }
+
+    /// Replace the leader with a `Leader`, which becomes the object the
+    /// `leader` attribute returns.
+    #[setter]
+    pub fn set_leader(&mut self, leader: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.leader = Some(extract_leader(leader)?);
+        Ok(())
     }
 
     /// Non-fatal errors accumulated while parsing this record. Always
@@ -1438,8 +1497,8 @@ impl PyAuthorityRecord {
     }
 
     /// Get record type (single character)
-    pub fn record_type(&self) -> String {
-        self.inner.leader.record_type.to_string()
+    pub fn record_type(&self, py: Python<'_>) -> String {
+        self.with_leader(py, |leader| leader.record_type.to_string())
     }
 
     /// Get the main heading (1XX field)
@@ -1536,10 +1595,10 @@ impl PyAuthorityRecord {
         Ok(heading_json)
     }
 
-    fn __repr__(&self) -> String {
+    fn __repr__(&self, py: Python<'_>) -> String {
         format!(
             "<AuthorityRecord type={} heading={}>",
-            self.inner.leader.record_type,
+            self.with_leader(py, |leader| leader.record_type),
             self.heading_text().unwrap_or_else(|| "Unknown".to_string())
         )
     }
@@ -1557,20 +1616,61 @@ impl PyAuthorityRecord {
 /// Holdings records are used to maintain inventory and location information.
 /// They use the same ISO 2709 binary format as bibliographic records but organize
 /// fields by functional role (locations, enumeration, notes, etc.).
-#[pyclass(name = "HoldingsRecord", from_py_object)]
-#[derive(Clone, Debug)]
+#[pyclass(name = "HoldingsRecord")]
+#[derive(Debug)]
 pub struct PyHoldingsRecord {
     pub inner: HoldingsRecord,
+    /// The `Leader` object the `leader` attribute returns, created on first
+    /// access and returned every time after, so edits made through it stay
+    /// on the record. Once it exists it is the record's leader; until then
+    /// `inner.leader` is.
+    leader: Option<Py<PyLeader>>,
+}
+
+impl From<HoldingsRecord> for PyHoldingsRecord {
+    fn from(inner: HoldingsRecord) -> Self {
+        PyHoldingsRecord {
+            inner,
+            leader: None,
+        }
+    }
+}
+
+impl PyHoldingsRecord {
+    /// Read the record's current leader value.
+    fn with_leader<R>(&self, py: Python<'_>, f: impl FnOnce(&Leader) -> R) -> R {
+        match &self.leader {
+            Some(leader) => f(&leader.borrow(py).inner),
+            None => f(&self.inner.leader),
+        }
+    }
 }
 
 #[pymethods]
 impl PyHoldingsRecord {
-    /// Get the leader
+    /// The record leader. The same object is returned on every access, so
+    /// edits made through it stay on the record.
     #[getter]
-    pub fn leader(&self) -> PyLeader {
-        PyLeader {
-            inner: self.inner.leader.clone(),
+    pub fn leader(&mut self, py: Python<'_>) -> PyResult<Py<PyLeader>> {
+        if let Some(leader) = &self.leader {
+            return Ok(leader.clone_ref(py));
         }
+        let leader = Py::new(
+            py,
+            PyLeader {
+                inner: self.inner.leader.clone(),
+            },
+        )?;
+        self.leader = Some(leader.clone_ref(py));
+        Ok(leader)
+    }
+
+    /// Replace the leader with a `Leader`, which becomes the object the
+    /// `leader` attribute returns.
+    #[setter]
+    pub fn set_leader(&mut self, leader: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.leader = Some(extract_leader(leader)?);
+        Ok(())
     }
 
     /// Non-fatal errors accumulated while parsing this record. Always
@@ -1586,8 +1686,8 @@ impl PyHoldingsRecord {
     }
 
     /// Get record type (single character: x, y, v, or u)
-    pub fn record_type(&self) -> String {
-        self.inner.leader.record_type.to_string()
+    pub fn record_type(&self, py: Python<'_>) -> String {
+        self.with_leader(py, |leader| leader.record_type.to_string())
     }
 
     /// Get all location fields (852)
@@ -1720,18 +1820,18 @@ impl PyHoldingsRecord {
         Ok(format!("{{\"locations\": {loc_count}}}"))
     }
 
-    fn __repr__(&self) -> String {
+    fn __repr__(&self, py: Python<'_>) -> String {
         format!(
             "<HoldingsRecord type={} locations={}>",
-            self.inner.leader.record_type,
+            self.with_leader(py, |leader| leader.record_type),
             self.locations().len()
         )
     }
 
-    fn __str__(&self) -> String {
+    fn __str__(&self, py: Python<'_>) -> String {
         format!(
             "HoldingsRecord(type={}, locations={})",
-            self.inner.leader.record_type,
+            self.with_leader(py, |leader| leader.record_type),
             self.locations().len()
         )
     }

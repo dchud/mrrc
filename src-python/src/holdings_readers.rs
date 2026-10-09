@@ -131,7 +131,7 @@ impl PyHoldingsMARCReader {
             HoldingsReaderBackend::RustFile(mut reader) => match reader.read_record() {
                 Ok(Some(record)) => {
                     self.backend = Some(HoldingsReaderBackend::RustFile(reader));
-                    Ok(Some(PyHoldingsRecord { inner: record }))
+                    Ok(Some(PyHoldingsRecord::from(record)))
                 },
                 Ok(None) => Ok(None),
                 Err(e) => {
@@ -142,7 +142,7 @@ impl PyHoldingsMARCReader {
             HoldingsReaderBackend::CursorBackend(mut reader) => match reader.read_record() {
                 Ok(Some(record)) => {
                     self.backend = Some(HoldingsReaderBackend::CursorBackend(reader));
-                    Ok(Some(PyHoldingsRecord { inner: record }))
+                    Ok(Some(PyHoldingsRecord::from(record)))
                 },
                 Ok(None) => Ok(None),
                 Err(e) => {
@@ -164,7 +164,7 @@ impl PyHoldingsMARCReader {
                         match parser.read_record() {
                             Ok(Some(record)) => {
                                 self.backend = Some(HoldingsReaderBackend::PythonFile(py_obj));
-                                Ok(Some(PyHoldingsRecord { inner: record }))
+                                Ok(Some(PyHoldingsRecord::from(record)))
                             },
                             Ok(None) => Ok(None),
                             Err(e) => Err(crate::error::marc_error_to_py_err(e)),

@@ -131,7 +131,7 @@ impl PyAuthorityMARCReader {
             AuthorityReaderBackend::RustFile(mut reader) => match reader.read_record() {
                 Ok(Some(record)) => {
                     self.backend = Some(AuthorityReaderBackend::RustFile(reader));
-                    Ok(Some(PyAuthorityRecord { inner: record }))
+                    Ok(Some(PyAuthorityRecord::from(record)))
                 },
                 Ok(None) => Ok(None),
                 Err(e) => {
@@ -142,7 +142,7 @@ impl PyAuthorityMARCReader {
             AuthorityReaderBackend::CursorBackend(mut reader) => match reader.read_record() {
                 Ok(Some(record)) => {
                     self.backend = Some(AuthorityReaderBackend::CursorBackend(reader));
-                    Ok(Some(PyAuthorityRecord { inner: record }))
+                    Ok(Some(PyAuthorityRecord::from(record)))
                 },
                 Ok(None) => Ok(None),
                 Err(e) => {
@@ -164,7 +164,7 @@ impl PyAuthorityMARCReader {
                         match parser.read_record() {
                             Ok(Some(record)) => {
                                 self.backend = Some(AuthorityReaderBackend::PythonFile(py_obj));
-                                Ok(Some(PyAuthorityRecord { inner: record }))
+                                Ok(Some(PyAuthorityRecord::from(record)))
                             },
                             Ok(None) => Ok(None),
                             Err(e) => Err(crate::error::marc_error_to_py_err(e)),
