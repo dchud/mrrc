@@ -140,19 +140,29 @@ leader.character_coding = "a"      # UTF-8
 
 | Property | Position | Description |
 |----------|----------|-------------|
-| `record_length` | 00-04 | Record length (5 digits) |
+| `record_length` | 00-04 | Record length, a 5-digit string such as `"00714"` |
 | `record_status` | 05 | Record status (n/c/d) |
 | `record_type` | 06 | Type of record (a=language, c=music, etc.) |
 | `bibliographic_level` | 07 | Bibliographic level (m=monograph, s=serial) |
 | `control_record_type` | 08 | Type of control |
 | `character_coding` | 09 | Character coding (space=MARC-8, a=UTF-8) |
-| `indicator_count` | 10 | Indicator count (usually 2) |
-| `subfield_code_count` | 11 | Subfield code count (usually 2) |
-| `data_base_address` | 12-16 | Base address of data |
+| `indicator_count` | 10 | Indicator count, a 1-digit string (usually `"2"`) |
+| `subfield_code_count` | 11 | Subfield code count, a 1-digit string (usually `"2"`) |
+| `data_base_address` | 12-16 | Base address of data, a 5-digit string such as `"00205"` (pymarc's `base_address`) |
 | `encoding_level` | 17 | Encoding level |
 | `cataloging_form` | 18 | Descriptive cataloging form |
 | `multipart_level` | 19 | Multipart resource record level |
 | `reserved` | 20-23 | Entry map (usually "4500") |
+
+Every property is a string, as in pymarc. The four numeric positions
+(`record_length`, `indicator_count`, `subfield_code_count`, and
+`data_base_address`) take a string of digits of their full width, such as
+`leader.record_length = "00321"`. A string of another length, or one
+containing anything but ASCII digits, raises `ValueError`; a value that is
+not a string, such as an `int`, raises `TypeError`. pymarc also raises
+`TypeError` for an `int`, but accepts any characters of the right length.
+`MARCWriter` and `as_marc()` compute the record length and base address
+when they write a record.
 
 ### AuthorityRecord
 
@@ -222,9 +232,16 @@ serializes any record's fields to ISO 2709.
 Reads MARC records from files with GIL-released I/O for parallelism.
 
 ```python
-MARCReader(file_obj, to_unicode=True, permissive=False, recovery_mode=None,
-           validation_level="structural", max_errors=None)
+MARCReader(marc_target, to_unicode=True, force_utf8=False,
+           hide_utf8_warnings=False, utf8_handling="strict",
+           file_encoding="iso8859-1", permissive=False, *,
+           recovery_mode=None, validation_level="structural",
+           max_errors=None, character_coding=None)
 ```
+
+The parameters before `*` are pymarc's, in pymarc's order and with pymarc's
+defaults, so a pymarc call that passes them positionally means the same in
+mrrc. The mrrc-only parameters after `*` are keyword-only.
 
 ```python
 from mrrc import MARCReader
@@ -252,18 +269,27 @@ for record in MARCReader(data):
 | `bytes` or `bytearray` | In-memory data |
 | File object | Python file-like object |
 
-**Keyword Arguments:**
+**Parameters:**
 
-| Kwarg | Type | Default | Description |
-|-------|------|---------|-------------|
+pymarc's parameters, positional or keyword, in this order:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
 | `to_unicode` | `bool` | `True` | Accepted for pymarc compatibility. mrrc always converts MARC-8 to UTF-8; passing `False` emits a warning but has no effect. |
 | `force_utf8` | `bool` | `False` | pymarc's option: when `True`, decode every record as UTF-8 whatever leader position 09 says. The same as `character_coding="utf-8"`. |
+| `hide_utf8_warnings` | `bool` | `False` | Accepted for pymarc compatibility, and has no effect. pymarc writes a message to stderr for each MARC-8 character it cannot map unless this is `True`; mrrc writes no such messages. It decodes an unmappable character as `U+FFFD`, or raises `Marc8Error` under `validation_level="strict_marc"`. |
+| `utf8_handling` | `str` | `"strict"` | pymarc's option for invalid UTF-8 in a record decoded as UTF-8. `"strict"` (the default, as in pymarc) makes it an E301 `EncodingError`, handled by `recovery_mode` like any other error; `"replace"` substitutes `U+FFFD`; `"ignore"` drops the bytes. |
+| `file_encoding` | `str` | `"iso8859-1"` | pymarc's option naming the encoding of records whose leader does not say UTF-8. mrrc accepts only pymarc's default, `"iso8859-1"`, which selects MARC-8 decoding; any other value raises `ValueError`. mrrc decodes control fields as MARC-8 too, where pymarc decodes them as ISO 8859-1; the two agree on ASCII. |
 | `permissive` | `bool` | `False` | When `True`, yields `None` for records that fail to parse instead of raising, matching pymarc's permissive behavior. |
+
+mrrc's parameters, keyword-only:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
 | `recovery_mode` | `str` | `None` | Controls how malformed records are handled (see below). When not given, resolves to `"permissive"` — or `"strict"` if `permissive=True` (the inner reader raises so the outer wrapper can swallow). Cannot be combined explicitly with `permissive=True` unless `"strict"`. |
 | `validation_level` | `str` | `"structural"` | What counts as an error during parsing, orthogonal to `recovery_mode`. `"structural"` fires only ISO 2709 structural errors; `"strict_marc"` adds byte-level MARC 21 checks (indicators, subfield codes, strict MARC-8 decoding). Invalid UTF-8 follows `utf8_handling` instead. See [Validation level vs recovery mode](error-handling.md#validation-level-vs-recovery-mode). |
 | `max_errors` | `int` | `None` | Cap on accumulated recovered errors in lenient/permissive mode; exceeding it raises `FatalReaderError`. `None` or `0` disables the cap. See [Capping recovered errors](error-handling.md#capping-recovered-errors-with-max_errors). |
 | `character_coding` | `str` | `None` | How each record's character encoding is chosen. `"leader"` (what `None` means unless `force_utf8=True`) follows leader position 09 as pymarc does: `a` is UTF-8, any other value MARC-8. `"utf-8"` decodes every record as UTF-8. `"detect"` decodes a record as UTF-8 when its field data is valid UTF-8 with non-ASCII bytes, and otherwise follows the leader. Combining `force_utf8=True` with `"leader"` or `"detect"` raises `ValueError`. See [Character encoding](encoding.md). |
-| `utf8_handling` | `str` | `"strict"` | pymarc's option for invalid UTF-8 in a record decoded as UTF-8. `"strict"` (the default, as in pymarc) makes it an E301 `EncodingError`, handled by `recovery_mode` like any other error; `"replace"` substitutes `U+FFFD`; `"ignore"` drops the bytes. |
 
 **Recovery Modes:**
 
