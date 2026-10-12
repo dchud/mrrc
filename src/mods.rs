@@ -432,75 +432,61 @@ fn escape_xml(s: &str) -> String {
 // MODS XML → MARC Record parsing
 // ---------------------------------------------------------------------------
 
-/// Strip namespace prefix from an XML element name, returning an owned `Vec<u8>`.
+/// Strip namespace prefix from an XML element name, returning an owned `String`.
 ///
 /// Handles both `mods:title` → `title` and plain `title` → `title`.
-fn strip_ns_owned(name: &[u8]) -> Vec<u8> {
-    match memchr::memchr(b':', name) {
-        Some(pos) => name[pos + 1..].to_vec(),
-        None => name.to_vec(),
-    }
+fn strip_ns_owned(name: &str) -> String {
+    name.split_once(':')
+        .map_or(name, |(_, local)| local)
+        .to_string()
 }
 
-/// Captured info from a start-element event (owned, so `buf` can be reused).
+/// Captured info from a start-element event: the namespace-stripped local
+/// name and the raw attribute values.
 struct StartInfo {
-    local_name: Vec<u8>,
-    attrs: Vec<(Vec<u8>, String)>,
+    local_name: String,
+    attrs: Vec<(String, String)>,
 }
 
 impl StartInfo {
     fn from_event(e: &quick_xml::events::BytesStart<'_>) -> Self {
         let local_name = strip_ns_owned(e.name().as_ref());
-        let attrs: Vec<(Vec<u8>, String)> = e
+        let attrs: Vec<(String, String)> = e
             .attributes()
             .flatten()
-            .map(|a| {
-                (
-                    a.key.as_ref().to_vec(),
-                    String::from_utf8_lossy(&a.value).to_string(),
-                )
-            })
+            .map(|a| (a.key.as_ref().to_string(), a.value.to_string()))
             .collect();
         Self { local_name, attrs }
     }
 
-    fn attr(&self, key: &[u8]) -> Option<&str> {
+    fn attr(&self, key: &str) -> Option<&str> {
         self.attrs
             .iter()
-            .find(|(k, _)| k.as_slice() == key)
+            .find(|(k, _)| k.as_str() == key)
             .map(|(_, v)| v.as_str())
     }
 }
 
 /// Read the text content of the current element and consume the end tag.
-fn read_text(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<String> {
+fn read_text(reader: &mut Reader<&[u8]>) -> Result<String> {
     let mut text = String::new();
     loop {
-        match reader.read_event_into(buf) {
-            Ok(Event::Text(e)) => {
-                text.push_str(
-                    &e.decode().map_err(|err| {
-                        MarcError::invalid_field_msg(format!("XML decode: {err}"))
-                    })?,
-                );
-            },
-            Ok(Event::CData(e)) => {
-                text.push_str(&String::from_utf8_lossy(&e));
-            },
+        match reader.read_event() {
+            Ok(Event::Text(e)) => text.push_str(&e),
+            Ok(Event::CData(e)) => text.push_str(&e),
             Ok(Event::GeneralRef(e)) => {
                 if let Ok(Some(c)) = e.resolve_char_ref() {
                     text.push(c);
                 } else {
-                    match e.as_ref() {
-                        b"amp" => text.push('&'),
-                        b"lt" => text.push('<'),
-                        b"gt" => text.push('>'),
-                        b"apos" => text.push('\''),
-                        b"quot" => text.push('"'),
+                    match &*e {
+                        "amp" => text.push('&'),
+                        "lt" => text.push('<'),
+                        "gt" => text.push('>'),
+                        "apos" => text.push('\''),
+                        "quot" => text.push('"'),
                         other => {
                             return Err(MarcError::invalid_field_msg(format!(
-                                "Unknown XML entity: &{};",
-                                String::from_utf8_lossy(other)
+                                "Unknown XML entity: &{other};"
                             )));
                         },
                     }
@@ -510,16 +496,15 @@ fn read_text(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<String> {
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
     Ok(text)
 }
 
 /// Skip over the current element and all its children until the matching end tag.
-fn skip_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<()> {
+fn skip_element(reader: &mut Reader<&[u8]>) -> Result<()> {
     let mut depth: u32 = 1;
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(_)) => depth += 1,
             Ok(Event::End(_)) => {
                 depth -= 1;
@@ -531,7 +516,6 @@ fn skip_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<()> {
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML skip: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
     Ok(())
 }
@@ -572,19 +556,17 @@ fn resource_type_to_leader_code(s: &str) -> char {
 }
 
 /// Read the next start-element event, returning owned `StartInfo`. Returns `None` at EOF or end-tag.
-fn next_start(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<Option<StartInfo>> {
+fn next_start(reader: &mut Reader<&[u8]>) -> Result<Option<StartInfo>> {
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let info = StartInfo::from_event(e);
-                buf.clear();
                 return Ok(Some(info));
             },
             Ok(Event::End(_) | Event::Eof) => return Ok(None),
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 }
 
@@ -600,16 +582,14 @@ fn next_start(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<Option<St
 pub fn mods_xml_to_record(xml: &str) -> Result<Record> {
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(false);
-    let mut buf = Vec::new();
 
     // Advance to the <mods> start element
     loop {
-        match reader.read_event_into(&mut buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"mods" {
-                    buf.clear();
-                    return parse_mods_element(&mut reader, &mut buf);
+                if local == "mods" {
+                    return parse_mods_element(&mut reader);
                 }
             },
             Ok(Event::Eof) => {
@@ -620,7 +600,6 @@ pub fn mods_xml_to_record(xml: &str) -> Result<Record> {
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 }
 
@@ -632,16 +611,14 @@ pub fn mods_xml_to_record(xml: &str) -> Result<Record> {
 pub fn mods_xml_to_records(xml: &str) -> Result<Vec<Record>> {
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(false);
-    let mut buf = Vec::new();
     let mut records = Vec::new();
 
     loop {
-        match reader.read_event_into(&mut buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                buf.clear();
-                if local == b"mods" {
-                    records.push(parse_mods_element(&mut reader, &mut buf)?);
+                if local == "mods" {
+                    records.push(parse_mods_element(&mut reader)?);
                 }
                 // else modsCollection — continue into children
             },
@@ -649,7 +626,6 @@ pub fn mods_xml_to_records(xml: &str) -> Result<Vec<Record>> {
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 
     // If called on a single <mods> document, still return it
@@ -661,7 +637,7 @@ pub fn mods_xml_to_records(xml: &str) -> Result<Vec<Record>> {
 }
 
 /// Parse the children of a `<mods>` element into a MARC Record.
-fn parse_mods_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<Record> {
+fn parse_mods_element(reader: &mut Reader<&[u8]>) -> Result<Record> {
     let mut record = Record::new(make_default_leader());
     // Track whether we've assigned the primary 1XX entries
     let mut has_100 = false;
@@ -669,50 +645,47 @@ fn parse_mods_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<R
     let mut has_111 = false;
 
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
-                // Capture owned info so we can release the borrow on buf
                 let info = StartInfo::from_event(e);
-                buf.clear();
-                match info.local_name.as_slice() {
-                    b"titleInfo" => parse_title_info(reader, buf, &info, &mut record)?,
-                    b"name" => parse_name(
+                match info.local_name.as_str() {
+                    "titleInfo" => parse_title_info(reader, &info, &mut record)?,
+                    "name" => parse_name(
                         reader,
-                        buf,
                         &info,
                         &mut record,
                         &mut has_100,
                         &mut has_110,
                         &mut has_111,
                     )?,
-                    b"typeOfResource" => parse_type_of_resource(reader, buf, &mut record)?,
-                    b"originInfo" => parse_origin_info(reader, buf, &mut record)?,
-                    b"physicalDescription" => {
-                        parse_physical_description(reader, buf, &mut record)?;
+                    "typeOfResource" => parse_type_of_resource(reader, &mut record)?,
+                    "originInfo" => parse_origin_info(reader, &mut record)?,
+                    "physicalDescription" => {
+                        parse_physical_description(reader, &mut record)?;
                     },
-                    b"abstract" => parse_abstract(reader, buf, &mut record)?,
-                    b"note" => parse_note(reader, buf, &mut record)?,
-                    b"subject" => parse_subject(reader, buf, &mut record)?,
-                    b"identifier" => parse_identifier(reader, buf, &info, &mut record)?,
-                    b"language" => parse_language(reader, buf, &mut record)?,
-                    b"genre" => parse_genre(reader, buf, &mut record)?,
-                    b"classification" => {
-                        parse_classification(reader, buf, &info, &mut record)?;
+                    "abstract" => parse_abstract(reader, &mut record)?,
+                    "note" => parse_note(reader, &mut record)?,
+                    "subject" => parse_subject(reader, &mut record)?,
+                    "identifier" => parse_identifier(reader, &info, &mut record)?,
+                    "language" => parse_language(reader, &mut record)?,
+                    "genre" => parse_genre(reader, &mut record)?,
+                    "classification" => {
+                        parse_classification(reader, &info, &mut record)?;
                     },
-                    b"location" => parse_location(reader, buf, &mut record)?,
-                    b"relatedItem" => parse_related_item(reader, buf, &info, &mut record)?,
-                    b"recordInfo" => parse_record_info(reader, buf, &mut record)?,
-                    b"accessCondition" => {
-                        parse_access_condition(reader, buf, &info, &mut record)?;
+                    "location" => parse_location(reader, &mut record)?,
+                    "relatedItem" => parse_related_item(reader, &info, &mut record)?,
+                    "recordInfo" => parse_record_info(reader, &mut record)?,
+                    "accessCondition" => {
+                        parse_access_condition(reader, &info, &mut record)?;
                     },
-                    b"tableOfContents" => parse_table_of_contents(reader, buf, &mut record)?,
-                    b"targetAudience" => parse_target_audience(reader, buf, &mut record)?,
-                    _ => skip_element(reader, buf)?,
+                    "tableOfContents" => parse_table_of_contents(reader, &mut record)?,
+                    "targetAudience" => parse_target_audience(reader, &mut record)?,
+                    _ => skip_element(reader)?,
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"mods" {
+                if local == "mods" {
                     break;
                 }
             },
@@ -720,7 +693,6 @@ fn parse_mods_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<R
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 
     Ok(record)
@@ -729,11 +701,10 @@ fn parse_mods_element(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>) -> Result<R
 /// Parse `<titleInfo>` → 245 or 246 depending on `@type`.
 fn parse_title_info(
     reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
     info: &StartInfo,
     record: &mut Record,
 ) -> Result<()> {
-    let title_type = info.attr(b"type");
+    let title_type = info.attr("type");
     let tag = match title_type {
         Some("alternative" | "abbreviated" | "translated" | "uniform") => "246",
         _ => "245",
@@ -745,48 +716,47 @@ fn parse_title_info(
     let mut has_content = false;
 
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                buf.clear();
-                match local.as_slice() {
-                    b"title" => {
-                        let text = read_text(reader, buf)?;
+                match local.as_str() {
+                    "title" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             field.add_subfield('a', text);
                             has_content = true;
                         }
                     },
-                    b"subTitle" => {
-                        let text = read_text(reader, buf)?;
+                    "subTitle" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             field.add_subfield('b', text);
                             has_content = true;
                         }
                     },
-                    b"partNumber" => {
-                        let text = read_text(reader, buf)?;
+                    "partNumber" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             field.add_subfield('n', text);
                             has_content = true;
                         }
                     },
-                    b"partName" => {
-                        let text = read_text(reader, buf)?;
+                    "partName" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             field.add_subfield('p', text);
                             has_content = true;
                         }
                     },
-                    b"nonSort" => {
-                        let _text = read_text(reader, buf)?;
+                    "nonSort" => {
+                        let _text = read_text(reader)?;
                     },
-                    _ => skip_element(reader, buf)?,
+                    _ => skip_element(reader)?,
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"titleInfo" {
+                if local == "titleInfo" {
                     break;
                 }
             },
@@ -794,7 +764,6 @@ fn parse_title_info(
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 
     if has_content {
@@ -807,27 +776,25 @@ fn parse_title_info(
 #[allow(clippy::too_many_arguments)]
 fn parse_name(
     reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
     info: &StartInfo,
     record: &mut Record,
     has_100: &mut bool,
     has_110: &mut bool,
     has_111: &mut bool,
 ) -> Result<()> {
-    let name_type = info.attr(b"type").map(String::from);
+    let name_type = info.attr("type").map(String::from);
     let mut name_parts: Vec<String> = Vec::new();
     let mut date_part: Option<String> = None;
     let mut role_term: Option<String> = None;
 
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let child = StartInfo::from_event(e);
-                buf.clear();
-                match child.local_name.as_slice() {
-                    b"namePart" => {
-                        let part_type = child.attr(b"type").map(String::from);
-                        let text = read_text(reader, buf)?;
+                match child.local_name.as_str() {
+                    "namePart" => {
+                        let part_type = child.attr("type").map(String::from);
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             if part_type.as_deref() == Some("date") {
                                 date_part = Some(text);
@@ -836,25 +803,25 @@ fn parse_name(
                             }
                         }
                     },
-                    b"role" => {
+                    "role" => {
                         // Read inside <role> to find <roleTerm>
-                        while let Some(role_child) = next_start(reader, buf)? {
-                            if role_child.local_name == b"roleTerm" {
-                                let text = read_text(reader, buf)?;
+                        while let Some(role_child) = next_start(reader)? {
+                            if role_child.local_name == "roleTerm" {
+                                let text = read_text(reader)?;
                                 if !text.is_empty() {
                                     role_term = Some(text);
                                 }
                             } else {
-                                skip_element(reader, buf)?;
+                                skip_element(reader)?;
                             }
                         }
                     },
-                    _ => skip_element(reader, buf)?,
+                    _ => skip_element(reader)?,
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"name" {
+                if local == "name" {
                     break;
                 }
             },
@@ -862,7 +829,6 @@ fn parse_name(
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 
     if name_parts.is_empty() {
@@ -913,12 +879,8 @@ fn parse_name(
 }
 
 /// Parse `<typeOfResource>` → Leader record type.
-fn parse_type_of_resource(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
-    let text = read_text(reader, buf)?;
+fn parse_type_of_resource(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
+    let text = read_text(reader)?;
     if !text.is_empty() {
         record.leader.record_type = resource_type_to_leader_code(&text);
     }
@@ -926,65 +888,60 @@ fn parse_type_of_resource(
 }
 
 /// Parse `<originInfo>` → 260 (place/publisher/date) and 250 (edition).
-fn parse_origin_info(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
+fn parse_origin_info(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
     let mut place: Option<String> = None;
     let mut publisher: Option<String> = None;
     let mut date_issued: Option<String> = None;
     let mut edition: Option<String> = None;
 
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                buf.clear();
-                match local.as_slice() {
-                    b"place" => {
+                match local.as_str() {
+                    "place" => {
                         // Read inside <place> to find <placeTerm>
-                        while let Some(child) = next_start(reader, buf)? {
-                            if child.local_name == b"placeTerm" {
-                                let text = read_text(reader, buf)?;
+                        while let Some(child) = next_start(reader)? {
+                            if child.local_name == "placeTerm" {
+                                let text = read_text(reader)?;
                                 if !text.is_empty() {
                                     place = Some(text);
                                 }
                             } else {
-                                skip_element(reader, buf)?;
+                                skip_element(reader)?;
                             }
                         }
                     },
-                    b"publisher" => {
-                        let text = read_text(reader, buf)?;
+                    "publisher" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             publisher = Some(text);
                         }
                     },
-                    b"dateIssued" => {
-                        let text = read_text(reader, buf)?;
+                    "dateIssued" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             date_issued = Some(text);
                         }
                     },
-                    b"dateCreated" => {
-                        let text = read_text(reader, buf)?;
+                    "dateCreated" => {
+                        let text = read_text(reader)?;
                         if date_issued.is_none() && !text.is_empty() {
                             date_issued = Some(text);
                         }
                     },
-                    b"edition" => {
-                        let text = read_text(reader, buf)?;
+                    "edition" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             edition = Some(text);
                         }
                     },
-                    _ => skip_element(reader, buf)?,
+                    _ => skip_element(reader)?,
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"originInfo" {
+                if local == "originInfo" {
                     break;
                 }
             },
@@ -992,7 +949,6 @@ fn parse_origin_info(
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 
     if place.is_some() || publisher.is_some() || date_issued.is_some() {
@@ -1019,45 +975,40 @@ fn parse_origin_info(
 }
 
 /// Parse `<physicalDescription>` → 300.
-fn parse_physical_description(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
+fn parse_physical_description(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
     let mut extent: Option<String> = None;
     let mut form: Option<String> = None;
     let mut dimensions: Option<String> = None;
 
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                buf.clear();
-                match local.as_slice() {
-                    b"extent" => {
-                        let text = read_text(reader, buf)?;
+                match local.as_str() {
+                    "extent" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             extent = Some(text);
                         }
                     },
-                    b"form" => {
-                        let text = read_text(reader, buf)?;
+                    "form" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             form = Some(text);
                         }
                     },
-                    b"dimensions" => {
-                        let text = read_text(reader, buf)?;
+                    "dimensions" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             dimensions = Some(text);
                         }
                     },
-                    _ => skip_element(reader, buf)?,
+                    _ => skip_element(reader)?,
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"physicalDescription" {
+                if local == "physicalDescription" {
                     break;
                 }
             },
@@ -1065,7 +1016,6 @@ fn parse_physical_description(
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 
     if extent.is_some() || form.is_some() || dimensions.is_some() {
@@ -1086,12 +1036,8 @@ fn parse_physical_description(
 }
 
 /// Parse `<abstract>` → 520 $a.
-fn parse_abstract(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
-    let text = read_text(reader, buf)?;
+fn parse_abstract(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
+    let text = read_text(reader)?;
     if !text.is_empty() {
         let mut field = Field::new("520".to_string(), ' ', ' ');
         field.add_subfield('a', text);
@@ -1101,8 +1047,8 @@ fn parse_abstract(
 }
 
 /// Parse `<note>` → 500 $a.
-fn parse_note(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Record) -> Result<()> {
-    let text = read_text(reader, buf)?;
+fn parse_note(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
+    let text = read_text(reader)?;
     if !text.is_empty() {
         let mut field = Field::new("500".to_string(), ' ', ' ');
         field.add_subfield('a', text);
@@ -1112,43 +1058,42 @@ fn parse_note(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Record
 }
 
 /// Parse `<subject>` → 650/651 (topic/geographic).
-fn parse_subject(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Record) -> Result<()> {
+fn parse_subject(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                buf.clear();
-                match local.as_slice() {
-                    b"topic" => {
-                        let text = read_text(reader, buf)?;
+                match local.as_str() {
+                    "topic" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             let mut field = Field::new("650".to_string(), ' ', '0');
                             field.add_subfield('a', text);
                             record.add_field(field);
                         }
                     },
-                    b"geographic" => {
-                        let text = read_text(reader, buf)?;
+                    "geographic" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             let mut field = Field::new("651".to_string(), ' ', '0');
                             field.add_subfield('a', text);
                             record.add_field(field);
                         }
                     },
-                    b"temporal" => {
-                        let text = read_text(reader, buf)?;
+                    "temporal" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             let mut field = Field::new("650".to_string(), ' ', '0');
                             field.add_subfield('y', text);
                             record.add_field(field);
                         }
                     },
-                    _ => skip_element(reader, buf)?,
+                    _ => skip_element(reader)?,
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"subject" {
+                if local == "subject" {
                     break;
                 }
             },
@@ -1156,7 +1101,6 @@ fn parse_subject(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Rec
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
     Ok(())
 }
@@ -1164,12 +1108,11 @@ fn parse_subject(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Rec
 /// Parse `<identifier>` → 020/022/010/024/001 depending on `@type`.
 fn parse_identifier(
     reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
     info: &StartInfo,
     record: &mut Record,
 ) -> Result<()> {
-    let id_type = info.attr(b"type").map(String::from);
-    let text = read_text(reader, buf)?;
+    let id_type = info.attr("type").map(String::from);
+    let text = read_text(reader)?;
 
     if text.is_empty() {
         return Ok(());
@@ -1213,30 +1156,25 @@ fn parse_identifier(
 }
 
 /// Parse `<language>` → 041 $a.
-fn parse_language(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
+fn parse_language(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
     let mut codes = Vec::new();
 
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                buf.clear();
-                if local == b"languageTerm" {
-                    let text = read_text(reader, buf)?;
+                if local == "languageTerm" {
+                    let text = read_text(reader)?;
                     if !text.is_empty() {
                         codes.push(text);
                     }
                 } else {
-                    skip_element(reader, buf)?;
+                    skip_element(reader)?;
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"language" {
+                if local == "language" {
                     break;
                 }
             },
@@ -1244,7 +1182,6 @@ fn parse_language(
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 
     for code in codes {
@@ -1257,8 +1194,8 @@ fn parse_language(
 }
 
 /// Parse `<genre>` → 655 $a.
-fn parse_genre(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Record) -> Result<()> {
-    let text = read_text(reader, buf)?;
+fn parse_genre(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
+    let text = read_text(reader)?;
     if !text.is_empty() {
         let mut field = Field::new("655".to_string(), ' ', '7');
         field.add_subfield('a', text);
@@ -1270,12 +1207,11 @@ fn parse_genre(reader: &mut Reader<&[u8]>, buf: &mut Vec<u8>, record: &mut Recor
 /// Parse `<classification>` → 050/082 depending on `@authority`.
 fn parse_classification(
     reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
     info: &StartInfo,
     record: &mut Record,
 ) -> Result<()> {
-    let authority = info.attr(b"authority").map(String::from);
-    let text = read_text(reader, buf)?;
+    let authority = info.attr("authority").map(String::from);
+    let text = read_text(reader)?;
 
     if text.is_empty() {
         return Ok(());
@@ -1306,47 +1242,42 @@ fn parse_classification(
 }
 
 /// Parse `<location>` → 856 $u or 852 $a.
-fn parse_location(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
+fn parse_location(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                buf.clear();
-                match local.as_slice() {
-                    b"url" => {
-                        let text = read_text(reader, buf)?;
+                match local.as_str() {
+                    "url" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             let mut field = Field::new("856".to_string(), '4', '0');
                             field.add_subfield('u', text);
                             record.add_field(field);
                         }
                     },
-                    b"physicalLocation" => {
-                        let text = read_text(reader, buf)?;
+                    "physicalLocation" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             let mut field = Field::new("852".to_string(), ' ', ' ');
                             field.add_subfield('a', text);
                             record.add_field(field);
                         }
                     },
-                    b"shelfLocator" => {
-                        let text = read_text(reader, buf)?;
+                    "shelfLocator" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             let mut field = Field::new("852".to_string(), ' ', ' ');
                             field.add_subfield('h', text);
                             record.add_field(field);
                         }
                     },
-                    _ => skip_element(reader, buf)?,
+                    _ => skip_element(reader)?,
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"location" {
+                if local == "location" {
                     break;
                 }
             },
@@ -1354,7 +1285,6 @@ fn parse_location(
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
     Ok(())
 }
@@ -1362,11 +1292,10 @@ fn parse_location(
 /// Parse `<relatedItem>` → 773/780/785/830 depending on `@type`.
 fn parse_related_item(
     reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
     info: &StartInfo,
     record: &mut Record,
 ) -> Result<()> {
-    let rel_type = info.attr(b"type");
+    let rel_type = info.attr("type");
     let tag = match rel_type {
         Some("host") => "773",
         Some("preceding") => "780",
@@ -1378,29 +1307,28 @@ fn parse_related_item(
     let mut title: Option<String> = None;
 
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                buf.clear();
-                if local == b"titleInfo" {
+                if local == "titleInfo" {
                     // Read children to find <title>
-                    while let Some(child) = next_start(reader, buf)? {
-                        if child.local_name == b"title" {
-                            let text = read_text(reader, buf)?;
+                    while let Some(child) = next_start(reader)? {
+                        if child.local_name == "title" {
+                            let text = read_text(reader)?;
                             if !text.is_empty() {
                                 title = Some(text);
                             }
                         } else {
-                            skip_element(reader, buf)?;
+                            skip_element(reader)?;
                         }
                     }
                 } else {
-                    skip_element(reader, buf)?;
+                    skip_element(reader)?;
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"relatedItem" {
+                if local == "relatedItem" {
                     break;
                 }
             },
@@ -1408,7 +1336,6 @@ fn parse_related_item(
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
 
     if let Some(t) = title {
@@ -1423,20 +1350,15 @@ fn parse_related_item(
 }
 
 /// Parse `<recordInfo>` → 001, 003, 040.
-fn parse_record_info(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
+fn parse_record_info(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
     loop {
-        match reader.read_event_into(buf) {
+        match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let child = StartInfo::from_event(e);
-                buf.clear();
-                match child.local_name.as_slice() {
-                    b"recordIdentifier" => {
-                        let source = child.attr(b"source").map(String::from);
-                        let text = read_text(reader, buf)?;
+                match child.local_name.as_str() {
+                    "recordIdentifier" => {
+                        let source = child.attr("source").map(String::from);
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             record.add_control_field("001".to_string(), text);
                         }
@@ -1446,34 +1368,34 @@ fn parse_record_info(
                             record.add_control_field("003".to_string(), src);
                         }
                     },
-                    b"recordContentSource" => {
-                        let text = read_text(reader, buf)?;
+                    "recordContentSource" => {
+                        let text = read_text(reader)?;
                         if !text.is_empty() {
                             let mut field = Field::new("040".to_string(), ' ', ' ');
                             field.add_subfield('a', text);
                             record.add_field(field);
                         }
                     },
-                    b"languageOfCataloging" => {
-                        while let Some(inner) = next_start(reader, buf)? {
-                            if inner.local_name == b"languageTerm" {
-                                let text = read_text(reader, buf)?;
+                    "languageOfCataloging" => {
+                        while let Some(inner) = next_start(reader)? {
+                            if inner.local_name == "languageTerm" {
+                                let text = read_text(reader)?;
                                 if !text.is_empty() {
                                     let mut field = Field::new("040".to_string(), ' ', ' ');
                                     field.add_subfield('b', text);
                                     record.add_field(field);
                                 }
                             } else {
-                                skip_element(reader, buf)?;
+                                skip_element(reader)?;
                             }
                         }
                     },
-                    _ => skip_element(reader, buf)?,
+                    _ => skip_element(reader)?,
                 }
             },
             Ok(Event::End(ref e)) => {
                 let local = strip_ns_owned(e.name().as_ref());
-                if local == b"recordInfo" {
+                if local == "recordInfo" {
                     break;
                 }
             },
@@ -1481,7 +1403,6 @@ fn parse_record_info(
             Err(e) => return Err(MarcError::invalid_field_msg(format!("XML read: {e}"))),
             _ => {},
         }
-        buf.clear();
     }
     Ok(())
 }
@@ -1489,12 +1410,11 @@ fn parse_record_info(
 /// Parse `<accessCondition>` → 506 or 540.
 fn parse_access_condition(
     reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
     info: &StartInfo,
     record: &mut Record,
 ) -> Result<()> {
-    let cond_type = info.attr(b"type");
-    let text = read_text(reader, buf)?;
+    let cond_type = info.attr("type");
+    let text = read_text(reader)?;
 
     if text.is_empty() {
         return Ok(());
@@ -1513,12 +1433,8 @@ fn parse_access_condition(
 }
 
 /// Parse `<tableOfContents>` → 505 $a.
-fn parse_table_of_contents(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
-    let text = read_text(reader, buf)?;
+fn parse_table_of_contents(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
+    let text = read_text(reader)?;
     if !text.is_empty() {
         let mut field = Field::new("505".to_string(), '0', ' ');
         field.add_subfield('a', text);
@@ -1528,12 +1444,8 @@ fn parse_table_of_contents(
 }
 
 /// Parse `<targetAudience>` → 521 $a.
-fn parse_target_audience(
-    reader: &mut Reader<&[u8]>,
-    buf: &mut Vec<u8>,
-    record: &mut Record,
-) -> Result<()> {
-    let text = read_text(reader, buf)?;
+fn parse_target_audience(reader: &mut Reader<&[u8]>, record: &mut Record) -> Result<()> {
+    let text = read_text(reader)?;
     if !text.is_empty() {
         let mut field = Field::new("521".to_string(), ' ', ' ');
         field.add_subfield('a', text);
