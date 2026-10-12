@@ -11,6 +11,11 @@ version: 2
 updates:
   - package-ecosystem: "cargo"
     directory: "/"
+    # Leave Cargo.toml alone when its requirement already allows the new
+    # version; otherwise raise the requirement to it. Without this, a 0.x bump
+    # outside the requirement arrived as a lockfile-only change, which
+    # `cargo metadata --locked` (lint.yml, check.sh) rejects.
+    versioning-strategy: increase-if-necessary
     schedule:
       interval: "weekly"
     cooldown:
