@@ -74,11 +74,11 @@ class Leader:
     All MARC records must begin with exactly 24 bytes of leader information.
     """
     @property
-    def record_length(self) -> int:
-        """Record length (5 digits) - positions 0-4"""
+    def record_length(self) -> str:
+        """Record length (5-digit zero-padded str) - positions 0-4"""
         ...
     @record_length.setter
-    def record_length(self, value: int) -> None: ...
+    def record_length(self, value: str) -> None: ...
     @property
     def record_status(self) -> str:
         """Record status (1 char) - position 5"""
@@ -110,23 +110,23 @@ class Leader:
     @character_coding.setter
     def character_coding(self, value: str) -> None: ...
     @property
-    def indicator_count(self) -> int:
-        """Indicator count (1 digit) - position 10 (usually 2)"""
+    def indicator_count(self) -> str:
+        """Indicator count (1-digit str) - position 10 (usually "2")"""
         ...
     @indicator_count.setter
-    def indicator_count(self, value: int) -> None: ...
+    def indicator_count(self, value: str) -> None: ...
     @property
-    def subfield_code_count(self) -> int:
-        """Subfield code count (1 digit) - position 11 (usually 2)"""
+    def subfield_code_count(self) -> str:
+        """Subfield code count (1-digit str) - position 11 (usually "2")"""
         ...
     @subfield_code_count.setter
-    def subfield_code_count(self, value: int) -> None: ...
+    def subfield_code_count(self, value: str) -> None: ...
     @property
-    def data_base_address(self) -> int:
-        """Base address of data (5 digits) - positions 12-16"""
+    def data_base_address(self) -> str:
+        """Base address of data (5-digit zero-padded str) - positions 12-16"""
         ...
     @data_base_address.setter
-    def data_base_address(self, value: int) -> None: ...
+    def data_base_address(self, value: str) -> None: ...
     @property
     def encoding_level(self) -> str:
         """Encoding level (1 char) - position 17"""

@@ -3,6 +3,36 @@
 use mrrc::{AuthorityRecord, Field, HoldingsRecord, Leader, Record, RecordHelpers, Subfield};
 use pyo3::prelude::*;
 
+/// Read a value assigned to one of the leader's numeric positions
+/// (`record_length`, `indicator_count`, `subfield_code_count`,
+/// `data_base_address`).
+///
+/// pymarc exposes these positions as strings of their full width, so the
+/// value must be a `str` of exactly `width` characters. The leader stores
+/// them as numbers, so the characters must also be ASCII digits.
+fn leader_digits<T: std::str::FromStr>(
+    value: &Bound<'_, PyAny>,
+    name: &str,
+    width: usize,
+) -> PyResult<T> {
+    let Ok(text) = value.extract::<String>() else {
+        return Err(pyo3::exceptions::PyTypeError::new_err(format!(
+            "{name} must be a {width}-digit str, got {}",
+            value.get_type().name()?
+        )));
+    };
+    let parsed = if text.len() == width && text.bytes().all(|b| b.is_ascii_digit()) {
+        text.parse::<T>().ok()
+    } else {
+        None
+    };
+    parsed.ok_or_else(|| {
+        pyo3::exceptions::PyValueError::new_err(format!(
+            "{name} must be a {width}-digit str, got '{text}'"
+        ))
+    })
+}
+
 /// Python wrapper for a MARC Leader (24-byte record header)
 ///
 /// The MARC leader is a 24-byte fixed-length field at the start of every MARC record.
@@ -32,15 +62,16 @@ impl PyLeader {
         }
     }
 
-    /// Record length (5 digits)
+    /// Record length (positions 00-04), a 5-digit zero-padded string
     #[getter]
-    pub fn record_length(&self) -> u32 {
-        self.inner.record_length
+    pub fn record_length(&self) -> String {
+        format!("{:05}", self.inner.record_length)
     }
 
     #[setter]
-    pub fn set_record_length(&mut self, value: u32) {
-        self.inner.record_length = value;
+    pub fn set_record_length(&mut self, value: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.inner.record_length = leader_digits(value, "record_length", 5)?;
+        Ok(())
     }
 
     /// Record status (1 char)
@@ -108,37 +139,40 @@ impl PyLeader {
         }
     }
 
-    /// Indicator count
+    /// Indicator count (position 10), a 1-digit string
     #[getter]
-    pub fn indicator_count(&self) -> u8 {
-        self.inner.indicator_count
+    pub fn indicator_count(&self) -> String {
+        self.inner.indicator_count.to_string()
     }
 
     #[setter]
-    pub fn set_indicator_count(&mut self, value: u8) {
-        self.inner.indicator_count = value;
+    pub fn set_indicator_count(&mut self, value: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.inner.indicator_count = leader_digits(value, "indicator_count", 1)?;
+        Ok(())
     }
 
-    /// Subfield code count
+    /// Subfield code count (position 11), a 1-digit string
     #[getter]
-    pub fn subfield_code_count(&self) -> u8 {
-        self.inner.subfield_code_count
+    pub fn subfield_code_count(&self) -> String {
+        self.inner.subfield_code_count.to_string()
     }
 
     #[setter]
-    pub fn set_subfield_code_count(&mut self, value: u8) {
-        self.inner.subfield_code_count = value;
+    pub fn set_subfield_code_count(&mut self, value: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.inner.subfield_code_count = leader_digits(value, "subfield_code_count", 1)?;
+        Ok(())
     }
 
-    /// Base address of data (5 digits)
+    /// Base address of data (positions 12-16), a 5-digit zero-padded string
     #[getter]
-    pub fn data_base_address(&self) -> u32 {
-        self.inner.data_base_address
+    pub fn data_base_address(&self) -> String {
+        format!("{:05}", self.inner.data_base_address)
     }
 
     #[setter]
-    pub fn set_data_base_address(&mut self, value: u32) {
-        self.inner.data_base_address = value;
+    pub fn set_data_base_address(&mut self, value: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.inner.data_base_address = leader_digits(value, "data_base_address", 5)?;
+        Ok(())
     }
 
     /// Encoding level (1 char)
