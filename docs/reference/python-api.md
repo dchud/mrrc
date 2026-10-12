@@ -342,7 +342,7 @@ with MARCWriter("output.mrc") as writer:
 
 ### AuthorityMARCReader
 
-Reads MARC **authority** records, yielding [`AuthorityRecord`](#authorityrecord). Same ISO 2709 binary format and iteration protocol as [`MARCReader`](#marcreader), with a smaller keyword set. The record source (path, bytes, or file object) is positional; `recovery_mode`, `validation_level`, `character_coding`, `force_utf8`, and `utf8_handling` are keyword-only and behave as in [MARCReader](#marcreader), except `recovery_mode` defaults to `"permissive"` here rather than `"strict"`.
+Reads MARC **authority** records, yielding [`AuthorityRecord`](#authorityrecord). Same ISO 2709 binary format and iteration protocol as [`MARCReader`](#marcreader), with a smaller keyword set. The record source (path, bytes, or file object) is positional; `recovery_mode`, `validation_level`, `character_coding`, `force_utf8`, and `utf8_handling` are keyword-only and behave as in [MARCReader](#marcreader), including the `"permissive"` default for `recovery_mode`.
 
 ```python
 from mrrc import AuthorityMARCReader
