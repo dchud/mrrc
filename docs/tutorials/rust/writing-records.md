@@ -7,167 +7,37 @@ Learn to create MARC records from scratch using builder patterns.
 Use the builder pattern for clean record construction:
 
 ```rust
-use mrrc::{Record, Field, Leader};
-
-let record = Record::builder(Leader::from_bytes(b"00000nam a2200000 i 4500")?)
-    .control_field_str("001", "12345")
-    .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||")
-    .field(
-        Field::builder("245".to_string(), '1', '0')
-            .subfield_str('a', "The Great Gatsby /")
-            .subfield_str('c', "F. Scott Fitzgerald.")
-            .build()
-    )
-    .build();
+--8<-- "doc_examples/writing_records.rs:creating-a-record"
 ```
 
 ## Building Fields
 
 ```rust
-use mrrc::Field;
-
-// Using builder
-let title = Field::builder("245".to_string(), '1', '0')
-    .subfield_str('a', "Main title :")
-    .subfield_str('b', "subtitle /")
-    .subfield_str('c', "by Author.")
-    .build();
-
-// Direct construction
-let mut author = Field::new("100".to_string(), '1', ' ');
-author.add_subfield('a', "Fitzgerald, F. Scott,".to_string());
-author.add_subfield('d', "1896-1940.".to_string());
+--8<-- "doc_examples/writing_records.rs:building-fields"
 ```
 
 ## Configuring the Leader
 
 ```rust
-use mrrc::Leader;
-
-let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500")?;
-leader.record_status = 'n';           // New record
-leader.record_type = 'a';             // Language material
-leader.bibliographic_level = 'm';     // Monograph
-leader.character_coding = 'a';        // UTF-8
-
-let record = Record::builder(leader)
-    // ... fields
-    .build();
+--8<-- "doc_examples/writing_records.rs:configuring-the-leader"
 ```
 
 ## Writing to Files
 
 ```rust
-use mrrc::MarcWriter;
-use std::fs::File;
-
-fn main() -> mrrc::Result<()> {
-    let file = File::create("output.mrc")?;
-    let mut writer = MarcWriter::new(file);
-
-    writer.write_record(&record)?;
-
-    Ok(())
-}
+--8<-- "doc_examples/writing_records.rs:writing-to-files"
 ```
 
 ## Write Multiple Records
 
 ```rust
-use mrrc::{MarcReader, MarcWriter, RecordHelpers};
-use std::fs::File;
-
-fn main() -> mrrc::Result<()> {
-    let input = File::open("input.mrc")?;
-    let output = File::create("output.mrc")?;
-
-    let mut reader = MarcReader::new(input);
-    let mut writer = MarcWriter::new(output);
-
-    while let Some(record) = reader.read_record()? {
-        if record.title().is_some() {
-            writer.write_record(&record)?;
-        }
-    }
-
-    Ok(())
-}
+--8<-- "doc_examples/writing_records.rs:write-multiple-records"
 ```
 
 ## Complete Example
 
 ```rust
-use mrrc::{Record, Field, Leader, MarcWriter};
-use std::fs::File;
-
-fn create_book_record(
-    title: &str,
-    author: &str,
-    isbn: &str,
-    subjects: &[&str],
-) -> mrrc::Result<Record> {
-    let mut leader = Leader::from_bytes(b"00000nam a2200000 i 4500")?;
-    leader.record_status = 'n';
-    leader.record_type = 'a';
-    leader.bibliographic_level = 'm';
-    leader.character_coding = 'a';
-
-    let mut builder = Record::builder(leader)
-        .control_field_str("001", &format!("mrrc-{}", isbn))
-        .control_field_str("008", "200101s2020    xxu||||||||||||||||eng||");
-
-    // ISBN
-    builder = builder.field(
-        Field::builder("020".to_string(), ' ', ' ')
-            .subfield_str('a', isbn)
-            .build()
-    );
-
-    // Author
-    if !author.is_empty() {
-        builder = builder.field(
-            Field::builder("100".to_string(), '1', ' ')
-                .subfield_str('a', author)
-                .build()
-        );
-    }
-
-    // Title
-    let ind1 = if author.is_empty() { '0' } else { '1' };
-    let mut title_field = Field::builder("245".to_string(), ind1, '0')
-        .subfield_str('a', title);
-    if !author.is_empty() {
-        title_field = title_field.subfield_str('c', &format!("by {}", author));
-    }
-    builder = builder.field(title_field.build());
-
-    // Subjects
-    for subject in subjects {
-        builder = builder.field(
-            Field::builder("650".to_string(), ' ', '0')
-                .subfield_str('a', subject)
-                .build()
-        );
-    }
-
-    Ok(builder.build())
-}
-
-fn main() -> mrrc::Result<()> {
-    let record = create_book_record(
-        "Introduction to MARC",
-        "Smith, John",
-        "9780123456789",
-        &["MARC format", "Library science"],
-    )?;
-
-    let file = File::create("new_record.mrc")?;
-    let mut writer = MarcWriter::new(file);
-    writer.write_record(&record)?;
-
-    println!("Record created successfully");
-    Ok(())
-}
+--8<-- "doc_examples/writing_records.rs:complete-example"
 ```
 
 ## Next Steps

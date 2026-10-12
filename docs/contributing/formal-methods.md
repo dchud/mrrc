@@ -29,12 +29,7 @@ infrastructure is documented separately in [Fuzzing](fuzzing.md).
 A unit test asserts a single concrete fact:
 
 ```rust
-#[test]
-fn parses_simple_record() {
-    let bytes = include_bytes!("simple.mrc");
-    let record = MarcReader::new(Cursor::new(&bytes[..])).read_record().unwrap().unwrap();
-    assert_eq!(record.get_control_field("001"), Some("12345"));
-}
+--8<-- "doc_examples/formal_methods.rs:unit-test"
 ```
 
 This catches *that one bug*. It says nothing about the next record, or
@@ -45,15 +40,7 @@ A *property* asserts a fact that should hold for **every** input drawn
 from some space:
 
 ```rust
-proptest! {
-    #[test]
-    fn binary_roundtrip(record in arb_record()) {
-        let bytes = serialize(&record);
-        let parsed = MarcReader::new(Cursor::new(&bytes[..]))
-            .read_record().unwrap().unwrap();
-        prop_assert_eq!(record, parsed);
-    }
-}
+--8<-- "doc_examples/formal_methods.rs:property-test"
 ```
 
 The framework — [proptest][proptest-book] in mrrc's case — generates

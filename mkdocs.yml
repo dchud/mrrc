@@ -71,6 +71,15 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.superfences
+  # Every Rust code block on the site is included from a compiled file under
+  # tests/ (see tests/doc_examples/main.rs and docs/contributing/testing.md).
+  # check_paths makes a missing file or section fail the build;
+  # dedent_subsections strips a section's indentation inside a module or
+  # function.
+  - pymdownx.snippets:
+      base_path: [tests]
+      check_paths: true
+      dedent_subsections: true
   - pymdownx.tabbed:
       alternate_style: true
   - admonition

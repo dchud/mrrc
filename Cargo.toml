@@ -184,6 +184,12 @@ required-features = ["bibframe"]
 name = "bibframe_baseline_comparison"
 required-features = ["bibframe"]
 
+# The Rust code shown on the documentation site (tests/doc_examples/), some
+# of which converts to BIBFRAME.
+[[test]]
+name = "doc_examples"
+required-features = ["bibframe"]
+
 [[bench]]
 name = "marc_benchmarks"
 harness = false

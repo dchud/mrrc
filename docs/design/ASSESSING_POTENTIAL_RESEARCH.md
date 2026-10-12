@@ -441,7 +441,7 @@ The emergence of large language models (LLMs) and retrieval-augmented generation
 
 Our `record_validation.rs` module handles MARC21 compliance checking, but much validation knowledge is encoded implicitly:
 
-```rust
+```text
 // Pseudo-code from our validation
 if field.tag == "008" && record.leader.record_type == 'a' {
     // validate positions 18-21 as illustration codes
@@ -522,7 +522,7 @@ The BIBFRAME representation is **graph-based**, not **record-based**. That's sem
 **Candidate name**: MARC Semantic IR (Internal Representation)
 
 **Concept:**
-```rust
+```text
 struct MarcSemanticRecord {
     control: ControlMetadata,
     

@@ -33,15 +33,7 @@ for record in mrrc.read("large_file.mrc"):
 ### Rust
 
 ```rust
-use mrrc::MarcReader;
-use std::fs::File;
-
-let file = File::open("large_file.mrc")?;
-let mut reader = MarcReader::new(file);
-
-while let Some(record) = reader.read_record()? {
-    process(&record);
-}
+--8<-- "doc_examples/working_with_large_files.rs:iterator-processing"
 ```
 
 ## When to Load All Records
@@ -75,16 +67,7 @@ field in Python.
 ### Rust
 
 ```rust
-use mrrc::MarcReader;
-use std::fs::File;
-
-let file = File::open("file.mrc")?;
-let mut reader = MarcReader::new(file);
-
-let records: Vec<_> = reader
-    .into_iter()
-    .filter_map(|r| r.ok())
-    .collect();
+--8<-- "doc_examples/working_with_large_files.rs:load-all-records"
 ```
 
 ## ProducerConsumerPipeline (Python)
@@ -171,31 +154,7 @@ for batch in batch_generator("large_file.mrc"):
 ### Rust
 
 ```rust
-use mrrc::MarcReader;
-use std::fs::File;
-
-fn process_batches<F>(path: &str, batch_size: usize, mut processor: F) -> mrrc::Result<()>
-where
-    F: FnMut(&[Record]),
-{
-    let file = File::open(path)?;
-    let mut reader = MarcReader::new(file);
-    let mut batch = Vec::with_capacity(batch_size);
-
-    while let Some(record) = reader.read_record()? {
-        batch.push(record);
-        if batch.len() >= batch_size {
-            processor(&batch);
-            batch.clear();
-        }
-    }
-
-    if !batch.is_empty() {
-        processor(&batch);
-    }
-
-    Ok(())
-}
+--8<-- "doc_examples/working_with_large_files.rs:batch-processing"
 ```
 
 ## Parallel File Processing
@@ -230,26 +189,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 ### Rust with Rayon
 
 ```rust
-use mrrc::MarcReader;
-use rayon::prelude::*;
-use std::fs::File;
-
-fn process_files_parallel(paths: &[&str]) -> mrrc::Result<usize> {
-    let counts: Vec<_> = paths
-        .par_iter()
-        .map(|path| {
-            let file = File::open(path)?;
-            let mut reader = MarcReader::new(file);
-            let mut count = 0;
-            while let Some(_) = reader.read_record()? {
-                count += 1;
-            }
-            Ok(count)
-        })
-        .collect::<mrrc::Result<Vec<_>>>()?;
-
-    Ok(counts.iter().sum())
-}
+--8<-- "doc_examples/working_with_large_files.rs:parallel-file-processing"
 ```
 
 ## Record Boundary Scanner (Rust)
@@ -258,33 +198,7 @@ For advanced parallel processing within a single file, use the boundary scanner
 to find record boundaries, then parse sections in parallel.
 
 ```rust
-use mrrc::boundary_scanner::RecordBoundaryScanner;
-use rayon::prelude::*;
-use std::fs::File;
-use std::io::Read;
-
-fn parallel_single_file(path: &str) -> mrrc::Result<Vec<Record>> {
-    // Load file into memory
-    let mut file = File::open(path)?;
-    let mut data = Vec::new();
-    file.read_to_end(&mut data)?;
-
-    // Find record boundaries
-    let scanner = RecordBoundaryScanner::new(&data);
-    let boundaries: Vec<_> = scanner.collect();
-
-    // Parse in parallel
-    let records: Vec<_> = boundaries
-        .par_iter()
-        .filter_map(|boundary| {
-            // Parse record at boundary
-            // ...
-            None // placeholder
-        })
-        .collect();
-
-    Ok(records)
-}
+--8<-- "doc_examples/working_with_large_files.rs:record-boundary-scanner"
 ```
 
 ## Format Considerations

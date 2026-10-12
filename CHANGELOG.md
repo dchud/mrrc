@@ -72,6 +72,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   documented methods that do not exist or take different arguments than shown; those are
   corrected.
 
+- The Rust code on the documentation site is compiled by `cargo test`, and run where the test
+  fixtures allow: pages include it from `tests/doc_examples/`, and a lint rejects inline Rust code
+  blocks. Examples that did not compile, panicked, or called methods that do not exist (such as
+  `IsbnValidator::extract_isbns`) are corrected.
+
 ### Dependencies
 
 - Bump actions/checkout from 7.0.0 to 7.0.1
