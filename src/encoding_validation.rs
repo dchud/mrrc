@@ -82,7 +82,9 @@ impl EncodingValidator {
     fn other_encoding_in(data: &str, decoded_as: MarcEncoding) -> Option<MarcEncoding> {
         match decoded_as {
             // MARC-8 escape sequences survive decoding as UTF-8 (ESC is
-            // ASCII), while the MARC-8 diacritics around them become U+FFFD.
+            // ASCII). The MARC-8 diacritics around them are invalid UTF-8,
+            // which the reader rejects, replaces with U+FFFD, or drops,
+            // depending on its `Utf8Handling`.
             MarcEncoding::Utf8 => contains_escape_sequences(data).then_some(MarcEncoding::Marc8),
             // Decoded MARC-8 legitimately holds non-ASCII characters, and the
             // decoder consumes escape sequences, so nothing in the text can
@@ -160,8 +162,9 @@ mod tests {
     fn test_utf8_record_with_escape_sequences_is_mixed() {
         // MARC-8 bytes read as UTF-8 keep their ESC, which marks the value
         // as MARC-8.
-        // A diacritic in the same record comes out as U+FFFD, which is
-        // valid multibyte UTF-8 and must not hide the escape sequences.
+        // Under `Utf8Handling::Replace`, a diacritic in the same record
+        // comes out as U+FFFD, which is valid multibyte UTF-8 and must not
+        // hide the escape sequences.
         let record = record_with('a', "Caf\u{fffd}e H\x1Bb2\x1BsO");
         assert!(matches!(
             EncodingValidator::analyze_encoding(&record).unwrap(),

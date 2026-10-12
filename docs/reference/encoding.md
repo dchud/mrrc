@@ -183,7 +183,7 @@ Some legacy records have inconsistent encoding: the leader says MARC-8 but the d
 
 UTF-8 data labelled MARC-8 is the common case. Read such files with `character_coding="detect"` (see [Choosing the Encoding](#choosing-the-encoding)), which checks each record's bytes before decoding it.
 
-MARC-8 data labelled UTF-8 is decoded as UTF-8, so its escape sequences survive as literal ESC characters and its diacritics become `U+FFFD` (or raise E301 under `validation_level="strict_marc"`). In Rust, the encoding validator flags such records after reading:
+MARC-8 data labelled UTF-8 is decoded as UTF-8. Its diacritics are invalid UTF-8, so they raise E301 under the default `utf8_handling="strict"`, become `U+FFFD` under `"replace"`, and are dropped under `"ignore"`. Its escape sequences are ASCII, so they survive as literal ESC characters, and in Rust the encoding validator flags such records after reading:
 
 ```rust
 use mrrc::{EncodingAnalysis, EncodingValidator};
