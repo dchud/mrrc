@@ -2,6 +2,7 @@
 
 use mrrc::{AuthorityRecord, Field, HoldingsRecord, Leader, Record, RecordHelpers, Subfield};
 use pyo3::prelude::*;
+use pyo3::types::PyTuple;
 
 /// Python wrapper for a MARC Leader (24-byte record header)
 ///
@@ -801,6 +802,42 @@ impl PyRecord {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    /// Fields with any of `tags`, grouped by tag in argument order, as
+    /// `(tag, occurrence, item)` tuples. `item` is the value for a control
+    /// field and a `Field` for a data field; `occurrence` is the zero-based
+    /// index among fields with that tag. Looks up every tag in one call.
+    #[pyo3(signature = (*tags))]
+    pub fn field_entries(
+        &self,
+        tags: &Bound<'_, PyTuple>,
+    ) -> PyResult<Vec<(Py<PyAny>, usize, Py<PyAny>)>> {
+        let py = tags.py();
+        let mut entries = Vec::new();
+        for tag_obj in tags.iter() {
+            let tag: &str = tag_obj.extract()?;
+            if mrrc::iso2709::is_control_field_tag(tag) {
+                if let Some(values) = self.inner.control_fields.get(tag) {
+                    for (i, value) in values.iter().enumerate() {
+                        let item = value.into_pyobject(py)?.into_any().unbind();
+                        entries.push((tag_obj.clone().unbind(), i, item));
+                    }
+                }
+            } else if let Some(fields) = self.inner.get_fields(tag) {
+                for (i, field) in fields.iter().enumerate() {
+                    let item = Py::new(
+                        py,
+                        PyField {
+                            inner: field.clone(),
+                        },
+                    )?
+                    .into_any();
+                    entries.push((tag_obj.clone().unbind(), i, item));
+                }
+            }
+        }
+        Ok(entries)
     }
 
     /// Get all fields

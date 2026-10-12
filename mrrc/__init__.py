@@ -1188,16 +1188,13 @@ class Record:
                 occurrences[field.tag] = i + 1
                 result.append(_wrap_field(field, self, i))
         else:
-            # Return fields for specified tags
-            for tag in tags:
-                if _is_control_tag(tag):
-                    for i, value in enumerate(
-                        self._inner.control_field_values(tag)
-                    ):
-                        result.append(_wrap_control_field(self, tag, i, value))
+            # One Rust call looks up every tag; a control field's item is
+            # its value, a data field's item is the Rust field.
+            for tag, i, item in self._inner.field_entries(*tags):
+                if isinstance(item, str):
+                    result.append(_wrap_control_field(self, tag, i, item))
                 else:
-                    for i, field in enumerate(self._inner.get_fields(tag)):
-                        result.append(_wrap_field(field, self, i))
+                    result.append(_wrap_field(item, self, i))
 
         return result
 
