@@ -68,11 +68,11 @@ pytest tests/python/ -m benchmark
 
 `tests/python/test_pymarc_parity.py` compares mrrc against pymarc:
 permissive iteration shape (record-vs-`None` per record) over a
-mixed-quality corpus, and per-record values (title, each field's
-`value()`, `format_field()`, and `str()`, and `as_marc()` bytes) over
-`simple_book.mrc`, `1k_records.mrc`, and `field_shapes.mrc`. pymarc
-comes from the `oracle` extra, so the tests run in any environment
-synced with `uv sync --all-extras`:
+mixed-quality corpus, and per-record values (the `Record` properties,
+each field's `value()`, `format_field()`, and `str()`, and `as_marc()`
+bytes) over `simple_book.mrc`, `1k_records.mrc`, and `field_shapes.mrc`.
+pymarc comes from the `oracle` extra, so the tests run in any
+environment synced with `uv sync --all-extras`:
 
 ```bash
 uv run python -m pytest tests/python/test_pymarc_parity.py -q
@@ -80,7 +80,7 @@ uv run python -m pytest tests/python/test_pymarc_parity.py -q
 
 Worth running when changing reader iteration, recovery-mode defaults,
 anything affecting how malformed records are surfaced, or how field
-text is produced. When a field shape is missing from the value
+text and the `Record` properties are produced. When a field shape is missing from the value
 comparison, add it to `scripts/generate_field_shapes_fixture.py` and
 regenerate `tests/data/field_shapes.mrc`.
 
@@ -99,7 +99,7 @@ Test data is located in `tests/data/`:
 | `simple_authority.mrc` | Authority record | 1 |
 | `simple_holdings.mrc` | Holdings record | 1 |
 | `with_control_fields.mrc` | Record with 008 field | 1 |
-| `field_shapes.mrc` | 6XX subdivisions, `$6`/880 linkage, `$8`, padded and empty subfields (pymarc oracle) | 2 |
+| `field_shapes.mrc` | 6XX subdivisions, `$6`/880 linkage, `$8`, padded and empty subfields, and the fields the `Record` properties read (pymarc oracle) | 3 |
 
 Benchmark fixtures in `tests/data/fixtures/`:
 

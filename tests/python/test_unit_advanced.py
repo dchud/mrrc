@@ -315,7 +315,7 @@ class TestFormatConversionWrapping:
 
         record = marcjson_to_record(self._make_marcjson())
         assert record.title == "Test title /"
-        assert record.subjects == ["Testing."]
+        assert [f["a"] for f in record.subjects] == ["Testing."]
 
     def test_json_to_record_returns_wrapped_record(self):
         """Test that json_to_record returns a wrapped Python Record."""

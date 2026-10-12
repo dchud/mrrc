@@ -177,22 +177,24 @@ record.add_field(field)                # Add field (accepts multiple: add_field(
 record.get_fields('650', '651')        # Get fields for multiple tags
 
 # Record accessors (all are @property, matching pymarc)
-record.title                           # Get title (245 $a)
-record.author                          # Get author (100/110/111 $a)
-record.isbn                            # Get ISBN (020 $a)
-record.issn                            # Get ISSN (022 $a)
-record.subjects                        # Get all subjects (6XX $a)
-record.publisher                       # Get publisher (260 $b)
-record.physical_description            # Get extent (300 $a)
-record.series                          # Get series (490 $a)
-record.pubyear                         # Get publication year (str, not int)
-record.notes                           # Get all notes (5XX)
-record.location                        # Get location (852 $a)
-record.uniform_title                   # Get uniform title (130 $a)
-record.sudoc                           # Get SuDoc classification (086 $a)
-record.issn_title                      # Get ISSN title (222 $a)
-record.issnl                           # Get ISSN-L (024 $a)
-record.addedentries                    # Get added entries (7XX fields)
+record.title                           # 245 $a and $b
+record.author                          # First 100/110/111, as format_field() text
+record.isbn                            # First 020 $a, digits only
+record.issn                            # 022 $a
+record.issnl                           # 022 $l
+record.issn_title                      # 222 $a and $b
+record.sudoc                           # 086, as format_field() text
+record.uniformtitle                    # First 130/240, as format_field() text
+record.publisher                       # 260 $b, or 264 $b with second indicator 1
+record.pubyear                         # $c of that field, as cataloged (str)
+record.subjects                        # 6XX subject fields (list of Field)
+record.addedentries                    # 7XX added entry fields (list of Field)
+record.series                          # 440/490/800/810/811/830 fields (list of Field)
+record.notes                           # 5XX note fields (list of Field)
+record.location                        # 852 fields (list of Field)
+record.physicaldescription             # 300 fields (list of Field)
+record.uniform_title                   # Alias for uniformtitle
+record.physical_description            # Alias for physicaldescription
 
 # Serialization (pymarc-compatible)
 record.as_marc()                       # ISO 2709 bytes
@@ -280,20 +282,16 @@ print(record['245']['a'])  # Works exactly like pymarc
 ```
 
 ### 2. Optional: Extended Convenience Properties
-mrrc extends pymarc with additional convenience properties:
+mrrc extends pymarc with additional convenience names:
 ```python
 # All pymarc properties work:
 record.title               # Get title
 record.author              # Get author
 record.isbn                # Get ISBN
 
-# Plus many additional properties:
-record.issn                # Get ISSN
-record.issn_title          # Get ISSN title
-record.sudoc               # Get SuDoc classification
-record.issnl               # Get ISSN-L
-record.pubyear             # Get publication year (str)
-record.physical_description  # Get extent/pages
+# Plus additional names:
+record.uniform_title       # Same as record.uniformtitle
+record.physical_description  # Same as record.physicaldescription
 record.is_book()           # Check if book
 record.is_serial()         # Check if serial
 record.is_music()          # Check if music
@@ -345,7 +343,7 @@ hierarchy and the pymarc exception name mapping.
 **Optional enhancements:**
 
 - [ ] Pass file paths to `MARCReader('file.mrc')` instead of file objects (releases the GIL, enables multi-thread parallelism)
-- [ ] Use additional convenience properties like `record.issn`, `record.sudoc`, etc. for specialized use cases
+- [ ] Use record-type checks like `record.is_book()` and `record.is_serial()`
 - [ ] Update writers to use context managers: `with mrrc.MARCWriter(f) as w:` (better resource management)
 - [ ] Use `record.as_marc()`, `record.as_json()`, `record.as_dict()` for serialization
 

@@ -2,10 +2,11 @@
 """Generate the field-shapes fixture for the pymarc parity oracle.
 
 The oracle (tests/python/test_pymarc_parity.py) reads each record through
-both mrrc and pymarc and compares field text: value(), format_field(), and
-str(). The benchmark corpora it also reads have few of the field shapes
-where those methods do something other than join subfield values with
-spaces, so this fixture supplies them:
+both mrrc and pymarc and compares field text (value(), format_field(), and
+str()) and the Record properties (title, author, subjects, and the rest).
+The benchmark corpora it also reads have few of the field shapes where
+those differ from a plain join of subfield values, so this fixture
+supplies them:
 
 - 6XX fields with $v, $x, $y, and $z subdivisions, including a subdivision
   before $a and empty subdivisions
@@ -13,6 +14,9 @@ spaces, so this fixture supplies them:
 - $8 field links, which format_field() keeps
 - subfield values with leading or trailing whitespace, and empty values
 - control fields containing spaces
+- the fields the Record properties read: 245 and 222 with $b, 110, 240,
+  086, 022 $l, 264 with second indicators 4 and 1, 4XX/8XX series, 5XX notes
+  inside and outside pymarc's list, 7XX added entries, and 852
 
 Fields with the same tag are kept adjacent, so field order does not depend
 on how a reader orders repeated tags. The records are written with pymarc.
@@ -158,6 +162,71 @@ def whitespace_record() -> Record:
     )
 
 
+def properties_record() -> Record:
+    """The fields pymarc's Record properties read."""
+    return record(
+        control("001", "shape0003"),
+        control("008", "200101t20202019dcu     o    f000 0 eng d"),
+        data(
+            "020", "  ", ("a", "978-0-306-40615-7 (hardcover)"), ("q", "print")
+        ),
+        data("022", "0 ", ("a", "0378-5955"), ("l", "0378-5955")),
+        data(
+            "086",
+            "0 ",
+            ("a", "Y 4.G 74/7:R 31"),
+            ("z", "Y 4.G 74/7:R 30"),
+        ),
+        data(
+            "110",
+            "1 ",
+            ("a", "United States."),
+            ("b", "Congress."),
+            ("b", "Senate."),
+        ),
+        data("222", " 0", ("a", "Journal of things"), ("b", "(Print)")),
+        data(
+            "240",
+            "10",
+            ("a", "Works."),
+            ("k", "Selections."),
+            ("l", "English"),
+        ),
+        data(
+            "245",
+            "10",
+            ("a", "Collected things :"),
+            ("b", "a reader /"),
+            ("c", "edited by A. Editor."),
+        ),
+        data("264", " 4", ("c", "\u00a92019")),
+        data(
+            "264",
+            " 1",
+            ("a", "Washington :"),
+            ("b", "U.S. Government Publishing Office,"),
+            ("c", "[2020]"),
+        ),
+        data(
+            "300",
+            "  ",
+            ("a", "xii, 300 pages :"),
+            ("b", "illustrations ;"),
+            ("c", "24 cm"),
+        ),
+        data("490", "1 ", ("a", "Things series ;"), ("v", "12")),
+        data("500", "  ", ("a", "Includes index.")),
+        data("504", "  ", ("a", "Includes bibliographical references.")),
+        data("509", "  ", ("a", "A 5XX tag outside pymarc's notes list.")),
+        data("590", "  ", ("a", "Local note.")),
+        data("650", " 0", ("a", "Things"), ("v", "Periodicals.")),
+        data("700", "1 ", ("a", "Editor, A.,"), ("e", "editor.")),
+        data("740", "02", ("a", "Other things.")),
+        data("830", " 0", ("a", "Things series ;"), ("v", "12.")),
+        data("852", "  ", ("b", "Main"), ("h", "QA76"), ("i", ".T45")),
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -166,7 +235,7 @@ def main() -> None:
         default=Path("tests/data/field_shapes.mrc"),
     )
     args = parser.parse_args()
-    records = [subject_record(), whitespace_record()]
+    records = [subject_record(), whitespace_record(), properties_record()]
     args.out.write_bytes(b"".join(r.as_marc() for r in records))
     print(f"wrote {len(records)} records to {args.out}")
 

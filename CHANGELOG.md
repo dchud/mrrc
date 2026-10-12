@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every validation level; it was replaced with U+FFFD unless `validation_level="strict_marc"`.
   The default Python recovery drops the field and records E301 on `record.errors`, and
   `permissive=True` yields `None`. Pass `utf8_handling="replace"` for the previous decoding.
+- Python `Record` properties return pymarc's values: `title` and `issn_title` add `$b`; `author`,
+  `sudoc`, and `uniformtitle` are `format_field()` text; `isbn` is digits only; `issnl` reads
+  022 `$l`; `pubyear` is `$c` as cataloged. `subjects`, `notes`, `series`, `location`,
+  `physicaldescription`, and `addedentries` return lists of `Field` with pymarc's tags.
 
 ### Fixed
 

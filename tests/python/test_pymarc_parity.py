@@ -85,13 +85,50 @@ def _read_both(data: bytes):
     return mrrc_records, pymarc_records
 
 
+# pymarc's Record properties: those returning a string, and those
+# returning a list of fields (compared by each field's str()).
+_TEXT_PROPERTIES = (
+    "title",
+    "author",
+    "isbn",
+    "issn",
+    "issnl",
+    "issn_title",
+    "sudoc",
+    "uniformtitle",
+    "publisher",
+    "pubyear",
+)
+_FIELD_LIST_PROPERTIES = (
+    "subjects",
+    "addedentries",
+    "series",
+    "notes",
+    "location",
+    "physicaldescription",
+)
+
+
+def _assert_record_properties_match(
+    mrrc_record, pymarc_record, where: str
+) -> None:
+    for name in _TEXT_PROPERTIES:
+        assert getattr(mrrc_record, name) == getattr(pymarc_record, name), (
+            f"{where}: {name}"
+        )
+    for name in _FIELD_LIST_PROPERTIES:
+        ours = [str(f) for f in getattr(mrrc_record, name)]
+        theirs = [str(f) for f in getattr(pymarc_record, name)]
+        assert ours == theirs, f"{where}: {name}"
+
+
 def _assert_record_values_match(
     mrrc_record, pymarc_record, where: str
 ) -> None:
     assert str(mrrc_record.leader) == str(pymarc_record.leader), (
         f"{where}: leader"
     )
-    assert mrrc_record.title == pymarc_record.title, f"{where}: title"
+    _assert_record_properties_match(mrrc_record, pymarc_record, where)
     mrrc_fields = mrrc_record.fields()
     pymarc_fields = pymarc_record.fields
     assert [f.tag for f in mrrc_fields] == [f.tag for f in pymarc_fields], (
@@ -116,8 +153,8 @@ def _assert_record_values_match(
 
 
 def test_value_level_parity_simple_book() -> None:
-    """Titles, field values/formatting, and serialization bytes match
-    pymarc on a single known-good record."""
+    """Record properties, field values/formatting, and serialization
+    bytes match pymarc on a single known-good record."""
     mrrc_records, pymarc_records = _read_both(_VALID.read_bytes())
     _assert_record_values_match(
         mrrc_records[0], pymarc_records[0], "simple_book"
@@ -128,9 +165,9 @@ def test_value_level_parity_simple_book() -> None:
     "corpus", [_FIXTURE_1K, _FIELD_SHAPES], ids=lambda path: path.stem
 )
 def test_value_level_parity_corpus(corpus: Path) -> None:
-    """Value-level parity with pymarc across a whole corpus: title,
-    per-field format_field(), value(), and str(), and as_marc()
-    byte-equality for every record."""
+    """Value-level parity with pymarc across a whole corpus: the Record
+    properties, per-field format_field(), value(), and str(), and
+    as_marc() byte-equality for every record."""
     if not corpus.exists():
         pytest.skip(f"Fixture not found: {corpus}")
     mrrc_records, pymarc_records = _read_both(corpus.read_bytes())
@@ -309,6 +346,110 @@ def test_setitem_keeps_subfield_position_like_pymarc() -> None:
     ours = record["245"]
     assert str(ours) == str(theirs)
     assert ours.as_marc() == theirs.as_marc("utf-8")
+
+
+# Record shapes for the Record property parity tests: data fields as
+# (tag, indicators, subfields), in record order.
+_RECORD_PROPERTY_CASES = {
+    "no_data_fields": [],
+    "title_a_only": [("245", "10", [("a", "Title.")])],
+    "title_empty_a_with_b": [("245", "10", [("a", ""), ("b", "sub")])],
+    "title_b_without_a": [("245", "10", [("b", "sub")])],
+    "title_empty_b": [("245", "10", [("a", "Title"), ("b", "")])],
+    "author_110": [("110", "2 ", [("a", "Body."), ("b", "Unit.")])],
+    "author_111": [("111", "2 ", [("a", "Meeting"), ("n", "(1st :")])],
+    "author_100_preferred_over_earlier_111": [
+        ("111", "2 ", [("a", "Meeting")]),
+        ("100", "1 ", [("a", "Person,"), ("d", "1900-")]),
+    ],
+    "author_with_linkage": [
+        ("100", "1 ", [("6", "880-01"), ("a", "Name,"), ("d", "1950-")])
+    ],
+    "isbn_after_text": [("020", "  ", [("a", "(pbk.) 0-306-40615-2")])],
+    "isbn_lowercase_x": [("020", "  ", [("a", "080442957x")])],
+    "isbn_no_digits": [("020", "  ", [("a", "pbk.")])],
+    "isbn_only_hyphens": [("020", "  ", [("a", "--")])],
+    "isbn_empty": [("020", "  ", [("a", "")])],
+    "isbn_without_a": [("020", "  ", [("z", "0306406152")])],
+    "issnl_without_l": [("022", "  ", [("a", "0378-5955")])],
+    "publisher_260_without_b": [
+        ("260", "  ", [("a", "Place :"), ("c", "1999.")]),
+        ("264", " 1", [("b", "Later publisher,"), ("c", "2001.")]),
+    ],
+    "publisher_264_before_260": [
+        ("264", " 1", [("b", "RDA publisher,"), ("c", "2001.")]),
+        ("260", "  ", [("b", "AACR2 publisher,"), ("c", "1999.")]),
+    ],
+    "publisher_264_other_indicators": [
+        ("264", " 2", [("b", "Distributor,")]),
+        ("264", " 3", [("b", "Manufacturer,")]),
+    ],
+    "uniformtitle_240_only": [("240", "10", [("a", "Works."), ("l", "Fr")])],
+    "uniformtitle_130_over_240": [
+        ("130", "0 ", [("a", "Bible."), ("l", "Latin.")]),
+        ("240", "10", [("a", "Works.")]),
+    ],
+    "sudoc_several_subfields": [("086", "0 ", [("a", "Y 4.2"), ("z", "old")])],
+}
+
+
+def _read_record_both(fields):
+    """Write a record with pymarc and read it back through both
+    libraries."""
+    pymarc = pytest.importorskip("pymarc")
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="001", data="prop0001"))
+    for tag, ind, subfields in fields:
+        record.add_field(
+            pymarc.Field(
+                tag=tag,
+                indicators=pymarc.Indicators(ind[0], ind[1]),
+                subfields=[pymarc.Subfield(c, v) for c, v in subfields],
+            )
+        )
+    data = record.as_marc()
+    (theirs,) = list(pymarc.MARCReader(io.BytesIO(data)))
+    (ours,) = list(mrrc.MARCReader(data))
+    return ours, theirs
+
+
+@pytest.mark.parametrize(
+    "fields",
+    _RECORD_PROPERTY_CASES.values(),
+    ids=_RECORD_PROPERTY_CASES.keys(),
+)
+def test_record_properties_match_pymarc(fields) -> None:
+    """Every pymarc Record property gives pymarc's value."""
+    ours, theirs = _read_record_both(fields)
+    _assert_record_properties_match(ours, theirs, "record")
+
+
+def test_record_field_list_properties_cover_pymarc_tags() -> None:
+    """subjects, addedentries, series, notes, location, and
+    physicaldescription collect the same tags as pymarc's."""
+    tags = [f"{n:03d}" for n in range(300, 900)]
+    ours, theirs = _read_record_both(
+        [(tag, "  ", [("a", tag)]) for tag in tags]
+    )
+    for name in _FIELD_LIST_PROPERTIES:
+        assert [f.tag for f in getattr(ours, name)] == [
+            f.tag for f in getattr(theirs, name)
+        ], name
+
+
+def test_record_property_aliases() -> None:
+    """uniform_title and physical_description return the same values as
+    pymarc's uniformtitle and physicaldescription."""
+    ours, _ = _read_record_both(
+        [
+            ("240", "10", [("a", "Works.")]),
+            ("300", "  ", [("a", "300 p.")]),
+        ]
+    )
+    assert ours.uniform_title == ours.uniformtitle == "Works."
+    assert [str(f) for f in ours.physical_description] == [
+        str(f) for f in ours.physicaldescription
+    ]
 
 
 def test_permissive_iteration_shape_matches_pymarc() -> None:

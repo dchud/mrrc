@@ -98,7 +98,7 @@ def convenience_methods(record):
     if subjects:
         print(f"\nSubjects (via property, {len(subjects)} found):")
         for subject in subjects:
-            print(f"  - {subject}")
+            print(f"  - {subject.format_field()}")
 
     # Authors (plural) convenience method
     authors = [f['a'] for f in record.get_fields('100', '700') if f['a']]
