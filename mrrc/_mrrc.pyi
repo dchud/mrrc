@@ -230,6 +230,31 @@ class Field:
             ValueError: If code is empty.
         """
         ...
+    def get_subfields(self, *codes: str) -> list[str]:
+        """Get the values of the subfields whose code is one of ``codes``.
+
+        Values are returned in field order (pymarc's
+        ``Field.get_subfields()``). A code that is not exactly one
+        character matches nothing.
+        """
+        ...
+    def value(self) -> str:
+        """Get the subfield values as one string (pymarc's ``Field.value()``).
+
+        Strips surrounding whitespace from each subfield value and joins
+        the values with spaces; every subfield is included.
+        """
+        ...
+    def format_field(self) -> str:
+        """Get the subfield values as display text (pymarc's
+        ``Field.format_field()``).
+
+        Joins the subfield values with spaces, skipping ``$6``. In subject
+        fields (tags starting with ``6``), ``$v``, ``$x``, ``$y``, and
+        ``$z`` are preceded by ``" -- "`` instead of a space. Surrounding
+        whitespace is stripped from the result.
+        """
+        ...
     def to_marc21(self) -> bytes:
         """Serialize field to ISO 2709 binary format.
 

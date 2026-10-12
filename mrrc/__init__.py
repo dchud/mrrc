@@ -7,7 +7,6 @@ reading, writing, and manipulation of MARC bibliographic records.
 The Python wrapper aims for API compatibility with pymarc.
 """
 
-import contextlib
 import weakref
 from typing import Any, ClassVar, Optional, Union
 
@@ -378,22 +377,32 @@ class Field:
             return None
 
     def __setitem__(self, code: str, value: str) -> None:
-        """Set subfield value (replace first occurrence)."""
+        """Replace the value of the subfield with ``code``, keeping its
+        position (pymarc compatibility).
+
+        Raises KeyError if the field has no subfield with ``code``, or
+        more than one.
+        """
         self._refresh()
         subfields = self._inner.subfields()
-        code_char = code[0] if code else ""
-
-        # Check if code already exists
-        found_count = sum(1 for sf in subfields if sf.code == code_char)
-
-        if found_count == 0:
-            raise KeyError(code)
-        elif found_count > 1:
-            raise KeyError(f"Multiple subfields with code '{code}' exist")
-        else:
-            self._inner.delete_subfield(code)
-            self._inner.add_subfield(code, value)
-            self._writeback()
+        positions = [i for i, sf in enumerate(subfields) if sf.code == code]
+        if not positions:
+            raise KeyError(f"no code '{code}'")
+        if len(positions) > 1:
+            raise KeyError(f"more than one code '{code}'")
+        subfields[positions[0]] = Subfield(code, value)
+        inner = self._inner
+        object.__setattr__(
+            self,
+            "_inner",
+            _Field(
+                inner.tag,
+                inner.indicator1,
+                inner.indicator2,
+                subfields=subfields,
+            ),
+        )
+        self._writeback()
 
     def get(self, code: str, default: str | None = None) -> str | None:
         """Get first subfield value by code or return default."""
@@ -433,21 +442,30 @@ class Field:
 
     def value(self) -> str:
         """Return the field's value (pymarc compatibility).
-        For control fields, returns the data content.
-        For data fields, returns space-joined subfield values.
+
+        For control fields, returns the data content. For data fields,
+        strips surrounding whitespace from each subfield value and joins
+        the values with spaces; every subfield is included.
         """
         self._refresh()
         if self.is_control_field():
             return self._data or ""
-        return " ".join(sf.value for sf in self._inner.subfields())
+        return self._inner.value()
 
     def format_field(self) -> str:
         """Return human-readable text without indicators or subfield codes
         (pymarc compatibility).
+
+        For control fields, returns the data content. For data fields,
+        joins the subfield values with spaces, skipping ``$6``; in subject
+        fields (tags starting with ``6``), ``$v``, ``$x``, ``$y``, and
+        ``$z`` are preceded by ``" -- "`` instead of a space. Surrounding
+        whitespace is stripped from the result.
         """
+        self._refresh()
         if self.is_control_field():
             return self._data or ""
-        return " ".join(sf.value for sf in self.subfields())
+        return self._inner.format_field()
 
     def is_control_field(self) -> bool:
         """Check if this is a control field (pymarc compatibility)."""
@@ -458,10 +476,14 @@ class Field:
 
         Data fields: =TAG  IND1IND2$aCONTENT$bCONTENT
         Control fields: =TAG  CONTENT
+
+        Blank indicators and spaces in control field data are written
+        as backslashes.
         """
         self._refresh()
         if self.is_control_field():
-            return f"={self._inner.tag}  {self._data}"
+            data = (self._data or "").replace(" ", "\\")
+            return f"={self._inner.tag}  {data}"
         ind1 = self._inner.indicator1.replace(" ", "\\")
         ind2 = self._inner.indicator2.replace(" ", "\\")
         subfield_str = "".join(
@@ -485,17 +507,16 @@ class Field:
     def get_subfields(self, *codes: str) -> list[str]:
         """Get all subfield values for given codes (pymarc compatibility).
 
+        Values are returned in the order their subfields appear in the
+        field, not in the order of ``codes``.
+
         Example:
             ```python
             field.get_subfields('a', 'b')  # Get all 'a' and 'b' subfield values
             ```
         """
         self._refresh()
-        result = []
-        for code in codes:
-            with contextlib.suppress(Exception):
-                result.extend(self._inner.subfields_by_code(code))
-        return result
+        return self._inner.get_subfields(*codes)
 
     def delete_subfield(self, code: str) -> str | None:
         """Delete first subfield with given code and return its value.

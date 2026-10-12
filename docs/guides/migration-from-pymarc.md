@@ -161,8 +161,8 @@ field.delete_subfield('a')             # Delete subfield by code
 field.subfields_as_dict()              # Get all subfields as dict
 field.subfields()                      # Get all Subfield objects
 field.is_control_field()               # False for data fields (identical to pymarc)
-field.value()                          # Space-joined subfield values
-field.format_field()                   # Human-readable field text
+field.value()                          # Stripped subfield values, space-joined
+field.format_field()                   # Display text: skips $6, " -- " before 6XX $v/$x/$y/$z
 ```
 
 ### Record Operations (Identical to pymarc + Extensions)
@@ -307,8 +307,8 @@ record.as_marc()           # ISO 2709 bytes
 record.as_json()           # pymarc-compatible MARC-in-JSON
 record.as_dict()           # pymarc-compatible dict
 field.as_marc()            # Field-level binary
-field.value()              # Space-joined subfield values
-field.format_field()       # Human-readable text
+field.value()              # Stripped subfield values, space-joined
+field.format_field()       # Display text: skips $6, " -- " before 6XX $v/$x/$y/$z
 ```
 
 ### Module-Level Functions

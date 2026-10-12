@@ -560,6 +560,41 @@ impl PyField {
         Ok(self.inner.delete_subfield(code_char))
     }
 
+    /// Get the values of the subfields whose code is one of `codes`, in
+    /// field order (pymarc's `Field.get_subfields()`). A code that is not
+    /// exactly one character matches nothing.
+    #[pyo3(signature = (*codes))]
+    pub fn get_subfields(&self, codes: Vec<String>) -> Vec<String> {
+        let chars: Vec<char> = codes
+            .iter()
+            .filter_map(|code| {
+                let mut chars = code.chars();
+                match (chars.next(), chars.next()) {
+                    (Some(c), None) => Some(c),
+                    _ => None,
+                }
+            })
+            .collect();
+        self.inner
+            .get_subfields(&chars)
+            .into_iter()
+            .map(str::to_string)
+            .collect()
+    }
+
+    /// Get the subfield values joined with spaces, each value stripped of
+    /// surrounding whitespace (pymarc's `Field.value()`).
+    pub fn value(&self) -> String {
+        self.inner.value()
+    }
+
+    /// Get the subfield values as display text (pymarc's
+    /// `Field.format_field()`): `$6` is skipped, and in 6XX fields `$v`,
+    /// `$x`, `$y`, and `$z` are preceded by " -- " instead of a space.
+    pub fn format_field(&self) -> String {
+        self.inner.format_field()
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "<Field tag={} ind1={} ind2={} subfields={}>",

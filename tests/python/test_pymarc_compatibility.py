@@ -1829,6 +1829,46 @@ class TestFieldValueMethods:
         field = Field("001", data="12345")
         assert field.format_field() == "12345"
 
+    def test_format_field_subject_subdivisions(self):
+        field = Field(
+            "650",
+            " ",
+            "0",
+            subfields=[
+                Subfield("a", "Cats"),
+                Subfield("x", "Behavior"),
+                Subfield("z", "France"),
+                Subfield("v", "Juvenile literature."),
+            ],
+        )
+        assert (
+            field.format_field()
+            == "Cats -- Behavior -- France -- Juvenile literature."
+        )
+
+    def test_format_field_skips_linkage(self):
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[Subfield("6", "880-02"), Subfield("a", "Title")],
+        )
+        assert field.format_field() == "Title"
+        assert field.value() == "880-02 Title"
+
+    def test_value_strips_each_subfield(self):
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[Subfield("a", " Title / "), Subfield("c", "A. ")],
+        )
+        assert field.value() == "Title / A."
+
+    def test_str_control_field_spaces_as_backslashes(self):
+        field = Field("008", data="850101s1985    nyu")
+        assert str(field) == "=008  850101s1985\\\\\\\\nyu"
+
 
 class TestFieldBinarySerialization:
     def test_field_as_marc_returns_bytes(self):
