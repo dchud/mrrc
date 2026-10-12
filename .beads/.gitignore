@@ -44,6 +44,10 @@ export-state/
 # Recovery bundles (local-only, generated during br doctor schema migrations)
 .br_recovery/
 
+# WAL-index quarantine dirs (local-only, left by br when it resets a stale
+# shared-memory index)
+.br-wal-index-*/
+
 # Sync state (local-only, per-machine)
 # These files are machine-specific and should not be shared across clones
 .sync.lock
