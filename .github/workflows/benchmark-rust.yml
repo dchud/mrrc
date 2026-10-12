@@ -53,9 +53,13 @@ jobs:
         # is excluded: Valgrind serializes threads under simulation mode, so
         # rayon speedup cannot be measured there (its sequential baselines
         # duplicate marc_benchmarks' read_* coverage). Run it locally with
-        # criterion for real walltime numbers. The remaining bench targets are
-        # print-only profiling harnesses that produce no CodSpeed signal.
-        run: cargo codspeed build --bench marc_benchmarks --bench error_handling_benchmarks
+        # criterion for real walltime numbers. memory_profile prints a
+        # heap-per-record table and produces no CodSpeed signal.
+        run: >-
+          cargo codspeed build
+          --bench marc_benchmarks
+          --bench error_handling_benchmarks
+          --bench format_benchmarks
 
       - name: Run benchmarks
         uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1

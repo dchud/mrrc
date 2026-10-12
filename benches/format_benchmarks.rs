@@ -3,7 +3,9 @@
 //! the single-thread parser-pool path.
 //!
 //! Covers CSV, MODS, Dublin Core, BIBFRAME (RDF), and MARC-in-JSON
-//! serialization, the parse-from direction where one exists, and the
+//! serialization, the parse-from direction where one exists, conversion of
+//! the realistic and large-record fixtures to MARCXML, MODS, Dublin Core, and
+//! BIBFRAME, and the
 //! boundary-scan + batch-parse path used by the producer-consumer pipeline,
 //! pinned to one rayon worker so the per-record instruction cost is a
 //! deterministic single-thread signal.
@@ -12,7 +14,7 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use mrrc::bibframe::{BibframeConfig, RdfFormat, marc_to_bibframe};
 use mrrc::boundary_scanner::RecordBoundaryScanner;
 use mrrc::rayon_parser_pool::parse_batch_parallel;
-use mrrc::{MarcReader, Record, csv, dublin_core, marcjson, mods};
+use mrrc::{MarcReader, Record, csv, dublin_core, marcjson, marcxml, mods};
 use std::io::Cursor;
 
 /// Load test fixtures from the test data directory.
@@ -157,6 +159,59 @@ fn benchmark_serialize_to_bibframe_turtle_1k(c: &mut Criterion) {
     });
 }
 
+/// Benchmark MARCXML, MODS, Dublin Core, and BIBFRAME (Turtle) conversion of
+/// the realistic fixture (2,000 records of 12-30 fields) and the large-record
+/// fixture (100 records of 150-250 fields).
+///
+/// The 1k fixture's records average 6.5 fields, which understates per-record
+/// work that grows with field count: each converter looks up dozens of tags
+/// per record and walks every field.
+fn benchmark_convert_realistic_and_large(c: &mut Criterion) {
+    let config = BibframeConfig::default();
+    for (label, file) in [
+        ("realistic", "realistic.mrc"),
+        ("large", "large_records.mrc"),
+    ] {
+        let records = black_box(parse_fixture(file));
+        c.bench_function(&format!("serialize_{label}_to_marcxml"), |b| {
+            b.iter(|| {
+                records
+                    .iter()
+                    .filter(|r| marcxml::record_to_marcxml(r).is_ok())
+                    .count()
+            });
+        });
+        c.bench_function(&format!("serialize_{label}_to_mods_xml"), |b| {
+            b.iter(|| {
+                records
+                    .iter()
+                    .filter(|r| mods::record_to_mods_xml(r).is_ok())
+                    .count()
+            });
+        });
+        c.bench_function(&format!("serialize_{label}_to_dublin_core_xml"), |b| {
+            b.iter(|| {
+                records
+                    .iter()
+                    .filter(|r| dublin_core::record_to_dublin_core_xml(r).is_ok())
+                    .count()
+            });
+        });
+        c.bench_function(&format!("serialize_{label}_to_bibframe_turtle"), |b| {
+            b.iter(|| {
+                records
+                    .iter()
+                    .filter(|r| {
+                        marc_to_bibframe(r, &config)
+                            .serialize(RdfFormat::Turtle)
+                            .is_ok()
+                    })
+                    .count()
+            });
+        });
+    }
+}
+
 /// Benchmark the single-thread parser-pool path over 1,000 records.
 ///
 /// Drives the boundary scan and `parse_batch_parallel` exactly as the
@@ -192,5 +247,6 @@ criterion_group!(
     benchmark_serialize_to_dublin_core_1k,
     benchmark_serialize_to_bibframe_turtle_1k,
     benchmark_parser_pool_single_thread_1k,
+    benchmark_convert_realistic_and_large,
 );
 criterion_main!(benches);

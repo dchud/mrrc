@@ -107,6 +107,47 @@ class TestReadingBenchmarks:
         assert len(result) == 10000
 
 
+class TestRecordShapeReadingBenchmarks:
+    """Reading benchmarks over fixtures of realistic, large, and MARC-8 records.
+
+    The 1k and 10k fixtures hold records of about 6 fields; these cover
+    records of 12-30 fields, records of 150-1,000 fields, and MARC-8 decoding.
+    """
+
+    @staticmethod
+    def read_all(data):
+        reader = MARCReader(io.BytesIO(data))
+        records = []
+        while (record := reader.read_record()) is not None:
+            records.append(record)
+        return records
+
+    @pytest.mark.benchmark
+    def test_read_realistic_records(self, benchmark, fixture_realistic):
+        """Benchmark reading 2,000 records of 12-30 fields."""
+        result = benchmark(self.read_all, fixture_realistic)
+        assert len(result) == 2000
+
+    @pytest.mark.benchmark
+    def test_read_large_records(self, benchmark, fixture_large):
+        """Benchmark reading 100 records of 150-250 fields."""
+        result = benchmark(self.read_all, fixture_large)
+        assert len(result) == 100
+
+    @pytest.mark.benchmark
+    def test_read_very_large_records(self, benchmark, fixture_very_large):
+        """Benchmark reading 10 records of 800-1,000 fields."""
+        result = benchmark(self.read_all, fixture_very_large)
+        assert len(result) == 10
+
+    @pytest.mark.benchmark
+    def test_read_marc8_records(self, benchmark, fixture_marc8):
+        """Benchmark reading 1,000 MARC-8 records with diacritics and
+        Cyrillic and Greek text."""
+        result = benchmark(self.read_all, fixture_marc8)
+        assert len(result) == 1000
+
+
 class TestIterationBenchmarks:
     """Benchmarks for different iteration patterns."""
 

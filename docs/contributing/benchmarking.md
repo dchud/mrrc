@@ -14,24 +14,119 @@ Located in `benches/`. Run with `cargo bench --bench <name>`. Output lands
 under `target/criterion/<scenario>/new/` as JSON estimates suitable for
 programmatic comparison.
 
-The benches rely on fixtures in `tests/data/fixtures/` (1k / 5k / 10k record
-files; the 100k fixture is gitignored and regenerated locally with
-`scripts/generate_benchmark_fixtures.py` when needed).
+| Target | Covers |
+|---|---|
+| `marc_benchmarks` | ISO 2709 reading of every fixture below (and of the 1k and 10k fixtures from a path), writing, tag lookups (`get_field`, `fields_by_tag`, `get_control_field`), JSON and MARCXML serialization, MARCXML parsing |
+| `format_benchmarks` | CSV, MARC-in-JSON, MODS, Dublin Core, and BIBFRAME conversion, including MARCXML, MODS, Dublin Core, and BIBFRAME conversion of the realistic and large-record fixtures; the single-thread parser-pool path |
+| `error_handling_benchmarks` | Strict parsing of clean records and lenient parsing of malformed ones |
+| `parallel_benchmarks` | Multi-threaded reading, wall-clock only (see [Parallel throughput](#parallel-throughput-wall-clock)) |
+| `memory_profile` | Heap per record; prints a table rather than timing (see [Heap per record](#heap-per-record)) |
+
+The benches read fixtures from `tests/data/fixtures/`, built by the scripts
+in `scripts/` named below:
+
+| Fixture | Records | Shape | Generator |
+|---|---|---|---|
+| `1k_records.mrc`, `10k_records.mrc` | 1,000 and 10,000 | About 6 fields of short text per record | `generate_benchmark_fixtures.py` |
+| `5k_records.mrc` | 5,000 | The same shape | None (committed as is) |
+| `realistic.mrc` | 2,000 | 12-30 fields with real-length text | `generate_realistic_fixture.py` |
+| `realistic_marc8.mrc` | 1,000 | Realistic records in MARC-8 (leader position 09 blank) with ANSEL diacritics and Cyrillic and Greek 880 fields | `generate_marc8_fixture.py` |
+| `large_records.mrc` | 100 | 150-250 fields; repeated tags interleaved within the 5XX, 6XX, and 7XX blocks | `generate_large_fixture.py` |
+| `very_large_records.mrc` | 10 | 800-1,000 fields, interleaved the same way | `generate_large_fixture.py --preset very-large` |
+
+The realistic, MARC-8, and large-record generators use a fixed seed, so
+re-running one reproduces its committed file byte for byte. The MARC-8
+generator encodes with pymarc's MARC-8 tables and stops unless pymarc decodes
+every value back unchanged.
 
 ## Python pytest-benchmark suites
 
 Located under `tests/python/test_benchmark_*.py`. Run with
 `uv run python -m pytest tests/python/ --benchmark-only -m benchmark`. These
 exercise the FFI surface and surface cross-binding overhead.
+`test_benchmark_field_access.py` times `record["245"]`,
+`record.get_fields("650")`, and the field-handle loop
+`for f in record.get_fields(): f["a"]` over the realistic and large-record
+fixtures.
+
+`test_memory_benchmarks.py` measures peak memory with `tracemalloc`, which
+sees allocations made through Python's allocator (the record and field
+wrapper objects) but not the Rust heap behind each record. `memory_profile`
+measures that.
 
 ## Codspeed regression detection
 
-Both the Rust and Python suites are exercised under `pytest-codspeed` /
-`cargo codspeed` in the `Codspeed Performance Regression Detection` CI job.
-Codspeed compares each PR against the project's main branch and reports
-deltas on the dashboard. Use it as a generic "is anything weird" signal —
-**not** as a hard gate, because cross-machine variance on the public CI
-runner makes precise threshold enforcement (2-5% range) unreliable.
+The `marc_benchmarks`, `error_handling_benchmarks`, and `format_benchmarks`
+targets and the Python benchmarks (except the parallel ones) run under
+`cargo codspeed` and `pytest-codspeed` in CI. Both run in simulation mode,
+which counts instructions under Valgrind and so varies far less between runs
+than wall-clock time. Codspeed compares each PR against the project's main
+branch and reports deltas on the dashboard. It does not block merges. For a
+change to a hot path, read its deltas together with a local
+[before/after comparison](#comparing-before-and-after-a-change), which also
+covers the parallel and heap measurements that Codspeed does not run.
+
+## Heap per record
+
+`cargo bench --bench memory_profile` reads each fixture with a counting global
+allocator and prints, per record: the heap a parsed record owns (not counting
+the `Record` struct itself, whose size it prints first), the number of live
+allocations behind it, and the allocation calls made while reading it. For a
+given build the table is the same on every run, so any difference between two
+builds is real.
+
+## Comparing before and after a change
+
+For a change to a hot path (record storage, the ISO 2709 codec, a
+converter), compare the whole benchmark profile on the change's base commit
+and on the branch: release builds, the same machine, run back to back.
+
+```bash
+# On the base commit
+cargo bench --bench marc_benchmarks --bench format_benchmarks \
+    --bench error_handling_benchmarks -- --save-baseline before
+cargo bench --bench memory_profile > before-heap.txt
+uv run maturin develop --release
+uv run python -m pytest tests/python/ -m "benchmark and not slow" --benchmark-only \
+    --ignore=tests/python/test_benchmark_parallel.py \
+    --ignore=tests/python/test_benchmark_pipeline_parallel.py \
+    --benchmark-warmup=on --benchmark-disable-gc --benchmark-min-rounds=30 \
+    --benchmark-save=before
+
+# On the branch: the same commands, comparing instead of saving
+cargo bench --bench marc_benchmarks --bench format_benchmarks \
+    --bench error_handling_benchmarks -- --baseline before
+cargo bench --bench memory_profile > after-heap.txt
+uv run maturin develop --release
+uv run python -m pytest tests/python/ -m "benchmark and not slow" --benchmark-only \
+    --ignore=tests/python/test_benchmark_parallel.py \
+    --ignore=tests/python/test_benchmark_pipeline_parallel.py \
+    --benchmark-warmup=on --benchmark-disable-gc --benchmark-min-rounds=30 \
+    --benchmark-compare
+```
+
+Run `maturin develop --release` right before the Python benchmarks: the
+`check.sh` commit and push hooks rebuild the extension in dev mode. For a
+change that affects threading, also run `parallel_benchmarks` and
+`scripts/parallel_throughput.py` on both builds.
+
+**Know the noise floor first.** Wall-clock benchmarks on a laptop vary
+between runs of the same code. Run the base twice, comparing the second run
+against the first (`--baseline` for criterion, `--benchmark-compare` for
+pytest-benchmark), and note each benchmark's spread. Most criterion benches
+stay within about 1%, but a few allocation-heavy ones (MARC-in-JSON) move by
+several percent, and the Python benchmarks vary more than the Rust ones even
+with warm-up, garbage collection off, and 30 rounds, as above. criterion
+reports every change with a confidence interval and says when a change is
+within its noise threshold. A delta inside the noise floor is not evidence
+either way; re-run it, or use Codspeed's instruction counts for the
+benchmarks Codspeed covers, which include every Python benchmark above.
+
+**Thresholds.** Beyond the noise floor, any benchmark slower by more than
+2.5% needs an explanation in the PR, and a slowdown of more than 10% on a
+user-facing path (Python reading, field access, a converter) is fixed before
+the change merges. Put the comparison in the PR description: every delta over
+2.5%, and the heap tables if record storage changed.
 
 ## Parallel throughput (wall-clock)
 
@@ -122,4 +217,6 @@ as a sanity check that expects a high count.)
 | `cargo bench` (any) | absolute Rust hot-path cost | local + Codspeed | per-PR signal, exploration |
 | `pytest --benchmark-only` | FFI overhead | local + Codspeed | Python-binding regressions |
 | Codspeed | broad PR-vs-main drift | CI dashboard | continuous awareness |
+| `cargo bench --bench memory_profile` | heap use per record | local only | memory comparisons |
+| before/after comparison | whole-profile drift from one change | local, alongside Codspeed | merging a hot-path change |
 | `parallel_throughput.py` | multi-thread GIL-release scaling | local only (wall-clock) | concurrency claims |

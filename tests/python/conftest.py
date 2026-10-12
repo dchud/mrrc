@@ -34,6 +34,37 @@ def fixture_10k(fixture_dir):
         return f.read()
 
 
+def _load_fixture(fixture_dir, name):
+    path = fixture_dir / name
+    if not path.exists():
+        pytest.skip(f"Fixture not found: {path}")
+    return path.read_bytes()
+
+
+@pytest.fixture(scope="session")
+def fixture_realistic(fixture_dir):
+    """2,000 realistic-shaped records of 12-30 fields."""
+    return _load_fixture(fixture_dir, "realistic.mrc")
+
+
+@pytest.fixture(scope="session")
+def fixture_large(fixture_dir):
+    """100 large records of 150-250 fields."""
+    return _load_fixture(fixture_dir, "large_records.mrc")
+
+
+@pytest.fixture(scope="session")
+def fixture_very_large(fixture_dir):
+    """10 very large records of 800-1,000 fields."""
+    return _load_fixture(fixture_dir, "very_large_records.mrc")
+
+
+@pytest.fixture(scope="session")
+def fixture_marc8(fixture_dir):
+    """1,000 realistic-shaped MARC-8 records (leader position 09 blank)."""
+    return _load_fixture(fixture_dir, "realistic_marc8.mrc")
+
+
 @pytest.fixture(scope="session")
 def fixture_1k_path(fixture_dir):
     """Path to the 1k record fixture file on disk."""
