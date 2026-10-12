@@ -77,14 +77,15 @@ The sections below describe what CI measures and the broader benchmarking setup.
 
 ## What CI measures
 
-Two CodSpeed jobs run on every pull request, both in simulation mode:
+Two CodSpeed jobs run on every pull request, both in simulation mode, as
+jobs of one workflow (`.github/workflows/benchmarks.yml`) so that CodSpeed
+reports them together:
 
 - **Rust**: criterion benches (`benches/marc_benchmarks.rs`,
-  `benches/error_handling_benchmarks.rs`) via
-  `.github/workflows/benchmark-rust.yml`
+  `benches/format_benchmarks.rs`, `benches/error_handling_benchmarks.rs`)
 - **Python**: pytest benchmarks (`tests/python/test_benchmark_reading.py`,
-  `test_benchmark_writing.py`, `test_memory_benchmarks.py`) via
-  `.github/workflows/benchmark-python.yml`
+  `test_benchmark_field_access.py`, `test_benchmark_writing.py`,
+  `test_memory_benchmarks.py`)
 
 Simulation mode executes each benchmark once under Valgrind and models its
 cost from instruction counts and cache behavior. The result is deterministic:
@@ -161,10 +162,12 @@ library data (a real corpus).
 
 - Three-way comparison harness: `scripts/benchmark_comparison.py` (Python +
   pymarc) and `examples/benchmark_native.rs` (native Rust ceiling)
-- Rust benchmarks: `benches/marc_benchmarks.rs`,
-  `benches/error_handling_benchmarks.rs`, `benches/parallel_benchmarks.rs`
+- Rust benchmarks: `benches/marc_benchmarks.rs`, `benches/format_benchmarks.rs`,
+  `benches/error_handling_benchmarks.rs`, `benches/parallel_benchmarks.rs`,
+  and `benches/memory_profile.rs` (heap per record)
 - Python benchmarks: `tests/python/test_benchmark_*.py`
 - Memory benchmarks: `tests/python/test_memory_benchmarks.py`
-- Fixture generator: `scripts/generate_benchmark_fixtures.py`
-- CI workflows: `.github/workflows/benchmark-rust.yml`,
-  `.github/workflows/benchmark-python.yml`
+- Fixture generators: `scripts/generate_benchmark_fixtures.py`,
+  `scripts/generate_realistic_fixture.py`, `scripts/generate_large_fixture.py`,
+  `scripts/generate_marc8_fixture.py`
+- CI workflow: `.github/workflows/benchmarks.yml`
