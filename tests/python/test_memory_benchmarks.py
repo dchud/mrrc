@@ -68,6 +68,30 @@ class TestMemoryBenchmarks:
         )
 
     @pytest.mark.benchmark
+    def test_memory_read_large_records(self, fixture_large):
+        """Measure peak memory when reading 100 records of 150-250 fields.
+
+        tracemalloc sees allocations made through Python's allocator (the
+        record and field wrapper objects), not the Rust heap behind each
+        record; `cargo bench --bench memory_profile` measures that.
+        """
+
+        def read_all():
+            data = io.BytesIO(fixture_large)
+            reader = MARCReader(data)
+            records = []
+            while record := reader.read_record():
+                records.append(record)
+            return records
+
+        records, peak_memory = self.measure_peak_memory(read_all)
+
+        assert len(records) == 100
+        assert peak_memory < 10 * 1024 * 1024, (
+            f"Peak memory {peak_memory / 1024 / 1024:.2f}MB exceeds 10MB for 100 large records"
+        )
+
+    @pytest.mark.benchmark
     def test_memory_streaming_read_10k(self, fixture_10k):
         """Measure memory with streaming (not storing all records)."""
 

@@ -5,7 +5,7 @@
 //! MARC records using Criterion.rs for statistical analysis.
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
-use mrrc::{LinkageInfo, MarcReader, MarcWriter, RecordHelpers, json, marcxml};
+use mrrc::{LinkageInfo, MarcReader, MarcWriter, Record, RecordHelpers, json, marcxml};
 use std::io::Cursor;
 
 /// Load test fixtures from the test data directory.
@@ -75,6 +75,121 @@ fn benchmark_read_10k_from_path(c: &mut Criterion) {
                 count += 1;
             }
             black_box(count)
+        });
+    });
+}
+
+/// Read every record in a fixture held in memory and return the count.
+fn read_all(fixture: &[u8]) -> usize {
+    let mut reader = MarcReader::new(Cursor::new(fixture.to_vec()));
+    let mut count = 0;
+    while let Ok(Some(_record)) = reader.read_record() {
+        count += 1;
+    }
+    count
+}
+
+/// Parse every record in a fixture once, for benches that time work on
+/// parsed records.
+fn parse_fixture(filename: &str) -> Vec<Record> {
+    let mut reader = MarcReader::new(Cursor::new(load_fixture(filename)));
+    let mut records = Vec::new();
+    while let Ok(Some(record)) = reader.read_record() {
+        records.push(record);
+    }
+    records
+}
+
+/// Benchmark reading the realistic fixture: 2,000 records of 12-30 fields
+/// with real-length text, so parsing rather than per-record overhead
+/// dominates.
+fn benchmark_read_realistic(c: &mut Criterion) {
+    let fixture = black_box(load_fixture("realistic.mrc"));
+    c.bench_function("read_realistic_records", |b| b.iter(|| read_all(&fixture)));
+}
+
+/// Benchmark reading 100 large records (150-250 fields each).
+fn benchmark_read_large(c: &mut Criterion) {
+    let fixture = black_box(load_fixture("large_records.mrc"));
+    c.bench_function("read_large_records", |b| b.iter(|| read_all(&fixture)));
+}
+
+/// Benchmark reading 10 very large records (800-1,000 fields each).
+fn benchmark_read_very_large(c: &mut Criterion) {
+    let fixture = black_box(load_fixture("very_large_records.mrc"));
+    c.bench_function("read_very_large_records", |b| b.iter(|| read_all(&fixture)));
+}
+
+/// Benchmark reading 1,000 MARC-8 records (leader position 09 blank) with
+/// ANSEL diacritics and Cyrillic and Greek text reached through escape
+/// sequences. The only fixture that exercises MARC-8 decoding.
+fn benchmark_read_marc8(c: &mut Criterion) {
+    let fixture = black_box(load_fixture("realistic_marc8.mrc"));
+    c.bench_function("read_marc8_records", |b| b.iter(|| read_all(&fixture)));
+}
+
+/// Data-field tags the BIBFRAME and MODS converters look up on each record.
+/// Several are absent from most records, so those lookups miss.
+const LOOKUP_TAGS: &[&str] = &[
+    "010", "020", "022", "024", "035", "041", "050", "082", "100", "110", "111", "240", "245",
+    "246", "250", "260", "264", "300", "310", "490", "500", "504", "505", "520", "600", "610",
+    "611", "630", "650", "651", "655", "700", "710", "711", "730", "830", "852", "856", "880",
+];
+
+/// Look up every tag in [`LOOKUP_TAGS`] on every record, the way a
+/// converter does, through `get_field`, `fields_by_tag`, and
+/// `get_control_field`.
+fn lookup_tags(records: &[Record]) -> usize {
+    let mut found = 0;
+    for record in records {
+        found += usize::from(record.get_control_field(black_box("001")).is_some());
+        for tag in LOOKUP_TAGS {
+            let tag = black_box(*tag);
+            if let Some(field) = record.get_field(tag) {
+                found += field.subfields().count();
+            }
+            found += record.fields_by_tag(tag).count();
+        }
+    }
+    found
+}
+
+/// Benchmark tag lookups on the realistic fixture.
+fn benchmark_lookup_tags_realistic(c: &mut Criterion) {
+    let records = parse_fixture("realistic.mrc");
+    c.bench_function("lookup_tags_realistic", |b| {
+        b.iter(|| lookup_tags(&records));
+    });
+}
+
+/// Benchmark tag lookups on large records, where per-lookup cost that grows
+/// with field count shows.
+fn benchmark_lookup_tags_large(c: &mut Criterion) {
+    let records = parse_fixture("large_records.mrc");
+    c.bench_function("lookup_tags_large", |b| b.iter(|| lookup_tags(&records)));
+}
+
+/// Benchmark tag lookups on very large records.
+fn benchmark_lookup_tags_very_large(c: &mut Criterion) {
+    let records = parse_fixture("very_large_records.mrc");
+    c.bench_function("lookup_tags_very_large", |b| {
+        b.iter(|| lookup_tags(&records));
+    });
+}
+
+/// Benchmark writing 100 large records to ISO 2709 binary: an in-order walk
+/// of every field.
+fn benchmark_write_large(c: &mut Criterion) {
+    let records = parse_fixture("large_records.mrc");
+    let mut output = Vec::with_capacity(2 << 20);
+    c.bench_function("write_large_records", |b| {
+        b.iter(|| {
+            output.clear();
+            let mut writer = MarcWriter::new(&mut output);
+            for record in &records {
+                writer.write_record(record).unwrap();
+            }
+            black_box(output.len())
         });
     });
 }
@@ -310,5 +425,13 @@ criterion_group!(
     benchmark_parse_linkage,
     benchmark_roundtrip_1k,
     benchmark_roundtrip_10k,
+    benchmark_read_realistic,
+    benchmark_read_large,
+    benchmark_read_very_large,
+    benchmark_read_marc8,
+    benchmark_lookup_tags_realistic,
+    benchmark_lookup_tags_large,
+    benchmark_lookup_tags_very_large,
+    benchmark_write_large,
 );
 criterion_main!(benches);
