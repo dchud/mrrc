@@ -58,10 +58,13 @@ measures that.
 
 The `marc_benchmarks`, `error_handling_benchmarks`, and `format_benchmarks`
 targets and the Python benchmarks (except the parallel ones) run under
-`cargo codspeed` and `pytest-codspeed` in CI. Both run in simulation mode,
-which counts instructions under Valgrind and so varies far less between runs
-than wall-clock time. Codspeed compares each PR against the project's main
-branch and reports deltas on the dashboard. It does not block merges. For a
+`cargo codspeed` and `pytest-codspeed` in CI, as two jobs of one workflow
+(`.github/workflows/benchmarks.yml`): Codspeed combines the results of a
+workflow run into one report, but not results from separate workflows. Both
+jobs run in simulation mode, which counts instructions under Valgrind and so
+varies far less between runs than wall-clock time. Codspeed compares each PR
+against the project's main branch and reports deltas in a PR comment and on
+the dashboard. It does not block merges. For a
 change to a hot path, read its deltas together with a local
 [before/after comparison](#comparing-before-and-after-a-change), which also
 covers the parallel and heap measurements that Codspeed does not run.
