@@ -31,9 +31,9 @@ use crate::error::{MarcError, Result};
 use crate::iso2709::ParseContext;
 use crate::leader::Leader;
 use crate::record::{Field, Record};
+use quick_xml::XmlVersion;
 use quick_xml::events::Event;
 use quick_xml::se::to_string as xml_to_string;
-use quick_xml::{Decoder, XmlVersion};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
@@ -162,28 +162,27 @@ fn read_marcxml_record<B: std::io::BufRead>(
             .map_err(|e| ctx.err_xml(e))?
         {
             Event::Start(ref e) => {
-                let name_bytes = e.name().into_inner();
-                let name = std::str::from_utf8(name_bytes).unwrap_or("");
+                let name = e.name().into_inner();
                 match name {
                     "leader" => {
-                        record.leader = read_leaf_text(reader, name_bytes, ctx)?;
+                        record.leader = read_leaf_text(reader, name, ctx)?;
                     },
                     "controlfield" => {
-                        let tag = attr_value(e, b"tag", reader.decoder()).unwrap_or_default();
-                        let value = read_leaf_text(reader, name_bytes, ctx)?;
+                        let tag = attr_value(e, "tag").unwrap_or_default();
+                        let value = read_leaf_text(reader, name, ctx)?;
                         record.controlfield.push(MarcxmlControlField { tag, value });
                     },
                     "datafield" => {
                         current_df = Some(MarcxmlDataField {
-                            tag: attr_value(e, b"tag", reader.decoder()).unwrap_or_default(),
-                            ind1: attr_value(e, b"ind1", reader.decoder()).unwrap_or_default(),
-                            ind2: attr_value(e, b"ind2", reader.decoder()).unwrap_or_default(),
+                            tag: attr_value(e, "tag").unwrap_or_default(),
+                            ind1: attr_value(e, "ind1").unwrap_or_default(),
+                            ind2: attr_value(e, "ind2").unwrap_or_default(),
                             subfield: Vec::new(),
                         });
                     },
                     "subfield" => {
-                        let code = attr_value(e, b"code", reader.decoder()).unwrap_or_default();
-                        let value = read_leaf_text(reader, name_bytes, ctx)?;
+                        let code = attr_value(e, "code").unwrap_or_default();
+                        let value = read_leaf_text(reader, name, ctx)?;
                         if let Some(df) = current_df.as_mut() {
                             df.subfield.push(MarcxmlSubfield { code, value });
                         }
@@ -192,7 +191,7 @@ fn read_marcxml_record<B: std::io::BufRead>(
                 }
             },
             Event::End(ref e) => {
-                let name = std::str::from_utf8(e.name().into_inner()).unwrap_or("");
+                let name = e.name().into_inner();
                 if name == "datafield" {
                     if let Some(df) = current_df.take() {
                         record.datafield.push(df);
@@ -204,27 +203,27 @@ fn read_marcxml_record<B: std::io::BufRead>(
             Event::Empty(ref e) => {
                 // Self-closing element: <controlfield tag="001"/> etc. Treat
                 // as empty string value so callers see the field at all.
-                let name = std::str::from_utf8(e.name().into_inner()).unwrap_or("");
+                let name = e.name().into_inner();
                 match name {
                     "controlfield" => {
                         record.controlfield.push(MarcxmlControlField {
-                            tag: attr_value(e, b"tag", reader.decoder()).unwrap_or_default(),
+                            tag: attr_value(e, "tag").unwrap_or_default(),
                             value: String::new(),
                         });
                     },
                     "subfield" => {
                         if let Some(df) = current_df.as_mut() {
                             df.subfield.push(MarcxmlSubfield {
-                                code: attr_value(e, b"code", reader.decoder()).unwrap_or_default(),
+                                code: attr_value(e, "code").unwrap_or_default(),
                                 value: String::new(),
                             });
                         }
                     },
                     "datafield" => {
                         record.datafield.push(MarcxmlDataField {
-                            tag: attr_value(e, b"tag", reader.decoder()).unwrap_or_default(),
-                            ind1: attr_value(e, b"ind1", reader.decoder()).unwrap_or_default(),
-                            ind2: attr_value(e, b"ind2", reader.decoder()).unwrap_or_default(),
+                            tag: attr_value(e, "tag").unwrap_or_default(),
+                            ind1: attr_value(e, "ind1").unwrap_or_default(),
+                            ind2: attr_value(e, "ind2").unwrap_or_default(),
                             subfield: Vec::new(),
                         });
                     },
@@ -245,7 +244,7 @@ fn read_marcxml_record<B: std::io::BufRead>(
 /// the concatenated, unescaped payload verbatim (whitespace preserved).
 fn read_leaf_text<B: std::io::BufRead>(
     reader: &mut quick_xml::reader::Reader<B>,
-    name: &[u8],
+    name: &str,
     ctx: &ParseContext,
 ) -> Result<String> {
     let mut out = String::new();
@@ -258,24 +257,15 @@ fn read_leaf_text<B: std::io::BufRead>(
         {
             Event::Text(t) => {
                 // xml_content() applies XML §2.11 end-of-line normalization
-                // (CR, CRLF → LF for XML 1.0) per spec. quick-xml's plain
-                // decode() skips that pass; quick-xml's own docs flag it as
-                // the wrong default. MARCXML is XML 1.0; the version is
-                // assumed per spec when no declaration states otherwise.
-                let decoded = t.xml_content(XmlVersion::Implicit1_0).map_err(|e| {
-                    MarcError::invalid_field_msg(format!("Invalid text encoding: {e}"))
-                })?;
-                out.push_str(&decoded);
+                // (CR, CRLF → LF for XML 1.0) per spec, which the raw text
+                // skips. MARCXML is XML 1.0; the version is assumed per spec
+                // when no declaration states otherwise.
+                out.push_str(&t.xml_content(XmlVersion::Implicit1_0));
             },
             Event::CData(c) => {
                 // CDATA section content is part of the document entity and is
-                // also subject to XML §2.11 EOL normalization. xml_content()
-                // additionally honors the reader's declared encoding, so this
-                // is a strict improvement over a raw UTF-8 conversion.
-                let decoded = c.xml_content(XmlVersion::Implicit1_0).map_err(|e| {
-                    MarcError::invalid_field_msg(format!("Invalid CDATA encoding: {e}"))
-                })?;
-                out.push_str(&decoded);
+                // also subject to XML §2.11 EOL normalization.
+                out.push_str(&c.xml_content(XmlVersion::Implicit1_0));
             },
             Event::GeneralRef(r) => {
                 // `&#NN;` / `&#xHH;` numeric character references, plus the
@@ -284,10 +274,7 @@ fn read_leaf_text<B: std::io::BufRead>(
                 if let Some(ch) = r.resolve_char_ref().map_err(|e| ctx.err_xml(e))? {
                     out.push(ch);
                 } else {
-                    let name = r.decode().map_err(|e| {
-                        MarcError::invalid_field_msg(format!("Invalid entity encoding: {e}"))
-                    })?;
-                    let ch = match &*name {
+                    let ch = match &*r {
                         "lt" => '<',
                         "gt" => '>',
                         "amp" => '&',
@@ -305,8 +292,7 @@ fn read_leaf_text<B: std::io::BufRead>(
             Event::End(ref e) if e.name().into_inner() == name => return Ok(out),
             Event::Eof => {
                 return Err(ctx.err_xml(quick_xml::DeError::Custom(format!(
-                    "unexpected EOF inside <{}>",
-                    std::str::from_utf8(name).unwrap_or("?")
+                    "unexpected EOF inside <{name}>"
                 ))));
             },
             // Ignore comments, PIs, nested starts (MARCXML leaf elements
@@ -318,23 +304,14 @@ fn read_leaf_text<B: std::io::BufRead>(
 
 /// Extract an attribute value as an owned `String`, decoding XML escapes
 /// and applying XML 1.0 attribute-value normalization.
-///
-/// Takes the reader's `Decoder` because the lib-safe quick-xml API
-/// (`decoded_and_normalized_value`) requires one; the deprecated
-/// decoder-less variants are compiled out when any crate in the build
-/// enables quick-xml's `encoding` feature.
-fn attr_value(
-    start: &quick_xml::events::BytesStart,
-    name: &[u8],
-    decoder: Decoder,
-) -> Option<String> {
+fn attr_value(start: &quick_xml::events::BytesStart, name: &str) -> Option<String> {
     start
         .attributes()
         .with_checks(false)
         .filter_map(std::result::Result::ok)
         .find(|a| a.key.into_inner() == name)
         .and_then(|a| {
-            a.decoded_and_normalized_value(XmlVersion::Implicit1_0, decoder)
+            a.normalized_value(XmlVersion::Implicit1_0)
                 .ok()
                 .map(std::borrow::Cow::into_owned)
         })
@@ -473,7 +450,7 @@ pub fn marcxml_to_record(xml: &str) -> Result<Record> {
             .read_event_into(&mut buf)
             .map_err(|e| ctx.err_xml(e))?
         {
-            Event::Start(ref e) if e.name().into_inner() == b"record" => break,
+            Event::Start(ref e) if e.name().into_inner() == "record" => break,
             Event::Eof => {
                 return Err(ctx.err_xml(quick_xml::DeError::Custom(
                     "no <record> element found".to_string(),
@@ -517,7 +494,7 @@ pub fn marcxml_to_records(xml: &str) -> Result<Vec<Record>> {
             .read_event_into(&mut buf)
             .map_err(|e| ctx.err_xml(e))?
         {
-            Event::Start(ref e) if e.name().into_inner() == b"record" => {
+            Event::Start(ref e) if e.name().into_inner() == "record" => {
                 ctx.begin_record();
                 let xml_record = read_marcxml_record(&mut reader, &ctx)?;
                 records
