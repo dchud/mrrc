@@ -113,7 +113,7 @@ def demonstrate_record_structure(record):
     print(f"Author:          {record.author}")
     print(f"All Authors:     {', '.join(f['a'] for f in record.get_fields('100', '700') if f['a'])}")
     print(f"ISBN:            {', '.join(f['a'] for f in record.get_fields('020') if f['a'])}")
-    print(f"Subjects:        {', '.join(record.subjects[:2])}... ({len(record.subjects)} total)")
+    print(f"Subjects:        {', '.join(f.format_field() for f in record.subjects[:2])}... ({len(record.subjects)} total)")
 
     pub = record.get_field('260')
     if pub:

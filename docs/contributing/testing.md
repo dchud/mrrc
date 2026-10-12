@@ -66,19 +66,23 @@ pytest tests/python/ -m benchmark
 
 ### Cross-library parity (pymarc)
 
-`tests/python/test_pymarc_parity.py` compares mrrc's permissive
-iteration shape (record-vs-`None` per record) against pymarc over a
-mixed-quality corpus. pymarc is an optional comparison target, not a
-project dependency, so the test is guarded by `pytest.importorskip`
-and **skips silently** unless pymarc is installed. To actually run it,
-install pymarc for the invocation:
+`tests/python/test_pymarc_parity.py` compares mrrc against pymarc:
+permissive iteration shape (record-vs-`None` per record) over a
+mixed-quality corpus, and per-record values (the `Record` properties,
+each field's `value()`, `format_field()`, and `str()`, and `as_marc()`
+bytes) over `simple_book.mrc`, `1k_records.mrc`, and `field_shapes.mrc`.
+pymarc comes from the `oracle` extra, so the tests run in any
+environment synced with `uv sync --all-extras`:
 
 ```bash
-uv run --with 'pymarc==5.3.1' python -m pytest tests/python/test_pymarc_parity.py -q
+uv run python -m pytest tests/python/test_pymarc_parity.py -q
 ```
 
 Worth running when changing reader iteration, recovery-mode defaults,
-or anything affecting how malformed records are surfaced.
+anything affecting how malformed records are surfaced, or how field
+text and the `Record` properties are produced. When a field shape is missing from the value
+comparison, add it to `scripts/generate_field_shapes_fixture.py` and
+regenerate `tests/data/field_shapes.mrc`.
 
 `tests/python/test_pymarc_compat_accessors.py` carries a similar
 pymarc-guarded parity check for the `current_exception` /
@@ -95,6 +99,7 @@ Test data is located in `tests/data/`:
 | `simple_authority.mrc` | Authority record | 1 |
 | `simple_holdings.mrc` | Holdings record | 1 |
 | `with_control_fields.mrc` | Record with 008 field | 1 |
+| `field_shapes.mrc` | 6XX subdivisions, `$6`/880 linkage, `$8`, padded and empty subfields, and the fields the `Record` properties read (pymarc oracle) | 3 |
 
 Benchmark fixtures in `tests/data/fixtures/`:
 

@@ -315,7 +315,7 @@ class TestFormatConversionWrapping:
 
         record = marcjson_to_record(self._make_marcjson())
         assert record.title == "Test title /"
-        assert record.subjects == ["Testing."]
+        assert [f["a"] for f in record.subjects] == ["Testing."]
 
     def test_json_to_record_returns_wrapped_record(self):
         """Test that json_to_record returns a wrapped Python Record."""
@@ -786,6 +786,23 @@ class TestFieldConveniences:
         # Get multiple tags at once
         fields = record.get_fields("245", "100", "260")
         assert len(fields) >= 3
+
+    def test_get_fields_mixes_control_and_data_tags(self):
+        """A multi-tag lookup returns control and data fields grouped by tag
+        in argument order, each bound to its own occurrence."""
+        record = Record()
+        record.add_field(Field("001", data="ocm123"))
+        record.add_field(create_field("650", " ", "0", a="First"))
+        record.add_field(create_field("650", " ", "0", a="Second"))
+        record.add_field(create_field("245", "1", "0", a="Title"))
+
+        fields = record.get_fields("650", "001", "999", "245")
+
+        assert [f.tag for f in fields] == ["650", "650", "001", "245"]
+        assert fields[2].data == "ocm123"
+        fields[1]["a"] = "Changed"
+        values = [f["a"] for f in record.get_fields("650")]
+        assert values == ["First", "Changed"]
 
     def test_all_fields_access(self):
         """Test getting all fields at once."""
