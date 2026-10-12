@@ -73,7 +73,7 @@ cargo build --release
 
 ### Python: "No matching distribution found"
 
-Ensure you're using a supported Python version (3.10-3.14) and platform.
+Ensure you're using a supported Python version (3.10-3.15) and platform.
 
 ## Next Steps
 

@@ -857,9 +857,9 @@ Look for the "Python Release to PyPI" workflow:
 ### 8.2 Monitor Build Process
 
 **Wait for**:
-1. **build-release-wheels** job - Builds native wheels for Python 3.10-3.14 on macOS/Ubuntu/Windows (15
+1. **build-release-wheels** job - Builds native wheels for Python 3.10-3.15 on macOS/Ubuntu/Windows (18
    wheels; the macOS wheels are universal2, covering arm64 and Intel)
-2. **build-cross-linux-wheels** job - Cross-compiles aarch64 and i686 Linux wheels for Python 3.10-3.14 (10 wheels)
+2. **build-cross-linux-wheels** job - Cross-compiles aarch64 and i686 Linux wheels for Python 3.10-3.15 (12 wheels)
 3. **build-sdist** / **test-sdist** jobs - Build the source distribution and prove it compiles and
    imports in a clean environment (the fallback for platforms outside the wheel matrix)
 4. **test-release-wheels** / **validate-cross-wheels** / **smoke-test-cross-wheels** jobs - Test
@@ -910,17 +910,17 @@ Should list your new version within 1-2 minutes.
 
 https://pypi.org/project/mrrc/
 
-Should show your new version with wheels for Python 3.10, 3.11, 3.12, 3.13, 3.14 across macOS
+Should show your new version with wheels for Python 3.10, 3.11, 3.12, 3.13, 3.14, 3.15 across macOS
 (universal2: arm64 + Intel), Ubuntu, and Windows, plus cross-compiled aarch64 and i686 Linux
 wheels, plus the source distribution.
 
-**Expected**: 26 files total (25 wheels: 5 Python versions × 3 native platforms + 5 × 2
+**Expected**: 31 files total (30 wheels: 6 Python versions × 3 native platforms + 6 × 2
 cross-compiled Linux targets; plus 1 sdist)
 
 **Checklist**:
 
 - [ ] Version appears on PyPI
-- [ ] All files are present (25 wheels + 1 sdist)
+- [ ] All files are present (30 wheels + 1 sdist)
 - [ ] Documentation is correct
 
 ### 8.5 Verify GitHub Release Created
@@ -1336,7 +1336,7 @@ twine upload dist/mrrc-*.whl
 - [ ] build-release-wheels job passed
 - [ ] test-release-wheels job passed
 - [ ] publish-pypi job completed
-- [ ] PyPI publication verified (25 wheels + 1 sdist present)
+- [ ] PyPI publication verified (30 wheels + 1 sdist present)
 - [ ] crates.io publication verified (manual or CI)
 - [ ] GitHub release created with changelog notes
 - [ ] docs.rs documentation available

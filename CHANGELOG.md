@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   value that doesn't decode, raised under `validation_level="strict_marc"`.
 - Readers take pymarc's `utf8_handling` option: `"strict"` (default), `"replace"` (U+FFFD), or
   `"ignore"` (drop the bytes). Rust readers use `with_utf8_handling`.
+- Wheels for Python 3.15, which is also tested in CI. `pip install mrrc` on 3.15 previously
+  fell back to building from source, which needs a Rust toolchain.
 
 ### Changed
 
