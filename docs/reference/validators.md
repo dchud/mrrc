@@ -136,8 +136,9 @@ validator during parsing; run it yourself when investigating suspect
 records or auditing a corpus.
 
 E301 (`utf8_invalid`) and E302 (`marc8_invalid`) are the encoding
-errors wired into the parser under `validation_level="strict_marc"`:
-they fire when a value's bytes don't decode in the record's encoding.
+errors wired into the parser: they fire when a value's bytes don't
+decode in the record's encoding, E301 under the default
+`utf8_handling="strict"` and E302 under `validation_level="strict_marc"`.
 `EncodingValidator` catches a case they don't: MARC-8 escape sequences
 in text that is otherwise valid UTF-8, such as ASCII switched into
 subscripts or Greek.

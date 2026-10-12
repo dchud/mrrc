@@ -109,21 +109,21 @@ pub enum RecoveryMode {
 ///
 /// Single rule across all readers (bibliographic, authority, holdings):
 /// [`Structural`](Self::Structural) is lossy everywhere;
-/// [`StrictMarc`](Self::StrictMarc) is strict everywhere.
+/// [`StrictMarc`](Self::StrictMarc) is strict everywhere. Invalid UTF-8 is
+/// not governed by the validation level but by [`crate::Utf8Handling`].
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ValidationLevel {
     /// Only ISO 2709 structural errors fire (leader, directory, EOR,
-    /// base address, truncation). UTF-8 and MARC-8 decoding are lossy
-    /// (`U+FFFD` substitution); indicator and subfield-code byte
-    /// validation are skipped. The default — closest to historical
-    /// reader behavior and to pymarc 5.3.1.
+    /// base address, truncation). MARC-8 decoding is lossy (`U+FFFD`
+    /// substitution); indicator and subfield-code byte validation are
+    /// skipped. The default — closest to historical reader behavior and to
+    /// pymarc 5.3.1.
     #[default]
     Structural,
     /// Adds universal byte-level MARC 21 checks: indicator bytes
     /// (`E201` `InvalidIndicator`), subfield-code bytes
-    /// (`E202` `BadSubfieldCode`), strict UTF-8 decoding
-    /// (`E301` `EncodingError`), and strict MARC-8 decoding
+    /// (`E202` `BadSubfieldCode`), and strict MARC-8 decoding
     /// (`E302` `Marc8Error`). Applied uniformly across every reader.
     StrictMarc,
 }

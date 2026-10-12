@@ -102,6 +102,47 @@ pub fn create_realistic_record() -> Record {
     record
 }
 
+#[allow(dead_code)]
+const FIELD_TERMINATOR: u8 = 0x1E;
+#[allow(dead_code)]
+const RECORD_TERMINATOR: u8 = 0x1D;
+
+/// Build one ISO 2709 record. `kind` is leader positions 05-08 (status,
+/// type of record, bibliographic level, type of control) and `coding` is
+/// position 09.
+#[allow(dead_code)]
+pub fn record_bytes(kind: [u8; 4], coding: u8, fields: &[(&str, Vec<u8>)]) -> Vec<u8> {
+    let mut directory = Vec::new();
+    let mut data = Vec::new();
+    for (tag, value) in fields {
+        let start = data.len();
+        data.extend_from_slice(value);
+        data.push(FIELD_TERMINATOR);
+        directory.extend_from_slice(tag.as_bytes());
+        directory.extend_from_slice(format!("{:04}{:05}", data.len() - start, start).as_bytes());
+    }
+    directory.push(FIELD_TERMINATOR);
+    let base = 24 + directory.len();
+    let total = base + data.len() + 1;
+
+    let mut record = format!("{total:05}").into_bytes();
+    record.extend_from_slice(&kind);
+    record.push(coding);
+    record.extend_from_slice(format!("22{base:05}   4500").as_bytes());
+    record.extend_from_slice(&directory);
+    record.extend_from_slice(&data);
+    record.push(RECORD_TERMINATOR);
+    record
+}
+
+/// A data field: two indicators, then `$a` with `value`.
+#[allow(dead_code)]
+pub fn subfield_a(value: &[u8]) -> Vec<u8> {
+    let mut field = b"10\x1Fa".to_vec();
+    field.extend_from_slice(value);
+    field
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

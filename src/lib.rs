@@ -165,7 +165,7 @@ pub use authority_record::{
 };
 pub use authority_writer::AuthorityMarcWriter;
 pub use bibliographic_helpers::{IsbnValidator, PublicationInfo};
-pub use encoding::CharacterCoding;
+pub use encoding::{CharacterCoding, Utf8Handling};
 pub use encoding_validation::{EncodingAnalysis, EncodingValidator};
 pub use error::{BytesNear, ErrorMetadata, MarcError, Result};
 pub use field_linkage::LinkageInfo;
@@ -182,7 +182,7 @@ pub use leader::Leader;
 pub use marc_record::MarcRecord;
 pub use producer_consumer_pipeline::{PipelineConfig, PipelineError, ProducerConsumerPipeline};
 #[doc(hidden)]
-pub use reader::parse_record_from_shared_bytes_with_character_coding;
+pub use reader::parse_record_from_shared_bytes_with_options;
 pub use reader::{MarcReader, parse_record_from_bytes, parse_record_from_shared_bytes};
 pub use record::{Field, FieldBuilder, Record, RecordBuilder, Subfield};
 pub use record_builder_generic::GenericRecordBuilder;

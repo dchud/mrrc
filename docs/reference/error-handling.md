@@ -201,16 +201,8 @@ for record in reader:
     process(record)
 ```
 
-Two documented divergences from pymarc:
+One documented divergence from pymarc:
 
-- **Invalid UTF-8.** In a record whose leader says UTF-8, pymarc's
-  default `utf8_handling="strict"` rejects the record: it yields `None`
-  and `current_exception` holds the `UnicodeDecodeError`. mrrc
-  substitutes `U+FFFD` for the invalid bytes and yields the record, as
-  pymarc does with `utf8_handling="replace"`. To reject such records
-  instead, pass `validation_level="strict_marc"`; with `permissive=True`
-  the record then yields as `None` and `current_exception` holds an
-  `EncodingError` (E301).
 - **`current_chunk` on byte-read errors.** When the underlying read
   of the next record's bytes fails before parsing begins (truncated
   stream, I/O error), `current_chunk` may be `None` even though
@@ -347,19 +339,27 @@ Concretely:
 | Per-tag MARC 21 indicator semantics (E201, e.g. 245 ind1 ∈ {0,1}) | skipped | fires |
 | Subfield-code byte validation (E202) | skipped | fires |
 | MARC 21 leader semantics (E002, e.g. record_status ∈ {a,c,d,n,p}) | skipped | fires |
-| UTF-8 strictness (E301) | lossy decode (`U+FFFD` substitution) across bibliographic + authority + holdings | strict decode raises across all three readers |
+| MARC-8 strictness (E302) | lossy decode (`U+FFFD` substitution) across bibliographic + authority + holdings | strict decode raises across all three readers |
+
+Invalid UTF-8 (E301) is not on this axis. It follows `utf8_handling`,
+pymarc's option: the default `"strict"` makes it an error at both levels,
+as in pymarc, and `"replace"` (`U+FFFD`) or `"ignore"` (drop the bytes)
+suppress it at both. An E301 then goes through `recovery_mode` like any
+other error, so `permissive=True` gives pymarc's result: the record
+yields as `None` with the error in `current_exception`.
 
 ```python
 reader = mrrc.MARCReader(
     file,
     validation_level="structural",   # or "strict_marc"
     recovery_mode="strict",          # or "lenient", "permissive"
+    utf8_handling="strict",          # or "replace", "ignore"
 )
 ```
 
 The two axes compose. `(strict_marc, lenient)` means *I want byte-level
 checks AND I want to keep iterating past one bad record* — strict_marc
-makes E201/E202/E301 fire, lenient absorbs them via the per-stream
+makes E201/E202/E302 fire, lenient absorbs them via the per-stream
 recovery cap.
 
 ## Recovery modes and errors

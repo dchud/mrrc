@@ -7,9 +7,9 @@
 use crate::backend::FILE_READ_BUF_CAPACITY;
 use crate::reader_helpers;
 use crate::wrappers::PyAuthorityRecord;
-use mrrc::CharacterCoding;
 use mrrc::authority_reader::AuthorityMarcReader;
 use mrrc::recovery::{RecoveryMode, ValidationLevel};
+use mrrc::{CharacterCoding, Utf8Handling};
 use pyo3::prelude::*;
 use std::fs::File;
 use std::io::{BufReader, Cursor};
@@ -36,6 +36,7 @@ pub struct PyAuthorityMARCReader {
     recovery_mode: RecoveryMode,
     validation_level: ValidationLevel,
     character_coding: CharacterCoding,
+    utf8_handling: Utf8Handling,
 }
 
 #[pymethods]
@@ -54,6 +55,9 @@ impl PyAuthorityMARCReader {
     ///   'leader' (the default: leader position 09, as pymarc does),
     ///   'utf-8', or 'detect'.
     /// * `force_utf8` - pymarc's spelling of `character_coding='utf-8'`.
+    /// * `utf8_handling` - pymarc's option for invalid UTF-8: 'strict'
+    ///   (the default: an E301 error, handled by `recovery_mode`),
+    ///   'replace' (U+FFFD), or 'ignore' (drop the bytes).
     #[new]
     #[pyo3(signature = (
         source,
@@ -62,6 +66,7 @@ impl PyAuthorityMARCReader {
         validation_level = "structural",
         character_coding = None,
         force_utf8 = false,
+        utf8_handling = "strict",
     ))]
     pub fn new(
         source: &Bound<'_, PyAny>,
@@ -69,10 +74,12 @@ impl PyAuthorityMARCReader {
         validation_level: &str,
         character_coding: Option<&str>,
         force_utf8: bool,
+        utf8_handling: &str,
     ) -> PyResult<Self> {
         let rec_mode = reader_helpers::parse_recovery_mode(recovery_mode)?;
         let val_level = reader_helpers::parse_validation_level(validation_level)?;
         let coding = reader_helpers::parse_character_coding(character_coding, force_utf8)?;
+        let utf8 = reader_helpers::parse_utf8_handling(utf8_handling)?;
 
         // Try file path (str or pathlib.Path)
         if let Some(file) = reader_helpers::try_open_as_path(source)? {
@@ -80,12 +87,14 @@ impl PyAuthorityMARCReader {
             let reader = AuthorityMarcReader::new(file)
                 .with_recovery_mode(rec_mode)
                 .with_validation_level(val_level)
-                .with_character_coding(coding);
+                .with_character_coding(coding)
+                .with_utf8_handling(utf8);
             return Ok(PyAuthorityMARCReader {
                 backend: Some(AuthorityReaderBackend::RustFile(reader)),
                 recovery_mode: rec_mode,
                 validation_level: val_level,
                 character_coding: coding,
+                utf8_handling: utf8,
             });
         }
 
@@ -94,12 +103,14 @@ impl PyAuthorityMARCReader {
             let reader = AuthorityMarcReader::new(Cursor::new(bytes))
                 .with_recovery_mode(rec_mode)
                 .with_validation_level(val_level)
-                .with_character_coding(coding);
+                .with_character_coding(coding)
+                .with_utf8_handling(utf8);
             return Ok(PyAuthorityMARCReader {
                 backend: Some(AuthorityReaderBackend::CursorBackend(reader)),
                 recovery_mode: rec_mode,
                 validation_level: val_level,
                 character_coding: coding,
+                utf8_handling: utf8,
             });
         }
 
@@ -110,6 +121,7 @@ impl PyAuthorityMARCReader {
                 recovery_mode: rec_mode,
                 validation_level: val_level,
                 character_coding: coding,
+                utf8_handling: utf8,
             });
         }
 
@@ -160,7 +172,8 @@ impl PyAuthorityMARCReader {
                         let mut parser = AuthorityMarcReader::new(cursor)
                             .with_recovery_mode(self.recovery_mode)
                             .with_validation_level(self.validation_level)
-                            .with_character_coding(self.character_coding);
+                            .with_character_coding(self.character_coding)
+                            .with_utf8_handling(self.utf8_handling);
                         match parser.read_record() {
                             Ok(Some(record)) => {
                                 self.backend = Some(AuthorityReaderBackend::PythonFile(py_obj));

@@ -8,6 +8,7 @@
 use crate::backend::ReaderBackend;
 use crate::batched_reader::{BatchedReader, RecordOutcome};
 use crate::wrappers::PyRecord;
+use mrrc::iso2709_skeleton::ParseOptions;
 use pyo3::prelude::*;
 
 /// Python wrapper for `MarcReader` with efficient GIL management
@@ -118,6 +119,9 @@ impl PyMARCReader {
     ///   'leader' (the default: leader position 09, as pymarc does),
     ///   'utf-8', or 'detect'.
     /// * `force_utf8` - pymarc's spelling of `character_coding='utf-8'`.
+    /// * `utf8_handling` - pymarc's option for invalid UTF-8: 'strict'
+    ///   (the default: an E301 error, handled by `recovery_mode`),
+    ///   'replace' (U+FFFD), or 'ignore' (drop the bytes).
     #[new]
     #[pyo3(signature = (
         source,
@@ -127,7 +131,9 @@ impl PyMARCReader {
         max_errors = None,
         character_coding = None,
         force_utf8 = false,
+        utf8_handling = "strict",
     ))]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         source: &Bound<'_, PyAny>,
         recovery_mode: &str,
@@ -135,10 +141,12 @@ impl PyMARCReader {
         max_errors: Option<usize>,
         character_coding: Option<&str>,
         force_utf8: bool,
+        utf8_handling: &str,
     ) -> PyResult<Self> {
         let rec_mode = crate::reader_helpers::parse_recovery_mode(recovery_mode)?;
         let val_level = crate::reader_helpers::parse_validation_level(validation_level)?;
         let coding = crate::reader_helpers::parse_character_coding(character_coding, force_utf8)?;
+        let utf8 = crate::reader_helpers::parse_utf8_handling(utf8_handling)?;
 
         // One backend handles every source: str/path → RustFile, bytes →
         // Cursor, any .read() object → chunked Python-file. A bad path or
@@ -146,7 +154,15 @@ impl PyMARCReader {
         // …) here at construction.
         let backend = ReaderBackend::from_python(source, source.py(), rec_mode)?;
         Ok(PyMARCReader {
-            reader: Some(BatchedReader::new(backend, rec_mode, val_level, coding)),
+            reader: Some(BatchedReader::new(
+                backend,
+                ParseOptions {
+                    recovery_mode: rec_mode,
+                    validation_level: val_level,
+                    character_coding: coding,
+                    utf8_handling: utf8,
+                },
+            )),
             max_errors,
             accumulated_errors: 0,
             records_yielded: 0,

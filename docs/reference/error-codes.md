@@ -427,21 +427,24 @@ position 09 is `a`, or when the reader's `character_coding` says so (see
 
 **Context:** Parse-side (or wherever a string conversion runs).
 **Applies to:** Bibliographic, authority, and holdings readers — fired
-uniformly when `validation_level="strict_marc"` and a value contains
-bytes that aren't valid UTF-8. At the default `validation_level="structural"`
-all three readers fall back to lossy decoding (`U+FFFD` substitution)
-and don't surface this code.
+uniformly, at every validation level, when a value contains bytes that
+aren't valid UTF-8 under the default `utf8_handling="strict"` (Rust:
+`Utf8Handling::Strict`), as pymarc's default does. `utf8_handling="replace"`
+substitutes `U+FFFD` and `"ignore"` drops the bytes; neither surfaces this
+code.
 **Populates:** `record_index`. May also populate: `field_tag`,
 `byte_offset`, `source`, `record_control_number`. The `message` attribute
 carries the underlying `std::str::Utf8Error` description.
 
 **Common causes.** Records cataloged in MARC-8 encoding without correct
 character-coding leader byte; legacy records with embedded byte sequences
-that valid in MARC-8 but not in UTF-8.
+that are valid in MARC-8 but not in UTF-8.
 
-**How to recover.** Convert input to UTF-8 before parsing, or set
-`validation_level="structural"` if you can tolerate `U+FFFD` substitutions
-and don't need byte-perfect fidelity.
+**How to recover.** Pass `utf8_handling="replace"` to accept `U+FFFD`
+substitutions, or `"ignore"` to drop the invalid bytes. Under the default
+recovery mode, the field holding the bad bytes is dropped and the error
+recorded on `record.errors`. Convert input to UTF-8 before parsing if you
+need byte-perfect fidelity.
 
 **Python class:** `mrrc.EncodingError`.
 
