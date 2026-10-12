@@ -111,34 +111,36 @@ yourself when ISBN integrity matters for your pipeline.
 
 ### `EncodingValidator`
 
-Heuristic detection of mixed encodings within a single record — e.g.,
-a leader that declares UTF-8 but data fields containing MARC-8 escape
-sequences, or vice versa.
+Detects MARC-8 data whose leader declares UTF-8: after such a record
+is decoded as UTF-8, its MARC-8 escape sequences survive as literal ESC
+(0x1B) characters, and the validator reports the fields holding them.
+The declared encoding follows the readers' rule for leader position 09
+(`a` is UTF-8, any other value MARC-8).
 
 ```rust
-use mrrc::{EncodingValidator, EncodingAnalysis};
+use mrrc::{EncodingAnalysis, EncodingValidator};
 
 match EncodingValidator::analyze_encoding(&record)? {
-    EncodingAnalysis::Consistent(enc) => { /* OK */ }
     EncodingAnalysis::Mixed { primary, secondary, field_count } => {
-        // Some fields look like a different encoding than the leader claims.
+        // `field_count` values hold MARC-8 escape sequences.
     }
-    EncodingAnalysis::Undetermined => { /* not enough signal */ }
+    _ => { /* no mismatch visible in the decoded values */ }
 }
 ```
 
-The analysis is heuristic — it counts high bytes, escape sequences,
-and valid UTF-8 multibyte starts to estimate per-field encoding. mrrc
-deliberately does not run it during parsing: it's not deterministic,
-and `validation_level="strict_marc"` should fail the same way every
-time on the same input. Run `EncodingValidator` yourself when
-investigating suspect records or auditing a corpus.
+The validator works on decoded values, so it can't detect UTF-8 data
+whose leader declares MARC-8: the reader has already decoded that as
+MARC-8. Read such files with `character_coding="detect"` instead, which
+checks each record's bytes before decoding. mrrc doesn't run the
+validator during parsing; run it yourself when investigating suspect
+records or auditing a corpus.
 
-E301 (`utf8_invalid`) is the *deterministic* encoding error wired into
-the parser — it fires when bytes flagged for UTF-8 decoding are not
-valid UTF-8. `EncodingValidator` is broader: it can flag a record
-whose bytes *are* valid UTF-8 but disagree with what the leader
-claims.
+E301 (`utf8_invalid`) and E302 (`marc8_invalid`) are the encoding
+errors wired into the parser under `validation_level="strict_marc"`:
+they fire when a value's bytes don't decode in the record's encoding.
+`EncodingValidator` catches a case they don't: MARC-8 escape sequences
+in text that is otherwise valid UTF-8, such as ASCII switched into
+subscripts or Greek.
 
 ## See also
 

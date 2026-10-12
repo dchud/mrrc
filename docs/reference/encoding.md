@@ -117,8 +117,9 @@ Check a record's declared encoding via the leader:
     ```rust
     use mrrc::encoding::MarcEncoding;
 
-    // Leader position 9 (`character_coding`) declares the scheme
-    let encoding = MarcEncoding::from_leader_char(record.leader.character_coding)?;
+    // Leader position 9 (`character_coding`) declares the scheme, by the rule
+    // the readers use: `a` is UTF-8 and any other value is MARC-8
+    let encoding = MarcEncoding::declared_by_leader(record.leader.character_coding);
     match encoding {
         MarcEncoding::Utf8 => println!("UTF-8"),
         MarcEncoding::Marc8 => println!("MARC-8"),
@@ -177,28 +178,24 @@ currently supported.
 
 ## Mixed Encoding Handling
 
-Some legacy records have inconsistent encoding - the leader says MARC-8 but some fields contain UTF-8 (or vice versa).
+Some legacy records have inconsistent encoding: the leader says MARC-8 but the data is UTF-8, or the other way round.
 
-In Rust, the encoding validator can detect this programmatically:
+UTF-8 data labelled MARC-8 is the common case. Read such files with `character_coding="detect"` (see [Choosing the Encoding](#choosing-the-encoding)), which checks each record's bytes before decoding it.
+
+MARC-8 data labelled UTF-8 is decoded as UTF-8, so its escape sequences survive as literal ESC characters and its diacritics become `U+FFFD` (or raise E301 under `validation_level="strict_marc"`). In Rust, the encoding validator flags such records after reading:
 
 ```rust
-use mrrc::encoding::EncodingValidator;
+use mrrc::{EncodingAnalysis, EncodingValidator};
 
-let analysis = EncodingValidator::analyze_encoding(&record)?;
-match analysis {
-    EncodingAnalysis::Consistent(enc) => {
-        println!("Consistent encoding: {:?}", enc);
-    }
+match EncodingValidator::analyze_encoding(&record)? {
     EncodingAnalysis::Mixed { primary, .. } => {
-        println!("Warning: mixed encoding detected");
+        println!("Warning: MARC-8 escape sequences in a record declared {:?}", primary);
     }
-    EncodingAnalysis::Undetermined => {
-        println!("Could not determine encoding");
-    }
+    _ => {}
 }
 ```
 
-In Python, MRRC handles encoding conversion automatically when reading records. For a file that mixes MARC-8 records with UTF-8 records labelled MARC-8, read with `character_coding="detect"` (see [Choosing the Encoding](#choosing-the-encoding)). If you encounter other encoding issues, check the leader's `character_coding` property and compare it with the actual content.
+The validator works on decoded values, so it can't see UTF-8 data labelled MARC-8: by then the reader has decoded it as MARC-8. Use `character_coding="detect"` for that case. If you encounter other encoding issues, check the leader's `character_coding` property and compare it with the actual content.
 
 ## Common Issues
 

@@ -44,6 +44,19 @@ impl MarcEncoding {
         }
     }
 
+    /// The encoding a leader position 09 value declares, by the rule the
+    /// readers use (pymarc's): `a` is UTF-8 and any other value is MARC-8.
+    /// Unlike [`MarcEncoding::from_leader_char`], values other than ' ' and
+    /// `a` are not an error.
+    #[must_use]
+    pub fn declared_by_leader(position_09: char) -> Self {
+        if position_09 == 'a' {
+            MarcEncoding::Utf8
+        } else {
+            MarcEncoding::Marc8
+        }
+    }
+
     /// Get the leader character for this encoding
     #[must_use]
     pub fn as_leader_char(&self) -> char {
@@ -78,11 +91,7 @@ impl CharacterCoding {
     /// 09 and the record's field data (directory excluded).
     #[must_use]
     pub(crate) fn resolve(self, position_09: char, field_data: &[u8]) -> MarcEncoding {
-        let from_leader = if position_09 == 'a' {
-            MarcEncoding::Utf8
-        } else {
-            MarcEncoding::Marc8
-        };
+        let from_leader = MarcEncoding::declared_by_leader(position_09);
         match self {
             CharacterCoding::Leader => from_leader,
             CharacterCoding::Utf8 => MarcEncoding::Utf8,
