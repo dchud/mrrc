@@ -49,8 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `record_type()` and the repr read, and it can be assigned.
 - `EncodingValidator::analyze_encoding` follows the readers' leader position 09 rule instead of
   failing on values other than space and `a`, no longer reports correctly decoded MARC-8 records
-  with non-ASCII text as mixed, and flags MARC-8 escape sequences in a UTF-8 record even when it
-  also holds `U+FFFD`. `MarcEncoding::declared_by_leader` exposes the position 09 rule.
+  with non-ASCII text as mixed, and flags every value in a UTF-8 record that holds a MARC-8 escape
+  character, including one that also holds `U+FFFD` or ends in ESC.
+  `MarcEncoding::declared_by_leader` exposes the position 09 rule.
 
 ### Performance
 

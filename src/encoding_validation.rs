@@ -51,36 +51,17 @@ impl EncodingValidator {
         let mut mixed_encodings = Vec::new();
         let mut inconsistent_field_count = 0usize;
 
-        // Check control fields
-        for values in record.control_fields.values() {
-            for value in values {
-                if Self::is_likely_different_encoding(value, primary_encoding) {
-                    inconsistent_field_count += 1;
-                    let detected = Self::detect_encoding_from_string(value);
-                    if let Some(enc) = detected
-                        && enc != primary_encoding
-                        && !mixed_encodings.contains(&enc)
-                    {
-                        mixed_encodings.push(enc);
-                    }
-                }
-            }
-        }
-
-        // Check data fields and subfields
-        for fields in record.fields.values() {
-            for field in fields {
-                for subfield in &field.subfields {
-                    if Self::is_likely_different_encoding(&subfield.value, primary_encoding) {
-                        inconsistent_field_count += 1;
-                        let detected = Self::detect_encoding_from_string(&subfield.value);
-                        if let Some(enc) = detected
-                            && enc != primary_encoding
-                            && !mixed_encodings.contains(&enc)
-                        {
-                            mixed_encodings.push(enc);
-                        }
-                    }
+        let control_values = record.control_fields.values().flatten();
+        let subfield_values = record
+            .fields
+            .values()
+            .flatten()
+            .flat_map(|field| field.subfields.iter().map(|subfield| &subfield.value));
+        for value in control_values.chain(subfield_values) {
+            if let Some(enc) = Self::other_encoding_in(value, primary_encoding) {
+                inconsistent_field_count += 1;
+                if !mixed_encodings.contains(&enc) {
+                    mixed_encodings.push(enc);
                 }
             }
         }
@@ -96,53 +77,17 @@ impl EncodingValidator {
         }
     }
 
-    /// Check if a decoded value shows signs of an encoding other than the
-    /// one it was decoded in.
-    fn is_likely_different_encoding(data: &str, expected: MarcEncoding) -> bool {
-        match expected {
+    /// The encoding a decoded value shows signs of, if it differs from the
+    /// one the value was decoded in.
+    fn other_encoding_in(data: &str, decoded_as: MarcEncoding) -> Option<MarcEncoding> {
+        match decoded_as {
             // MARC-8 escape sequences survive decoding as UTF-8 (ESC is
             // ASCII), while the MARC-8 diacritics around them become U+FFFD.
-            MarcEncoding::Utf8 => contains_escape_sequences(data),
+            MarcEncoding::Utf8 => contains_escape_sequences(data).then_some(MarcEncoding::Marc8),
             // Decoded MARC-8 legitimately holds non-ASCII characters, and the
             // decoder consumes escape sequences, so nothing in the text can
             // reveal a different encoding.
-            MarcEncoding::Marc8 => false,
-        }
-    }
-
-    /// Attempt to detect the encoding used in a string
-    fn detect_encoding_from_string(s: &str) -> Option<MarcEncoding> {
-        let bytes = s.as_bytes();
-
-        // Check for UTF-8 multibyte sequences
-        let utf8_indicator_count = count_utf8_indicators(bytes);
-
-        // Check for MARC-8 escape sequences
-        let marc8_escape_count = bytes.windows(2).filter(|w| w[0] == 0x1B).count();
-
-        // Check for actual valid UTF-8 encoding of high bytes
-        let mut has_valid_utf8 = false;
-        let mut i = 0;
-        while i < bytes.len() {
-            let b = bytes[i];
-            if b >= 0xC0 {
-                // Potential UTF-8 multibyte start
-                let len = utf8_sequence_length(b);
-                if len > 1 && i + len <= bytes.len() && is_valid_utf8_sequence(&bytes[i..i + len]) {
-                    has_valid_utf8 = true;
-                    i += len;
-                    continue;
-                }
-            }
-            i += 1;
-        }
-
-        if marc8_escape_count > 0 {
-            Some(MarcEncoding::Marc8)
-        } else if utf8_indicator_count > 2 || has_valid_utf8 {
-            Some(MarcEncoding::Utf8)
-        } else {
-            None
+            MarcEncoding::Marc8 => None,
         }
     }
 
@@ -173,47 +118,6 @@ impl EncodingValidator {
 /// Check if a string contains MARC-8 escape sequences
 fn contains_escape_sequences(s: &str) -> bool {
     s.as_bytes().contains(&0x1B)
-}
-
-/// Get the expected length of a UTF-8 sequence from the first byte
-fn utf8_sequence_length(first_byte: u8) -> usize {
-    match first_byte {
-        0xC0..=0xDF => 2,
-        0xE0..=0xEF => 3,
-        0xF0..=0xF7 => 4,
-        _ => 1,
-    }
-}
-
-/// Check if a byte sequence is a valid UTF-8 sequence
-fn is_valid_utf8_sequence(bytes: &[u8]) -> bool {
-    if bytes.is_empty() {
-        return false;
-    }
-
-    let first = bytes[0];
-    let expected_len = utf8_sequence_length(first);
-
-    if bytes.len() != expected_len {
-        return false;
-    }
-
-    // Check continuation bytes
-    for (i, &byte) in bytes.iter().enumerate() {
-        if i == 0 {
-            continue; // First byte already checked
-        }
-        if (byte & 0xC0) != 0x80 {
-            return false; // Invalid continuation byte
-        }
-    }
-
-    true
-}
-
-/// Count indicators of UTF-8 multibyte characters
-fn count_utf8_indicators(bytes: &[u8]) -> usize {
-    bytes.iter().filter(|&&b| matches!(b, 0xC0..=0xF7)).count()
 }
 
 #[cfg(test)]
@@ -269,40 +173,23 @@ mod tests {
     }
 
     #[test]
-    fn test_utf8_sequence_length() {
-        assert_eq!(utf8_sequence_length(0x41), 1); // 'A'
-        assert_eq!(utf8_sequence_length(0xC0), 2); // 2-byte
-        assert_eq!(utf8_sequence_length(0xE0), 3); // 3-byte
-        assert_eq!(utf8_sequence_length(0xF0), 4); // 4-byte
-    }
-
-    #[test]
-    fn test_is_valid_utf8_sequence() {
-        assert!(is_valid_utf8_sequence(b"A")); // 1-byte
-        assert!(is_valid_utf8_sequence(&[0xC3, 0xA9])); // é in UTF-8
-        assert!(is_valid_utf8_sequence(&[0xE2, 0x82, 0xAC])); // € in UTF-8
-        assert!(!is_valid_utf8_sequence(&[0xC3])); // Incomplete
-        assert!(!is_valid_utf8_sequence(&[0xC3, 0x28])); // Invalid continuation
+    fn test_utf8_record_with_trailing_escape_is_mixed() {
+        // An escape sequence cut off by the end of the value leaves ESC as
+        // its last character.
+        let record = record_with('a', "Title \x1B");
+        assert_eq!(
+            EncodingValidator::analyze_encoding(&record).unwrap(),
+            EncodingAnalysis::Mixed {
+                primary: MarcEncoding::Utf8,
+                secondary: vec![MarcEncoding::Marc8],
+                field_count: 1,
+            }
+        );
     }
 
     #[test]
     fn test_contains_escape_sequences() {
         assert!(contains_escape_sequences("test\x1Btest"));
         assert!(!contains_escape_sequences("test"));
-    }
-
-    #[test]
-    fn test_detect_encoding_utf8() {
-        let utf8_str = "café"; // Contains UTF-8 encoded character
-        let result = EncodingValidator::detect_encoding_from_string(utf8_str);
-        assert_eq!(result, Some(MarcEncoding::Utf8));
-    }
-
-    #[test]
-    fn test_detect_encoding_ascii() {
-        let ascii_str = "test";
-        let result = EncodingValidator::detect_encoding_from_string(ascii_str);
-        // ASCII alone is ambiguous
-        assert!(result.is_none() || result == Some(MarcEncoding::Utf8));
     }
 }
