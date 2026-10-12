@@ -67,9 +67,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
-- The Rust doc examples are compile-checked: 119 of the 120 previously ignored examples now
-  build under `cargo test --doc`. Several of them documented methods that do not exist or take
-  different arguments than shown; those are corrected.
+- The Rust examples in the API documentation (doc comments in `src/`) are compile-checked: 119
+  of the 120 previously ignored examples now build under `cargo test --doc`. Several of them
+  documented methods that do not exist or take different arguments than shown; those are
+  corrected.
 
 ### Dependencies
 
