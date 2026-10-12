@@ -48,19 +48,7 @@ BIBFRAME support is included in MRRC by default for both Rust and Python. No fea
 === "Rust"
 
     ```rust
-    use mrrc::MarcReader;
-    use mrrc::bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat};
-    use std::fs::File;
-
-    let mut reader = MarcReader::new(File::open("records.mrc")?);
-    while let Some(record) = reader.read_record()? {
-        let config = BibframeConfig::default();
-        let graph = marc_to_bibframe(&record, &config);
-
-        // Serialize to Turtle format
-        let turtle = graph.serialize(RdfFormat::Turtle)?;
-        println!("{}", turtle);
-    }
+    --8<-- "doc_examples/bibframe_conversion.rs:marc-to-bibframe"
     ```
 
 ### BIBFRAME to MARC
@@ -84,10 +72,7 @@ BIBFRAME support is included in MRRC by default for both Rust and Python. No fea
 === "Rust"
 
     ```rust
-    use mrrc::bibframe::{bibframe_to_marc, RdfGraph, RdfFormat};
-
-    let graph = RdfGraph::parse(&turtle_string, RdfFormat::Turtle)?;
-    let record = bibframe_to_marc(&graph)?;
+    --8<-- "doc_examples/bibframe_conversion.rs:bibframe-to-marc"
     ```
 
 ## Configuration Options
@@ -112,10 +97,7 @@ Set a base URI for generated entity URIs:
 === "Rust"
 
     ```rust
-    let config = BibframeConfig {
-        base_uri: Some("http://library.example.org/bibframe/".to_string()),
-        ..Default::default()
-    };
+    --8<-- "doc_examples/bibframe_conversion.rs:base-uri"
     ```
 
 Without a base URI, MRRC uses blank nodes (`_:work1`, `_:instance1`), which is valid RDF.
@@ -156,12 +138,7 @@ Serialize the BIBFRAME graph to different RDF formats:
 === "Rust"
 
     ```rust
-    use mrrc::bibframe::RdfFormat;
-
-    let rdf_xml = graph.serialize(RdfFormat::RdfXml)?;
-    let turtle = graph.serialize(RdfFormat::Turtle)?;
-    let jsonld = graph.serialize(RdfFormat::JsonLd)?;
-    let ntriples = graph.serialize(RdfFormat::NTriples)?;
+    --8<-- "doc_examples/bibframe_conversion.rs:serialization-formats"
     ```
 
 ### Format Selection Guide
@@ -195,23 +172,7 @@ Process multiple records efficiently:
 === "Rust"
 
     ```rust
-    use mrrc::MarcReader;
-    use mrrc::bibframe::{marc_to_bibframe, BibframeConfig, RdfFormat};
-    use std::fs::File;
-    use std::io::Write;
-
-    let config = BibframeConfig {
-        base_uri: Some("http://library.example.org/".to_string()),
-        ..Default::default()
-    };
-
-    let mut reader = MarcReader::new(File::open("large_file.mrc")?);
-    let mut out = File::create("output.ttl")?;
-
-    while let Some(record) = reader.read_record()? {
-        let graph = marc_to_bibframe(&record, &config);
-        writeln!(out, "{}", graph.serialize(RdfFormat::Turtle)?)?;
-    }
+    --8<-- "doc_examples/bibframe_conversion.rs:batch-conversion"
     ```
 
 ## MARC Field Mappings

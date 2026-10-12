@@ -7,6 +7,8 @@ on:
       - 'docs/**'
       - 'mkdocs.yml'
       - 'README.md'
+      # The Rust code blocks on the site are included from here.
+      - 'tests/**.rs'
   workflow_dispatch:
 
 permissions:

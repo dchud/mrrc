@@ -54,9 +54,7 @@ print(leader.record_type)  # 'a' for language material
 
 **Rust:**
 ```rust
-let leader = &record.leader;
-println!("{}", leader.record_status);
-println!("{}", leader.record_type);
+--8<-- "doc_examples/marc_primer.rs:leader"
 ```
 
 ### Directory
@@ -88,9 +86,7 @@ print(control_number.data)  # "ocm12345678"
 
 **Rust:**
 ```rust
-if let Some(data) = record.get_control_field("001") {
-    println!("{}", data);
-}
+--8<-- "doc_examples/marc_primer.rs:control-fields"
 ```
 
 ### Data Fields (010-999)
@@ -139,11 +135,7 @@ if title_field:
 
 **Rust:**
 ```rust
-if let Some(field) = record.get_field("245") {
-    println!("{:?}", field.get_subfield('a'));
-    println!("{:?}", field.get_subfield('b'));
-    println!("Indicators: {} {}", field.indicator1, field.indicator2);
-}
+--8<-- "doc_examples/marc_primer.rs:subfields"
 ```
 
 ## Common Fields
@@ -222,13 +214,7 @@ print(record.isbn)
 
 **Rust:**
 ```rust
-use mrrc::RecordHelpers;
-
-println!("{:?}", record.title());
-println!("{:?}", record.author());
-for isbn in record.isbns() {
-    println!("{}", isbn);
-}
+--8<-- "doc_examples/marc_primer.rs:helper-methods"
 ```
 
 ## Character Encoding

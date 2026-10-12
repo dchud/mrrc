@@ -303,7 +303,7 @@ records = mrrc.read_all("records.mrc")   # list[Record]; boundary scan + paralle
 **Boundary shape.** The wrapper's `__next__` pops from a Python-side buffer refilled by a single
 Rust call per batch, so the boundary is crossed once per ~200 records instead of once per record:
 
-```rust
+```text
 /// One crossing per batch. Parse happens inside one GIL release (optionally
 /// rayon-parallel for file/bytes backends); the whole batch is materialized
 /// as Python objects under a single GIL hold. RecordOutcome (batched_reader.rs)
@@ -369,7 +369,7 @@ generation}` (a detached field holds an owned `Field` instead). Every operation 
 targeted Rust call that borrows the record and returns only the requested scalar — no field is
 ever materialized to answer `f["a"]`:
 
-```rust
+```text
 // Reads borrow the record in place; nothing is cloned but the returned value.
 fn subfield_first(&self, py: Python<'_>, code: char) -> PyResult<Option<String>>
 fn indicator1(&self, py: Python<'_>) -> PyResult<String>
@@ -455,7 +455,7 @@ stragglers to one convention while at it: string/bytes in, string/bytes out at t
 (`marcjson_to_record` gains the str entry point `bd-c5sh` asks about; typed intermediates like
 `serde_json::Value` and `DublinCoreRecord` stay available in the per-format modules).
 
-```rust
+```text
 #[non_exhaustive]
 pub enum Format { Iso2709, Json, MarcJson, MarcXml, Mods, DublinCore, Csv, Bibframe }
 
@@ -569,7 +569,7 @@ construction is the irreducible cost left after Proposal 1.
 (`src/lib.rs:160-189`) and instead re-exports the prelude tier only, everything else reachable
 through the module tree:
 
-```rust
+```text
 pub mod prelude {
     pub use crate::{Record, Field, Subfield, Leader, MarcReader, MarcWriter,
                     MarcError, Result, RecoveryMode, query::RecordQueryExt};

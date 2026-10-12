@@ -33,16 +33,7 @@ how to benchmark mrrc on your own hardware and data.
 === "Rust"
 
     ```rust
-    use mrrc::{MarcReader, RecordHelpers};
-    use std::fs::File;
-
-    let file = File::open("records.mrc")?;
-    let mut reader = MarcReader::new(file);
-    while let Some(record) = reader.read_record()? {
-        if let Some(title) = record.title() {
-            println!("{}", title);
-        }
-    }
+    --8<-- "doc_examples/index.rs:quick-example"
     ```
 
 ## Getting Started

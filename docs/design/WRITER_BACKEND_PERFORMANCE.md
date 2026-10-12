@@ -155,7 +155,7 @@ The fact that 2 and 4 threads complete **without deadlock** proves:
 
 The three-phase pattern successfully separates concerns:
 
-```rust
+```text
 // PHASE 1: GIL held
 // - Extract Python object references
 // - Copy to Rust-owned data
