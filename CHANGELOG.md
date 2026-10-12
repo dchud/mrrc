@@ -38,9 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A default leader now declares Unicode (position 09 = `a`) instead of MARC-8. `MarcWriter`
   serializes field values as UTF-8, so records built from `Leader::default()` or Python's
   `mrrc.Leader()` previously went out claiming an encoding they were not in.
-- Compile-check the Rust doc examples: 119 of the 120 previously ignored examples now build
-  under `cargo test --doc`. Several of them documented methods that do not exist or take
-  different arguments than shown; those are corrected.
 - The ISO 2709 writers (bibliographic, authority, holdings) set leader position 09 to `a` on
   output, since they always write UTF-8. A record whose leader said MARC-8 was previously
   written with UTF-8 bytes and a MARC-8 label.
@@ -63,7 +60,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
+- Python: records are freed as soon as nothing refers to them. A record and its leader referred
+  to each other, so records, including every record a reader returned, stayed in memory until
+  the cycle collector ran. Readers also no longer build a `Leader` object for each record until
+  `record.leader` is read.
+
 ### Documentation
+
+- The Rust doc examples are compile-checked: 119 of the 120 previously ignored examples now
+  build under `cargo test --doc`. Several of them documented methods that do not exist or take
+  different arguments than shown; those are corrected.
 
 ### Dependencies
 
@@ -79,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump indexmap from 2.14.0 to 2.14.2
 - Bump mkdocs-material from 9.7.6 to 9.7.7
 - Bump mypy from 2.3.0 to 2.3.1
+- Bump oxrdf from 0.3.3 to 0.3.4
 - Bump oxrdfio from 0.2.5 to 0.2.6
 - Bump pymdown-extensions from 11.0.1 to 12.0.1
 - Bump pyo3 from 0.29.0 to 0.29.2
