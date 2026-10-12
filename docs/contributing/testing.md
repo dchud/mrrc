@@ -107,6 +107,7 @@ Benchmark fixtures in `tests/data/fixtures/`:
 
 ```
 tests/
+├── doc_examples/               # Rust code shown on the documentation site
 ├── python/
 │   ├── test_reader.py          # MARCReader tests
 │   ├── test_writer.py          # MARCWriter tests
@@ -124,16 +125,7 @@ tests/
 ### Rust Test Example
 
 ```rust
-use mrrc::{MarcReader, RecordHelpers};
-use std::io::Cursor;
-
-#[test]
-fn test_parse_simple_record() {
-    let data = include_bytes!("../tests/data/simple_book.mrc");
-    let mut reader = MarcReader::new(Cursor::new(&data[..]));
-    let record = reader.read_record().unwrap().unwrap();
-    assert_eq!(record.title(), Some("Test Title"));
-}
+--8<-- "doc_examples/testing.rs:rust-test-example"
 ```
 
 ### Python Test Example
@@ -148,6 +140,98 @@ def test_read_simple_record():
         record = next(reader)
         assert record.title is not None
 ```
+
+## Rust Examples on the Documentation Site
+
+Every Rust code block on the documentation site is compiled. The code lives in
+`tests/doc_examples/`, an integration test target, and the pages include it
+with the
+[snippets](https://facelessuser.github.io/pymdown-extensions/extensions/snippets/)
+extension. When an API change breaks an example, `cargo test` and Clippy fail,
+and fixing the code in `tests/doc_examples/` fixes the page.
+
+**Where the code lives.** The code for `docs/<section>/<page>.md` is in
+`tests/doc_examples/<page>.rs`, with hyphens in the page name written as
+underscores, and `tests/doc_examples/main.rs` declares the file with
+`mod <page>;`. Each code block on the page is a named section of that file: the
+lines between `// --8<-- [start:<name>]` and `// --8<-- [end:<name>]`. The page
+shows a section with an include line in a `rust` fence:
+
+````markdown
+```rust
+;--8<-- "doc_examples/reading_records.rs:basic-reading"
+```
+````
+
+Include paths are relative to `tests/`, so a page can also show a section of a
+top-level test file, as the [fuzzing guide](fuzzing.md) does with
+`fuzz_regressions.rs:harness`.
+
+**Code around a section.** Only the lines between the markers appear on the
+page, with their common indentation removed. The code around them supplies what
+the page's prose defines. A fragment that uses a `record` (or a `leader`, a
+`graph`, a `file`) sits in a function that takes it as a parameter, returning
+`mrrc::Result<()>` when the fragment uses `?`. A complete program, with its own
+`use` lines and `fn main`, sits in a module of its own:
+
+```text
+fn access_fields(record: Record) {
+    // ;--8<-- [start:access-fields]
+    use mrrc::RecordHelpers;
+
+    println!("Title: {:?}", record.title());
+    // ;--8<-- [end:access-fields]
+}
+
+mod read_records {
+    // ;--8<-- [start:read-records]
+    use mrrc::{MarcReader, RecordHelpers};
+    use std::fs::File;
+
+    fn main() -> mrrc::Result<()> {
+        ...
+    }
+    // ;--8<-- [end:read-records]
+}
+```
+
+Put the `use` lines a reader needs inside the section, so the code on the page
+can be copied as it stands. Code outside the sections (fixtures, attributes,
+helper functions) stays off the page.
+
+**Running the examples.** `cargo test --test doc_examples` compiles every
+example and runs the ones that can run against the test fixtures: fragments
+that take a record are called with each record in
+`tests/data/fixtures/fidelity_test_100.mrc`. Complete programs that open files
+such as `records.mrc` are compiled but not run. Clippy checks the examples with
+the workspace's pedantic lints; `main.rs` allows the few that page-shaped code
+trips, with the reason for each.
+
+**The lint.** `scripts/lint_doc_examples.py` runs in `.cargo/check.sh` and in
+the Docs Build Check workflow. It fails when:
+
+- a `rust` (or `rs`) fence on a page the site builds holds anything but include
+  lines;
+- an include names a file that is not compiled (a top-level `tests/*.rs` file,
+  or a `tests/doc_examples/` file declared in `main.rs`), or a section the file
+  does not define;
+- a section has no matching end marker;
+- a file in `tests/doc_examples/` is not declared in `main.rs`;
+- a section is not shown on any page.
+
+There is no exemption marker. Code that is deliberately not compilable Rust,
+such as a signature listing, pseudo-code, or a compiler error message, goes in a
+`text` fence. With `check_paths` set in `mkdocs.yml`, `mkdocs build` also fails
+on a missing file or section.
+
+**To add or change an example:**
+
+1. Write or edit the section in `tests/doc_examples/<page>.rs` (create the file
+   and declare it in `main.rs` for a page that has no Rust code yet).
+2. Put the include line in the page.
+3. Run `cargo test --test doc_examples`, `python3
+   scripts/lint_doc_examples.py`, and `uv run mkdocs build --strict` (all part of
+   `.cargo/check.sh`), and check the page with `uv run mkdocs serve`.
 
 ## Memory safety checks
 

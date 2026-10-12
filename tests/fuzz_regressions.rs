@@ -13,6 +13,7 @@ use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
 
+// --8<-- [start:harness]
 fn fixtures_dir(target: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/data/fuzz-regressions")
@@ -48,6 +49,7 @@ fn parse_record_regressions() {
         while let Ok(Some(_)) = reader.read_record() {}
     }
 }
+// --8<-- [end:harness]
 
 /// `roundtrip_binary` asserts only that the reader → writer → reader
 /// pipeline does not panic. Mirrors

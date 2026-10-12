@@ -37,13 +37,7 @@ UTF-8 is the recommended encoding for new records. It supports all Unicode chara
 === "Rust"
 
     ```rust
-    use mrrc::{MarcReader, RecordHelpers};
-
-    let mut reader = MarcReader::new(file);
-    while let Some(record) = reader.read_record()? {
-        // All strings are Rust String (UTF-8)
-        println!("{:?}", record.title());
-    }
+    --8<-- "doc_examples/encoding.rs:reading-utf8"
     ```
 
 ## MARC-8 (Legacy)
@@ -115,15 +109,7 @@ Check a record's declared encoding via the leader:
 === "Rust"
 
     ```rust
-    use mrrc::encoding::MarcEncoding;
-
-    // Leader position 9 (`character_coding`) declares the scheme, by the rule
-    // the readers use: `a` is UTF-8 and any other value is MARC-8
-    let encoding = MarcEncoding::declared_by_leader(record.leader.character_coding);
-    match encoding {
-        MarcEncoding::Utf8 => println!("UTF-8"),
-        MarcEncoding::Marc8 => println!("MARC-8"),
-    }
+    --8<-- "doc_examples/encoding.rs:encoding-detection"
     ```
 
 ## Choosing the Encoding
@@ -154,9 +140,7 @@ readers take a `character_coding` option:
 === "Rust"
 
     ```rust
-    use mrrc::{CharacterCoding, MarcReader};
-
-    let mut reader = MarcReader::new(file).with_character_coding(CharacterCoding::Detect);
+    --8<-- "doc_examples/encoding.rs:choosing-the-encoding"
     ```
 
 `AuthorityMARCReader` and `HoldingsMARCReader` (and their Rust counterparts)
@@ -186,14 +170,7 @@ UTF-8 data labelled MARC-8 is the common case. Read such files with `character_c
 MARC-8 data labelled UTF-8 is decoded as UTF-8. Its diacritics are invalid UTF-8, so they raise E301 under the default `utf8_handling="strict"`, become `U+FFFD` under `"replace"`, and are dropped under `"ignore"`. Its escape sequences are ASCII, so they survive as literal ESC characters, and in Rust the encoding validator flags such records after reading:
 
 ```rust
-use mrrc::{EncodingAnalysis, EncodingValidator};
-
-match EncodingValidator::analyze_encoding(&record)? {
-    EncodingAnalysis::Mixed { primary, .. } => {
-        println!("Warning: MARC-8 escape sequences in a record declared {:?}", primary);
-    }
-    _ => {}
-}
+--8<-- "doc_examples/encoding.rs:mixed-encoding"
 ```
 
 The validator works on decoded values, so it can't see UTF-8 data labelled MARC-8: by then the reader has decoded it as MARC-8. Use `character_coding="detect"` for that case. If you encounter other encoding issues, check the leader's `character_coding` property and compare it with the actual content.
