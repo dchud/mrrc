@@ -237,3 +237,91 @@ class TestConflictValidation:
         )
         records = list(reader)
         assert len(records) == 1
+
+
+# ============================================================================
+# pymarc's positional order
+# ============================================================================
+
+
+def _record_245(value: bytes, coding: bytes = b" ") -> bytes:
+    """One-field ISO 2709 record whose leader position 09 is ``coding``."""
+    field = b"10\x1fa" + value + b"\x1e"
+    directory = b"245" + b"%04d%05d" % (len(field), 0) + b"\x1e"
+    base = 24 + len(directory)
+    leader = b"%05dnam %s22%05d   4500" % (
+        base + len(field) + 1,
+        coding,
+        base,
+    )
+    return leader + directory + field + b"\x1d"
+
+
+def _titles(reader) -> list:
+    return [None if r is None else r["245"]["a"] for r in reader]
+
+
+class TestPymarcPositionalOrder:
+    """pymarc's parameters bind positionally in pymarc's order:
+    (marc_target, to_unicode, force_utf8, hide_utf8_warnings,
+    utf8_handling, file_encoding, permissive)."""
+
+    def test_to_unicode_is_second(self):
+        data = _build_valid_record_bytes()
+        with pytest.warns(UserWarning, match="to_unicode=False"):
+            mrrc.MARCReader(data, False)
+
+    def test_force_utf8_is_third(self):
+        data = _record_245("Café".encode())
+        assert _titles(mrrc.MARCReader(data, True, True)) == ["Café"]
+
+    @pytest.mark.parametrize("hide", [False, True])
+    def test_hide_utf8_warnings_is_fourth_and_has_no_effect(self, hide, capfd):
+        """An unmappable MARC-8 byte decodes to U+FFFD with nothing
+        written to stderr, whatever hide_utf8_warnings says."""
+        data = _record_245(b"x\xafy")
+        reader = mrrc.MARCReader(data, True, False, hide)
+        assert _titles(reader) == ["x�y"]
+        assert capfd.readouterr().err == ""
+
+    def test_utf8_handling_is_fifth(self):
+        data = _record_245(b"Caf\xffe", coding=b"a")
+        reader = mrrc.MARCReader(data, True, False, False, "replace")
+        assert _titles(reader) == ["Caf�e"]
+
+    def test_file_encoding_is_sixth(self):
+        data = _record_245(b"Caf\xe2e")
+        reader = mrrc.MARCReader(
+            data, True, False, False, "strict", "iso8859-1"
+        )
+        assert _titles(reader) == ["Café"]
+
+    @pytest.mark.parametrize(
+        "encoding", ["cp1251", "utf-8", "latin-1", "iso-8859-1"]
+    )
+    def test_file_encoding_other_than_pymarc_default_raises(self, encoding):
+        data = _record_245(b"Title")
+        with pytest.raises(ValueError, match="Unsupported file_encoding"):
+            mrrc.MARCReader(data, True, False, False, "strict", encoding)
+
+    def test_permissive_is_seventh(self):
+        data = _build_two_record_stream(inject_bad_second=True)
+        reader = mrrc.MARCReader(
+            data, True, False, False, "strict", "iso8859-1", True
+        )
+        assert _titles(reader) == ["Test title", None]
+
+    def test_mrrc_options_are_keyword_only(self):
+        data = _build_valid_record_bytes()
+        with pytest.raises(TypeError, match="positional"):
+            mrrc.MARCReader(
+                data, True, False, False, "strict", "iso8859-1", True, "strict"
+            )
+        reader = mrrc.MARCReader(
+            data,
+            recovery_mode="strict",
+            validation_level="strict_marc",
+            max_errors=5,
+            character_coding="leader",
+        )
+        assert len(list(reader)) == 1
