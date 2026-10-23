@@ -160,28 +160,7 @@ mrrc/
 ### Doc comment template
 
 ````rust
-/// Brief one-line description.
-///
-/// More detail: what it does, when to use it, and any notable behavior.
-///
-/// # Examples
-///
-/// ```
-/// # use mrrc::{Record, Leader};
-/// let record = Record::builder(Leader::default()).build();
-/// assert_eq!(record.fields().count(), 0);
-/// ```
-///
-/// # Errors
-///
-/// Returns an error if [condition].
-///
-/// # Panics
-///
-/// Panics if [unlikely condition].
-pub fn my_function() -> Result<()> {
-    // ...
-}
+--8<-- "doc_examples/development_setup.rs:doc-comment-template"
 ````
 
 ## Common Tasks

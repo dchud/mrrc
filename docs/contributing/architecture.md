@@ -81,7 +81,7 @@ Phase 3: Convert to Python object (GIL re-acquired)
 - Parse record bytes to MARC structure (CPU-intensive work)
 - Uses `py.detach()` (PyO3 0.23+) to explicitly release GIL
 - Creates Rust `ParseError` without Python objects
-- SmallVec buffer handles most records inline
+- Parses from the owned record bytes read in Phase 1
 - Duration: ~90% of total parse time
 - **Result: Multiple threads can parse concurrently**
 
@@ -115,17 +115,18 @@ The key insight: parsing is CPU-intensive but doesn't need Python objects, so re
 
 **Multi-threaded benefit:** With explicit `ThreadPoolExecutor`, the GIL release enables concurrent parsing across threads, with speedup scaling with core count.
 
-### ReaderBackend Enum
+### ReaderBackend
 
-The unified reader supports multiple input types via a backend enum:
+The unified reader supports multiple input types through `ReaderBackend`
+(`src-python/src/backend.rs`), which chooses a backend from the Python
+object passed to the reader:
 
-```rust
-enum ReaderBackend {
-    RustFile(std::fs::File),        // Pure Rust I/O, zero GIL
-    Cursor(io::Cursor<Vec<u8>>),    // In-memory, zero GIL
-    PythonFile(PyObject),            // Python file object, GIL managed
-}
-```
+| Input | Backend | How record bytes are read |
+|-------|---------|---------------------------|
+| `str` or `pathlib.Path` | `RustFile` | Buffered Rust file I/O |
+| `bytes` | `PyBytesBuffer` | Sliced out of the `bytes` object, with no copy of the whole buffer |
+| `bytearray` and other buffers | `CursorBackend` | From an in-memory copy made at construction |
+| Object with `.read()` | `PythonFile` | Python `.read()` in large chunks, sliced into records in Rust |
 
 **Advantages**:
 
@@ -158,39 +159,27 @@ With batching (N records, batch size = 100):
 
 Result: N/100 GIL acquisitions instead of N.
 
-### SmallVec Optimization
+### Owned Record Bytes
 
-MARC records vary in size (typically 500-4000 bytes). The SmallVec buffer:
-
-```rust
-SmallVec<[u8; 4096]>
-```
-
-**Benefits**:
-
-- Inline storage for ~85-90% of records (no allocation)
-- Dynamic heap allocation for oversized records
-- <3% memory overhead
-- Eliminates borrow checker issues in Phase 2
+Phase 1 reads each record's bytes into an owned `Vec<u8>`, so the Phase 2
+parse borrows nothing from Python objects while the GIL is released. The
+parser and the parsed record's `current_chunk` (the pymarc-compatible
+accessor for the raw bytes) share that buffer through an `Arc`, so it is
+not copied again.
 
 ## Error Handling
 
-### ParseError Enum
+### ParseError
 
-Custom error type allows error creation without GIL:
-
-```rust
-pub enum ParseError {
-    InvalidRecord(String),
-    InvalidLeader(String),
-    InvalidDirectory(String),
-    EncodingError(String),
-}
-
-impl From<ParseError> for PyErr {
-    // Conversion happens after GIL re-acquisition in Phase 3
-}
-```
+The parsing primitives that run with the GIL released (the boundary
+scanner and the buffered reader) report errors as `ParseError`
+(`src-python/src/parse_error.rs`). It holds owned data only: a
+`ParseErrorKind` (invalid record, record boundary error, truncated record,
+invalid record length, or I/O error) and boxed positional context (record
+index, byte offsets, source name). `ParseError::to_py_err` converts it to a
+Python exception after the GIL is re-acquired, through the same
+`MarcError` mapping the rest of the reader uses, so callers see one
+exception hierarchy.
 
 **Why Custom Error Type?**
 - PyErr requires GIL to create
@@ -199,22 +188,11 @@ impl From<ParseError> for PyErr {
 
 ## Thread Safety
 
-### Not Send/Sync by Design
+### One Reader per Thread
 
-The readers are intentionally **not** Send or Sync:
-
-```rust
-// Readers hold Python references (not Send/Sync)
-pub struct PyMARCReader {
-    reader: Option<ReaderType>,
-    // ReaderType may contain PythonFile(PyObject) which is !Send
-}
-```
-
-**Why?**
-- Each thread needs its own GIL-aware reader
-- Sharing readers across threads causes undefined behavior
-- Forces correct usage pattern: one reader per thread
+A reader reads one stream from one position, so readers are not shared
+between threads: each thread creates its own. The
+[threading guide](../guides/threading-python.md) shows the patterns.
 
 ## Concurrency Model
 
@@ -272,9 +250,8 @@ modes scale with core count because parsing happens outside the GIL.
 
 | Scenario | Memory | Notes |
 |----------|--------|-------|
-| Per reader | ~4 KB | SmallVec buffer |
+| Per reader | One batch | Up to 200 records or 300 KB of record bytes, read ahead and parsed together |
 | Per record (memory) | ~4 KB | Typical MARC record |
-| Overhead (4 readers) | ~16 KB | Negligible |
 
 ### GIL Contention
 

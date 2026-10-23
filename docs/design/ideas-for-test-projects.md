@@ -247,7 +247,7 @@ def get_dataset(name: str = "default"):
     return FIXTURES_DIR / name / "sample.mrc"
 ```
 
-```rust
+```text
 // crates/mrrc_testbed/src/datasets.rs
 
 pub fn get_dataset(name: &str) -> Result<PathBuf, DatasetError> {
@@ -730,7 +730,7 @@ uv run python scripts/download_datasets.py --verify
 | `error_messages_useful` | Basic | Full | Errors identify the problem |
 
 **Discovered malformed patterns are cataloged:**
-```rust
+```text
 // Malformed pattern discovered in IA Lendable
 // Record offset: 1234567, Pattern: truncated_directory
 // Details: Directory ends mid-entry at byte 45
@@ -803,7 +803,7 @@ uv run python scripts/download_datasets.py --verify
 
 Rust tests use a shared discovery library to output findings in the standard JSON format:
 
-```rust
+```text
 // crates/mrrc_testbed/src/discovery.rs
 
 use crate::discovery::{Discovery, DiscoveryWriter};
@@ -1113,7 +1113,7 @@ ParseError::InvalidDirectory: Directory ends mid-entry at byte 45
 
 ## Reproduction
 
-```rust
+```text
 use mrrc::MarcReader;
 use std::fs::File;
 

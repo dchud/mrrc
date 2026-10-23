@@ -61,6 +61,12 @@ echo "=== Process-label lint ==="
 python3 scripts/lint_process_labels.py
 
 echo ""
+echo "=== Documentation Rust example lint ==="
+# Every Rust code block on the site must be a snippet include of compiled
+# code under tests/ (the Rust tests below compile and run it).
+python3 scripts/lint_doc_examples.py
+
+echo ""
 echo "=== Clippy check (mrrc core) ==="
 cargo clippy --package mrrc --all-targets -- -D warnings
 
