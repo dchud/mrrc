@@ -61,9 +61,15 @@ dev = [
     "pyright>=1.1",
     "ruff>=0.1",
 ]
+# Tools for the CodSpeed benchmark job (.github/workflows/benchmarks.yml),
+# which installs them at their uv.lock versions.
 benchmark = [
-    "pytest>=7.0",
+    # pytest-codspeed 5.0.3 fails at startup on pytest 9.2.0, which renamed
+    # the FixtureManager attribute it reads. Drop the cap once a
+    # pytest-codspeed release supports pytest 9.2.
+    "pytest>=7.0,<9.2",
     "pytest-benchmark>=4.0",
+    "pytest-codspeed>=5.0",
     "tomli>=2.0; python_version < '3.11'",
 ]
 docs = [

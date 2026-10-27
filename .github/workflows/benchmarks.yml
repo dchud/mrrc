@@ -110,7 +110,12 @@ jobs:
           # version instead of this commit.
           WHEEL=$(ls dist/*.whl | head -1)
           uv pip install --system "${WHEEL}"
-          uv pip install --system pytest pytest-benchmark pytest-codspeed
+          # Install pytest and its plugins at their uv.lock versions, so a new
+          # pytest or plugin release reaches this job only through a lockfile
+          # bump.
+          uv export --frozen --extra benchmark --no-emit-project \
+            --output-file "${RUNNER_TEMP}/benchmark-requirements.txt"
+          uv pip install --system -r "${RUNNER_TEMP}/benchmark-requirements.txt"
 
       - name: Run benchmarks
         uses: CodSpeedHQ/action@821a40cd6c80e3cfe387caf55668287addd808da # v5.5.0
