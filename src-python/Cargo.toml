@@ -11,7 +11,7 @@ repository.workspace = true
 publish = false
 
 [dependencies]
-pyo3 = { version = "0.29", features = ["extension-module"] }
+pyo3 = { version = "0.30", features = ["extension-module"] }
 # Enable bibframe explicitly (independent of mrrc's default features)
 # so the wheel always ships full functionality.
 mrrc = { path = "..", features = ["bibframe"] }
