@@ -1222,67 +1222,75 @@ impl Field {
         result
     }
 
-    /// Get the field's content as a formatted string
+    /// Get the field's subfield values as one string
     ///
-    /// For control fields (000-009), returns the field data.
-    /// For data fields, concatenates all subfield values with spaces.
+    /// Trims leading and trailing whitespace from each subfield value, then
+    /// joins the values with single spaces. Every subfield is included, `$6`
+    /// and `$8` among them. This matches pymarc's `Field.value()`.
+    ///
+    /// Whitespace is what Python's `str.strip()` removes: Unicode whitespace
+    /// plus the information separators U+001C to U+001F.
     ///
     /// # Examples
     ///
     /// ```
     /// # use mrrc::Field;
-    /// # let mut field = Field::new("245".to_string(), '1', '0');
-    /// # field.add_subfield('a', "The Great Gatsby".to_string());
-    /// let value_str = field.value();
+    /// let mut field = Field::new("245".to_string(), '1', '0');
+    /// field.add_subfield_str('a', "The Great Gatsby /");
+    /// field.add_subfield_str('c', " F. Scott Fitzgerald. ");
+    /// assert_eq!(field.value(), "The Great Gatsby / F. Scott Fitzgerald.");
     /// ```
     #[must_use]
     pub fn value(&self) -> String {
-        self.subfields
-            .iter()
-            .map(|sf| sf.value.as_str())
-            .collect::<Vec<_>>()
-            .join(" ")
+        let mut text = String::new();
+        for (i, subfield) in self.subfields.iter().enumerate() {
+            if i > 0 {
+                text.push(' ');
+            }
+            text.push_str(subfield.value.trim_matches(is_python_whitespace));
+        }
+        text
     }
 
-    /// Get the field's content as a pretty-formatted string
+    /// Get the field's subfield values as display text
     ///
-    /// For control fields, returns the field data.
-    /// For data fields, concatenates subfield values with spaces.
-    /// For subject fields (6xx), uses " -- " before subdivision subfields (v, x, y, z).
+    /// Joins the subfield values with single spaces and skips the `$6`
+    /// linkage subfield. In a subject field (a tag starting with `6`), the
+    /// subdivision subfields `$v`, `$x`, `$y`, and `$z` are preceded by
+    /// `" -- "` instead of a space. Leading and trailing whitespace is
+    /// trimmed from the whole result, not from each value. This matches
+    /// pymarc's `Field.format_field()`, including the whitespace definition
+    /// described on [`Field::value`].
     ///
     /// # Examples
     ///
     /// ```
     /// # use mrrc::Field;
-    /// # let mut field = Field::new("650".to_string(), ' ', '0');
-    /// # field.add_subfield('a', "Subject".to_string());
-    /// # field.add_subfield('x', "Subdivision".to_string());
-    /// let formatted = field.format_field();
-    /// // For 650 (subject): "Subject -- Subdivision -- Geographic"
+    /// let mut field = Field::new("650".to_string(), ' ', '0');
+    /// field.add_subfield_str('6', "880-01");
+    /// field.add_subfield_str('a', "Cats");
+    /// field.add_subfield_str('x', "Behavior");
+    /// field.add_subfield_str('z', "France.");
+    /// assert_eq!(field.format_field(), "Cats -- Behavior -- France.");
     /// ```
     #[must_use]
     pub fn format_field(&self) -> String {
-        if self.subfields.is_empty() {
-            return String::new();
-        }
-
         let is_subject = self.tag.starts_with('6');
-        let mut result = Vec::new();
+        let mut text = String::new();
 
         for subfield in &self.subfields {
-            // Skip field linking subfield
             if subfield.code == '6' {
                 continue;
             }
-
             if is_subject && matches!(subfield.code, 'v' | 'x' | 'y' | 'z') {
-                result.push(format!(" -- {}", subfield.value));
+                text.push_str(" -- ");
             } else {
-                result.push(format!(" {}", subfield.value));
+                text.push(' ');
             }
+            text.push_str(&subfield.value);
         }
 
-        result.join("").trim().to_string()
+        text.trim_matches(is_python_whitespace).to_string()
     }
 
     // ============================================================================
@@ -1405,6 +1413,13 @@ impl Index<char> for Field {
     fn index(&self, code: char) -> &Self::Output {
         self.get_subfield(code).expect("subfield not found")
     }
+}
+
+/// Whether `c` is whitespace by Python's `str.isspace()` definition, which
+/// pymarc's `strip()` calls use: Unicode whitespace plus the information
+/// separators U+001C to U+001F.
+fn is_python_whitespace(c: char) -> bool {
+    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
 }
 
 /// Builder for fluently constructing MARC fields
@@ -2452,6 +2467,132 @@ mod tests {
         field.add_subfield_str('x', "Subdivision");
 
         assert_eq!(field.format_field(), "Geographic Name -- Subdivision");
+    }
+
+    fn field_with(tag: &str, subfields: &[(char, &str)]) -> Field {
+        let mut field = Field::new(tag.to_string(), ' ', '0');
+        for (code, value) in subfields {
+            field.add_subfield_str(*code, value);
+        }
+        field
+    }
+
+    #[test]
+    fn test_field_value_trims_each_value() {
+        let field = field_with("245", &[('a', "  A  "), ('b', "\tB\n"), ('c', " ")]);
+        assert_eq!(field.value(), "A B ");
+    }
+
+    #[test]
+    fn test_field_value_keeps_linkage_subfields() {
+        let field = field_with("650", &[('6', "880-01"), ('a', "Cats"), ('8', "1\\c")]);
+        assert_eq!(field.value(), "880-01 Cats 1\\c");
+    }
+
+    #[test]
+    fn test_field_value_empty_subfield_leaves_double_space() {
+        let field = field_with("245", &[('a', "A"), ('b', ""), ('c', "C")]);
+        assert_eq!(field.value(), "A  C");
+    }
+
+    #[test]
+    fn test_field_format_field_all_subdivision_codes() {
+        let field = field_with(
+            "650",
+            &[
+                ('a', "Cats"),
+                ('x', "Behavior"),
+                ('v', "Juvenile literature"),
+                ('y', "20th century"),
+                ('z', "France"),
+            ],
+        );
+        assert_eq!(
+            field.format_field(),
+            "Cats -- Behavior -- Juvenile literature -- 20th century -- France"
+        );
+    }
+
+    #[test]
+    fn test_field_format_field_leading_subdivision_keeps_dashes() {
+        let field = field_with("600", &[('x', "Lead"), ('a', "Name")]);
+        assert_eq!(field.format_field(), "-- Lead Name");
+    }
+
+    #[test]
+    fn test_field_format_field_keeps_subfield_8() {
+        let field = field_with("650", &[('a', "Cats"), ('2', "fast"), ('8', "1\\c")]);
+        assert_eq!(field.format_field(), "Cats fast 1\\c");
+    }
+
+    #[test]
+    fn test_field_format_field_skips_linking_in_non_subject_field() {
+        let field = field_with("245", &[('6', "880-02"), ('a', "Title")]);
+        assert_eq!(field.format_field(), "Title");
+    }
+
+    #[test]
+    fn test_field_format_field_880_uses_its_own_tag() {
+        // An 880 linked to a 650 is not a subject field: its tag is 880.
+        let field = field_with("880", &[('6', "650-01"), ('a', "Neko"), ('x', "Rekishi")]);
+        assert_eq!(field.format_field(), "Neko Rekishi");
+    }
+
+    #[test]
+    fn test_field_format_field_empty_subdivisions() {
+        let field = field_with("650", &[('a', ""), ('x', ""), ('b', "B")]);
+        assert_eq!(field.format_field(), "--  B");
+    }
+
+    #[test]
+    fn test_field_format_field_trims_result_not_values() {
+        let field = field_with("650", &[('a', " A "), ('x', " X ")]);
+        assert_eq!(field.format_field(), "A  --  X");
+    }
+
+    #[test]
+    fn test_field_format_field_uppercase_codes_are_not_subdivisions() {
+        let field = field_with("650", &[('a', "A"), ('X', "Upper")]);
+        assert_eq!(field.format_field(), "A Upper");
+    }
+
+    #[test]
+    fn test_field_format_field_any_tag_starting_with_6_is_subject() {
+        let field = field_with("6AB", &[('a', "A"), ('x', "X")]);
+        assert_eq!(field.format_field(), "A -- X");
+    }
+
+    #[test]
+    fn test_field_value_and_format_field_trim_information_separators() {
+        let field = field_with("245", &[('a', "\u{1c}A\u{1f}"), ('b', "\u{a0}B\u{3000}")]);
+        assert_eq!(field.value(), "A B");
+        assert_eq!(field.format_field(), "A\u{1f} \u{a0}B");
+    }
+
+    #[test]
+    fn test_is_python_whitespace_matches_str_isspace() {
+        // The characters for which Python's str.isspace() is true.
+        let expected: Vec<u32> = [
+            0x09..=0x0d,
+            0x1c..=0x20,
+            0x85..=0x85,
+            0xa0..=0xa0,
+            0x1680..=0x1680,
+            0x2000..=0x200a,
+            0x2028..=0x2029,
+            0x202f..=0x202f,
+            0x205f..=0x205f,
+            0x3000..=0x3000,
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let actual: Vec<u32> = (0..=0x10_ffff_u32)
+            .filter_map(char::from_u32)
+            .filter(|&c| is_python_whitespace(c))
+            .map(u32::from)
+            .collect();
+        assert_eq!(actual, expected);
     }
 
     #[test]
