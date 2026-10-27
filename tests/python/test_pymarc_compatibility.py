@@ -882,6 +882,81 @@ class TestLeader:
         assert desc is None
 
 
+# The leader positions pymarc exposes as fixed-width strings of digits, keyed
+# by property name, with the slice of the leader each one covers.
+NUMERIC_LEADER_POSITIONS = {
+    "record_length": slice(0, 5),
+    "indicator_count": slice(10, 11),
+    "subfield_code_count": slice(11, 12),
+    "data_base_address": slice(12, 17),
+    "base_address": slice(12, 17),
+}
+NUMERIC_LEADER = "00714cjm a2200205 i 4500"
+
+
+class TestLeaderNumericPositions:
+    """The numeric leader positions are strings of their full width, as in
+    pymarc, over a leader that stores them as numbers."""
+
+    @pytest.mark.parametrize("name", sorted(NUMERIC_LEADER_POSITIONS))
+    def test_get_returns_the_leader_slice(self, name):
+        value = getattr(Leader(NUMERIC_LEADER), name)
+        assert value == NUMERIC_LEADER[NUMERIC_LEADER_POSITIONS[name]]
+
+    def test_default_leader_values_are_zero_padded(self):
+        leader = Leader()
+        assert leader.record_length == "00000"
+        assert leader.base_address == "00000"
+        assert leader.indicator_count == "2"
+        assert leader.subfield_code_count == "2"
+
+    @pytest.mark.parametrize("name", sorted(NUMERIC_LEADER_POSITIONS))
+    def test_set_writes_the_leader_slice(self, name):
+        where = NUMERIC_LEADER_POSITIONS[name]
+        value = "3" * (where.stop - where.start)
+        leader = Leader(NUMERIC_LEADER)
+        setattr(leader, name, value)
+        assert getattr(leader, name) == value
+        assert str(leader)[where] == value
+        assert str(leader)[: where.start] == NUMERIC_LEADER[: where.start]
+        assert str(leader)[where.stop :] == NUMERIC_LEADER[where.stop :]
+
+    @pytest.mark.parametrize("name", sorted(NUMERIC_LEADER_POSITIONS))
+    @pytest.mark.parametrize(
+        "value", ["", "a", "33", "321", "003210", "0x321", " 0321"]
+    )
+    def test_set_rejects_wrong_width_or_non_digits(self, name, value):
+        where = NUMERIC_LEADER_POSITIONS[name]
+        width = where.stop - where.start
+        leader = Leader(NUMERIC_LEADER)
+        with pytest.raises(ValueError, match=f"must be a {width}-digit str"):
+            setattr(leader, name, value)
+        assert str(leader) == NUMERIC_LEADER
+
+    @pytest.mark.parametrize("name", sorted(NUMERIC_LEADER_POSITIONS))
+    @pytest.mark.parametrize("value", [3, 321, None, b"00321"])
+    def test_set_rejects_non_str(self, name, value):
+        leader = Leader(NUMERIC_LEADER)
+        with pytest.raises(TypeError, match="-digit str"):
+            setattr(leader, name, value)
+        assert str(leader) == NUMERIC_LEADER
+
+    def test_constructor_rejects_non_digits_in_numeric_positions(self):
+        with pytest.raises(ValueError, match="record_length"):
+            Leader("  714cjm a2200205 i 4500")
+
+    def test_position_edit_rejects_non_digit(self):
+        leader = Leader(NUMERIC_LEADER)
+        with pytest.raises(ValueError, match="indicator_count"):
+            leader[10] = "x"
+        assert str(leader) == NUMERIC_LEADER
+
+    def test_edit_reaches_the_record(self):
+        record = Record(Leader(NUMERIC_LEADER))
+        record.leader.indicator_count = "3"
+        assert record.to_json().count('"00714cjm a3200205 i 4500"') == 1
+
+
 def _written_leader(record):
     buffer = io.BytesIO()
     MARCWriter(buffer).write(record)

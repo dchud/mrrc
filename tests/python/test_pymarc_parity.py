@@ -184,43 +184,142 @@ def test_leader_exposes_every_pymarc_property() -> None:
 
 
 def test_leader_pymarc_properties_read_the_same_positions() -> None:
-    """pymarc's Leader property names read the same leader positions.
-
-    mrrc returns the numeric positions (record length, indicator and
-    subfield code counts, base address) as ints where pymarc returns
-    zero-padded strings, so values are compared in pymarc's string form.
-    """
+    """pymarc's Leader property names return the same values, all strings,
+    including the zero-padded numeric positions."""
     pymarc = pytest.importorskip("pymarc")
     ours, theirs = mrrc.Leader(_LEADER), pymarc.Leader(_LEADER)
     mismatched = {}
     for name in _leader_property_names(pymarc.Leader):
-        expected = getattr(theirs, name)
-        actual = str(getattr(ours, name, None)).zfill(len(expected))
-        if actual != expected:
+        actual, expected = getattr(ours, name, None), getattr(theirs, name)
+        if actual != expected or type(actual) is not str:
             mismatched[name] = (actual, expected)
     assert mismatched == {}
 
 
 def test_leader_pymarc_properties_write_the_same_positions() -> None:
-    """Setting a single-character position through pymarc's property name
-    changes the same byte of the leader in both libraries."""
+    """Setting each of pymarc's Leader properties to a new value of its
+    width changes the same bytes of the leader in both libraries."""
     pymarc = pytest.importorskip("pymarc")
     mismatched = {}
     for name in _leader_property_names(pymarc.Leader):
-        if len(getattr(pymarc.Leader(_LEADER), name)) != 1:
-            continue
         ours, theirs = mrrc.Leader(_LEADER), pymarc.Leader(_LEADER)
-        if not isinstance(getattr(ours, name, ""), str):
-            continue  # numeric positions are ints in mrrc
+        # Digits suit every position, and the numeric positions accept
+        # nothing else in mrrc. "3" appears at none of _LEADER's positions.
+        value = "3" * len(getattr(theirs, name))
         try:
-            setattr(ours, name, "z")
-        except AttributeError as e:
+            setattr(ours, name, value)
+        except (AttributeError, TypeError, ValueError) as e:
             mismatched[name] = repr(e)
             continue
-        setattr(theirs, name, "z")
-        if str(ours) != str(theirs):
+        setattr(theirs, name, value)
+        if str(ours) != str(theirs) or getattr(ours, name) != value:
             mismatched[name] = (str(ours), str(theirs))
     assert mismatched == {}
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "record_length",
+        "indicator_count",
+        "subfield_code_count",
+        "base_address",
+    ],
+)
+def test_leader_numeric_position_rejects_int_like_pymarc(name) -> None:
+    """Assigning an int to a numeric position raises TypeError in both
+    libraries and leaves the leader unchanged."""
+    pymarc = pytest.importorskip("pymarc")
+    ours, theirs = mrrc.Leader(_LEADER), pymarc.Leader(_LEADER)
+    with pytest.raises(TypeError):
+        setattr(ours, name, 3)
+    with pytest.raises(TypeError):
+        setattr(theirs, name, 3)
+    assert str(ours) == str(theirs) == _LEADER
+
+
+def _record(field_245: bytes, coding: bytes = b" ") -> bytes:
+    """One-field ISO 2709 record whose leader position 09 is ``coding``."""
+    field = b"10\x1fa" + field_245 + b"\x1e"
+    directory = b"245" + b"%04d%05d" % (len(field), 0) + b"\x1e"
+    base = 24 + len(directory)
+    leader = b"%05dnam %s22%05d   4500" % (
+        base + len(field) + 1,
+        coding,
+        base,
+    )
+    return leader + directory + field + b"\x1d"
+
+
+def _titles(reader) -> list[str | None]:
+    return [None if r is None else r["245"]["a"] for r in reader]
+
+
+def test_marcreader_positional_parameters_match_pymarc() -> None:
+    """mrrc.MARCReader's positional parameters are pymarc's, with the same
+    names, order, and defaults; every mrrc-only parameter is keyword-only."""
+    import inspect
+
+    pymarc = pytest.importorskip("pymarc")
+    theirs = [
+        (p.name, p.default)
+        for p in inspect.signature(pymarc.MARCReader).parameters.values()
+    ]
+    params = list(inspect.signature(mrrc.MARCReader).parameters.values())
+    positional = [
+        p for p in params if p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    ]
+    assert [(p.name, p.default) for p in positional] == theirs
+    assert all(
+        p.kind is inspect.Parameter.KEYWORD_ONLY
+        for p in params
+        if p not in positional
+    )
+
+
+# Each case passes pymarc's MARCReader arguments positionally, in pymarc's
+# order (to_unicode, force_utf8, hide_utf8_warnings, utf8_handling,
+# file_encoding, permissive), and names the argument it exercises.
+_POSITIONAL_CASES = {
+    "to_unicode": (_record(b"Title"), (True,)),
+    # UTF-8 bytes under a leader that says MARC-8.
+    "force_utf8": (_record("Café".encode()), (True, True)),
+    "hide_utf8_warnings": (_record(b"Caf\xe2e"), (True, False, True)),
+    # Invalid UTF-8 under a leader that says UTF-8.
+    "utf8_handling=replace": (
+        _record(b"Caf\xffe", b"a"),
+        (True, False, False, "replace"),
+    ),
+    "utf8_handling=ignore": (
+        _record(b"Caf\xffe", b"a"),
+        (True, False, False, "ignore"),
+    ),
+    "file_encoding": (
+        _record(b"Caf\xe2e"),
+        (True, False, False, "strict", "iso8859-1"),
+    ),
+    # pymarc yields None for a record it cannot read; mrrc does under
+    # permissive=True.
+    "permissive": (
+        _build_corpus()[0],
+        (True, False, False, "strict", "iso8859-1", True),
+    ),
+    "utf8_handling=strict,permissive": (
+        _record(b"Caf\xffe", b"a"),
+        (True, False, False, "strict", "iso8859-1", True),
+    ),
+}
+
+
+@pytest.mark.parametrize("case", sorted(_POSITIONAL_CASES))
+def test_marcreader_positional_arguments_match_pymarc(case) -> None:
+    """The same positional arguments read the same records in both
+    libraries."""
+    pymarc = pytest.importorskip("pymarc")
+    data, args = _POSITIONAL_CASES[case]
+    ours = _titles(mrrc.MARCReader(data, *args))
+    theirs = _titles(pymarc.MARCReader(io.BytesIO(data), *args))
+    assert ours == theirs
 
 
 # MARC-8 designation escapes for each character set, keyed by final byte.
