@@ -51,18 +51,7 @@ with MARCWriter("output.mrc") as writer:
 
 **Rust**:
 ```rust
-use mrrc::{MarcReader, MarcWriter, RecordHelpers};
-use std::fs::File;
-
-// Reading
-let mut reader = MarcReader::new(File::open("records.mrc")?);
-while let Some(record) = reader.read_record()? {
-    println!("{:?}", record.title());
-}
-
-// Writing
-let mut writer = MarcWriter::new(File::create("output.mrc")?);
-writer.write_record(&record)?;
+--8<-- "doc_examples/formats.rs:iso-2709"
 ```
 
 ### JSON

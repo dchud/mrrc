@@ -17,10 +17,7 @@ except mrrc.MrrcException as e:
 ```
 
 ```rust
-match err {
-    e if e.code() == "E201" => handle_indicator_error(e),
-    _ => return Err(e),
-}
+--8<-- "doc_examples/error_codes.rs:match-on-code"
 ```
 
 ## Configuring the help URL base

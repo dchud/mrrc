@@ -45,11 +45,7 @@ string that names the per-tag rule.
 You can also call it directly:
 
 ```rust
-use mrrc::IndicatorValidator;
-
-let v = IndicatorValidator::new();
-v.validate_field(&field)?;                  // by Field
-v.validate_indicators("245", '0', '1')?;    // by tag + chars
+--8<-- "doc_examples/validators.rs:indicator-validator"
 ```
 
 ```python
@@ -77,11 +73,7 @@ structural shape, distinguished by message.
 You can also call it directly:
 
 ```rust
-use mrrc::RecordStructureValidator;
-
-RecordStructureValidator::validate_leader(&record.leader)?;
-RecordStructureValidator::validate_record(&record)?;
-RecordStructureValidator::validate_directory_structure(&record)?;
+--8<-- "doc_examples/validators.rs:record-structure-validator"
 ```
 
 `validate_record` and `validate_directory_structure` are not invoked
@@ -93,15 +85,12 @@ them after building a record programmatically and before writing it.
 
 ### `IsbnValidator`
 
-ISBN-10 and ISBN-13 checksum verification, plus an `extract_isbns`
-helper for pulling identifiers out of a 020 `$a` subfield.
+ISBN-10 and ISBN-13 checksum verification. `validate` picks the check
+by length after ignoring dashes and spaces, and `normalize` removes the
+dashes and spaces.
 
 ```rust
-use mrrc::IsbnValidator;
-
-assert!(IsbnValidator::validate_isbn10("0306406152"));
-assert!(IsbnValidator::validate_isbn13("9780306406157"));
-let isbns = IsbnValidator::extract_isbns("0306406152 (alk. paper)");
+--8<-- "doc_examples/validators.rs:isbn-validator"
 ```
 
 This validator inspects subfield *contents*, not record structure.
@@ -118,14 +107,7 @@ The declared encoding follows the readers' rule for leader position 09
 (`a` is UTF-8, any other value MARC-8).
 
 ```rust
-use mrrc::{EncodingAnalysis, EncodingValidator};
-
-match EncodingValidator::analyze_encoding(&record)? {
-    EncodingAnalysis::Mixed { primary, secondary, field_count } => {
-        // `field_count` values hold MARC-8 escape sequences.
-    }
-    _ => { /* no mismatch visible in the decoded values */ }
-}
+--8<-- "doc_examples/validators.rs:encoding-validator"
 ```
 
 The validator works on decoded values, so it can't detect UTF-8 data

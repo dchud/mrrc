@@ -307,14 +307,14 @@ cp fuzz/artifacts/parse_record/<minimized-filename> \
    tests/data/fuzz-regressions/parse_record/<short-slug>.mrc
 ```
 
-If `tests/fuzz_regressions.rs` does not yet exist, create it with the
-harness pattern in [Regression test harness](#regression-test-harness)
-below. Within a given target, the harness auto-discovers every fixture
-under `tests/data/fuzz-regressions/<target>/` — no test-code edits
-needed for subsequent fixtures **in that target**. Adding a finding for
-a new target (the first `decode_marc8` regression, for example)
-requires a new `#[test]` function pointing at that target's fixture
-directory; see the harness comment.
+`tests/fuzz_regressions.rs` holds the harness (see
+[Regression test harness](#regression-test-harness) below). Within a
+given target, the harness auto-discovers every fixture under
+`tests/data/fuzz-regressions/<target>/` — no test-code edits needed for
+subsequent fixtures **in that target**. Adding a finding for a target
+the harness does not cover yet (the first `decode_marc8` regression, for
+example) requires a new `#[test]` function pointing at that target's
+fixture directory.
 
 Run the test and confirm it **fails**:
 
@@ -387,59 +387,16 @@ Only close the bead after CI is green on all platforms.
 
 ### Regression test harness
 
-If `tests/fuzz_regressions.rs` does not yet exist, the first
-crash-finding PR creates it with this pattern. Subsequent fixtures are
-added as a single-file change — no test-code edits.
+`tests/fuzz_regressions.rs` has one `#[test]` function per fuzz target
+with filed regressions. Each walks the fixtures under
+`tests/data/fuzz-regressions/<target>/` and drives them through the
+public API the target exercises, so a new fixture for a covered target
+is a single-file change with no test-code edits. A target without a
+function yet gets one that mirrors that target's contract, following
+the pattern of `parse_record_regressions`:
 
 ```rust
-// tests/fuzz_regressions.rs
-// Regression tests for bugs found by coverage-guided fuzzing. Each
-// fixture under tests/data/fuzz-regressions/<target>/ is a minimized
-// reproducer committed to guard against reintroduction on every PR.
-//
-// Adding a fixture for an existing target is a single-file change — the
-// per-target test function below auto-discovers any new fixture.
-//
-// Adding a fixture for a NEW target requires adding a new #[test]
-// function that mirrors `parse_record_regressions` but calls the
-// appropriate public API (e.g., the writer path for roundtrip_binary,
-// or the MARCXML reader for parse_marcxml).
-
-use mrrc::MarcReader;
-use std::fs;
-use std::io::Cursor;
-use std::path::PathBuf;
-
-fn fixtures_dir(target: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/data/fuzz-regressions")
-        .join(target)
-}
-
-#[test]
-fn parse_record_regressions() {
-    let dir = fixtures_dir("parse_record");
-    if !dir.exists() {
-        return; // No regressions filed yet.
-    }
-    for entry in fs::read_dir(&dir).expect("read fuzz-regressions dir") {
-        let path = entry.expect("dir entry").path();
-        if !path.is_file() {
-            continue;
-        }
-        let bytes = fs::read(&path).expect("read fixture");
-        // Err returns on malformed input are correct; only panics,
-        // OOMs, and timeouts would be regressions. A panic inside
-        // read_record unwinds and fails the test.
-        let mut reader = MarcReader::new(Cursor::new(&bytes[..]));
-        loop {
-            match reader.read_record() {
-                Ok(Some(_)) => continue,
-                Ok(None) | Err(_) => break,
-            }
-        }
-    }
-}
+--8<-- "fuzz_regressions.rs:harness"
 ```
 
 ### What NOT to do
