@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every validation level; it was replaced with U+FFFD unless `validation_level="strict_marc"`.
   The default Python recovery drops the field and records E301 on `record.errors`, and
   `permissive=True` yields `None`. Pass `utf8_handling="replace"` for the previous decoding.
+- Python `Leader.record_length`, `base_address`, `indicator_count`, and `subfield_code_count` are
+  zero-padded strings, as in pymarc; use `int()` to read a number and assign digit strings.
+- `MARCReader` takes pymarc's parameters in pymarc's positional order, including
+  `hide_utf8_warnings` (no effect) and `file_encoding` (only `"iso8859-1"`). Pass `recovery_mode`,
+  `validation_level`, `max_errors`, and `character_coding` by keyword; the first parameter is
+  renamed from `file_obj` to `marc_target`, pymarc's name.
 
 ### Fixed
 

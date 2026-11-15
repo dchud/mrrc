@@ -970,23 +970,7 @@ class Leader:
 
     def _get_leader_as_string(self) -> str:
         """Get the leader as a 24-character MARC21 leader string."""
-        # Build leader string from properties
-        leader = []
-        leader.append(str(self._rust_leader.record_length).zfill(5))
-        leader.append(self._rust_leader.record_status)
-        leader.append(self._rust_leader.record_type)
-        leader.append(self._rust_leader.bibliographic_level)
-        leader.append(self._rust_leader.control_record_type)
-        leader.append(self._rust_leader.character_coding)
-        leader.append(str(self._rust_leader.indicator_count))
-        leader.append(str(self._rust_leader.subfield_code_count))
-        leader.append(str(self._rust_leader.data_base_address).zfill(5))
-        leader.append(self._rust_leader.encoding_level)
-        leader.append(self._rust_leader.cataloging_form)
-        leader.append(self._rust_leader.multipart_level)
-        leader.append(self._rust_leader.reserved)
-
-        return "".join(leader)
+        return str(self._rust_leader)
 
     def _update_leader_from_string(self, leader_str: str) -> None:
         """Update leader properties from a 24-character string."""
@@ -996,15 +980,15 @@ class Leader:
             )
 
         # Parse MARC21 leader format (positions as per standard)
-        self._rust_leader.record_length = int(leader_str[0:5])
+        self._rust_leader.record_length = leader_str[0:5]
         self._rust_leader.record_status = leader_str[5]
         self._rust_leader.record_type = leader_str[6]
         self._rust_leader.bibliographic_level = leader_str[7]
         self._rust_leader.control_record_type = leader_str[8]
         self._rust_leader.character_coding = leader_str[9]
-        self._rust_leader.indicator_count = int(leader_str[10])
-        self._rust_leader.subfield_code_count = int(leader_str[11])
-        self._rust_leader.data_base_address = int(leader_str[12:17])
+        self._rust_leader.indicator_count = leader_str[10]
+        self._rust_leader.subfield_code_count = leader_str[11]
+        self._rust_leader.data_base_address = leader_str[12:17]
         self._rust_leader.encoding_level = leader_str[17]
         self._rust_leader.cataloging_form = leader_str[18]
         self._rust_leader.multipart_level = leader_str[19]
@@ -1813,13 +1797,36 @@ class Record:
 class MARCReader:
     """MARC Reader wrapper.
 
+    The positional parameters are pymarc's, in pymarc's order, with
+    pymarc's defaults. The mrrc-only parameters after them are
+    keyword-only.
+
     Args:
-        file_obj: File path (str), pathlib.Path, bytes/bytearray, or file-like object.
+        marc_target: File path (str), pathlib.Path, bytes/bytearray, or
+            file-like object.
         to_unicode: Accepted for pymarc compatibility. mrrc always converts
             MARC-8 to UTF-8; passing ``False`` emits a warning.
         force_utf8: pymarc's option: when ``True``, decode every record as
             UTF-8 whatever leader position 09 says. The same as
             ``character_coding="utf-8"``.
+        hide_utf8_warnings: Accepted for pymarc compatibility, and has no
+            effect. pymarc writes a message to stderr for each MARC-8
+            character it cannot map unless this is ``True``; mrrc writes no
+            such messages. It decodes an unmappable character as U+FFFD, or
+            raises ``Marc8Error`` under ``validation_level="strict_marc"``.
+        utf8_handling: pymarc's option for invalid UTF-8 in a record decoded
+            as UTF-8. ``"strict"`` (the default, as in pymarc) makes it an
+            E301 ``EncodingError``, handled by ``recovery_mode`` like any other
+            error: the default recovery drops the field and records the error
+            on ``record.errors``, and ``permissive=True`` yields ``None`` with
+            the error in ``current_exception``, as pymarc does.
+            ``"replace"`` substitutes U+FFFD and ``"ignore"`` drops the bytes.
+        file_encoding: pymarc's option naming the encoding of records whose
+            leader does not say UTF-8. mrrc accepts only pymarc's default,
+            ``"iso8859-1"``, which selects MARC-8 decoding, and raises
+            ``ValueError`` for any other value. mrrc decodes control fields as
+            MARC-8 too, where pymarc decodes them as ISO 8859-1; the two agree
+            on ASCII.
         permissive: When ``True``, yields ``None`` for records that fail to
             parse instead of raising, matching pymarc's ``permissive`` behavior.
             Setting this flag implicitly defaults ``recovery_mode`` back to
@@ -1856,26 +1863,22 @@ class MARCReader:
             records whose leader still says MARC-8. Combining
             ``force_utf8=True`` with ``"leader"`` or ``"detect"`` raises
             ``ValueError``.
-        utf8_handling: pymarc's option for invalid UTF-8 in a record decoded
-            as UTF-8. ``"strict"`` (the default, as in pymarc) makes it an
-            E301 ``EncodingError``, handled by ``recovery_mode`` like any other
-            error: the default recovery drops the field and records the error
-            on ``record.errors``, and ``permissive=True`` yields ``None`` with
-            the error in ``current_exception``, as pymarc does.
-            ``"replace"`` substitutes U+FFFD and ``"ignore"`` drops the bytes.
     """
 
     def __init__(
         self,
-        file_obj: Any,
+        marc_target: Any,
         to_unicode: bool = True,
+        force_utf8: bool = False,
+        hide_utf8_warnings: bool = False,
+        utf8_handling: str = "strict",
+        file_encoding: str = "iso8859-1",
         permissive: bool = False,
+        *,
         recovery_mode: str | None = None,
         validation_level: str = "structural",
         max_errors: int | None = None,
-        force_utf8: bool = False,
         character_coding: str | None = None,
-        utf8_handling: str = "strict",
     ):
         """Create a new MARC reader."""
         if not to_unicode:
@@ -1884,6 +1887,13 @@ class MARCReader:
             warnings.warn(
                 "mrrc always converts MARC-8 to UTF-8; to_unicode=False has no effect",
                 stacklevel=2,
+            )
+        if file_encoding != "iso8859-1":
+            raise ValueError(
+                f"Unsupported file_encoding {file_encoding!r}: mrrc decodes "
+                "records whose leader does not say UTF-8 as MARC-8, which "
+                "pymarc's default file_encoding='iso8859-1' selects; it "
+                "supports no other encoding"
             )
         # ``recovery_mode`` defaults are a two-level sentinel: a caller
         # who passes ``permissive=True`` (pymarc-shape) without naming a
@@ -1901,7 +1911,7 @@ class MARCReader:
             )
         self._permissive = permissive
         self._inner = _MARCReader(
-            file_obj,
+            marc_target,
             recovery_mode=recovery_mode,
             validation_level=validation_level,
             max_errors=max_errors,

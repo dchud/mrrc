@@ -94,6 +94,7 @@ with open('output.mrc', 'wb') as f:
 | Create reader | `MARCReader(file_obj)` | `MARCReader('path.mrc')` (recommended) or `MARCReader(file_obj)` | Enhanced |
 | Permissive mode | `MARCReader(f, permissive=True)` | `MARCReader(f, permissive=True)` | **Same** |
 | Unicode flag | `MARCReader(f, to_unicode=True)` | `MARCReader(f, to_unicode=True)` | **Same** |
+| Positional arguments | `MARCReader(f, True, True)` (`to_unicode`, `force_utf8`) | `MARCReader(f, True, True)` | **Same** |
 | Read record | `reader.next()` or `next(reader)` | `next(reader)` | **Same** |
 | Write record | `writer.write(record)` | `writer.write(record)` | **Same** |
 | Iterate | `for record in reader:` | `for record in reader:` | **Same** |
@@ -233,8 +234,12 @@ leader[5] = 'c'                     # Set record status at position 5
 leader[6] = 'a'                     # Set record type at position 6
 
 # Slice access to get multiple positions
-record_length = int(leader[0:5])    # Get first 5 chars (record length)
+record_length = leader[0:5]         # First 5 chars, e.g. '00714'
 cataloging_form = leader[18]        # Get cataloging form char at position 18
+
+# Numeric positions are zero-padded strings, as in pymarc
+leader.record_length                # '00714', the same as leader[0:5]
+leader.base_address = '00205'       # Assign a string of the full width
 
 # Position and property access are automatically synchronized
 leader.record_status = 'd'
@@ -397,6 +402,15 @@ documented difference from pymarc's defaults:
   set. For parse failures of fully-read chunks (the common case),
   `current_chunk` carries the full record bytes as pymarc does.
 
+### MARCReader Arguments
+
+`mrrc.MARCReader` takes pymarc's parameters (`to_unicode`, `force_utf8`,
+`hide_utf8_warnings`, `utf8_handling`, `file_encoding`, `permissive`) in
+pymarc's order and with pymarc's defaults, so a pymarc call that passes them
+positionally means the same in mrrc. mrrc's own parameters
+(`recovery_mode`, `validation_level`, `max_errors`, `character_coding`) are
+keyword-only.
+
 ### to_unicode Flag
 
 pymarc's `to_unicode=True` (the default) converts MARC-8 encoded records to
@@ -439,6 +453,19 @@ when its field data is valid UTF-8 containing non-ASCII bytes and otherwise
 follows the leader. It suits files that mix MARC-8 records with UTF-8 records
 whose leader still says MARC-8, where `force_utf8=True` would misread the
 MARC-8 ones. See [Character Encoding](../reference/encoding.md#choosing-the-encoding).
+
+### hide_utf8_warnings and file_encoding
+
+pymarc writes a message to stderr for each MARC-8 character it cannot map
+unless `hide_utf8_warnings=True`. mrrc never writes these messages, so it
+accepts the flag and ignores it.
+
+pymarc's `file_encoding` names the encoding of records whose leader does not
+say UTF-8. Its default, `"iso8859-1"`, selects MARC-8 decoding for subfield
+data and ISO 8859-1 for control fields. mrrc accepts only that default and
+raises `ValueError` for any other value, because it decodes such records
+only as MARC-8. It decodes their control fields as MARC-8 as well, which
+gives the same text as pymarc for ASCII control-field data.
 
 ### Recovery Mode (mrrc-specific)
 
@@ -524,6 +551,7 @@ in the reference for the rationale.
 4. **Type safety**: All data is validated at Rust layer (this is a feature, prevents data corruption)
 5. **Field handles, not shared objects**: fields obtained from a record are live handles — in-place edits persist exactly as in pymarc, but each lookup returns a distinct handle object (`record['245'] is record['245']` is `False`), so don't compare fields with `is` or `id()`
 6. **Removal invalidates field handles**: after any `remove_field`/`remove_fields` call, outstanding handles raise `mrrc.StaleFieldError` on use instead of silently targeting the wrong field — re-fetch the field and retry (pymarc object references survive removals)
+7. **Leader numeric positions hold digits**: `record_length`, `base_address`, `indicator_count`, and `subfield_code_count` are strings as in pymarc, but assigning one takes a string of ASCII digits of the position's width and raises `ValueError` for any other string; pymarc accepts any characters of that width (both raise `TypeError` for an `int`)
 
 ## Getting Help
 

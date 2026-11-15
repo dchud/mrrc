@@ -414,6 +414,20 @@ class TestLeaderEdits:
         record.leader.record_status = "c"
         assert record.leader.record_status == "c"
 
+    def test_numeric_positions_are_strings(self, kind):
+        """The record length, base address, and indicator and subfield code
+        counts are strings of their full width, as in pymarc."""
+        record = READ_RECORD[kind]()
+        leader = str(record.leader)
+        assert record.leader.record_length == leader[0:5]
+        assert record.leader.indicator_count == leader[10]
+        assert record.leader.subfield_code_count == leader[11]
+        assert record.leader.data_base_address == leader[12:17]
+        record.leader.data_base_address = "00321"
+        assert str(record.leader)[12:17] == "00321"
+        with pytest.raises(TypeError, match="1-digit str"):
+            record.leader.indicator_count = 2
+
     def test_record_type_reflects_leader_edit(self, kind):
         record = READ_RECORD[kind]()
         record.leader.record_type = "q"
