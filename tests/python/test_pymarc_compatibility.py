@@ -324,7 +324,7 @@ class TestConvenienceMethods:
         record.add_field(create_field("852", " ", " ", a="Main Library"))
 
         locations = record.location
-        assert "Main Library" in locations
+        assert [f["a"] for f in locations] == ["Main Library"]
 
     def test_notes(self):
         """Test notes() convenience method."""
@@ -332,7 +332,7 @@ class TestConvenienceMethods:
         record.add_field(create_field("500", " ", " ", a="General note"))
 
         notes = record.notes
-        assert "General note" in notes
+        assert [f["a"] for f in notes] == ["General note"]
 
     def test_series(self):
         """Test series() convenience method."""
@@ -340,7 +340,7 @@ class TestConvenienceMethods:
         record.add_field(create_field("490", " ", " ", a="Series Name"))
 
         series = record.series
-        assert series is not None
+        assert [f["a"] for f in series] == ["Series Name"]
 
     def test_physical_description(self):
         """Test physical_description() convenience method."""
@@ -348,7 +348,7 @@ class TestConvenienceMethods:
         record.add_field(create_field("300", " ", " ", a="256 pages"))
 
         phys_desc = record.physical_description
-        assert "256" in phys_desc or phys_desc is not None
+        assert [f["a"] for f in phys_desc] == ["256 pages"]
 
     def test_uniform_title(self):
         """Test uniform_title() convenience method."""
@@ -1537,7 +1537,7 @@ class TestRecordPropertyAccessors:
     def test_subjects_is_property(self):
         record = self._make_record()
         assert isinstance(record.subjects, list)
-        assert "Testing." in record.subjects
+        assert [f["a"] for f in record.subjects] == ["Testing."]
 
     def test_publisher_is_property(self):
         record = self._make_record()
@@ -1564,10 +1564,11 @@ class TestRecordPropertyAccessors:
         assert record.issn_title is not None
 
     def test_issnl_is_property(self):
+        """issnl reads 022 $l."""
         record = self._make_record()
-        # issnl may or may not match based on how 024 is parsed
-        result = record.issnl
-        assert result is None or isinstance(result, str)
+        assert record.issnl is None
+        record["022"].add_subfield("l", "0028-0836")
+        assert record.issnl == "0028-0836"
 
     def test_pubyear_returns_str(self):
         """pubyear must return str, not int, matching pymarc."""
@@ -1601,7 +1602,7 @@ class TestRecordPropertyAccessors:
         assert record.uniformtitle == record.uniform_title
 
     def test_addedentries(self):
-        """addedentries returns 700/710/711/730 fields."""
+        """addedentries returns the 7XX added entry fields."""
         record = self._make_record()
         entries = record.addedentries
         assert isinstance(entries, list)
@@ -1828,6 +1829,46 @@ class TestFieldValueMethods:
     def test_format_field_control(self):
         field = Field("001", data="12345")
         assert field.format_field() == "12345"
+
+    def test_format_field_subject_subdivisions(self):
+        field = Field(
+            "650",
+            " ",
+            "0",
+            subfields=[
+                Subfield("a", "Cats"),
+                Subfield("x", "Behavior"),
+                Subfield("z", "France"),
+                Subfield("v", "Juvenile literature."),
+            ],
+        )
+        assert (
+            field.format_field()
+            == "Cats -- Behavior -- France -- Juvenile literature."
+        )
+
+    def test_format_field_skips_linkage(self):
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[Subfield("6", "880-02"), Subfield("a", "Title")],
+        )
+        assert field.format_field() == "Title"
+        assert field.value() == "880-02 Title"
+
+    def test_value_strips_each_subfield(self):
+        field = Field(
+            "245",
+            "1",
+            "0",
+            subfields=[Subfield("a", " Title / "), Subfield("c", "A. ")],
+        )
+        assert field.value() == "Title / A."
+
+    def test_str_control_field_spaces_as_backslashes(self):
+        field = Field("008", data="850101s1985    nyu")
+        assert str(field) == "=008  850101s1985\\\\\\\\nyu"
 
 
 class TestFieldBinarySerialization:

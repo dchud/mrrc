@@ -72,7 +72,7 @@ def simple_record():
     print(f"Control Number: {record.control_field('001')}")
     print(f"Title:          {record.title}")
     print(f"Author:         {record.author}")
-    print(f"Subjects:       {', '.join(record.subjects)}")
+    print(f"Subjects:       {', '.join(f.format_field() for f in record.subjects)}")
     print()
 
 
@@ -160,7 +160,7 @@ def record_with_complex_fields():
     
     print(f"\nSubjects:")
     for subject in record.subjects:
-        print(f"  - {subject}")
+        print(f"  - {subject.format_field()}")
     print()
 
 
@@ -245,7 +245,7 @@ def record_with_multiple_entries():
     
     print(f"\nSubjects:")
     for subject in record.subjects:
-        print(f"  - {subject}")
+        print(f"  - {subject.format_field()}")
 
     print(f"\nGenre/Form:")
     if '655' in record:

@@ -7,7 +7,6 @@ reading, writing, and manipulation of MARC bibliographic records.
 The Python wrapper aims for API compatibility with pymarc.
 """
 
-import contextlib
 import weakref
 from typing import Any, ClassVar, Optional, Union
 
@@ -171,6 +170,25 @@ def _field_value_key(rust_field) -> tuple:
 
 # Control field tags for enumeration (when we need to iterate all possible control fields)
 _CONTROL_TAGS = ("001", "002", "003", "004", "005", "006", "007", "008", "009")
+
+# Tags pymarc's Record properties collect, in pymarc's order.
+_SUBJECT_TAGS = (
+    "600", "610", "611", "630", "648", "650", "651", "653", "654", "655",
+    "656", "657", "658", "662", "690", "691", "696", "697", "698", "699",
+)  # fmt: skip
+_ADDED_ENTRY_TAGS = (
+    "700", "710", "711", "720", "730", "740", "752", "753", "754", "790",
+    "791", "792", "793", "796", "797", "798", "799",
+)  # fmt: skip
+_SERIES_TAGS = ("440", "490", "800", "810", "811", "830")
+_NOTE_TAGS = (
+    "500", "501", "502", "504", "505", "506", "507", "508", "510", "511",
+    "513", "514", "515", "516", "518", "520", "521", "522", "524", "525",
+    "526", "530", "533", "534", "535", "536", "538", "540", "541", "544",
+    "545", "546", "547", "550", "552", "555", "556", "561", "562", "563",
+    "565", "567", "580", "581", "583", "584", "585", "586", "590", "591",
+    "592", "593", "594", "595", "596", "597", "598", "599",
+)  # fmt: skip
 
 
 # MARC format constants (pymarc compatibility)
@@ -378,22 +396,32 @@ class Field:
             return None
 
     def __setitem__(self, code: str, value: str) -> None:
-        """Set subfield value (replace first occurrence)."""
+        """Replace the value of the subfield with ``code``, keeping its
+        position (pymarc compatibility).
+
+        Raises KeyError if the field has no subfield with ``code``, or
+        more than one.
+        """
         self._refresh()
         subfields = self._inner.subfields()
-        code_char = code[0] if code else ""
-
-        # Check if code already exists
-        found_count = sum(1 for sf in subfields if sf.code == code_char)
-
-        if found_count == 0:
-            raise KeyError(code)
-        elif found_count > 1:
-            raise KeyError(f"Multiple subfields with code '{code}' exist")
-        else:
-            self._inner.delete_subfield(code)
-            self._inner.add_subfield(code, value)
-            self._writeback()
+        positions = [i for i, sf in enumerate(subfields) if sf.code == code]
+        if not positions:
+            raise KeyError(f"no code '{code}'")
+        if len(positions) > 1:
+            raise KeyError(f"more than one code '{code}'")
+        subfields[positions[0]] = Subfield(code, value)
+        inner = self._inner
+        object.__setattr__(
+            self,
+            "_inner",
+            _Field(
+                inner.tag,
+                inner.indicator1,
+                inner.indicator2,
+                subfields=subfields,
+            ),
+        )
+        self._writeback()
 
     def get(self, code: str, default: str | None = None) -> str | None:
         """Get first subfield value by code or return default."""
@@ -433,21 +461,30 @@ class Field:
 
     def value(self) -> str:
         """Return the field's value (pymarc compatibility).
-        For control fields, returns the data content.
-        For data fields, returns space-joined subfield values.
+
+        For control fields, returns the data content. For data fields,
+        strips surrounding whitespace from each subfield value and joins
+        the values with spaces; every subfield is included.
         """
         self._refresh()
         if self.is_control_field():
             return self._data or ""
-        return " ".join(sf.value for sf in self._inner.subfields())
+        return self._inner.value()
 
     def format_field(self) -> str:
         """Return human-readable text without indicators or subfield codes
         (pymarc compatibility).
+
+        For control fields, returns the data content. For data fields,
+        joins the subfield values with spaces, skipping ``$6``; in subject
+        fields (tags starting with ``6``), ``$v``, ``$x``, ``$y``, and
+        ``$z`` are preceded by ``" -- "`` instead of a space. Surrounding
+        whitespace is stripped from the result.
         """
+        self._refresh()
         if self.is_control_field():
             return self._data or ""
-        return " ".join(sf.value for sf in self.subfields())
+        return self._inner.format_field()
 
     def is_control_field(self) -> bool:
         """Check if this is a control field (pymarc compatibility)."""
@@ -458,10 +495,14 @@ class Field:
 
         Data fields: =TAG  IND1IND2$aCONTENT$bCONTENT
         Control fields: =TAG  CONTENT
+
+        Blank indicators and spaces in control field data are written
+        as backslashes.
         """
         self._refresh()
         if self.is_control_field():
-            return f"={self._inner.tag}  {self._data}"
+            data = (self._data or "").replace(" ", "\\")
+            return f"={self._inner.tag}  {data}"
         ind1 = self._inner.indicator1.replace(" ", "\\")
         ind2 = self._inner.indicator2.replace(" ", "\\")
         subfield_str = "".join(
@@ -485,17 +526,16 @@ class Field:
     def get_subfields(self, *codes: str) -> list[str]:
         """Get all subfield values for given codes (pymarc compatibility).
 
+        Values are returned in the order their subfields appear in the
+        field, not in the order of ``codes``.
+
         Example:
             ```python
             field.get_subfields('a', 'b')  # Get all 'a' and 'b' subfield values
             ```
         """
         self._refresh()
-        result = []
-        for code in codes:
-            with contextlib.suppress(Exception):
-                result.extend(self._inner.subfields_by_code(code))
-        return result
+        return self._inner.get_subfields(*codes)
 
     def delete_subfield(self, code: str) -> str | None:
         """Delete first subfield with given code and return its value.
@@ -1148,16 +1188,13 @@ class Record:
                 occurrences[field.tag] = i + 1
                 result.append(_wrap_field(field, self, i))
         else:
-            # Return fields for specified tags
-            for tag in tags:
-                if _is_control_tag(tag):
-                    for i, value in enumerate(
-                        self._inner.control_field_values(tag)
-                    ):
-                        result.append(_wrap_control_field(self, tag, i, value))
+            # One Rust call looks up every tag; a control field's item is
+            # its value, a data field's item is the Rust field.
+            for tag, i, item in self._inner.field_entries(*tags):
+                if isinstance(item, str):
+                    result.append(_wrap_control_field(self, tag, i, item))
                 else:
-                    for i, field in enumerate(self._inner.get_fields(tag)):
-                        result.append(_wrap_field(field, self, i))
+                    result.append(_wrap_field(item, self, i))
 
         return result
 
@@ -1320,94 +1357,105 @@ class Record:
 
     @property
     def title(self) -> str | None:
-        """Title from 245 field."""
+        """Title: 245 ``$a``, followed by a space and ``$b`` when both are
+        non-empty (pymarc compatibility)."""
         return self._inner.title()
 
     @property
     def author(self) -> str | None:
-        """Author from 100/110/111 field."""
+        """Author: the first 100, 110, or 111 field, checked in that order,
+        as ``format_field()`` text (pymarc compatibility)."""
         return self._inner.author()
 
     @property
     def isbn(self) -> str | None:
-        """ISBN from 020 field."""
+        """ISBN: the first run of digits, hyphens, ``x``, and ``X`` in the
+        first 020 ``$a``, with the hyphens removed (pymarc compatibility)."""
         return self._inner.isbn()
 
     @property
     def issn(self) -> str | None:
-        """ISSN from 022 field."""
+        """ISSN: the first 022 ``$a`` (pymarc compatibility)."""
         return self._inner.issn()
 
     @property
-    def subjects(self) -> list[str]:
-        """All subject headings from 6XX subject fields."""
-        return self._inner.subjects()
-
-    @property
-    def location(self) -> list[str]:
-        """All location fields (852)."""
-        return self._inner.location()
-
-    @property
-    def notes(self) -> list[str]:
-        """All notes from 5xx fields."""
-        return self._inner.notes()
-
-    @property
-    def publisher(self) -> str | None:
-        """Publisher from 260 or 264 (RDA) field."""
-        return self._inner.publisher()
-
-    @property
-    def uniform_title(self) -> str | None:
-        """Uniform title from 130 field."""
-        return self._inner.uniform_title()
-
-    @property
-    def sudoc(self) -> str | None:
-        """SuDoc from 086 field."""
-        return self._inner.sudoc()
-
-    @property
-    def issn_title(self) -> str | None:
-        """ISSN title from 222 field."""
-        return self._inner.issn_title()
-
-    @property
     def issnl(self) -> str | None:
-        """ISSN-L from 024 field."""
+        """ISSN-L: the first 022 ``$l`` (pymarc compatibility)."""
         return self._inner.issnl()
 
     @property
-    def pubyear(self) -> str | None:
-        """Publication year (returns str, matching pymarc)."""
-        result = self._inner.pubyear()
-        return str(result) if result is not None else None
+    def issn_title(self) -> str | None:
+        """Key title: 222 ``$a``, followed by a space and ``$b`` when both
+        are non-empty (pymarc compatibility)."""
+        return self._inner.issn_title()
 
     @property
-    def series(self) -> str | None:
-        """Series from 490 field."""
-        return self._inner.series()
-
-    @property
-    def physical_description(self) -> str | None:
-        """Physical description from 300 field."""
-        return self._inner.physical_description()
-
-    @property
-    def physicaldescription(self) -> str | None:
-        """Physical description (pymarc-compatible name)."""
-        return self.physical_description
+    def sudoc(self) -> str | None:
+        """SuDoc classification: the first 086 field as ``format_field()``
+        text (pymarc compatibility)."""
+        return self._inner.sudoc()
 
     @property
     def uniformtitle(self) -> str | None:
-        """Uniform title (pymarc-compatible name)."""
-        return self.uniform_title
+        """Uniform title: the first 130 or 240 field, checked in that
+        order, as ``format_field()`` text (pymarc compatibility)."""
+        return self._inner.uniform_title()
 
     @property
-    def addedentries(self) -> list:
-        """Added entries from 700/710/711/730 fields (pymarc compatibility)."""
-        return self.get_fields("700", "710", "711", "730")
+    def uniform_title(self) -> str | None:
+        """Alias for ``uniformtitle``."""
+        return self.uniformtitle
+
+    @property
+    def publisher(self) -> str | None:
+        """Publisher: ``$b`` of the first field, in record order, that is a
+        260 or a 264 with second indicator ``1`` (pymarc compatibility)."""
+        return self._inner.publisher()
+
+    @property
+    def pubyear(self) -> str | None:
+        """Publication date as cataloged, such as ``"c1985."``: ``$c`` of
+        the field ``publisher`` reads (pymarc compatibility)."""
+        return self._inner.pubyear()
+
+    @property
+    def subjects(self) -> list["Field"]:
+        """Subject fields: 600, 610, 611, 630, 648, 650, 651, 653-658, 662,
+        690, 691, and 696-699 (pymarc compatibility)."""
+        return self.get_fields(*_SUBJECT_TAGS)
+
+    @property
+    def addedentries(self) -> list["Field"]:
+        """Added entry fields: 700, 710, 711, 720, 730, 740, 752-754,
+        790-793, and 796-799 (pymarc compatibility)."""
+        return self.get_fields(*_ADDED_ENTRY_TAGS)
+
+    @property
+    def series(self) -> list["Field"]:
+        """Series fields: 440, 490, 800, 810, 811, and 830 (pymarc
+        compatibility)."""
+        return self.get_fields(*_SERIES_TAGS)
+
+    @property
+    def notes(self) -> list["Field"]:
+        """Note fields: the 5XX tags pymarc lists, which leave out 503,
+        509, 512, 517, 519, and others (pymarc compatibility)."""
+        return self.get_fields(*_NOTE_TAGS)
+
+    @property
+    def location(self) -> list["Field"]:
+        """Location fields: 852 (pymarc compatibility)."""
+        return self.get_fields("852")
+
+    @property
+    def physicaldescription(self) -> list["Field"]:
+        """Physical description fields: 300 (pymarc compatibility)."""
+        return self.get_fields("300")
+
+    @property
+    def physical_description(self) -> list["Field"]:
+        """Alias for ``physicaldescription``."""
+        return self.physicaldescription
 
     def is_book(self) -> bool:
         """Check if this is a book."""

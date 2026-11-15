@@ -70,16 +70,22 @@ control_number = record.control_field("001")
 
 ## Convenience Properties
 
-MRRC provides property shortcuts for common data (no parentheses needed):
+MRRC provides pymarc's property shortcuts for common data (no parentheses
+needed):
 
 ```python
-record.title           # 245 $a
-record.author          # 100/110/111 $a
-record.isbn            # 020 $a (first)
+record.title           # 245 $a and $b
+record.author          # first 100, 110, or 111, as format_field() text
+record.isbn            # first 020 $a, digits only
 record.issn            # 022 $a
-record.publisher       # 260 $b
-record.pubyear         # Publication year
-record.subjects        # All 6XX $a values
+record.publisher       # 260 $b, or 264 $b with second indicator 1
+record.pubyear         # $c of the same field, as cataloged ("c1985.")
+record.subjects        # 6XX subject fields, as Field objects
+```
+
+```python
+for subject in record.subjects:
+    print(subject.format_field())   # "Cats -- Behavior -- France."
 ```
 
 ## Working with Subfields

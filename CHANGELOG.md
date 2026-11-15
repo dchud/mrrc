@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every validation level; it was replaced with U+FFFD unless `validation_level="strict_marc"`.
   The default Python recovery drops the field and records E301 on `record.errors`, and
   `permissive=True` yields `None`. Pass `utf8_handling="replace"` for the previous decoding.
+- Python `Record` properties return pymarc's values: `title` and `issn_title` add `$b`; `author`,
+  `sudoc`, and `uniformtitle` are `format_field()` text; `isbn` is digits only; `issnl` reads
+  022 `$l`; `pubyear` is `$c` as cataloged. `subjects`, `notes`, `series`, `location`,
+  `physicaldescription`, and `addedentries` return lists of `Field` with pymarc's tags.
 
 ### Fixed
 
@@ -57,6 +61,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with non-ASCII text as mixed, and flags every value in a UTF-8 record that holds a MARC-8 escape
   character, including one that also holds `U+FFFD` or ends in ESC.
   `MarcEncoding::declared_by_leader` exposes the position 09 rule.
+- `Field.format_field()` and `value()` match pymarc. Python's `format_field()` now skips `$6` and
+  puts ` -- ` before `$v`/`$x`/`$y`/`$z` in 6XX fields, as Rust's did; `value()` strips each
+  subfield value, in Rust too. Python `get_subfields()` returns values in field order,
+  `field[code] = value` keeps the subfield's position, and `str()` of a control field writes
+  spaces as backslashes.
 
 ### Performance
 

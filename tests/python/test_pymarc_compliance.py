@@ -212,8 +212,10 @@ class TestRecordSubjects:
         record.add_field(create_field("650", " ", "0", a="Python language"))
 
         subjects = record.subjects
-        assert len(subjects) >= 2
-        assert any("Computer" in s for s in subjects)
+        assert [f["a"] for f in subjects] == [
+            "Computer science",
+            "Python language",
+        ]
 
     def test_subjects_from_all_6xx_fields(self):
         """Test that subjects() returns entries from all 6xx fields, matching pymarc."""
@@ -229,15 +231,16 @@ class TestRecordSubjects:
         record.add_field(create_field("655", " ", "7", a="Commentaries."))
 
         subjects = record.subjects
-        assert len(subjects) == 8
-        assert "Maimonides, Moses," in subjects
-        assert "United Nations" in subjects
-        assert "Vatican Council" in subjects
-        assert "Talmud Bavli." in subjects
-        assert "20th century" in subjects
-        assert "Jewish law." in subjects
-        assert "Jerusalem" in subjects
-        assert "Commentaries." in subjects
+        assert [f.format_field() for f in subjects] == [
+            "Maimonides, Moses,",
+            "United Nations",
+            "Vatican Council",
+            "Talmud Bavli.",
+            "20th century",
+            "Jewish law.",
+            "Jerusalem",
+            "Commentaries.",
+        ]
 
 
 class TestRecordPublisher:
@@ -305,7 +308,7 @@ class TestRecordPublicationYear:
         """Test getting publication year from 264 field (RDA cataloging)."""
         record = Record()
         record.add_field(create_field("264", " ", "1", c="[2022]"))
-        assert record.pubyear == "2022"
+        assert record.pubyear == "[2022]"
 
 
 class TestRecordISBN:
@@ -398,7 +401,7 @@ class TestRecordPhysicalDescription:
     def test_physical_description(self):
         """Test physical description property."""
         record = Record()
-        assert record.physical_description is None
+        assert record.physical_description == []
 
         record.add_field(
             create_field(
@@ -411,7 +414,9 @@ class TestRecordPhysicalDescription:
             )
         )
         desc = record.physical_description
-        assert desc is not None
+        assert [f.format_field() for f in desc] == [
+            "1 photographic print : gelatin silver ; 10 x 56 in."
+        ]
 
 
 class TestRecordLocation:

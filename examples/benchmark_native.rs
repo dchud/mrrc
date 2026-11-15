@@ -70,7 +70,7 @@ fn op_extract(path: &Path) -> (usize, f64) {
                 acc += value.len();
             }
         }
-        // Data fields: value is the space-joined subfield values.
+        // Data fields: value is the trimmed subfield values, space-joined.
         for field in record.fields() {
             acc += field.value().len();
         }

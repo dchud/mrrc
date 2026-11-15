@@ -191,11 +191,14 @@ class TestConvenienceMethods:
         record.add_field(create_field("655", " ", "7", a="Commentaries."))
 
         subjects = record.subjects
-        assert len(subjects) == 6
-        assert "Subject 0" in subjects
-        assert "Maimonides, Moses," in subjects
-        assert "Talmud Bavli." in subjects
-        assert "Commentaries." in subjects
+        assert sorted(f["a"] for f in subjects) == [
+            "Commentaries.",
+            "Maimonides, Moses,",
+            "Subject 0",
+            "Subject 1",
+            "Subject 2",
+            "Talmud Bavli.",
+        ]
 
     def test_location_method(self):
         """Test the location() convenience method."""
@@ -204,8 +207,7 @@ class TestConvenienceMethods:
         record.add_field(create_field("852", " ", " ", a="Main Library"))
 
         locations = record.location
-        assert len(locations) >= 1
-        assert "Main Library" in locations
+        assert [f["a"] for f in locations] == ["Main Library"]
 
     def test_notes_method(self):
         """Test the notes() convenience method."""
@@ -214,8 +216,7 @@ class TestConvenienceMethods:
         record.add_field(create_field("500", " ", " ", a="General note"))
 
         notes = record.notes
-        assert len(notes) >= 1
-        assert "General note" in notes
+        assert [f["a"] for f in notes] == ["General note"]
 
     def test_uniform_title_method(self):
         """Test the uniform_title() convenience method."""
@@ -248,17 +249,19 @@ class TestConvenienceMethods:
         assert issn_title == "Key Title"
 
     def test_issnl_method(self):
-        """Test the issnl() convenience method for ISSN-L."""
+        """Test the issnl() convenience method for ISSN-L (022 $l)."""
         leader = Leader()
         record = Record(leader)
-        record.add_field(create_field("024", " ", " ", a="1234-5678"))
+        record.add_field(
+            create_field("022", " ", " ", a="0028-0836", l="1234-5678")
+        )
 
         issnl = record.issnl
         assert issnl is not None
         assert issnl == "1234-5678"
 
     def test_pubyear_method(self):
-        """Test the pubyear() convenience method (alias for publication_year)."""
+        """Test the pubyear() convenience method (260 or 264 $c)."""
         leader = Leader()
         record = Record(leader)
 
@@ -308,8 +311,7 @@ class TestConvenienceMethods:
         )
 
         series = record.series
-        assert series is not None
-        assert "Programming" in series
+        assert [f["a"] for f in series] == ["Programming Patterns"]
 
     def test_physical_description_method(self):
         """Test the physical_description() convenience method."""
@@ -322,8 +324,7 @@ class TestConvenienceMethods:
         record.add_field(field)
 
         phys_desc = record.physical_description
-        assert phys_desc is not None
-        assert "256" in phys_desc
+        assert [f.format_field() for f in phys_desc] == ["256 pages ; 24 cm"]
 
 
 class TestFieldDictLike:

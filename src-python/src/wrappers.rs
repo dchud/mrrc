@@ -2,6 +2,7 @@
 
 use mrrc::{AuthorityRecord, Field, HoldingsRecord, Leader, Record, RecordHelpers, Subfield};
 use pyo3::prelude::*;
+use pyo3::types::PyTuple;
 
 /// Python wrapper for a MARC Leader (24-byte record header)
 ///
@@ -560,6 +561,41 @@ impl PyField {
         Ok(self.inner.delete_subfield(code_char))
     }
 
+    /// Get the values of the subfields whose code is one of `codes`, in
+    /// field order (pymarc's `Field.get_subfields()`). A code that is not
+    /// exactly one character matches nothing.
+    #[pyo3(signature = (*codes))]
+    pub fn get_subfields(&self, codes: Vec<String>) -> Vec<String> {
+        let chars: Vec<char> = codes
+            .iter()
+            .filter_map(|code| {
+                let mut chars = code.chars();
+                match (chars.next(), chars.next()) {
+                    (Some(c), None) => Some(c),
+                    _ => None,
+                }
+            })
+            .collect();
+        self.inner
+            .get_subfields(&chars)
+            .into_iter()
+            .map(str::to_string)
+            .collect()
+    }
+
+    /// Get the subfield values joined with spaces, each value stripped of
+    /// surrounding whitespace (pymarc's `Field.value()`).
+    pub fn value(&self) -> String {
+        self.inner.value()
+    }
+
+    /// Get the subfield values as display text (pymarc's
+    /// `Field.format_field()`): `$6` is skipped, and in 6XX fields `$v`,
+    /// `$x`, `$y`, and `$z` are preceded by " -- " instead of a space.
+    pub fn format_field(&self) -> String {
+        self.inner.format_field()
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "<Field tag={} ind1={} ind2={} subfields={}>",
@@ -641,6 +677,46 @@ impl From<Record> for PyRecord {
             generation: 0,
         }
     }
+}
+
+impl PyRecord {
+    /// The first of `tags` present in the record, as `format_field()` text.
+    fn first_field_text(&self, tags: &[&str]) -> Option<String> {
+        tags.iter()
+            .find_map(|tag| self.inner.get_field(tag))
+            .map(Field::format_field)
+    }
+
+    /// `$code` of the first field, in record order, that is a 260 or a 264
+    /// with second indicator `1`: the field pymarc reads the publisher and
+    /// publication date from.
+    fn publication_subfield(&self, code: char) -> Option<String> {
+        self.inner
+            .fields()
+            .find(|f| f.tag == "260" || (f.tag == "264" && f.indicator2 == '1'))
+            .and_then(|f| f.get_subfield(code))
+            .map(str::to_string)
+    }
+}
+
+/// pymarc's title text for a 245 or 222 field: `$a`, followed by a space
+/// and `$b` when both are non-empty.
+fn title_text(field: &Field) -> Option<String> {
+    let title = field.get_subfield('a')?;
+    match field.get_subfield('b') {
+        Some(rest) if !title.is_empty() && !rest.is_empty() => Some(format!("{title} {rest}")),
+        _ => Some(title.to_string()),
+    }
+}
+
+/// pymarc's ISBN text: the first run of digits, hyphens, `x`, and `X` in
+/// `value`, with the hyphens removed.
+fn isbn_text(value: &str) -> Option<String> {
+    let is_isbn_char = |c: char| c.is_ascii_digit() || matches!(c, '-' | 'x' | 'X');
+    let start = value.find(is_isbn_char)?;
+    let run = &value[start..];
+    let end = run.find(|c: char| !is_isbn_char(c)).unwrap_or(run.len());
+    Some(run[..end].replace('-', ""))
 }
 
 #[pymethods]
@@ -726,6 +802,42 @@ impl PyRecord {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    /// Fields with any of `tags`, grouped by tag in argument order, as
+    /// `(tag, occurrence, item)` tuples. `item` is the value for a control
+    /// field and a `Field` for a data field; `occurrence` is the zero-based
+    /// index among fields with that tag. Looks up every tag in one call.
+    #[pyo3(signature = (*tags))]
+    pub fn field_entries(
+        &self,
+        tags: &Bound<'_, PyTuple>,
+    ) -> PyResult<Vec<(Py<PyAny>, usize, Py<PyAny>)>> {
+        let py = tags.py();
+        let mut entries = Vec::new();
+        for tag_obj in tags.iter() {
+            let tag: &str = tag_obj.extract()?;
+            if mrrc::iso2709::is_control_field_tag(tag) {
+                if let Some(values) = self.inner.control_fields.get(tag) {
+                    for (i, value) in values.iter().enumerate() {
+                        let item = value.into_pyobject(py)?.into_any().unbind();
+                        entries.push((tag_obj.clone().unbind(), i, item));
+                    }
+                }
+            } else if let Some(fields) = self.inner.get_fields(tag) {
+                for (i, field) in fields.iter().enumerate() {
+                    let item = Py::new(
+                        py,
+                        PyField {
+                            inner: field.clone(),
+                        },
+                    )?
+                    .into_any();
+                    entries.push((tag_obj.clone().unbind(), i, item));
+                }
+            }
+        }
+        Ok(entries)
     }
 
     /// Get all fields
@@ -899,97 +1011,68 @@ impl PyRecord {
         }
     }
 
-    /// Get title from 245 field (first subfield $a)
+    /// Get the title: 245 `$a`, followed by a space and `$b` when both are
+    /// non-empty (pymarc's `Record.title`)
     pub fn title(&self) -> Option<String> {
-        self.inner.title().map(std::string::ToString::to_string)
+        self.inner.get_field("245").and_then(title_text)
     }
 
-    /// Get author from 100/110/111 field
+    /// Get the author: the first 100, 110, or 111 field, checked in that
+    /// order, as `format_field()` text (pymarc's `Record.author`)
     pub fn author(&self) -> Option<String> {
-        self.inner.author().map(std::string::ToString::to_string)
+        self.first_field_text(&["100", "110", "111"])
     }
 
-    /// Get ISBN from 020 field
+    /// Get the ISBN: the first run of digits, hyphens, `x`, and `X` in the
+    /// first 020 `$a`, with the hyphens removed (pymarc's `Record.isbn`)
     pub fn isbn(&self) -> Option<String> {
-        self.inner.isbn().map(std::string::ToString::to_string)
-    }
-
-    /// Get all subject headings from 6XX subject fields
-    pub fn subjects(&self) -> Vec<String> {
         self.inner
-            .subjects()
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect()
+            .get_field("020")
+            .and_then(|f| f.get_subfield('a'))
+            .and_then(isbn_text)
     }
 
-    /// Get all location fields (852)
-    pub fn location(&self) -> Vec<String> {
-        self.inner
-            .location()
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect()
-    }
-
-    /// Get all notes from 5xx fields
-    pub fn notes(&self) -> Vec<String> {
-        self.inner
-            .notes()
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect()
-    }
-
-    /// Get publisher from 260 or 264 (RDA) field
-    pub fn publisher(&self) -> Option<String> {
-        self.inner.publisher().map(std::string::ToString::to_string)
-    }
-
-    /// Get uniform title from 130 field
-    pub fn uniform_title(&self) -> Option<String> {
-        self.inner
-            .uniform_title()
-            .map(std::string::ToString::to_string)
-    }
-
-    /// Get `SuDoc` (government document classification) from 086 field
-    pub fn sudoc(&self) -> Option<String> {
-        self.inner.sudoc().map(std::string::ToString::to_string)
-    }
-
-    /// Get ISSN title from 222 field
-    pub fn issn_title(&self) -> Option<String> {
-        self.inner
-            .issn_title()
-            .map(std::string::ToString::to_string)
-    }
-
-    /// Get ISSN-L from 024 field
-    pub fn issnl(&self) -> Option<String> {
-        self.inner.issnl().map(std::string::ToString::to_string)
-    }
-
-    /// Get publication year (alias for `publication_year`)
-    pub fn pubyear(&self) -> Option<u32> {
-        self.inner.pubyear()
-    }
-
-    /// Get ISSN from 022 field
+    /// Get the ISSN: the first 022 `$a` (pymarc's `Record.issn`)
     pub fn issn(&self) -> Option<String> {
         self.inner.issn().map(std::string::ToString::to_string)
     }
 
-    /// Get series from 490 field
-    pub fn series(&self) -> Option<String> {
-        self.inner.series().map(std::string::ToString::to_string)
+    /// Get the ISSN-L: the first 022 `$l` (pymarc's `Record.issnl`)
+    pub fn issnl(&self) -> Option<String> {
+        self.inner
+            .get_field("022")
+            .and_then(|f| f.get_subfield('l'))
+            .map(str::to_string)
     }
 
-    /// Get physical description from 300 field
-    pub fn physical_description(&self) -> Option<String> {
-        self.inner
-            .physical_description()
-            .map(std::string::ToString::to_string)
+    /// Get the key title: 222 `$a`, followed by a space and `$b` when both
+    /// are non-empty (pymarc's `Record.issn_title`)
+    pub fn issn_title(&self) -> Option<String> {
+        self.inner.get_field("222").and_then(title_text)
+    }
+
+    /// Get the `SuDoc` classification: the first 086 field as
+    /// `format_field()` text (pymarc's `Record.sudoc`)
+    pub fn sudoc(&self) -> Option<String> {
+        self.first_field_text(&["086"])
+    }
+
+    /// Get the uniform title: the first 130 or 240 field, checked in that
+    /// order, as `format_field()` text (pymarc's `Record.uniformtitle`)
+    pub fn uniform_title(&self) -> Option<String> {
+        self.first_field_text(&["130", "240"])
+    }
+
+    /// Get the publisher: `$b` of the first field, in record order, that is
+    /// a 260 or a 264 with second indicator `1` (pymarc's `Record.publisher`)
+    pub fn publisher(&self) -> Option<String> {
+        self.publication_subfield('b')
+    }
+
+    /// Get the publication date as cataloged: `$c` of the field `publisher`
+    /// reads (pymarc's `Record.pubyear`)
+    pub fn pubyear(&self) -> Option<String> {
+        self.publication_subfield('c')
     }
 
     /// Check if this record is a book (record type 'a' + bibliographic level 'm')
